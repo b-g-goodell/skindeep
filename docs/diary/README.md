@@ -10,3 +10,4 @@ merged, in plain words, with a picture.
 | <a href="03-meters.md"><img src="heroes/03-meters.png" width="240" alt=""></a> | [Chapter 3: No data is not zero](03-meters.md) | Wednesday, October 14, 2026, at 4:49 PM |
 | <a href="04-claude-logs.md"><img src="heroes/04-claude-logs.png" width="240" alt=""></a> | [Chapter 4: Reading Claude's clues](04-claude-logs.md) | Wednesday, October 14, 2026, at 5:08 PM |
 | <a href="05-skin-format.md"><img src="heroes/05-skin-format.png" width="240" alt=""></a> | [Chapter 5: A skin is just data](05-skin-format.md) | Wednesday, October 14, 2026, at 5:28 PM |
+| <a href="06-deck-and-phosphor.md"><img src="heroes/06-deck-and-phosphor.png" width="240" alt=""></a> | [Chapter 6: Two skins, deck and phosphor](06-deck-and-phosphor.md) | Wednesday, October 14, 2026, at 5:49 PM |
