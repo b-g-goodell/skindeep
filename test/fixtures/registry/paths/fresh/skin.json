@@ -1,0 +1,37 @@
+{
+  "name": "fresh",
+  "version": "1.0.0",
+  "author": "claude-skins",
+  "description": "Test skin: one of every widget type, bound to live metrics.",
+  "window": { "width": 1200, "height": 800, "minWidth": 900, "minHeight": 600 },
+  "menu": { "rect": { "right": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+  "terminal": {
+    "rect": { "left": 12, "top": 150, "right": 240, "bottom": 12 },
+    "fontFamily": "DejaVu Sans Mono",
+    "fontSize": 14,
+    "theme": { "foreground": "#d0d0d0", "background": "#101418", "cursor": "#3cff5a" }
+  },
+  "stylesheet": "skin.css",
+  "panels": [
+    { "class": "top", "rect": { "left": 0, "right": 0, "top": 0, "height": 140 } },
+    { "class": "side", "rect": { "right": 0, "width": 230, "top": 140, "bottom": 0 } }
+  ],
+  "widgets": [
+    { "id": "ctx", "type": "gauge", "bind": "context.used_pct", "label": "CONTEXT", "format": "fixed:1", "rect": { "left": 16, "top": 10, "width": 120, "height": 120 }, "max": 10, "ticks": 10, "marks": [{ "bind": "context.compact_at_pct" }] },
+    { "id": "rate", "type": "needle", "bind": "pty.out_bps", "label": "OUT B/S", "rect": { "left": 150, "top": 10, "width": 160, "height": 120 }, "max": 2000, "ticks": 8 },
+    { "id": "cpu", "type": "knob", "bind": "proc.cpu_pct", "label": "CPU", "image": "images/knob.png", "rect": { "left": 330, "top": 20, "width": 90, "height": 110 } },
+    { "id": "tokens", "type": "bar", "bind": "tokens.out_rate", "label": "TOK/S", "rect": { "left": 440, "top": 30, "width": 220, "height": 24 }, "max": 300, "segments": 20 },
+    { "id": "mem", "type": "bar", "bind": "proc.mem_mb", "label": "MEM", "rect": { "left": 440, "top": 80, "width": 220, "height": 24 }, "max": 200 },
+    { "id": "busy", "type": "led", "bind": "state.busy", "label": "BUSY", "on": 1, "rect": { "left": 690, "top": 30, "width": 60, "height": 30 } },
+    { "id": "tool", "type": "led", "bind": "event.tool", "label": "TOOL", "pulse": true, "pulseMs": 400, "rect": { "left": 690, "top": 80, "width": 60, "height": 30 } },
+    { "id": "cost", "type": "readout", "bind": "cost.usd", "label": "COST", "format": "usd", "rect": { "right": 16, "top": 20, "width": 180, "height": 44 } },
+    { "id": "clock", "type": "readout", "bind": "session.clock_s", "label": "CLOCK", "format": "duration", "rect": { "right": 16, "top": 80, "width": 180, "height": 44 } },
+    { "id": "meter", "type": "sprite", "bind": "tools.rate", "label": "TOOLS", "sheet": "images/meter.png", "frames": 16, "frameWidth": 32, "frameHeight": 32, "max": 15, "rect": { "left": 780, "top": 40, "width": 64, "height": 64 } },
+    { "id": "spin", "type": "sprite", "bind": "state.busy", "mode": "run", "fps": 16, "sheet": "images/meter.png", "frames": 16, "frameWidth": 32, "frameHeight": 32, "rect": { "left": 860, "top": 40, "width": 64, "height": 64 } },
+    { "id": "tools", "type": "readout", "bind": "tools.total", "label": "TOOL CALLS", "format": "int", "rect": { "right": 16, "top": 160, "width": 200, "height": 44 } },
+    { "id": "tin", "type": "readout", "bind": "tokens.in", "label": "TOKENS IN", "format": "tokens", "rect": { "right": 16, "top": 220, "width": 200, "height": 44 } },
+    { "id": "tout", "type": "readout", "bind": "tokens.out", "label": "TOKENS OUT", "format": "tokens", "rect": { "right": 16, "top": 280, "width": 200, "height": 44 } },
+    { "id": "model", "type": "readout", "bind": "model.name", "label": "MODEL", "format": "text", "rect": { "right": 16, "top": 340, "width": 200, "height": 44 } },
+    { "id": "agents", "type": "led", "bind": "agents.active", "label": "AGENT", "on": 1, "blink": 500, "rect": { "right": 150, "top": 400, "width": 66, "height": 30 } }
+  ]
+}
