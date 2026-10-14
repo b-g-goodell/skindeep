@@ -1,0 +1,58 @@
+/* phosphor: one green phosphor hue on near-black, scanlines, glow. */
+.casing {
+  background: linear-gradient(135deg, #3a3826, #1f1e14 55%, #2c2a1c);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #13120c, inset 0 0 22px #000;
+}
+.screen {
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 45%, #06301a 0%, #03180c 60%, #010a05 100%);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9), 0 0 0 3px #0b0a06;
+}
+.scanlines {
+  z-index: 5; pointer-events: none; border-radius: 22px;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 2px, rgba(0, 0, 0, 0.28) 3px);
+  animation: flicker 4s steps(40) infinite;
+}
+@keyframes flicker { 0% { opacity: 0.85; } 50% { opacity: 1; } 100% { opacity: 0.85; } }
+.header { border-bottom: 2px solid #3aff7e; box-shadow: 0 2px 6px rgba(58, 255, 126, 0.35); }
+.heading { white-space: nowrap; font: 24px/26px VT323, monospace; color: #3aff7e; text-shadow: 0 0 6px rgba(58, 255, 126, 0.7); letter-spacing: 2px; }
+.h-status::after { content: "[ STATUS ]"; }
+.h-context::after { content: "[ SESSION ]"; }
+.h-systems::after { content: "[ SYSTEMS ]"; float: right; }
+.divider { background: linear-gradient(#3aff7e, rgba(58, 255, 126, 0.1)); opacity: 0.5; }
+.bezel { border: 2px solid #3aff7e; border-radius: 8px; box-shadow: 0 0 10px rgba(58, 255, 126, 0.35), inset 0 0 12px rgba(58, 255, 126, 0.2); }
+
+.w { --text: #3aff7e; --fill: #3aff7e; --track: #0c3a1e; --off: #0a2a16; --on: #8affb4; --needle: #8affb4; --glow: rgba(58, 255, 126, 0.8);
+  font-family: VT323, monospace; text-shadow: 0 0 5px rgba(58, 255, 126, 0.6); }
+.w .label { font: 18px/18px VT323, monospace; letter-spacing: 1px; color: #3aff7e; }
+
+.w-gauge .track { stroke: #0c3a1e; }
+.w-gauge .fill { stroke: #3aff7e; }
+.w-gauge .tick { stroke: #3aff7e; opacity: 0.8; }
+.w-gauge .mark { stroke: #e0ffb0; stroke-width: 3; }
+.w-gauge text.value { font-family: VT323, monospace; font-size: 22px; fill: #8affb4; }
+.w-gauge .label { font-size: 22px; }
+
+.stat { align-items: flex-start; border-left: 2px solid rgba(58, 255, 126, 0.45); padding-left: 8px; }
+.stat .label { font-size: 17px; opacity: 0.8; }
+.stat .value { font: 26px/26px VT323, monospace; color: #8affb4; }
+
+.meter { align-items: stretch; }
+.meter .label { align-self: flex-start; font-size: 17px; }
+.meter .seg { background: #0a2a16; }
+.meter .seg.on { background: #3aff7e; box-shadow: 0 0 5px rgba(58, 255, 126, 0.8); }
+
+.radar .sheet { border-radius: 50%; box-shadow: 0 0 10px rgba(58, 255, 126, 0.5); image-rendering: auto; }
+.radar.nodata .sheet, .radar .sheet { opacity: 0.95; }
+
+.lamp-row { justify-content: flex-start; gap: 8px; }
+.lamp-row .lamp { width: 10px; height: 10px; background: #0a2a16; border: 1px solid #3aff7e; }
+.lamp-row .lamp.on { background: #b8ffd0; box-shadow: 0 0 10px #8affb4; }
+.lamp-row .label { font-size: 18px; }
+
+.w-needle .track { stroke: #3aff7e; stroke-width: 1.5; }
+.w-needle .tick { stroke: #3aff7e; opacity: 0.9; }
+.w-needle .needle { stroke: #b8ffd0; stroke-width: 2.5; }
+.w-needle .pivot { fill: #3aff7e; }
+.w-needle .value { font: 22px/22px VT323, monospace; color: #8affb4; }

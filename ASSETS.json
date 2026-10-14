@@ -70,6 +70,20 @@
     "notes": "Kenney Pixel UI pack, file 9-Slice/Ancient/grey_inlay.png, renamed. 44x44 9-slice recessed inlay, for a display well. CC0 per the pack's License.txt."
   },
   {
+    "path": "skins/phosphor/fonts/VT323/VT323-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/vt323/VT323-Regular.ttf",
+    "author": "The VT323 Project Authors (designer Peter Hull)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/vt323 at commit bd8f81ddb5c74d5c8897b36ad88b440266245103. Retro terminal font."
+  },
+  {
+    "path": "skins/phosphor/fonts/VT323/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/vt323/OFL.txt",
+    "author": "The VT323 Project Authors (designer Peter Hull)",
+    "license": "OFL-1.1",
+    "notes": "License file, copied byte for byte."
+  },
+  {
     "path": "skins/deck/images/slider-context.png",
     "source": "scripts/art/sprites.sh",
     "author": "claude-skins",
@@ -78,6 +92,13 @@
   },
   {
     "path": "skins/deck/images/slider-cache.png",
+    "source": "scripts/art/sprites.sh",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with ImageMagick"
+  },
+  {
+    "path": "skins/phosphor/images/radar.png",
     "source": "scripts/art/sprites.sh",
     "author": "claude-skins",
     "license": "project-original",
@@ -96,6 +117,13 @@
     "author": "claude-skins",
     "license": "project-original",
     "notes": "menu button, pressed state, drawn by hand as SVG"
+  },
+  {
+    "path": "skins/phosphor/images/menu.svg",
+    "source": "this repository",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "menu button, drawn by hand as SVG"
   },
   {
     "path": "docs/diary/heroes/01-design.png",

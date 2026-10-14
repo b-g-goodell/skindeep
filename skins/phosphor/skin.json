@@ -1,0 +1,428 @@
+{
+ "name": "phosphor",
+ "version": "1.0.0",
+ "author": "claude-skins",
+ "license": "project-original",
+ "description": "Monochrome green phosphor field console with scanlines, inspired by retro wrist-worn computers.",
+ "window": {
+  "width": 1260,
+  "height": 840,
+  "minWidth": 1180,
+  "minHeight": 700
+ },
+ "menu": { "rect": { "left": 40, "top": 24, "width": 26, "height": 26 }, "image": "images/menu.svg" },
+ "terminal": {
+  "rect": {
+   "left": 326,
+   "top": 66,
+   "right": 30,
+   "bottom": 168
+  },
+  "fontFamily": "VT323",
+  "fontSize": 19,
+  "theme": {
+   "foreground": "#8dffb4",
+   "background": "#03140a",
+   "cursor": "#b8ffd0",
+   "cursorAccent": "#03140a",
+   "selectionBackground": "#1d5a34",
+   "black": "#03140a",
+   "red": "#ffb36a",
+   "green": "#4dff8f",
+   "yellow": "#d8ff7a",
+   "blue": "#5ad8b0",
+   "magenta": "#9effc8",
+   "cyan": "#6affd8",
+   "white": "#a8ffc8",
+   "brightBlack": "#3a7a52",
+   "brightRed": "#ffcf9a",
+   "brightGreen": "#8affb4",
+   "brightYellow": "#eaffa8",
+   "brightBlue": "#8af0d0",
+   "brightMagenta": "#c8ffe0",
+   "brightCyan": "#a0fff0",
+   "brightWhite": "#e0fff0"
+  }
+ },
+ "fonts": [
+  {
+   "family": "VT323",
+   "file": "fonts/VT323/VT323-Regular.ttf"
+  }
+ ],
+ "stylesheet": "skin.css",
+ "panels": [
+  {
+   "class": "casing",
+   "rect": {
+    "left": 0,
+    "right": 0,
+    "top": 0,
+    "bottom": 0
+   }
+  },
+  {
+   "class": "screen",
+   "rect": {
+    "left": 12,
+    "right": 12,
+    "top": 12,
+    "bottom": 12
+   }
+  },
+  {
+   "class": "header",
+   "rect": {
+    "left": 28,
+    "right": 28,
+    "top": 22,
+    "height": 30
+   }
+  },
+  {
+   "class": "heading h-status",
+   "rect": {
+    "left": 76,
+    "top": 24,
+    "width": 200,
+    "height": 26
+   }
+  },
+  {
+   "class": "heading h-context",
+   "rect": {
+    "left": 340,
+    "top": 24,
+    "width": 200,
+    "height": 26
+   }
+  },
+  {
+   "class": "heading h-systems",
+   "rect": {
+    "right": 40,
+    "top": 24,
+    "width": 200,
+    "height": 26
+   }
+  },
+  {
+   "class": "divider",
+   "rect": {
+    "left": 310,
+    "top": 66,
+    "width": 2,
+    "bottom": 26
+   }
+  },
+  {
+   "class": "bezel",
+   "rect": {
+    "left": 320,
+    "top": 60,
+    "right": 24,
+    "bottom": 162
+   }
+  },
+  {
+   "class": "scanlines",
+   "rect": {
+    "left": 12,
+    "right": 12,
+    "top": 12,
+    "bottom": 12
+   }
+  }
+ ],
+ "widgets": [
+  {
+   "id": "ctx",
+   "type": "gauge",
+   "bind": "context.used_pct",
+   "format": "pct",
+   "label": "context load",
+   "max": 100,
+   "ticks": 20,
+   "thickness": 13,
+   "startAngle": -140,
+   "endAngle": 140,
+   "marks": [
+    {
+     "bind": "context.compact_at_pct"
+    }
+   ],
+   "rect": {
+    "left": 36,
+    "top": 70,
+    "width": 252,
+    "height": 262
+   }
+  },
+  {
+   "id": "ctx-tokens",
+   "type": "readout",
+   "bind": "context.used_tokens",
+   "format": "tokens",
+   "label": "in context",
+   "rect": {
+    "left": 36,
+    "top": 344,
+    "width": 124,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "ctx-compact",
+   "type": "readout",
+   "bind": "context.compact_threshold",
+   "format": "tokens",
+   "label": "compact at",
+   "rect": {
+    "left": 168,
+    "top": 344,
+    "width": 124,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "cache",
+   "type": "bar",
+   "bind": "cache.hit_ratio",
+   "label": "cache hits",
+   "max": 1,
+   "segments": 20,
+   "gap": 2,
+   "rect": {
+    "left": 36,
+    "top": 408,
+    "width": 256,
+    "height": 34
+   },
+   "class": "meter"
+  },
+  {
+   "id": "lim5",
+   "type": "bar",
+   "bind": "limits.five_hour_pct",
+   "label": "5h limit",
+   "max": 100,
+   "segments": 20,
+   "gap": 2,
+   "rect": {
+    "left": 36,
+    "top": 456,
+    "width": 256,
+    "height": 34
+   },
+   "class": "meter"
+  },
+  {
+   "id": "lim7",
+   "type": "bar",
+   "bind": "limits.seven_day_pct",
+   "label": "7d limit",
+   "max": 100,
+   "segments": 20,
+   "gap": 2,
+   "rect": {
+    "left": 36,
+    "top": 504,
+    "width": 256,
+    "height": 34
+   },
+   "class": "meter"
+  },
+  {
+   "id": "radar",
+   "type": "sprite",
+   "bind": "state.busy",
+   "mode": "run",
+   "fps": 18,
+   "sheet": "images/radar.png",
+   "frames": 24,
+   "frameWidth": 96,
+   "frameHeight": 96,
+   "label": "scan",
+   "rect": {
+    "left": 40,
+    "bottom": 40,
+    "width": 130,
+    "height": 150
+   },
+   "class": "radar"
+  },
+  {
+   "id": "busy",
+   "type": "led",
+   "bind": "state.busy",
+   "on": 1,
+   "label": "working",
+   "rect": {
+    "left": 186,
+    "bottom": 150,
+    "width": 110,
+    "height": 24
+   },
+   "class": "lamp-row"
+  },
+  {
+   "id": "tool",
+   "type": "led",
+   "bind": "event.tool",
+   "pulse": true,
+   "pulseMs": 350,
+   "label": "tool call",
+   "rect": {
+    "left": 186,
+    "bottom": 118,
+    "width": 110,
+    "height": 24
+   },
+   "class": "lamp-row"
+  },
+  {
+   "id": "agent",
+   "type": "led",
+   "bind": "agents.active",
+   "on": 1,
+   "blink": 400,
+   "label": "subagent",
+   "rect": {
+    "left": 186,
+    "bottom": 86,
+    "width": 110,
+    "height": 24
+   },
+   "class": "lamp-row"
+  },
+  {
+   "id": "prompt",
+   "type": "led",
+   "bind": "event.prompt",
+   "pulse": true,
+   "pulseMs": 600,
+   "label": "prompt",
+   "rect": {
+    "left": 186,
+    "bottom": 54,
+    "width": 110,
+    "height": 24
+   },
+   "class": "lamp-row"
+  },
+  {
+   "id": "cpu",
+   "type": "needle",
+   "bind": "proc.cpu_pct",
+   "label": "cpu",
+   "max": 100,
+   "ticks": 10,
+   "rect": {
+    "left": 330,
+    "bottom": 26,
+    "width": 170,
+    "height": 118
+   }
+  },
+  {
+   "id": "rate",
+   "type": "needle",
+   "bind": "tokens.out_rate",
+   "label": "tokens/s",
+   "max": 150,
+   "ticks": 6,
+   "rect": {
+    "left": 512,
+    "bottom": 26,
+    "width": 170,
+    "height": 118
+   }
+  },
+  {
+   "id": "cell-0",
+   "type": "readout",
+   "bind": "cost.usd",
+   "label": "cost",
+   "format": "usd",
+   "rect": {
+    "left": 700,
+    "bottom": 82,
+    "width": 164,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "cell-1",
+   "type": "readout",
+   "bind": "session.clock_s",
+   "label": "uptime",
+   "format": "duration",
+   "rect": {
+    "left": 876,
+    "bottom": 82,
+    "width": 164,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "cell-2",
+   "type": "readout",
+   "bind": "tools.total",
+   "label": "tool calls",
+   "format": "int",
+   "rect": {
+    "left": 1052,
+    "bottom": 82,
+    "width": 164,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "cell-3",
+   "type": "readout",
+   "bind": "tokens.out",
+   "label": "tokens out",
+   "format": "tokens",
+   "rect": {
+    "left": 700,
+    "bottom": 26,
+    "width": 164,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "cell-4",
+   "type": "readout",
+   "bind": "tokens.in",
+   "label": "tokens in",
+   "format": "tokens",
+   "rect": {
+    "left": 876,
+    "bottom": 26,
+    "width": 164,
+    "height": 48
+   },
+   "class": "stat"
+  },
+  {
+   "id": "cell-5",
+   "type": "readout",
+   "bind": "model.name",
+   "label": "model",
+   "format": "text",
+   "rect": {
+    "left": 1052,
+    "bottom": 26,
+    "width": 164,
+    "height": 48
+   },
+   "class": "stat"
+  }
+ ]
+}
