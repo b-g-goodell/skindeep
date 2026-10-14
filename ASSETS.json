@@ -1,0 +1,135 @@
+[
+  {
+    "path": "skins/deck/fonts/DSEG7Classic/DSEG7Classic-Regular.ttf",
+    "source": "https://github.com/keshikan/DSEG/releases/download/v0.46/fonts-DSEG_v046.zip",
+    "author": "keshikan",
+    "license": "OFL-1.1",
+    "notes": "DSEG v0.46 release zip, file fonts-DSEG_v046/DSEG7-Classic/DSEG7Classic-Regular.ttf. Seven-segment display font. Reserved Font Name DSEG."
+  },
+  {
+    "path": "skins/deck/fonts/DSEG7Classic/DSEG7Classic-Bold.ttf",
+    "source": "https://github.com/keshikan/DSEG/releases/download/v0.46/fonts-DSEG_v046.zip",
+    "author": "keshikan",
+    "license": "OFL-1.1",
+    "notes": "DSEG v0.46 release zip, file fonts-DSEG_v046/DSEG7-Classic/DSEG7Classic-Bold.ttf. Reserved Font Name DSEG."
+  },
+  {
+    "path": "skins/deck/fonts/DSEG7Classic/DSEG-LICENSE.txt",
+    "source": "https://github.com/keshikan/DSEG/releases/download/v0.46/fonts-DSEG_v046.zip",
+    "author": "keshikan",
+    "license": "OFL-1.1",
+    "notes": "License file shipped in the same release zip, file fonts-DSEG_v046/DSEG-LICENSE.txt. The source uses CRLF line endings. The repository stores it with LF under .gitattributes eol=lf. Text otherwise unchanged."
+  },
+  {
+    "path": "skins/deck/fonts/Silkscreen/Silkscreen-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/silkscreen/Silkscreen-Regular.ttf",
+    "author": "The Silkscreen Project Authors (designer Jason Kottke)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/silkscreen at commit bd8f81ddb5c74d5c8897b36ad88b440266245103. Small pixel label font."
+  },
+  {
+    "path": "skins/deck/fonts/Silkscreen/Silkscreen-Bold.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/silkscreen/Silkscreen-Bold.ttf",
+    "author": "The Silkscreen Project Authors (designer Jason Kottke)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/silkscreen at commit bd8f81ddb5c74d5c8897b36ad88b440266245103."
+  },
+  {
+    "path": "skins/deck/fonts/Silkscreen/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/silkscreen/OFL.txt",
+    "author": "The Silkscreen Project Authors (designer Jason Kottke)",
+    "license": "OFL-1.1",
+    "notes": "License file, copied byte for byte."
+  },
+  {
+    "path": "skins/deck/images/brushed-metal.png",
+    "source": "https://ambientcg.com/get?file=Metal009_1K-JPG.zip",
+    "author": "ambientCG",
+    "license": "CC0-1.0",
+    "notes": "Metal 009, asset page https://ambientcg.com/a/Metal009. Derived from Metal009_1K-JPG_Color.jpg in the zip: resized from 1024 to 512 px square, converted to PNG, metadata stripped. Tileable brushed metal. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
+  },
+  {
+    "path": "skins/deck/images/bevel-raised.png",
+    "source": "https://kenney.nl/media/pages/assets/pixel-ui-pack/821e760f21-1677661508/kenney_pixel-ui-pack.zip",
+    "author": "Kenney Vleugels for Kenney (www.kenney.nl), with help by Lynn Evers",
+    "license": "CC0-1.0",
+    "notes": "Kenney Pixel UI pack, file 9-Slice/Ancient/grey.png, renamed. 48x48 9-slice riveted grey panel, raised state. CC0 per the pack's License.txt."
+  },
+  {
+    "path": "skins/deck/images/bevel-pressed.png",
+    "source": "https://kenney.nl/media/pages/assets/pixel-ui-pack/821e760f21-1677661508/kenney_pixel-ui-pack.zip",
+    "author": "Kenney Vleugels for Kenney (www.kenney.nl), with help by Lynn Evers",
+    "license": "CC0-1.0",
+    "notes": "Kenney Pixel UI pack, file 9-Slice/Ancient/grey_pressed.png, renamed. 48x48 9-slice riveted grey panel, pressed state. CC0 per the pack's License.txt."
+  },
+  {
+    "path": "skins/deck/images/bevel-inlay.png",
+    "source": "https://kenney.nl/media/pages/assets/pixel-ui-pack/821e760f21-1677661508/kenney_pixel-ui-pack.zip",
+    "author": "Kenney Vleugels for Kenney (www.kenney.nl), with help by Lynn Evers",
+    "license": "CC0-1.0",
+    "notes": "Kenney Pixel UI pack, file 9-Slice/Ancient/grey_inlay.png, renamed. 44x44 9-slice recessed inlay, for a display well. CC0 per the pack's License.txt."
+  },
+  {
+    "path": "skins/deck/images/slider-context.png",
+    "source": "scripts/art/sprites.sh",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with ImageMagick"
+  },
+  {
+    "path": "skins/deck/images/slider-cache.png",
+    "source": "scripts/art/sprites.sh",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with ImageMagick"
+  },
+  {
+    "path": "skins/deck/images/menu.svg",
+    "source": "this repository",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "menu button, drawn by hand as SVG"
+  },
+  {
+    "path": "skins/deck/images/menu-pressed.svg",
+    "source": "this repository",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "menu button, pressed state, drawn by hand as SVG"
+  },
+  {
+    "path": "docs/diary/heroes/01-design.png",
+    "source": "drawn with Pillow for the dev diary",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name"
+  },
+  {
+    "path": "docs/diary/heroes/02-command-line.png",
+    "source": "drawn with Pillow for the dev diary",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name"
+  },
+  {
+    "path": "docs/diary/heroes/03-meters.png",
+    "source": "drawn with Pillow for the dev diary",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name"
+  },
+  {
+    "path": "docs/diary/heroes/04-claude-logs.png",
+    "source": "drawn with Pillow for the dev diary",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name"
+  },
+  {
+    "path": "docs/diary/heroes/05-skin-format.png",
+    "source": "drawn with Pillow for the dev diary",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name"
+  }
+]

@@ -1,0 +1,672 @@
+{
+ "name": "deck",
+ "version": "1.0.0",
+ "author": "claude-skins",
+ "license": "project-original",
+ "description": "Dark brushed-metal console with an LCD display, an analyzer and playlist-style counters, inspired by classic desktop media players.",
+ "window": {
+  "width": 1240,
+  "height": 820,
+  "minWidth": 1200,
+  "minHeight": 640
+ },
+ "menu": { "rect": { "left": 4, "top": 0, "width": 34, "height": 20 }, "image": "images/menu.svg", "pressed": "images/menu-pressed.svg" },
+ "terminal": {
+  "rect": {
+   "left": 14,
+   "top": 174,
+   "right": 292,
+   "bottom": 14
+  },
+  "fontFamily": "DejaVu Sans Mono",
+  "fontSize": 14,
+  "theme": {
+   "foreground": "#d2e6d2",
+   "background": "#000000",
+   "cursor": "#3cff3c",
+   "cursorAccent": "#000000",
+   "selectionBackground": "#2a5a2a",
+   "black": "#000000",
+   "red": "#e05050",
+   "green": "#3cdc3c",
+   "yellow": "#e0d040",
+   "blue": "#5a8ce6",
+   "magenta": "#c070d0",
+   "cyan": "#40c8d0",
+   "white": "#d0d0d0",
+   "brightBlack": "#606870",
+   "brightRed": "#ff7070",
+   "brightGreen": "#70ff70",
+   "brightYellow": "#ffff70",
+   "brightBlue": "#80b0ff",
+   "brightMagenta": "#e090f0",
+   "brightCyan": "#70f0f8",
+   "brightWhite": "#ffffff"
+  }
+ },
+ "fonts": [
+  {
+   "family": "DSEG7",
+   "file": "fonts/DSEG7Classic/DSEG7Classic-Bold.ttf"
+  },
+  {
+   "family": "Silkscreen",
+   "file": "fonts/Silkscreen/Silkscreen-Regular.ttf"
+  }
+ ],
+ "stylesheet": "skin.css",
+ "panels": [
+  {
+   "class": "body",
+   "rect": {
+    "left": 0,
+    "right": 0,
+    "top": 0,
+    "bottom": 0
+   }
+  },
+  {
+   "class": "titlebar",
+   "rect": {
+    "left": 0,
+    "right": 0,
+    "top": 0,
+    "height": 16
+   }
+  },
+  {
+   "class": "lcd display",
+   "rect": {
+    "left": 12,
+    "top": 24,
+    "width": 330,
+    "height": 128
+   }
+  },
+  {
+   "class": "lcd analyzer-box",
+   "rect": {
+    "left": 354,
+    "top": 24,
+    "width": 216,
+    "height": 128
+   }
+  },
+  {
+   "class": "plate",
+   "rect": {
+    "left": 578,
+    "top": 22,
+    "width": 386,
+    "height": 132
+   }
+  },
+  {
+   "class": "plate",
+   "rect": {
+    "right": 10,
+    "top": 22,
+    "width": 220,
+    "height": 132
+   }
+  },
+  {
+   "class": "well",
+   "rect": {
+    "left": 8,
+    "top": 168,
+    "right": 286,
+    "bottom": 8
+   }
+  },
+  {
+   "class": "lcd playlist",
+   "rect": {
+    "right": 12,
+    "top": 174,
+    "width": 264,
+    "bottom": 14
+   }
+  }
+ ],
+ "widgets": [
+  {
+   "id": "clock",
+   "type": "readout",
+   "bind": "session.clock_s",
+   "format": "duration",
+   "rect": {
+    "left": 24,
+    "top": 34,
+    "width": 190,
+    "height": 56
+   },
+   "class": "digits big"
+  },
+  {
+   "id": "busy",
+   "type": "led",
+   "bind": "state.busy",
+   "on": 1,
+   "label": "busy",
+   "rect": {
+    "left": 226,
+    "top": 34,
+    "width": 100,
+    "height": 18
+   },
+   "class": "lcd-led"
+  },
+  {
+   "id": "tool",
+   "type": "led",
+   "bind": "event.tool",
+   "pulse": true,
+   "pulseMs": 350,
+   "label": "tool",
+   "rect": {
+    "left": 226,
+    "top": 56,
+    "width": 100,
+    "height": 18
+   },
+   "class": "lcd-led"
+  },
+  {
+   "id": "agent",
+   "type": "led",
+   "bind": "agents.active",
+   "on": 1,
+   "blink": 450,
+   "label": "agent",
+   "rect": {
+    "left": 226,
+    "top": 78,
+    "width": 100,
+    "height": 18
+   },
+   "class": "lcd-led"
+  },
+  {
+   "id": "cost",
+   "type": "readout",
+   "bind": "cost.usd",
+   "format": "fixed:2",
+   "label": "usd",
+   "rect": {
+    "left": 24,
+    "top": 96,
+    "width": 110,
+    "height": 44
+   },
+   "class": "digits small"
+  },
+  {
+   "id": "model",
+   "type": "readout",
+   "bind": "model.name",
+   "format": "text",
+   "rect": {
+    "left": 140,
+    "top": 112,
+    "width": 192,
+    "height": 22
+   },
+   "class": "marquee"
+  },
+  {
+   "id": "an-out",
+   "type": "bar",
+   "bind": "pty.out_bps",
+   "label": "out",
+   "orientation": "vertical",
+   "segments": 14,
+   "gap": 1,
+   "max": 4000,
+   "rect": {
+    "left": 366,
+    "top": 30,
+    "width": 26,
+    "height": 112
+   },
+   "class": "analyzer"
+  },
+  {
+   "id": "an-tok",
+   "type": "bar",
+   "bind": "tokens.out_rate",
+   "label": "tok",
+   "orientation": "vertical",
+   "segments": 14,
+   "gap": 1,
+   "max": 150,
+   "rect": {
+    "left": 399,
+    "top": 30,
+    "width": 26,
+    "height": 112
+   },
+   "class": "analyzer"
+  },
+  {
+   "id": "an-tpm",
+   "type": "bar",
+   "bind": "tools.rate",
+   "label": "tpm",
+   "orientation": "vertical",
+   "segments": 14,
+   "gap": 1,
+   "max": 20,
+   "rect": {
+    "left": 432,
+    "top": 30,
+    "width": 26,
+    "height": 112
+   },
+   "class": "analyzer"
+  },
+  {
+   "id": "an-cpu",
+   "type": "bar",
+   "bind": "proc.cpu_pct",
+   "label": "cpu",
+   "orientation": "vertical",
+   "segments": 14,
+   "gap": 1,
+   "max": 100,
+   "rect": {
+    "left": 465,
+    "top": 30,
+    "width": 26,
+    "height": 112
+   },
+   "class": "analyzer"
+  },
+  {
+   "id": "an-agt",
+   "type": "bar",
+   "bind": "agents.active",
+   "label": "agt",
+   "orientation": "vertical",
+   "segments": 14,
+   "gap": 1,
+   "max": 4,
+   "rect": {
+    "left": 498,
+    "top": 30,
+    "width": 26,
+    "height": 112
+   },
+   "class": "analyzer"
+  },
+  {
+   "id": "an-key",
+   "type": "bar",
+   "bind": "pty.in_kps",
+   "label": "key",
+   "orientation": "vertical",
+   "segments": 14,
+   "gap": 1,
+   "max": 20,
+   "rect": {
+    "left": 531,
+    "top": 30,
+    "width": 26,
+    "height": 112
+   },
+   "class": "analyzer"
+  },
+  {
+   "id": "ctx",
+   "type": "gauge",
+   "bind": "context.used_pct",
+   "format": "pct",
+   "label": "context",
+   "max": 100,
+   "ticks": 10,
+   "thickness": 9,
+   "marks": [
+    {
+     "bind": "context.compact_at_pct"
+    }
+   ],
+   "rect": {
+    "left": 584,
+    "top": 22,
+    "width": 124,
+    "height": 130
+   }
+  },
+  {
+   "id": "tps",
+   "type": "needle",
+   "bind": "tokens.out_rate",
+   "label": "tokens/s",
+   "max": 150,
+   "ticks": 6,
+   "rect": {
+    "left": 718,
+    "top": 30,
+    "width": 150,
+    "height": 118
+   }
+  },
+  {
+   "id": "cpu",
+   "type": "knob",
+   "bind": "proc.cpu_pct",
+   "label": "cpu",
+   "format": "int",
+   "rect": {
+    "left": 878,
+    "top": 30,
+    "width": 80,
+    "height": 118
+   }
+  },
+  {
+   "id": "vol",
+   "type": "sprite",
+   "bind": "context.used_pct",
+   "label": "context fill",
+   "sheet": "images/slider-context.png",
+   "frames": 28,
+   "frameWidth": 160,
+   "frameHeight": 14,
+   "layout": "column",
+   "max": 100,
+   "rect": {
+    "right": 16,
+    "top": 28,
+    "width": 208,
+    "height": 38
+   }
+  },
+  {
+   "id": "bal",
+   "type": "sprite",
+   "bind": "cache.hit_ratio",
+   "label": "cache hits",
+   "sheet": "images/slider-cache.png",
+   "frames": 28,
+   "frameWidth": 160,
+   "frameHeight": 14,
+   "layout": "column",
+   "max": 1,
+   "rect": {
+    "right": 16,
+    "top": 72,
+    "width": 208,
+    "height": 38
+   }
+  },
+  {
+   "id": "lim",
+   "type": "bar",
+   "bind": "limits.five_hour_pct",
+   "label": "5h limit",
+   "segments": 26,
+   "gap": 1,
+   "max": 100,
+   "rect": {
+    "right": 16,
+    "top": 118,
+    "width": 208,
+    "height": 28
+   },
+   "class": "limit"
+  },
+  {
+   "id": "pl-0",
+   "type": "readout",
+   "bind": "tools.total",
+   "label": "tool calls",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 186,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-1",
+   "type": "readout",
+   "bind": "tools.Read",
+   "label": "read",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 209,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-2",
+   "type": "readout",
+   "bind": "tools.Edit",
+   "label": "edit",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 232,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-3",
+   "type": "readout",
+   "bind": "tools.Write",
+   "label": "write",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 255,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-4",
+   "type": "readout",
+   "bind": "tools.Bash",
+   "label": "bash",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 278,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-5",
+   "type": "readout",
+   "bind": "tools.Grep",
+   "label": "grep",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 301,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-6",
+   "type": "readout",
+   "bind": "tools.Glob",
+   "label": "glob",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 324,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-7",
+   "type": "readout",
+   "bind": "tools.WebFetch",
+   "label": "web fetch",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 347,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-8",
+   "type": "readout",
+   "bind": "tools.Agent",
+   "label": "agent",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 370,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-9",
+   "type": "readout",
+   "bind": "tokens.in",
+   "label": "tokens in",
+   "format": "tokens",
+   "rect": {
+    "right": 22,
+    "top": 393,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-10",
+   "type": "readout",
+   "bind": "tokens.out",
+   "label": "tokens out",
+   "format": "tokens",
+   "rect": {
+    "right": 22,
+    "top": 416,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-11",
+   "type": "readout",
+   "bind": "tokens.cache_read",
+   "label": "cache read",
+   "format": "tokens",
+   "rect": {
+    "right": 22,
+    "top": 439,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-12",
+   "type": "readout",
+   "bind": "context.used_tokens",
+   "label": "context",
+   "format": "tokens",
+   "rect": {
+    "right": 22,
+    "top": 462,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-13",
+   "type": "readout",
+   "bind": "context.compact_threshold",
+   "label": "compact at",
+   "format": "tokens",
+   "rect": {
+    "right": 22,
+    "top": 485,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-14",
+   "type": "readout",
+   "bind": "lines.added",
+   "label": "lines added",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 508,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-15",
+   "type": "readout",
+   "bind": "lines.removed",
+   "label": "lines removed",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 531,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-16",
+   "type": "readout",
+   "bind": "limits.seven_day_pct",
+   "label": "7d limit",
+   "format": "pct",
+   "rect": {
+    "right": 22,
+    "top": 554,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  },
+  {
+   "id": "pl-17",
+   "type": "readout",
+   "bind": "proc.mem_mb",
+   "label": "memory mb",
+   "format": "int",
+   "rect": {
+    "right": 22,
+    "top": 577,
+    "width": 244,
+    "height": 21
+   },
+   "class": "row"
+  }
+ ]
+}

@@ -1,0 +1,80 @@
+/* deck: dark brushed metal, black LCD windows, green segment digits. */
+.skin { counter-reset: row; }
+
+.body {
+  background: linear-gradient(rgba(14, 16, 21, 0.86), rgba(10, 11, 15, 0.92)), url(images/brushed-metal.png);
+  background-size: auto, 256px 256px;
+}
+.titlebar {
+  border-style: solid; border-width: 4px; border-image: url(images/bevel-raised.png) 8 fill / 4px stretch;
+  filter: brightness(0.42) contrast(1.3);
+}
+.titlebar::after {
+  content: "D E C K"; position: absolute; inset: 0; text-align: center;
+  font: 8px/8px Silkscreen, monospace; color: #e8f0ff; letter-spacing: 2px;
+}
+.lcd {
+  background: #020402;
+  border: 2px solid; border-color: #05070a #5c636d #5c636d #05070a;
+  box-shadow: inset 0 0 18px rgba(40, 255, 60, 0.06);
+}
+.plate {
+  border: 1px solid; border-color: #4e5560 #0a0b0e #0a0b0e #4e5560;
+  background: linear-gradient(rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.18));
+  border-radius: 2px;
+}
+.well {
+  border: 2px solid; border-color: #05070a #4e5560 #4e5560 #05070a; background: #000;
+}
+
+.w { --text: #3cdc3c; --fill: #3cff3c; --track: #0d220d; --off: #0b1a0b; --on: #3cff3c; --needle: #ff8a3c; --glow: rgba(60, 255, 60, 0.5); }
+.w .label { font: 8px/10px Silkscreen, monospace; letter-spacing: 1px; color: #2fae2f; }
+
+.digits .value { font-family: DSEG7, monospace; color: #3cff3c; text-shadow: 0 0 6px rgba(60, 255, 60, 0.55); }
+.big .value { font-size: 40px; line-height: 52px; }
+.small { flex-direction: row-reverse; justify-content: flex-end; align-items: baseline; gap: 6px; }
+.small .value { font-size: 18px; }
+
+.lcd-led { justify-content: flex-start; }
+.lcd-led .lamp { width: 9px; height: 9px; border-radius: 1px; }
+.lcd-led .label { font-size: 8px; }
+
+.marquee { overflow: hidden; justify-content: center; align-items: flex-start; }
+.marquee .value {
+  font: 8px/12px Silkscreen, monospace; color: #3cff3c; letter-spacing: 1px; text-transform: uppercase;
+  animation: scroll 9s linear infinite; padding-left: 100%;
+}
+@keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+.analyzer { flex-direction: column-reverse; gap: 2px; }
+.analyzer .label { font-size: 7px; line-height: 8px; }
+.analyzer .seg { background: #0a160a; }
+.analyzer .seg.on { background: #2ee82e; box-shadow: none; }
+.analyzer .seg:nth-child(n+9).on { background: #d8e030; }
+.analyzer .seg:nth-child(n+12).on { background: #ff4a2a; }
+
+.w-gauge .track { stroke: #0f2a0f; }
+.w-gauge .fill { stroke: #3cff3c; }
+.w-gauge text.value { font-family: DSEG7, monospace; font-size: 14px; fill: #3cff3c; }
+.w-gauge .tick, .w-needle .tick { stroke: #7a8490; }
+.w-gauge .label, .w-needle .label, .w-knob .label { color: #aab4c0; }
+.w-needle .track { stroke: #7a8490; stroke-width: 1.5; }
+.w-needle .value, .w-knob .value { font: 10px/12px DSEG7, monospace; color: #3cff3c; }
+.w-knob .knob-face { fill: #3a3f47; stroke: #0a0b0e; stroke-width: 4; }
+.w-knob .knob-pointer { stroke: #3cff3c; }
+
+.w-sprite .label { align-self: flex-start; color: #aab4c0; }
+.w-sprite .sheet { width: 100%; image-rendering: pixelated; }
+
+.limit .label { align-self: flex-start; color: #aab4c0; }
+.limit .seg.on { background: #3cdc3c; }
+.limit .seg:nth-child(n+18).on { background: #d8e030; }
+.limit .seg:nth-child(n+23).on { background: #ff4a2a; }
+
+.row { flex-direction: row; justify-content: space-between; align-items: center; counter-increment: row;
+  border-bottom: 1px solid #0c1a0c; padding: 0 2px; }
+.row .label { font: 11px/14px "DejaVu Sans Mono", monospace; color: #2fae2f; text-transform: uppercase; letter-spacing: 0; }
+.row .label::before { content: counter(row) ". "; }
+.row .value { font: 12px/14px "DejaVu Sans Mono", monospace; color: #3cff3c; }
+.row.nodata .value { color: #1d6d1d; }
+.row:hover { background: #0a2a8a; }
