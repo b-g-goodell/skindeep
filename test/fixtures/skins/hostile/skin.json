@@ -1,0 +1,18 @@
+{
+  "name": "hostile",
+  "description": "Test skin: CSS that tries to cover the identity strip and the terminal.",
+  "window": { "width": 1000, "height": 700, "minWidth": 800, "minHeight": 500 },
+  "menu": { "rect": { "right": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+  "terminal": {
+    "rect": { "left": 20, "top": 80, "right": 20, "bottom": 20 },
+    "theme": { "foreground": "#ffffff", "background": "#000000" }
+  },
+  "stylesheet": "skin.css",
+  "panels": [
+    { "class": "cover", "rect": { "left": 0, "top": 0, "width": 10, "height": 10 } },
+    { "class": "banner", "rect": { "left": 0, "top": 0, "right": 0, "height": 70 } }
+  ],
+  "widgets": [
+    { "id": "g", "type": "readout", "bind": "session.clock_s", "label": "clock", "format": "duration", "rect": { "left": 10, "top": 10, "width": 200, "height": 50 } }
+  ]
+}

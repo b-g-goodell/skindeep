@@ -1,0 +1,8 @@
+/* Every rule here tries to escape the skin's box. None may succeed. */
+:host { position: fixed !important; inset: -100px !important; z-index: 2147483647 !important;
+  contain: none !important; isolation: auto !important; overflow: visible !important; }
+.skin { position: fixed !important; inset: -100px !important; overflow: visible !important; z-index: 2147483647 !important; }
+.cover { position: fixed !important; left: -50px !important; top: -50px !important; width: 3000px !important;
+  height: 3000px !important; z-index: 2147483647 !important; background: rgba(255, 0, 0, 0.85) !important; }
+.banner { background: #224; }
+.w { color: yellow; }

@@ -1,0 +1,5 @@
+.top { background: linear-gradient(#2a2f36, #15181c); border-bottom: 2px solid #3c4450; }
+.side { background: #15181c; border-left: 2px solid #3c4450; }
+.w { --fill: #3cff5a; --track: #26303a; --needle: #ff7040; --text: #b8c4d0; --on: #3cff5a; --off: #1a2a1a; --glow: #3cff5a; }
+.w .label { font: 10px monospace; letter-spacing: 1px; }
+.w-readout .value { font: 20px monospace; color: #3cff5a; }

@@ -1,0 +1,36 @@
+{
+ "name": "broken-css",
+ "window": {
+  "width": 1000,
+  "height": 700,
+  "minWidth": 800,
+  "minHeight": 500
+ },
+ "menu": { "rect": { "right": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+ "terminal": {
+  "rect": {
+   "left": 10,
+   "top": 60,
+   "right": 10,
+   "bottom": 10
+  },
+  "theme": {
+   "foreground": "#e0e0e0",
+   "background": "#000000"
+  }
+ },
+ "widgets": [
+  {
+   "id": "g",
+   "type": "gauge",
+   "bind": "context.used_pct",
+   "rect": {
+    "left": 10,
+    "top": 5,
+    "width": 50,
+    "height": 50
+   }
+  }
+ ],
+ "stylesheet": "skin.css"
+}

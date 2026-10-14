@@ -1,0 +1,13 @@
+{
+  "name": "sounds",
+  "window": { "width": 1000, "height": 700, "minWidth": 800, "minHeight": 500 },
+  "menu": { "rect": { "right": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+  "terminal": {
+    "rect": { "left": 10, "top": 60, "right": 10, "bottom": 10 },
+    "theme": { "foreground": "#e0e0e0", "background": "#000000" }
+  },
+  "sounds": [
+    { "file": "sounds/hum.ogg", "mode": "loop", "volume": 0.4 },
+    { "file": "sounds/beep.ogg", "mode": "random", "interval": [1, 2] }
+  ]
+}
