@@ -5,7 +5,8 @@ the maintainer's ruling of one window: the sessions of different agents
 are tabs of it, never separate windows (decision 0023). Revised the
 same day by the maintainer's ruling to read three fields of Claude
 Code's per-pid record.
-Revised 2026-10-13 for the menu list's height and stable rows.
+Revised 2026-10-13 for the menu list's height and stable rows. Revised
+2026-10-14: the known profiles include those the home scan finds.
 
 ## Context
 
@@ -39,7 +40,11 @@ them all and shows any of them on the meters.
   such as a `claude -p` its agent runs, is left out. A process's
   environment is never read: it can hold a key.
 - A session's channel is found among the known profiles: the default,
-  the window's, the open tabs' and those New tab... recorded. Codex's
+  the window's, the open tabs', those New tab... recorded, and those
+  the home scan of decision 0025 finds. The scan is the chooser's,
+  taken again, at most once in 10 s, when a session's profile is not
+  among the profiles known so far, so a session on any profile under
+  the home gets its label and its channel. Codex's
   rollout is found by the routes of decision 0013, with the session's
   start as the launch, and its profile is the one known home whose
   `sessions` folder holds the rollout.
@@ -64,8 +69,9 @@ them all and shows any of them on the meters.
   another (measured 2026-10-12), tested by name alone. Two sessions of
   one profile in one folder may then show each other's transcript, as
   Codex's inexact routes may.
-- With no such evidence, a profile never chosen here or a channel not
-  found, the label says `[?]`: `claude [?]`, never the default's name.
+- With no such evidence, a profile the scan does not find or a channel
+  not found, the label says `[?]`: `claude [?]`, never the default's
+  name.
 - State, from when the channel was last written: working within 10 s,
   waiting within 10 min, else idle, unknown with no channel. A tab of the
   window gives its own: working while `state.busy` is 1.

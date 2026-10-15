@@ -257,12 +257,28 @@ function newTab () {
   }
 }
 
+// The home scan's config dirs (decision 0025), for the chooser and the
+// known profiles. A scan reads every directory under the home, 360 ms
+// on a home of ten profiles, so it is taken again only when older than
+// maxAge ms: 0 for a fresh one.
+let found = []
+let scanned = 0
+function homeScan (maxAge) {
+  if (Date.now() - scanned > maxAge) {
+    found = profiles.scan(os.homedir())
+    scanned = Date.now()
+  }
+  return found
+}
+
 // The profiles a session the app did not start may run on (decision
-// 0027): the default, the window's, the open tabs', those recorded.
+// 0027): the default, the window's, the open tabs', those recorded, and
+// those the home scan found.
 function knownProfiles (kind) {
   const open = tabs.list.filter(t => !readOnly(t) && kindOf(t.cmd) === kind).map(t => profiles.of(t.env, kind))
   const recorded = profiles.read(profilesDir).filter(r => r.agent === kind).map(r => r.dir)
-  return [...new Set([profiles.defaultDir(kind), profiles.of(process.env, kind), ...open, ...recorded])]
+  const seen = found.filter(r => r.agent === kind).map(r => r.dir)
+  return [...new Set([profiles.defaultDir(kind), profiles.of(process.env, kind), ...open, ...recorded, ...seen])]
 }
 
 // A session's transcript or rollout among the known profiles, or null.
@@ -301,7 +317,9 @@ const watching = s => tabs.list.find(t => t.monitor && t.monitor.pid === s.pid &
 // user, this window's tabs first, each { s, tab, row }: its scan entry,
 // the tab that shows it or null, and the menu's row. A session in a tab,
 // its own or one it watches, is that tab's. A session started inside a
-// tab's session is left out.
+// tab's session is left out. A session whose channel the known profiles
+// do not hold has the home scanned again, at most once in RESCAN_MS.
+const RESCAN_MS = 10000
 function listSessions () {
   const now = Date.now()
   const all = sessions.scan()
@@ -321,9 +339,13 @@ function listSessions () {
       out.push({ s, tab, row: Object.assign(row, { tab: tab.id, where: 'tab', label: tab.label, state: busy === 1 ? 'working' : busy === 0 ? 'waiting' : 'unknown' }) })
       continue
     }
-    const found = channelOf(s)
+    let ch = channelOf(s)
+    if (!ch || !ch.profile) {
+      homeScan(RESCAN_MS)
+      ch = channelOf(s)
+    }
     const w = watching(s)
-    out.push({ s: Object.assign({}, s, { found }), tab: w, row: Object.assign(row, { tab: w ? w.id : null, where: w ? 'monitor' : '', label: foreignLabel(s.kind, found), state: sessions.stateOf(found && found.mtime, now) }) })
+    out.push({ s: Object.assign({}, s, { found: ch }), tab: w, row: Object.assign(row, { tab: w ? w.id : null, where: w ? 'monitor' : '', label: foreignLabel(s.kind, ch), state: sessions.stateOf(ch && ch.mtime, now) }) })
   }
   return out.sort((a, b) => (a.tab === null) - (b.tab === null))
 }
@@ -445,12 +467,11 @@ function tabsMenu () {
 // when the window runs that agent, else the bare CLI. The agent and the
 // folder of the active tab come first.
 const profilesDir = profiles.dir()
-let found = []
 
 // fresh: scan the home directory again, as each opening of the dialog
 // does. Forget keeps the scan of the open dialog.
 function chooserState (fresh = true) {
-  if (fresh) found = profiles.scan(os.homedir())
+  if (fresh) homeScan(0)
   const from = tabs.active && !readOnly(tabs.active) ? tabs.active : null
   const windowKind = kindOf(opts.cmd)
   const records = profiles.read(profilesDir)
