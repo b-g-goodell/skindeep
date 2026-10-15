@@ -2,6 +2,13 @@
 
 Skindeep Knickknacks, Instruments, and Needles, Delivering Essentially Equivalent Performance.
 
+[**Read the dev diary**](https://b-g-goodell.github.io/skindeep/): one
+entry per chapter, in plain words, with a picture. The latest:
+
+[![Nine font names on a chalkboard with one circled, beside the front page shrinking](docs/diary/heroes/23-chalk-and-readme.png)](docs/diary/23-chalk-and-readme.md)
+
+[Chapter 23: Chalk, and a shorter front page](docs/diary/23-chalk-and-readme.md)
+
 Winamp-style skins for Claude Code and Codex on Linux. Your agent runs
 as it always does, in a real terminal. Around it, the skin shows gauges,
 needles and lamps that move with what the agent is doing, and a second

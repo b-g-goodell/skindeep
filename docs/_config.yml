@@ -1,0 +1,5 @@
+title: skindeep
+description: Winamp-style skins for Claude Code and Codex on Linux, and the dev diary of how they were built.
+theme: jekyll-theme-minimal
+exclude:
+  - decisions/
