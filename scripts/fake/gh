@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+'use strict'
+// Check fake of the GitHub CLI (decision 0029). Answers only
+// `gh issue list --repo O/R --state all --json createdAt,closedAt ...`
+// with the issues of $SKINNED_FAKE_GH_ISSUES, a JSON file of
+// { "O/R": [{ createdAt, closedAt }] }, and appends each call's argv to
+// $SKINNED_CHECK_OUT/gh-calls.jsonl. Any other call exits 1. It reaches
+// no network.
+
+const fs = require('fs')
+const path = require('path')
+
+const argv = process.argv.slice(2)
+if (process.env.SKINNED_CHECK_OUT) fs.appendFileSync(path.join(process.env.SKINNED_CHECK_OUT, 'gh-calls.jsonl'), JSON.stringify(argv) + '\n')
+const at = name => { const i = argv.indexOf(name); return i < 0 ? null : argv[i + 1] }
+if (argv[0] !== 'issue' || argv[1] !== 'list' || at('--state') !== 'all' || !at('--repo')) process.exit(1)
+let all = {}
+try { all = JSON.parse(fs.readFileSync(process.env.SKINNED_FAKE_GH_ISSUES, 'utf8')) } catch (e) {}
+const list = all[at('--repo')]
+if (!list) {
+  process.stderr.write(`GraphQL: Could not resolve to a Repository with the name '${at('--repo')}'.\n`)
+  process.exit(1)
+}
+process.stdout.write(JSON.stringify(list) + '\n')

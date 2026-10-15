@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+'use strict'
+// Replay fake for skin and viz work (decision 0019). Named `claude` so the
+// app injects its settings. It plays a scenario through the same paths
+// the real CLI uses: the statusLine command and the hook commands from
+// --settings, each run by /bin/sh with its JSON on stdin, and a
+// transcript file named in every payload. It spends
+// no tokens and calls no API. With --continue the transcript starts with
+// the recorded history of test/fixtures/claude/transcript-read.jsonl.
+// --resume <id> appends to that session's transcript, --fork-session with
+// it copies the transcript into a new session, each seeded from the same
+// history when the transcript is gone. Transcripts stay after exit, for
+// a later --resume, and are pruned after a day.
+
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const crypto = require('crypto')
+const { spawn } = require('child_process')
+
+const argv = process.argv.slice(2)
+const si = argv.indexOf('--settings')
+const settings = si >= 0 ? JSON.parse(fs.readFileSync(argv[si + 1], 'utf8')) : {}
+const hookCmd = settings.hooks && settings.hooks.PreToolUse ? settings.hooks.PreToolUse[0].hooks[0].command : null
+const statusCmd = settings.statusLine ? settings.statusLine.command : null
+const fixtures = path.join(__dirname, '..', '..', 'test', 'fixtures', 'claude')
+
+// The --resume picker's refusal to open a session that runs in the
+// background, as Claude Code 2.1.296 prints it when its command line
+// carries session settings, then exit 0 (decision 0030). The job is
+// FAKE_CLAUDE_BACKGROUND. `attach ID` stands for the opened session.
+const bg = process.env.FAKE_CLAUDE_BACKGROUND
+if (bg && si >= 0 && (argv.includes('--resume') || argv.includes('-r'))) {
+  process.stdout.write(`"Fake background session" is running in the background (${bg}). Run\r\n\`claude attach ${bg}\` to open it, or \`claude stop ${bg}\` first to resume it\r\nhere.\r\n`)
+  process.exit(0)
+}
+const attached = argv[0] === 'attach' ? argv[1] : null
+const base = JSON.parse(fs.readFileSync(path.join(fixtures, 'statusline.json'), 'utf8'))
+
+const dir = path.join(process.env.XDG_RUNTIME_DIR || os.homedir(), 'claude-skins-fake')
+fs.mkdirSync(dir, { recursive: true })
+for (const n of fs.readdirSync(dir)) {
+  const p = path.join(dir, n)
+  try { if (n.endsWith('.jsonl') && Date.now() - fs.statSync(p).mtimeMs > 86400000) fs.rmSync(p) } catch (e) {}
+}
+const ri = argv.indexOf('--resume')
+const resumed = ri >= 0 && /^[0-9a-f-]{36}$/i.test(argv[ri + 1] || '') ? argv[ri + 1] : null
+const forked = !!resumed && argv.includes('--fork-session')
+const session = resumed && !forked ? resumed : crypto.randomUUID()
+const transcript = path.join(dir, `${session}.jsonl`)
+const history = () => fs.readFileSync(path.join(fixtures, 'transcript-read.jsonl'))
+const from = resumed && path.join(dir, `${resumed}.jsonl`)
+if (forked) fs.writeFileSync(transcript, fs.existsSync(from) ? fs.readFileSync(from) : history())
+else if (resumed) { if (!fs.existsSync(transcript)) fs.writeFileSync(transcript, history()) }
+else fs.writeFileSync(transcript, argv.includes('--continue') ? history() : '')
+// Message ids of this run, unique across the runs of one transcript.
+const run = crypto.randomBytes(4).toString('hex')
+
+const common = () => ({ session_id: session, transcript_path: transcript, cwd: process.cwd(), hook_event_name: '' })
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const w = s => process.stdout.write(s)
+const rnd = n => Math.floor(Math.random() * n)
+
+let used = 18000
+let cost = 0
+let added = 0
+let removed = 0
+let msg = 0
+
+function cleanup () {
+  process.exit(0)
+}
+for (const s of ['SIGHUP', 'SIGTERM', 'SIGINT']) process.on(s, cleanup)
+if (process.stdin.isTTY) process.stdin.setRawMode(true)
+process.stdin.on('data', d => { if (d.includes(3) || d.includes(4)) cleanup() })
+
+function hook (event, extra = {}) {
+  if (!hookCmd) return
+  const p = spawn('/bin/sh', ['-c', hookCmd], { stdio: ['pipe', 'ignore', 'ignore'] })
+  p.on('error', () => {})
+  p.stdin.on('error', () => {})
+  p.stdin.end(JSON.stringify(Object.assign(common(), { hook_event_name: event }, extra)))
+}
+
+function statusline () {
+  if (!statusCmd) return
+  const j = JSON.parse(JSON.stringify(base))
+  Object.assign(j, { session_id: session, transcript_path: transcript, cwd: process.cwd() })
+  j.context_window.current_usage = { input_tokens: 3, output_tokens: 400, cache_creation_input_tokens: 2000, cache_read_input_tokens: used - 2003 }
+  j.context_window.used_percentage = Math.floor(used / 10000)
+  j.cost.total_cost_usd = cost
+  j.cost.total_lines_added = added
+  j.cost.total_lines_removed = removed
+  const p = spawn('/bin/sh', ['-c', statusCmd], { stdio: ['pipe', 'ignore', 'ignore'] })
+  p.on('error', () => {})
+  p.stdin.on('error', () => {})
+  p.stdin.end(JSON.stringify(j))
+}
+
+function assistant (outTokens) {
+  msg++
+  const line = { type: 'assistant', isSidechain: false, timestamp: new Date().toISOString(), message: { id: `msg_fake_${run}_${msg}`, model: 'claude-fake', usage: { input_tokens: 3, cache_creation_input_tokens: 2000, cache_read_input_tokens: used - 2003, output_tokens: outTokens } } }
+  fs.appendFileSync(transcript, JSON.stringify(line) + '\n')
+}
+
+const WORDS = 'the context gauge needle sweeps while tokens stream through the console and the meters glow'.split(' ')
+const TOOLS = ['Read', 'Read', 'Edit', 'Bash', 'Grep', 'WebFetch', 'Write']
+
+async function burst (ms) {
+  const end = Date.now() + ms
+  while (Date.now() < end) {
+    const n = 4 + rnd(10)
+    w('\x1b[38;2;' + (150 + rnd(100)) + ';' + (150 + rnd(100)) + ';255m' + Array.from({ length: n }, () => WORDS[rnd(WORDS.length)]).join(' ') + '\x1b[0m\r\n')
+    await sleep(40 + rnd(80))
+  }
+}
+
+async function turn (k) {
+  hook('UserPromptSubmit')
+  w(`\r\n\x1b[1m> fake prompt ${k}\x1b[0m\r\n`)
+  await burst(1500)
+  const calls = 1 + rnd(4)
+  for (let i = 0; i < calls; i++) {
+    const tool = TOOLS[rnd(TOOLS.length)]
+    const id = 'toolu_' + crypto.randomBytes(6).toString('hex')
+    hook('PreToolUse', { tool_name: tool, tool_use_id: id })
+    w(`\x1b[32m  ${tool}\x1b[0m(...)\r\n`)
+    await sleep(300 + rnd(500))
+    hook('PostToolUse', { tool_name: tool, tool_use_id: id, duration_ms: 200 })
+    if (tool === 'Edit' || tool === 'Write') { added += 5 + rnd(40); removed += rnd(10) }
+  }
+  if (k % 3 === 0) {
+    hook('SubagentStart', { agent_id: 'a' + k, agent_type: 'general-purpose' })
+    await burst(2500)
+    hook('SubagentStop', { agent_id: 'a' + k, agent_type: 'general-purpose' })
+  }
+  await burst(1000 + rnd(2000))
+  used += 3000 + rnd(9000)
+  cost += 0.02 + Math.random() * 0.1
+  assistant(200 + rnd(900))
+  statusline()
+  hook('Stop')
+  w('\x1b[2m* done\x1b[0m\r\n')
+}
+
+;(async () => {
+  w(`\x1b[1;38;2;215;119;87mfake claude\x1b[0m replay for claude-skins, ${attached ? `attached to background session ${attached}` : `session ${session}`}\r\n`)
+  hook('SessionStart', { source: 'startup', model: 'claude-fake' })
+  statusline()
+  for (let k = 1; ; k++) {
+    await turn(k)
+    await sleep(2500 + rnd(3000))
+  }
+})()

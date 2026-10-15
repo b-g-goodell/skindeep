@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+'use strict'
+// Replay fake of the Codex TUI for the live checks (decision 0019). Named
+// `codex` so the app dispatches the Codex adapter. It writes a rollout
+// where Codex 0.162 does, $CODEX_HOME/sessions/YYYY/MM/DD/, replaying
+// test/fixtures/codex/rollout.jsonl, and spends no tokens. `resume <id>`
+// appends to that thread's rollout, `fork <id>` starts a new thread whose
+// first line references that rollout's history and copies none of it, as
+// Codex 0.162.1 does. Unlike Codex, it writes the rollout at start, not
+// at the first prompt.
+
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const crypto = require('crypto')
+
+const argv = process.argv.slice(2)
+const home = process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
+const sessions = path.join(home, 'sessions')
+const fixture = fs.readFileSync(path.join(__dirname, '..', '..', 'test', 'fixtures', 'codex', 'rollout.jsonl'), 'utf8').split('\n').filter(Boolean)
+const w = s => process.stdout.write(s)
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const pad = n => String(n).padStart(2, '0')
+
+// The thread id after a subcommand, as codex resume and codex fork take it.
+function after (sub) {
+  const i = argv.indexOf(sub)
+  return i < 0 ? null : argv.slice(i + 1).find(a => /^[0-9a-f-]{36}$/i.test(a)) || null
+}
+
+function find (id) {
+  const walk = d => {
+    let out = []
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name)
+      if (e.isDirectory()) out = out.concat(walk(p))
+      else if (e.name.endsWith(`-${id}.jsonl`)) out.push(p)
+    }
+    return out
+  }
+  try { return walk(sessions)[0] || null } catch (e) { return null }
+}
+
+function create (id, extra = {}) {
+  const now = new Date()
+  const dir = path.join(sessions, String(now.getFullYear()), pad(now.getMonth() + 1), pad(now.getDate()))
+  fs.mkdirSync(dir, { recursive: true })
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
+  const file = path.join(dir, `rollout-${stamp}-${id}.jsonl`)
+  const meta = { type: 'session_meta', payload: Object.assign({ id, timestamp: now.toISOString(), cwd: process.cwd(), source: 'cli', originator: 'codex-tui', cli_version: 'fake' }, extra), timestamp: now.toISOString() }
+  fs.writeFileSync(file, JSON.stringify(meta) + '\n')
+  return file
+}
+
+let file
+let thread
+const resumed = after('resume')
+const forked = after('fork')
+if (resumed) {
+  file = find(resumed)
+  thread = resumed
+  if (!file) {
+    w(`fake codex: no rollout of ${resumed}\r\n`)
+    process.exit(1)
+  }
+} else if (forked) {
+  const from = find(forked)
+  if (!from) {
+    w(`fake codex: no rollout of ${forked}\r\n`)
+    process.exit(1)
+  }
+  thread = crypto.randomUUID()
+  const n = fs.readFileSync(from, 'utf8').split('\n').filter(Boolean).length
+  const base = { thread_id: forked, end_byte_offset: fs.statSync(from).size, end_ordinal_exclusive: n }
+  file = create(thread, { forked_from_id: forked, forked_from_ordinal_exclusive: n, history_mode: 'paginated', history_base: base })
+} else {
+  thread = crypto.randomUUID()
+  file = create(thread)
+}
+
+function cleanup () {
+  process.exit(0)
+}
+for (const s of ['SIGHUP', 'SIGTERM', 'SIGINT']) process.on(s, cleanup)
+if (process.stdin.isTTY) process.stdin.setRawMode(true)
+process.stdin.on('data', d => { if (d.includes(3) || d.includes(4)) cleanup() })
+
+;(async () => {
+  w(`\x1b[1;38;2;120;180;255mfake codex\x1b[0m replay for claude-skins, thread ${thread}\r\n`)
+  for (const line of fixture) {
+    const o = JSON.parse(line)
+    if (o.type === 'session_meta') continue
+    o.timestamp = new Date().toISOString()
+    fs.appendFileSync(file, JSON.stringify(o) + '\n')
+    if (o.type === 'response_item') w(`\x1b[32m  ${o.payload.name}\x1b[0m(...)\r\n`)
+    await sleep(120)
+  }
+  w('\x1b[2m* replay done\x1b[0m\r\n')
+  setInterval(() => {}, 1 << 30)
+})()

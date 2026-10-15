@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+'use strict'
+// Check fake (decisions 0019, 0023). Prints 300 numbered lines, then
+// appends every byte it reads to $SKINNED_CHECK_OUT/<pid>.bin, so a check
+// sees which tab got a key and whether each tab's scrollback is whole.
+// The bytes # and a digit end it with that digit as its status.
+
+const fs = require('fs')
+const path = require('path')
+
+const file = path.join(process.env.SKINNED_CHECK_OUT, `${process.pid}.bin`)
+fs.writeFileSync(file, '')
+if (process.stdin.isTTY) process.stdin.setRawMode(true)
+let out = ''
+for (let i = 1; i <= 300; i++) out += `pid ${process.pid} line ${i}\r\n`
+process.stdout.write(out)
+let prev = ''
+process.stdin.on('data', d => {
+  fs.appendFileSync(file, d)
+  const s = prev + d.toString('latin1')
+  const m = s.match(/#([0-9])/)
+  if (m) process.exit(Number(m[1]))
+  prev = s.slice(-1)
+})
+for (const s of ['SIGHUP', 'SIGTERM', 'SIGINT']) process.on(s, () => process.exit(0))
