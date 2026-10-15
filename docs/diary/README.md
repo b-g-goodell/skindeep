@@ -21,3 +21,4 @@ merged, in plain words, with a picture.
 | <a href="14-window-and-install.md"><img src="heroes/14-window-and-install.png" width="240" alt=""></a> | [Chapter 14: The window, at last](14-window-and-install.md) | Wednesday, October 14, 2026, at 8:34 PM |
 | <a href="15-library-and-coffee.md"><img src="heroes/15-library-and-coffee.png" width="240" alt=""></a> | [Chapter 15: A library and a coffee shop](15-library-and-coffee.md) | Wednesday, October 14, 2026, at 8:53 PM |
 | <a href="16-readme.md"><img src="heroes/16-readme.png" width="240" alt=""></a> | [Chapter 16: The front page](16-readme.md) | Wednesday, October 14, 2026, at 9:11 PM |
+| <a href="17-chooser-and-strip.md"><img src="heroes/17-chooser-and-strip.png" width="240" alt=""></a> | [Chapter 17: Every profile on the machine](17-chooser-and-strip.md) | Wednesday, October 14, 2026, at 9:33 PM |

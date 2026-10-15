@@ -651,6 +651,13 @@
     "notes": "the picture of the dev diary entry of the same name. It shows skins whose fonts and images are listed in this file"
   },
   {
+    "path": "docs/diary/heroes/17-chooser-and-strip.png",
+    "source": "drawn with Pillow for the dev diary",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name"
+  },
+  {
     "path": "skins/library/fonts/GochiHand/GochiHand-Regular.ttf",
     "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/GochiHand-Regular.ttf",
     "author": "Juan Pablo del Peral (Huerta Tipografica)",
