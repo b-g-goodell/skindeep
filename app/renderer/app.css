@@ -1,0 +1,176 @@
+/* App-owned layout. Skin CSS never reaches this document (decision 0005). */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+
+#strip {
+  position: absolute; top: 0; left: 0; right: 0; height: 22px; z-index: 30;
+  display: flex; gap: 14px; align-items: center; padding: 0 8px;
+  box-sizing: border-box; overflow: hidden; white-space: nowrap;
+  background: #101010; color: #c8c8c8; border-bottom: 1px solid #333;
+  font: 12px/22px "DejaVu Sans Mono", monospace;
+}
+#strip-label { color: #fff; font-weight: bold; flex: none; }
+#strip-cmd { color: #9fb3c8; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+#strip-notice { color: #e0b050; flex: none; }
+#strip-cwd { color: #888; flex: none; }
+
+/* The tab strip (decision 0023), shown from the second tab on. Its
+   height is TAB_STRIP of app/main.js. */
+#tabs {
+  position: absolute; top: 22px; left: 0; right: 0; height: 24px; z-index: 30;
+  display: flex; align-items: stretch; box-sizing: border-box; overflow: hidden;
+  background: #0b0b0b; color: #9a9a9a; border-bottom: 1px solid #333;
+  font: 12px/23px "DejaVu Sans Mono", monospace; user-select: none;
+}
+#tabs[hidden] { display: none; }
+#tabs .tab {
+  display: flex; align-items: center; gap: 6px; padding: 0 4px 0 8px;
+  min-width: 60px; max-width: 240px; flex: 0 1 auto; overflow: hidden; white-space: nowrap;
+  border-right: 1px solid #262626; cursor: default;
+}
+#tabs .tab.active { background: #1e1e1e; color: #fff; }
+#tabs .tab:not(.active):hover, #tabs .new:hover { background: #161616; }
+#tabs .tab.dragging { opacity: 0.6; }
+#tabs .label, #tabs .folder { overflow: hidden; text-overflow: ellipsis; }
+#tabs .folder { color: #777; }
+#tabs .mark { flex: none; width: 7px; height: 7px; border-radius: 50%; visibility: hidden; }
+#tabs .unseen .mark { visibility: visible; background: #6fa8dc; }
+#tabs .busy .mark { visibility: visible; background: #e0b050; animation: tab-busy 0.8s ease-in-out infinite alternate; }
+@keyframes tab-busy { from { opacity: 0.25; } to { opacity: 1; } }
+#tabs .close { flex: none; width: 16px; text-align: center; color: #777; border-radius: 3px; }
+#tabs .close:hover { background: #3a3a3a; color: #fff; }
+#tabs .new { flex: none; width: 26px; text-align: center; }
+
+#stage { position: absolute; top: 22px; left: 0; right: 0; bottom: 0; }
+body.tabbed #stage { top: 46px; }
+
+#skin-wrap {
+  position: absolute; inset: 0; z-index: 0;
+  isolation: isolate; contain: strict; overflow: hidden;
+}
+
+#term { position: absolute; inset: 4px; z-index: 10; }
+/* One pane per tab. A hidden pane keeps its layout (decision 0023). */
+#term .pane { position: absolute; inset: 0; visibility: hidden; }
+#term .pane.active { visibility: visible; }
+
+/* The skin's menu button, drawn by the app (decision 0022). A state the
+   skin gives no image gets the app's effect. */
+#menu-button { position: absolute; z-index: 15; cursor: pointer; background: var(--img) center / 100% 100% no-repeat; }
+#menu-button:hover { background-image: var(--img-hover); }
+#menu-button:hover:not(.own-hover) { filter: brightness(1.35); outline: 1px solid rgba(255, 255, 255, 0.55); }
+#menu-button.down, #menu-button.open { background-image: var(--img-pressed); }
+#menu-button.down:not(.own-pressed), #menu-button.open:not(.own-pressed) { transform: translateY(1px); filter: brightness(0.8); }
+#menu-button .dot { position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; border-radius: 50%;
+  background: #ff3b30; box-shadow: 0 0 0 1px #000; }
+
+#menu {
+  position: absolute; z-index: 20; min-width: 180px; max-width: 520px; padding: 4px 0;
+  background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a;
+  font: 13px/1.6 "DejaVu Sans", sans-serif; user-select: none;
+}
+#menu .item { padding: 0 14px; white-space: pre; cursor: default; }
+#menu .item:hover { background: #2f5d8a; }
+#menu .heading { color: #8a929c; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+#menu .heading:hover { background: none; }
+#menu .current { color: #fff; font-weight: bold; }
+#menu hr { border: 0; border-top: 1px solid #3a3f47; margin: 4px 0; }
+#menu .error { margin: 4px 10px; padding: 6px; max-height: 240px; overflow: auto; white-space: pre-wrap;
+  background: #3a1616; color: #ffb4b4; font: 11px/1.4 "DejaVu Sans Mono", monospace; }
+#menu .note { margin: 4px 10px; padding: 6px; white-space: pre-wrap; background: #16283a; color: #c8dcf0;
+  font: 11px/1.4 "DejaVu Sans Mono", monospace; }
+#menu .problem { color: #ffb4b4; }
+#menu .disabled { color: #5c636c; }
+#menu .disabled:hover { background: none; }
+#menu .keys { float: right; margin-left: 28px; color: #8a929c; }
+/* A row with a flyout (the visualization's modes): the flyout opens
+   beside the drop-down while the pointer is on the row or in it. */
+#menu .submenu { position: relative; }
+#menu .submenu::after { content: '\25B8'; float: right; margin-left: 28px; color: #8a929c; }
+#menu .submenu.open { background: #2f5d8a; }
+#menu .sub { display: none; position: absolute; left: 100%; top: -5px; min-width: 160px; padding: 4px 0;
+  background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a; font-weight: normal; }
+#menu .sub.left { left: auto; right: 100%; }
+#menu .submenu.open > .sub { display: block; }
+/* A long path shows its end: the line runs right to left, so it
+   overflows and ellipsizes at its left, and the bdi keeps the path's own
+   order. */
+#menu .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+#menu .path bdi { direction: ltr; unicode-bidi: isolate; }
+#menu .located { display: flex; gap: 14px; }
+#menu .located .location { flex: 1 1 auto; min-width: 60px; color: #a7b0ba; font-weight: normal; }
+
+/* New tab... (decision 0025): app DOM over the skin and the tab strip,
+   under the identity strip. */
+#chooser {
+  position: absolute; top: 22px; left: 0; right: 0; bottom: 0; z-index: 35;
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 48px;
+  background: #000a; font: 13px/1.6 "DejaVu Sans", sans-serif;
+}
+#chooser[hidden] { display: none; }
+#chooser .dialog {
+  width: min(640px, calc(100% - 32px)); box-sizing: border-box; padding: 10px 14px 12px;
+  background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a;
+}
+#chooser .title { font-weight: bold; color: #fff; margin-bottom: 6px; }
+#chooser .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+#chooser .name { flex: none; width: 72px; color: #8a929c; }
+#chooser .agents { display: flex; gap: 18px; }
+#chooser select, #chooser input:not([type]), #chooser input[type="text"] {
+  flex: 1 1 auto; min-width: 0; background: #0f1114; color: #e6e9ed; border: 1px solid #4a505a;
+  font: 12px/1.6 "DejaVu Sans Mono", monospace; padding: 1px 4px;
+}
+#chooser button {
+  flex: none; background: #2a2e35; color: #d8dde3; border: 1px solid #4a505a; padding: 1px 10px;
+  font: 12px/1.6 "DejaVu Sans", sans-serif;
+}
+#chooser button:hover:not(:disabled) { background: #2f5d8a; }
+#chooser button:disabled { color: #666; }
+#chooser .hint { margin-left: 80px; color: #8a929c; font-size: 11px; }
+#chooser .hint[hidden], #chooser .error[hidden] { display: none; }
+#chooser .env, #chooser .dropped { font-family: "DejaVu Sans Mono", monospace; overflow-wrap: anywhere; }
+#chooser .dropped { color: #e0b050; }
+#chooser .error { margin: 6px 0 0 80px; padding: 6px; white-space: pre-wrap; background: #3a1616; color: #ffb4b4;
+  font: 11px/1.4 "DejaVu Sans Mono", monospace; }
+#chooser .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+#chooser .open { background: #2f5d8a; }
+/* Agent sessions in the menu (decision 0027). */
+#menu .session { display: flex; gap: 10px; white-space: nowrap; }
+#menu .session span { flex: none; }
+#menu .session .s-label { width: 120px; overflow: hidden; text-overflow: ellipsis; }
+#menu .session .s-folder { flex: 1 1 auto; min-width: 60px; overflow: hidden; text-overflow: ellipsis; color: #a7b0ba; }
+#menu .session .s-state { width: 58px; }
+#menu .session .working { color: #e0b050; }
+#menu .session .waiting { color: #8fd18f; }
+#menu .session .idle, #menu .session .unknown { color: #8a929c; }
+#menu .session .s-age { width: 38px; text-align: right; color: #8a929c; }
+#menu .session .s-where { width: 52px; color: #6fa8dc; }
+#menu .none { color: #8a929c; }
+#menu .none:hover { background: none; }
+
+/* The sessions dashboard's pane (decision 0028): app DOM at the
+   terminal's rect, in the terminal theme's foreground. */
+#term .pane.dashboard { overflow: auto; outline: none; padding: 6px 8px; box-sizing: border-box;
+  font: 12px/1.5 "DejaVu Sans Mono", monospace; }
+.dashboard .d-head { font-weight: bold; margin-bottom: 6px; }
+.dashboard .d-across { display: flex; gap: 10px; margin-bottom: 10px; }
+.dashboard .d-chart { flex: 1 1 0; min-width: 0; position: relative; border: 1px solid #ffffff22; padding: 3px 6px; }
+.dashboard .d-title { opacity: 0.7; font-size: 11px; }
+.dashboard .d-value { position: absolute; top: 3px; right: 6px; font-weight: bold; }
+.dashboard .d-chart canvas { display: block; width: 100%; height: 56px; }
+.dashboard .d-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; border-bottom: 1px solid #ffffff14; cursor: default; }
+.dashboard .d-row:not(.d-header):not(.ended):hover { background: #ffffff10; }
+.dashboard .d-header { opacity: 0.6; font-size: 11px; }
+.dashboard .d-row.ended { opacity: 0.4; }
+.dashboard .d-label { flex: none; width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard .d-folder { flex: 1 1 120px; min-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.75; }
+.dashboard .d-state { flex: none; width: 58px; }
+.dashboard .d-state.working { color: #e0b050; }
+.dashboard .d-state.waiting { color: #8fd18f; }
+.dashboard .d-spark { flex: none; width: 96px; display: flex; align-items: center; gap: 4px; }
+.dashboard .d-spark canvas { width: 54px; height: 20px; flex: none; }
+.dashboard .d-board { flex: none; width: 104px; display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; }
+.dashboard .d-board canvas { width: 46px; height: 20px; flex: none; }
+.dashboard .d-header .d-board { font-size: 11px; }
+.dashboard .d-num { font-size: 11px; opacity: 0.85; white-space: nowrap; overflow: hidden; }
+.dashboard .d-header .d-spark { font-size: 11px; overflow: hidden; white-space: nowrap; }
+.dashboard .d-none { opacity: 0.7; padding: 6px 0; }

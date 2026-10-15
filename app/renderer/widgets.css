@@ -1,0 +1,43 @@
+/* Structure and defaults of the widgets, loaded in the skin's shadow
+   root before the skin's own stylesheet, which overrides any of it. */
+.skin { position: absolute; inset: 0; overflow: hidden; }
+.panel, .w { position: absolute; box-sizing: border-box; }
+.w {
+  --fill: #4fd06a; --track: #2a2f36; --needle: #ff6a3d; --glow: transparent;
+  --on: #5cff70; --off: #20302a; --text: #c8d0d8;
+  color: var(--text); font: 11px/1.2 "DejaVu Sans Mono", monospace;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.w.nodata { opacity: 0.55; }
+.w .label { text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+.w .value { white-space: nowrap; }
+
+.w-gauge .dial, .w-needle .dial { width: 100%; flex: 1 1 auto; min-height: 0; overflow: visible; }
+.w-gauge .track, .w-needle .track { stroke: var(--track); }
+.w-gauge .fill { stroke: var(--fill); filter: drop-shadow(0 0 2px var(--glow)); }
+.w-gauge .tick, .w-needle .tick { stroke: var(--text); stroke-width: 1; opacity: 0.6; }
+.w-gauge .mark { stroke: var(--needle); stroke-width: 2.5; }
+.w-gauge text.value { fill: var(--text); font-size: 16px; }
+.w-needle .track { stroke-width: 2; }
+.w-needle .needle { stroke: var(--needle); stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 2px var(--glow)); }
+.w-needle .pivot { fill: var(--needle); }
+
+.w-knob .knob-box { flex: 1 1 auto; width: 100%; min-height: 0; overflow: visible; }
+.w-knob .knob-face { fill: #2a2f36; stroke: var(--track); stroke-width: 3; }
+.w-knob .knob-pointer { stroke: var(--fill); stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 0 2px var(--glow)); }
+
+.w-bar { align-items: stretch; }
+.w-bar .track { flex: 1 1 auto; background: var(--track); position: relative; overflow: hidden; }
+.w-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--fill); box-shadow: 0 0 6px var(--glow); }
+.w-bar.vertical .fill { top: auto; right: 0; width: auto; height: 0; }
+.w-bar .seg { flex: 1 1 0; background: var(--off); }
+.w-bar .seg.on { background: var(--fill); box-shadow: 0 0 4px var(--glow); }
+
+.w-led { flex-direction: row; gap: 6px; }
+.w-led .lamp { width: 12px; height: 12px; border-radius: 50%; background: var(--off); flex: none; }
+.w-led .lamp.on { background: var(--on); box-shadow: 0 0 8px var(--on); }
+
+.w-readout { align-items: flex-start; }
+.w-readout .value { font-size: 18px; }
+
+.w-sprite .sheet { flex: 1 1 auto; width: 100%; min-height: 0; background-repeat: no-repeat; image-rendering: pixelated; }

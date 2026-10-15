@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' skin:; img-src 'self' skin: data:; font-src 'self' skin:; media-src skin:">
+<link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="strip"><span id="strip-label"></span><span id="strip-cmd"></span><span id="strip-notice"></span><span id="strip-cwd"></span></div>
+<div id="tabs" hidden></div>
+<div id="stage">
+  <div id="skin-wrap"></div>
+  <div id="term"></div>
+  <div id="menu-button" role="button" aria-label="Menu" hidden><span class="dot" hidden></span></div>
+</div>
+<div id="menu" hidden></div>
+<div id="chooser" hidden></div>
+<script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="../../node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js"></script>
+<script src="../../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
+<script src="../../node_modules/@xterm/addon-webgl/lib/addon-webgl.js"></script>
+<script src="terminal.js"></script>
+<script src="widgets.js"></script>
+<script src="skin.js"></script>
+<script src="chooser.js"></script>
+<script src="sounds.js"></script>
+<script src="menu.js"></script>
+<script src="tabs.js"></script>
+<script src="dashboard.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>
