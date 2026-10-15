@@ -121,5 +121,6 @@ own keys, pastes and mouse reports.
 | [0031](decisions/0031-fuzz.md) | Fuzz testing with written predictions |
 | [0032](decisions/0032-rename.md) | A session's name in its tab, by /rename or a right click |
 | [0033](decisions/0033-dials.md) | Readouts open dials on the sessions dashboard |
+| [0034](decisions/0034-checklist.md) | The agent's task list in a list widget |
 
 Channel facts: `docs/research/side-channels.md`.

@@ -1,7 +1,8 @@
 # 0011 Metric vocabulary
 
 Status: accepted 2026-10-11, the usage limits' resets and spend limit
-added 2026-10-13.
+added 2026-10-13, the checklist family added 2026-10-14 (decision
+0034).
 
 ## Context
 
@@ -31,6 +32,9 @@ Dotted names. A metric absent for the current CLI reads as "no data"
   tool type, `agents.active`, `lines.added`, `lines.removed`,
   `state.busy` (1 between prompt submit and stop).
 - Identity: `model.name` (text), `session.clock_s`, `session.compactions`.
+- Checklist (decision 0034): `checklist.items`, a list of `{ text,
+  state }`, the one list-valued name, `checklist.count`,
+  `checklist.done`.
 - Generic: `pty.out_bps`, `pty.in_kps`, `pty.idle_s`, `proc.cpu_pct`,
   `proc.mem_mb`.
 - Events (pulse counters that only increase): `event.output`,
@@ -83,8 +87,8 @@ and Generic do, and the bus exports no other write.
 - History: a sample or event marked as history (replayed transcript
   lines) is dropped. Counters apply.
 - Reset, a new session: every name under `context.`, `tokens.`,
-  `cost.`, `lines.`, `tools.`, `agents.`, `cache.`, `state.` and
-  `session.compactions` is forgotten, and in the same call the source
+  `cost.`, `lines.`, `tools.`, `agents.`, `cache.`, `state.`,
+  `checklist.` and `session.compactions` is forgotten, and in the same call the source
   reseeds its defaults and writes 0 to its rates. `event.*`,
   `model.name` and `limits.*` survive.
 - A write to a name outside the vocabulary (`app/metrics/names.js`) is

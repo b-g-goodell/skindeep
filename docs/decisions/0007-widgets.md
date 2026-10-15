@@ -1,7 +1,8 @@
 # 0007 Widget set and animation
 
 Status: accepted 2026-10-11. A numeric readout takes a click since
-decision 0033.
+decision 0033, and an eighth type, `list`, shows the agent's
+task list since decision 0034.
 
 ## Context
 

@@ -38,6 +38,9 @@ const NAMES = {
   'model.name': 'model name (text)',
   'session.clock_s': 'seconds since launch',
   'session.compactions': 'compactions this session',
+  'checklist.items': 'the agent\'s task list, [{ text, state }], state todo, doing or done',
+  'checklist.count': 'items of the agent\'s task list',
+  'checklist.done': 'items of the agent\'s task list that are done',
   'pty.out_bps': 'terminal output bytes per second',
   'pty.in_kps': 'input writes (keys, pastes) per second',
   'pty.idle_s': 'seconds since the last terminal output',
@@ -49,6 +52,13 @@ const NAMES = {
   'event.stop': 'counter: turns finished',
   'event.compact': 'counter: compactions',
   'event.agent': 'counter: subagents started'
+}
+
+// The names whose value is a list, not a number (decision 0034).
+const LISTS = new Set(['checklist.items'])
+
+function isList (name) {
+  return LISTS.has(name)
 }
 
 // The metric of tool `name`: tools.<Name>, unsafe characters as _.
@@ -65,4 +75,4 @@ function known (name) {
   return Object.prototype.hasOwnProperty.call(NAMES, name) || /^tools\.[A-Za-z0-9_]{1,64}$/.test(name)
 }
 
-module.exports = { NAMES, known, toolKey, num }
+module.exports = { NAMES, LISTS, isList, known, toolKey, num }

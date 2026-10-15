@@ -667,6 +667,19 @@
     "height": 21
    },
    "class": "row"
+  },
+  {
+   "id": "todo",
+   "type": "list",
+   "bind": "checklist.items",
+   "label": "tasks",
+   "rect": {
+    "right": 22,
+    "top": 186,
+    "width": 244,
+    "bottom": 24
+   },
+   "class": "tracklist"
   }
  ]
 }

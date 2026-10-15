@@ -22,6 +22,13 @@
 .line .label::after { content: " . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ."; color: rgba(244, 234, 214, 0.45); }
 .line .value { flex: none; font: bold 24px/24px "Amatic SC", cursive; letter-spacing: 1px; color: #ffe2a8; }
 
+/* The agent's task list (decision 0034), chalked over the menu lines. */
+.skin.checklist .line { visibility: hidden; }
+.chalk-list .item { font: bold 22px/28px "Amatic SC", cursive; letter-spacing: 1.5px; color: #f4ead6; gap: 10px; }
+.chalk-list .item .mark { color: rgba(244, 234, 214, 0.7); }
+.chalk-list .item.doing { color: #ffe2a8; }
+.chalk-list .item.done { opacity: 0.6; }
+
 /* String lights across the wall: they flare at each tool call. */
 .lights { display: block; }
 .lights.nodata { opacity: 1; }

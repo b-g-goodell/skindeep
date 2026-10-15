@@ -146,4 +146,95 @@ class TranscriptTotals {
   }
 }
 
-module.exports = { toolClass, hookMeta, fromStatusline, fromHook, usage, contextFrom, TranscriptTotals }
+// The agent's task list as the transcript shows it (decision 0034).
+// A TodoWrite call replaces it whole, a TaskCreate adds an item, a
+// TaskUpdate changes or deletes one, and a markdown task list in an
+// assistant text replaces it. An item is { id, text, state }, state
+// todo, doing or done. Sidechain lines are a subagent's.
+const STATE = { pending: 'todo', in_progress: 'doing', completed: 'done' }
+const TEXT_MAX = 200
+const TASK_LINE = /^[ \t]*[-*+][ \t]+\[([ xX])\][ \t]+(\S.*)$/gm
+
+const text = s => String(s === undefined || s === null ? '' : s).trim().slice(0, TEXT_MAX)
+
+class Checklist {
+  constructor () {
+    this.items = []
+    // TaskCreate calls whose result, which names the task's id, is
+    // yet to come, by tool_use id.
+    this.pending = new Map()
+    this.created = 0
+  }
+
+  // One transcript line. True when the list changed.
+  add (obj) {
+    if (!obj || typeof obj !== 'object' || obj.isSidechain) return false
+    const msg = obj.message || {}
+    const content = Array.isArray(msg.content) ? msg.content : []
+    let changed = false
+    if (obj.type === 'assistant') {
+      for (const b of content) {
+        if (!b || typeof b !== 'object') continue
+        if (b.type === 'tool_use') changed = this.toolUse(b) || changed
+        else if (b.type === 'text' && typeof b.text === 'string') changed = this.markdown(b.text) || changed
+      }
+    } else if (obj.type === 'user') {
+      const r = obj.toolUseResult
+      const task = r && typeof r === 'object' && r.task && typeof r.task === 'object' ? r.task : null
+      for (const b of content) {
+        if (!b || b.type !== 'tool_result' || !this.pending.has(b.tool_use_id)) continue
+        const item = this.pending.get(b.tool_use_id)
+        this.pending.delete(b.tool_use_id)
+        if (task && task.id !== undefined && task.id !== null) item.id = String(task.id)
+      }
+    }
+    return changed
+  }
+
+  toolUse (b) {
+    const input = b.input && typeof b.input === 'object' ? b.input : {}
+    if (b.name === 'TodoWrite') {
+      if (!Array.isArray(input.todos)) return false
+      this.items = input.todos.filter(t => t && typeof t === 'object')
+        .map((t, i) => ({ id: String(i + 1), text: text(t.content !== undefined ? t.content : t.activeForm), state: STATE[t.status] || 'todo' }))
+      this.pending.clear()
+      return true
+    }
+    if (b.name === 'TaskCreate') {
+      if (typeof input.subject !== 'string') return false
+      const item = { id: String(++this.created), text: text(input.subject), state: 'todo' }
+      this.items.push(item)
+      if (typeof b.id === 'string') this.pending.set(b.id, item)
+      return true
+    }
+    if (b.name === 'TaskUpdate') {
+      const item = this.items.find(i => i.id === String(input.taskId))
+      if (!item) return false
+      if (input.status === 'deleted') {
+        this.items = this.items.filter(i => i !== item)
+        return true
+      }
+      let changed = false
+      if (STATE[input.status] && STATE[input.status] !== item.state) { item.state = STATE[input.status]; changed = true }
+      if (typeof input.subject === 'string' && text(input.subject) !== item.text) { item.text = text(input.subject); changed = true }
+      return changed
+    }
+    return false
+  }
+
+  markdown (s) {
+    const items = []
+    for (const m of s.matchAll(TASK_LINE)) items.push({ id: String(items.length + 1), text: text(m[2]), state: /x/i.test(m[1]) ? 'done' : 'todo' })
+    if (!items.length) return false
+    this.items = items
+    this.pending.clear()
+    return true
+  }
+
+  metrics () {
+    const items = this.items.map(i => ({ text: i.text, state: i.state }))
+    return [['checklist.items', items], ['checklist.count', items.length], ['checklist.done', items.filter(i => i.state === 'done').length]]
+  }
+}
+
+module.exports = { toolClass, hookMeta, fromStatusline, fromHook, usage, contextFrom, TranscriptTotals, Checklist }

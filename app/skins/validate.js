@@ -27,7 +27,8 @@ const TYPES = {
   bar: ['orientation', 'segments', 'gap', 'resets', 'fallback'],
   led: ['on', 'pulse', 'pulseMs', 'blink'],
   readout: ['prefix', 'suffix', 'resets', 'fallback'],
-  sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps']
+  sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps'],
+  list: ['rows']
 }
 const FORMAT = /^(int|fixed:[0-4]|pct|usd|tokens|duration|until|bytes|text)$/
 const CLASS = /^[a-z0-9-]+( [a-z0-9-]+)*$/
@@ -260,6 +261,8 @@ function validate (dir) {
         else ids.add(w.id)
         if (!isStr(w.bind)) err(`${fld}.bind`, 'missing metric name')
         else if (!names.known(w.bind)) err(`${fld}.bind`, `unknown metric "${w.bind}"`)
+        else if (w.type === 'list' && !names.isList(w.bind)) err(`${fld}.bind`, `"${w.bind}": a list shows a list-valued metric, one of ${[...names.LISTS].join(', ')}`)
+        else if (w.type !== 'list' && names.isList(w.bind)) err(`${fld}.bind`, `"${w.bind}": a list-valued metric needs a list widget`)
         if ('resets' in w && (!isStr(w.resets) || !names.known(w.resets))) err(`${fld}.resets`, `unknown metric "${w.resets}"`)
         if ('fallback' in w) {
           const f = w.fallback
@@ -274,7 +277,7 @@ function validate (dir) {
         rect(w.rect, `${fld}.rect`, false)
         if ('class' in w && (!isStr(w.class) || !CLASS.test(w.class))) err(`${fld}.class`, 'must be lowercase class names')
         if ('label' in w && typeof w.label !== 'string') err(`${fld}.label`, 'must be a string')
-        for (const k of ['min', 'max', 'startAngle', 'endAngle', 'thickness', 'ticks', 'segments', 'gap', 'on', 'pulseMs', 'blink', 'fps', 'damping']) {
+        for (const k of ['min', 'max', 'startAngle', 'endAngle', 'thickness', 'ticks', 'segments', 'gap', 'on', 'pulseMs', 'blink', 'fps', 'damping', 'rows']) {
           if (k in w && !isNum(w[k])) err(`${fld}.${k}`, 'must be a number')
         }
         if (isNum(w.min) && isNum(w.max) && w.max <= w.min) err(`${fld}.max`, 'must be larger than min')

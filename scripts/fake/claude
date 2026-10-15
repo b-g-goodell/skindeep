@@ -134,6 +134,24 @@ function assistant (outTokens) {
 const WORDS = 'the context gauge needle sweeps while tokens stream through the console and the meters glow'.split(' ')
 const TOOLS = ['Read', 'Read', 'Edit', 'Bash', 'Grep', 'WebFetch', 'Write']
 
+// The agent's task list (decision 0034), as a TodoWrite call in the
+// transcript: three items at the first turn of each cycle of five, one
+// more done each turn after, all done at the fourth, cleared at the
+// fifth. FAKE_CLAUDE_TODO=0 leaves it out, for a check of the counters
+// the list replaces.
+const TODOS = ['read the manifest', 'wire the list widget', 'run the checks']
+function todoWrite (k) {
+  const step = (k - 1) % 5
+  const todos = step === 4 ? [] : TODOS.map((content, i) => ({ content, activeForm: content, status: i < step ? 'completed' : i === step ? 'in_progress' : 'pending' }))
+  const id = 'toolu_' + crypto.randomBytes(6).toString('hex')
+  hook('PreToolUse', { tool_name: 'TodoWrite', tool_use_id: id })
+  w(`\x1b[32m  TodoWrite\x1b[0m(${todos.length} items)\r\n`)
+  msg++
+  const line = { type: 'assistant', isSidechain: false, timestamp: new Date().toISOString(), message: { id: `msg_fake_${run}_${msg}`, model: 'claude-fake', content: [{ type: 'tool_use', id, name: 'TodoWrite', input: { todos } }], usage: { input_tokens: 3, cache_creation_input_tokens: 0, cache_read_input_tokens: used, output_tokens: 60 } } }
+  fs.appendFileSync(transcript, JSON.stringify(line) + '\n')
+  hook('PostToolUse', { tool_name: 'TodoWrite', tool_use_id: id, duration_ms: 20 })
+}
+
 async function burst (ms) {
   const end = Date.now() + ms
   while (Date.now() < end) {
@@ -147,6 +165,7 @@ async function turn (k) {
   hook('UserPromptSubmit')
   w(`\r\n\x1b[1m> fake prompt ${k}\x1b[0m\r\n`)
   await burst(1500)
+  if (process.env.FAKE_CLAUDE_TODO !== '0') todoWrite(k)
   const calls = 1 + rnd(4)
   for (let i = 0; i < calls; i++) {
     const tool = TOOLS[rnd(TOOLS.length)]

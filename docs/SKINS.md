@@ -144,7 +144,7 @@ Every widget has:
 | Field | Meaning |
 | --- | --- |
 | `id` | unique, lowercase letters, digits, dashes |
-| `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout` or `sprite` |
+| `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout`, `sprite` or `list` |
 | `bind` | the metric it shows, see Metrics |
 | `rect` | where it sits |
 | `class` | optional extra CSS classes (lowercase, space separated) |
@@ -177,6 +177,7 @@ Type options:
 | `led` | a lamp. Either `on`: lit while the value is at least this, or `pulse: true`: lit for `pulseMs` (250) each time an event counter rises. `blink` (ms): flashes while lit |
 | `readout` | a number or text. `prefix`, `suffix`, `resets` and `fallback` as for `bar` |
 | `sprite` | a sprite sheet, as in Winamp's sliders. `sheet` (a PNG), `frames`, `frameWidth`, `frameHeight`, `layout` (`row` or `column`). `mode`: `value` (default) picks the frame from the value between min and max, `run` cycles the frames at `fps` (12) while the value is above 0. The PNG must be exactly frames x frame size |
+| `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }` |
 
 ## Styling with CSS
 
@@ -193,7 +194,10 @@ Class names you can style:
 - Parts: `.label`, `.value`, `.track`, `.fill` (gauge arc, bar fill),
   `.tick`, `.mark`, `.needle`, `.pivot`, `.face`, `.knob-face`,
   `.knob-pointer`, `.knob-image`, `.seg` and `.seg.on` (bar segments),
-  `.lamp` and `.lamp.on` (led), `.sheet` (sprite).
+  `.lamp` and `.lamp.on` (led), `.sheet` (sprite), `.item` with
+  `.todo`, `.doing` or `.done`, holding `.mark` and `.text` (list).
+- The stage, `.skin`, carries `.checklist` while the agent's task list
+  has an item.
 
 Colours come from custom properties you can set on `.w` or any widget:
 `--fill`, `--track`, `--needle`, `--glow`, `--on`, `--off`, `--text`.
@@ -254,6 +258,9 @@ any command fills the `pty.*`, `proc.*` and `session.clock_s` meters.
 | `model.name` | model name (text) |
 | `session.clock_s` | seconds since launch |
 | `session.compactions` | compactions this session |
+| `checklist.items` | the agent's task list, a list of `{ text, state }` with state `todo`, `doing` or `done`: Claude Code's TodoWrite, TaskCreate and TaskUpdate calls, or a markdown task list in the agent's text. For a `list` widget alone |
+| `checklist.count` | items of the agent's task list |
+| `checklist.done` | items of the agent's task list that are done |
 | `pty.out_bps` | terminal output bytes per second |
 | `pty.in_kps` | input writes (keys, pastes) per second |
 | `pty.idle_s` | seconds since the last terminal output |

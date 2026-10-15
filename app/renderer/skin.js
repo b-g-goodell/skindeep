@@ -149,10 +149,14 @@ window.SkinView = (function () {
     el.hidden = false
   }
 
+  // The stage carries `checklist` while the agent's task list has
+  // items (decision 0034), so a skin can hide what the list replaces.
   function update (snap) {
     lastSnap = snap
     const now = performance.now()
     for (const w of widgets) w.update(snap, now)
+    const items = snap['checklist.items']
+    if (stageEl) stageEl.classList.toggle('checklist', Array.isArray(items) && items.length > 0)
   }
 
   // The dials open on the sessions dashboard (decision 0033), marked on
@@ -173,6 +177,7 @@ window.SkinView = (function () {
         bind: w.spec.bind,
         classes: [...w.el.classList],
         cursor: getComputedStyle(w.el).cursor,
+        visible: getComputedStyle(w.el).visibility === 'visible' && getComputedStyle(w.el).display !== 'none',
         box: { x: b.x, y: b.y, width: b.width, height: b.height },
         rows: w.rows ? w.rows() : undefined
       }
@@ -188,5 +193,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, setDials, state, styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
+  return { apply, update, setDials, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
 })()

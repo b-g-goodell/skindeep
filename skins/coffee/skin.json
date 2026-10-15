@@ -95,7 +95,9 @@
       "class": "jar tape", "rect": { "left": 498, "bottom": 76, "width": 56, "height": 100 } },
     { "id": "helpers", "type": "sprite", "bind": "agents.active", "min": 0, "max": 4, "sheet": "images/mugs.png",
       "frames": 5, "frameWidth": 372, "frameHeight": 168, "label": "subagents",
-      "class": "mugs tape", "rect": { "right": 24, "bottom": 70, "width": 186, "height": 104 } }
+      "class": "mugs tape", "rect": { "right": 24, "bottom": 70, "width": 186, "height": 104 } },
+    { "id": "todo", "type": "list", "bind": "checklist.items", "rows": 3,
+      "class": "chalk-list", "rect": { "left": 44, "top": 62, "width": 584, "height": 84 } }
   ],
   "sounds": [
     { "file": "sounds/murmur.ogg", "mode": "loop", "volume": 0.5 },

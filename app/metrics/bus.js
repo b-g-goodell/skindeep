@@ -1,5 +1,6 @@
 'use strict'
-// Named metrics. A value is a number, a string, or null for no data.
+// Named metrics. A value is a number, a string, or null for no data,
+// and a list for the list-valued names of names.js (decision 0034).
 // Event metrics are counters that only increase (decision 0011).
 // The bus is read through get, snapshot and drainEvents. The only way
 // to write is a source (the writer), which owns the rate windows,
@@ -17,7 +18,7 @@ const RATES = {
 }
 
 // What a new session forgets. event.*, model.name and limits.* survive.
-const SESSION_PREFIXES = ['context.', 'tokens.', 'cost.', 'lines.', 'tools.', 'agents.', 'cache.', 'state.', 'session.compactions']
+const SESSION_PREFIXES = ['context.', 'tokens.', 'cost.', 'lines.', 'tools.', 'agents.', 'cache.', 'state.', 'checklist.', 'session.compactions']
 
 class Bus {
   constructor ({ log } = {}) {

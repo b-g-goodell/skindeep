@@ -43,6 +43,7 @@ class ClaudeCore {
     // The session's custom title from its transcript (decision 0032).
     this.title = null
     this.totals = new parse.TranscriptTotals()
+    this.checklist = new parse.Checklist()
     this.claims = new Set()
     this.agents = 0
     this.quiet()
@@ -61,6 +62,7 @@ class ClaudeCore {
     if (this.session && j.session_id !== this.session) {
       this.src.reset()
       this.totals = new parse.TranscriptTotals()
+      this.checklist = new parse.Checklist()
       this.claims.clear()
       this.agents = 0
       this.title = null
@@ -71,6 +73,7 @@ class ClaudeCore {
     if (typeof j.transcript_path === 'string' && j.transcript_path && j.transcript_path !== this.transcript) {
       this.transcript = j.transcript_path
       this.totals = new parse.TranscriptTotals()
+      this.checklist = new parse.Checklist()
     }
     return true
   }
@@ -115,6 +118,7 @@ class ClaudeCore {
     if (!this.transcript || file !== this.transcript || !isObject(obj)) return
     const t = titleOf(obj, this.session)
     if (t) this.title = t
+    if (this.checklist.add(obj)) for (const [k, v] of this.checklist.metrics()) this.src.set(k, v)
     const dOut = this.totals.add(obj)
     if (dOut === null) return
     if (dOut > 0) this.src.sample('tokens.out_rate', dOut, { history: replayed })

@@ -147,6 +147,7 @@ window.skinnedPage = () => ({
   sounds: SkinSounds.state(),
   scale: SkinView.scale(),
   widgets: SkinView.state(),
+  stage: SkinView.stageClasses(),
   panes: [...panes.values()].map(p => {
     if (p.dash) return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', lines: [], dashboard: p.dash.state() }
     const b = p.term.buffer.active

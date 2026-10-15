@@ -80,3 +80,15 @@
 .row:hover { background: #0a2a8a; filter: none; }
 .row.open { outline: none; background: #06301a; }
 .row.open .label { color: #d8e030; }
+
+/* The agent's task list (decision 0034) in the playlist's place. */
+.skin.checklist .row { visibility: hidden; }
+.tracklist { counter-reset: task; }
+.tracklist .label { align-self: flex-start; padding: 0 2px; line-height: 21px; border-bottom: 1px solid #0c1a0c; width: 100%; }
+.tracklist .item { font: 11px/21px "DejaVu Sans Mono", monospace; color: #3cff3c; border-bottom: 1px solid #0c1a0c; padding: 0 2px; counter-increment: task; }
+.tracklist .item .text::before { content: counter(task) ". "; color: #2fae2f; }
+.tracklist .item .mark { color: #2fae2f; }
+.tracklist .item.doing { color: #d8e030; }
+.tracklist .item.doing .mark { color: #d8e030; }
+.tracklist .item.done { opacity: 1; color: #1d6d1d; }
+.tracklist .item.done .mark { color: #3cdc3c; }

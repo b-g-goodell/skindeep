@@ -34,6 +34,11 @@ const BROKEN = {
   'broken-json': ['skin.json: (file): not valid JSON'],
   'broken-metric': ['skin.json: widgets[0].bind: unknown metric "foo.bar"'],
   'broken-type': ['skin.json: widgets[0].type: unknown widget type "slider"'],
+  'broken-list': [
+    'skin.json: widgets[0].bind: "tools.total": a list shows a list-valued metric, one of checklist.items',
+    'skin.json: widgets[0].rows: must be a number',
+    'skin.json: widgets[1].bind: "checklist.items": a list-valued metric needs a list widget'
+  ],
   'broken-fallback': [
     'skin.json: widgets[0].resets: unknown metric "foo.when"',
     'skin.json: widgets[0].fallback.color: unknown field',

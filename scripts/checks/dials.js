@@ -13,7 +13,8 @@ const path = require('path')
 
 const out = path.resolve(process.argv[2])
 const fakes = path.join(__dirname, '..', 'fake')
-const env = { SKINNED_GL: 'swiftshader', PATH: `${fakes}:${process.env.PATH}` }
+// No task list from the fake: it would hide the rows (decision 0034).
+const env = { SKINNED_GL: 'swiftshader', FAKE_CLAUDE_TODO: '0', PATH: `${fakes}:${process.env.PATH}` }
 for (const [k, d] of [['XDG_RUNTIME_DIR', 'run'], ['XDG_STATE_HOME', 'state'], ['HOME', 'home'], ['CLAUDE_CONFIG_DIR', 'config']]) {
   env[k] = path.join(out, d)
   fs.mkdirSync(env[k], { recursive: true, mode: 0o700 })

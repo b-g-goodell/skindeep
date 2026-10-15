@@ -1,5 +1,6 @@
 'use strict'
-// The seven display-only widgets (decision 0007). Each returns
+// The seven display widgets (decision 0007) and the list (decision
+// 0034). Each returns
 // { el, update(snapshot, now), frame(now, dt) }. Values move toward their
 // targets with a damped spring. Parts carry stable class names that skin
 // CSS styles, colours come from CSS custom properties.
@@ -412,4 +413,36 @@ function sprite (spec) {
   }
 }
 
-window.Widgets = { gauge, needle, knob, bar, led, readout, sprite, format, Spring }
+// The agent's task list (decision 0034): one row per item, a mark and
+// the text, in the item's state. nodata while the list is empty or
+// absent, which hides the widget.
+const MARK = { todo: '[ ]', doing: '[>]', done: '[x]' }
+
+function list (spec) {
+  const { el } = base(spec, 'list')
+  labelled(el, spec)
+  const box = div('items', el)
+  let items = []
+  let drawn = null
+  return {
+    el,
+    rows: () => items.map(i => ({ text: i.text, state: i.state })),
+    update (snap) {
+      const v = valueOf(snap, spec.bind)
+      items = Array.isArray(v) ? v.slice(0, spec.rows || v.length) : []
+      el.classList.toggle('nodata', !items.length)
+      const key = JSON.stringify(items)
+      if (key === drawn) return
+      drawn = key
+      box.textContent = ''
+      for (const it of items) {
+        const row = div('item ' + (MARK[it.state] ? it.state : 'todo'), box)
+        div('mark', row, MARK[it.state] || MARK.todo)
+        div('text', row, String(it.text))
+      }
+    },
+    frame () {}
+  }
+}
+
+window.Widgets = { gauge, needle, knob, bar, led, readout, sprite, list, format, Spring }

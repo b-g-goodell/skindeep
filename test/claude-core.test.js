@@ -293,3 +293,20 @@ test('C16 a custom-title line names the session, another session\'s does not, a 
   core.enter({ session_id: 'S2', transcript_path: 'T2' })
   assert.strictEqual(core.title, null)
 })
+
+// Decision 0034: the checklist family follows the transcript and is
+// forgotten with the session.
+test('C17 a TodoWrite line writes the checklist family, a session change forgets it', () => {
+  const { bus, core } = make()
+  core.hook({ session_id: 'a', transcript_path: 'A', hook_event_name: 'SessionStart' })
+  const todo = todos => ({ type: 'assistant', isSidechain: false, message: { id: 'msg_todo_' + todos.length, usage: { input_tokens: 1, output_tokens: 20 }, content: [{ type: 'tool_use', id: 'toolu_1', name: 'TodoWrite', input: { todos } }] } })
+  core.line('A', todo([{ content: 'read', status: 'in_progress' }, { content: 'wire', status: 'pending' }, { content: 'check', status: 'pending' }]), true)
+  assert.deepStrictEqual(bus.get('checklist.items'), [{ text: 'read', state: 'doing' }, { text: 'wire', state: 'todo' }, { text: 'check', state: 'todo' }])
+  assert.deepStrictEqual([bus.get('checklist.count'), bus.get('checklist.done')], [3, 0])
+  assert.strictEqual(bus.get('tokens.out'), 20, 'the line\'s usage still counts')
+  core.line('B', todo([]), false)
+  assert.strictEqual(bus.get('checklist.count'), 3, 'a line of another file writes nothing')
+  core.hook({ session_id: 'b', transcript_path: 'B', hook_event_name: 'SessionStart' })
+  assert.strictEqual(bus.get('checklist.items'), undefined)
+  assert.strictEqual(bus.get('checklist.count'), undefined)
+})

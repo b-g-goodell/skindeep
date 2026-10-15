@@ -1,0 +1,47 @@
+{
+ "name": "broken-list",
+ "window": {
+  "width": 1000,
+  "height": 700,
+  "minWidth": 800,
+  "minHeight": 500
+ },
+ "menu": { "rect": { "right": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+ "terminal": {
+  "rect": {
+   "left": 10,
+   "top": 60,
+   "right": 10,
+   "bottom": 10
+  },
+  "theme": {
+   "foreground": "#e0e0e0",
+   "background": "#000000"
+  }
+ },
+ "widgets": [
+  {
+   "id": "l",
+   "type": "list",
+   "bind": "tools.total",
+   "rows": "six",
+   "rect": {
+    "left": 10,
+    "top": 5,
+    "width": 50,
+    "height": 50
+   }
+  },
+  {
+   "id": "r",
+   "type": "readout",
+   "bind": "checklist.items",
+   "rect": {
+    "left": 70,
+    "top": 5,
+    "width": 50,
+    "height": 50
+   }
+  }
+ ]
+}
