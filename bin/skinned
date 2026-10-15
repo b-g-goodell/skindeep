@@ -1,0 +1,51 @@
+#!/bin/sh
+# skinned: run a terminal CLI inside a claude-skins window.
+# The caller's stderr stays on fd 3 for the app's own messages.
+# Electron's stderr goes to a per-launch log.
+
+usage() {
+  echo "usage: skinned [--skin NAME|PATH] [--statusline=always|chain-only] [--no-viz] [--mute] -- CMD [ARGS...]" >&2
+  exit 125
+}
+
+self=$(readlink -f "$0") || exit 125
+repo=$(dirname "$(dirname "$self")")
+electron="$repo/node_modules/electron/dist/electron"
+if [ ! -x "$electron" ]; then
+  echo "skinned: $electron missing, run $repo/install.sh" >&2
+  exit 125
+fi
+
+# Check the app's own options here, so a typo fails before any window.
+found=
+for a in "$@"; do
+  case "$a" in
+    --) found=1; break ;;
+    --skin|--skin=*|--statusline=always|--statusline=chain-only|--no-viz|--mute) ;;
+    -*) echo "skinned: unknown option $a" >&2; usage ;;
+  esac
+done
+[ -n "$found" ] || usage
+
+logdir="${XDG_STATE_HOME:-$HOME/.local/state}/claude-skins"
+mkdir -p "$logdir" || exit 125
+log="$logdir/$(date +%Y%m%d-%H%M%S)-$$.log"
+
+# Chromium writes into its user data dir while it shuts down, so the
+# runtime dir is removed here, after Electron has exited.
+if [ -n "$XDG_RUNTIME_DIR" ]; then
+  rundir="$XDG_RUNTIME_DIR/claude-skins/$$"
+else
+  rundir="${TMPDIR:-/tmp}/claude-skins-$(id -u)/$$"
+fi
+export SKINNED_RUNTIME_DIR="$rundir"
+
+# Terminal signals reach Electron directly (same process group). The
+# trap only keeps this shell alive to clean up after it.
+trap : INT TERM HUP
+exec 3>&2
+"$electron" --no-sandbox "$repo" "$@" 2>>"$log"
+code=$?
+exec 3>&-
+rm -rf "$rundir"
+exit $code

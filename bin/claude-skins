@@ -1,0 +1,4 @@
+#!/bin/sh
+# claude-skins: Claude Code in a claude-skins window. Every argument goes
+# to claude. SKINNED_SKIN picks the skin.
+exec "$(dirname "$(readlink -f "$0")")/skinned" -- claude "$@"

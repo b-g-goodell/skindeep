@@ -1,0 +1,4 @@
+#!/bin/sh
+# codex-skins: Codex in a claude-skins window. Every argument goes to
+# codex. SKINNED_SKIN picks the skin.
+exec "$(dirname "$(readlink -f "$0")")/skinned" -- codex "$@"
