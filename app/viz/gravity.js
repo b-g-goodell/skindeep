@@ -8,7 +8,9 @@
 // a tool call a planet on a near circular orbit in its class's colour, a
 // prompt a comet that slings past the star, a stop a flare that adds to
 // the star's mass, a subagent a second star, a compaction drags every
-// body inward, and an output event a puff of dust.
+// body inward, and an output event a puff of dust. The pointer throws a
+// moon: a click drops one on a circular orbit, a drag flings it from the
+// press with the drag's velocity, its aim drawn while pressed.
 
 ;(function (root) {
   const CLASS_HUE = [200, 120, 40, 0, 280, 320]
@@ -125,6 +127,11 @@
     let clock = 0
     let cw = 0
     let ch = 0
+    // The view as last drawn, the pointer's press and its last point
+    // while pressed, and the moons thrown.
+    let view = null
+    let aim = null
+    let thrown = 0
 
     function body (x, y, vx, vy, m, hue, star) {
       const b = { x, y, vx, vy, m, hue, star: !!star, r: radius(m, star), ax: 0, ay: 0 }
@@ -208,6 +215,12 @@
           dust.push({ x: p.x + (p.r + 3) * Math.cos(a), y: p.y + (p.r + 3) * Math.sin(a), vx: p.vx + v * Math.cos(a), vy: p.vy + v * Math.sin(a), hue: p.hue })
         }
       }
+      trim()
+    }
+
+    // The lightest planets past the cap gone, the oldest dust past its
+    // cap, the frame recentred.
+    function trim () {
       while (bodies.length > MAX_BODIES) bodies.splice(bodies.indexOf(bodies.filter(b => !b.star).reduce((a, b) => a.m < b.m ? a : b)), 1)
       if (dust.length > MAX_DUST) dust.splice(0, dust.length - MAX_DUST)
       centre(bodies)
@@ -269,6 +282,7 @@
         const s = Math.min(w, h) / (2 * VIEW)
         const cx = w / 2
         const cy = h / 2
+        view = { s, cx, cy }
         // Trails: long while busy, gone while idle, when time all but
         // stops.
         tg.fillStyle = `rgba(0, 0, 0, ${0.04 + 0.16 * L.idle})`
@@ -320,7 +334,54 @@
           g.arc(cx + f.x * s, cy + f.y * s, (f.r + (clock - f.t) * 3) * s, 0, Math.PI * 2)
           g.stroke()
         }
+        if (aim) {
+          g.strokeStyle = 'rgba(255, 255, 255, 0.7)'
+          g.lineWidth = 1.5
+          g.setLineDash([4, 4])
+          g.beginPath()
+          g.moveTo(aim.x0, aim.y0)
+          g.lineTo(aim.x1, aim.y1)
+          g.stroke()
+          g.setLineDash([])
+        }
         out.drawImage(layer, 0, 0)
+      },
+
+      // A press marks the moon's place, the release throws it: on a
+      // circular orbit about the heaviest body for a click, else with
+      // a velocity in proportion to the drag.
+      pointer (kind, x, y, down) {
+        if (kind === 'down') aim = { x0: x, y0: y, x1: x, y1: y }
+        else if (aim && down) Object.assign(aim, { x1: x, y1: y })
+        if (kind !== 'up' || !aim || !view) return
+        const { s, cx, cy } = view
+        const px = (aim.x0 - cx) / s
+        const py = (aim.y0 - cy) / s
+        const dx = (aim.x1 - aim.x0) / s
+        const dy = (aim.y1 - aim.y0) / s
+        aim = null
+        const sn = sun()
+        let vx = sn.vx
+        let vy = sn.vy
+        if (Math.hypot(dx, dy) * s < 5) {
+          const rx = px - sn.x
+          const ry = py - sn.y
+          const r = Math.max(sn.r + 4, Math.hypot(rx, ry))
+          const v = Math.sqrt(sn.m / r)
+          vx -= v * ry / r
+          vy += v * rx / r
+        } else {
+          vx += dx * 0.02
+          vy += dy * 0.02
+        }
+        body(px, py, vx, vy, 2 + Math.random() * 3, 55)
+        thrown++
+        trim()
+      },
+
+      // For the live checks: the bodies and the moons thrown.
+      probe () {
+        return { thrown, bodies: bodies.length }
       }
     }
   }

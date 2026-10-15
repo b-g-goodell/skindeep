@@ -13,7 +13,10 @@
 // measures the position and collapses the state to a narrow packet
 // there, and an output event fires one. While the agent idles the wall
 // fades into a harmonic trap holding a coherent state that circles in
-// it, an orbital at rest.
+// it, an orbital at rest. A press and drag of the pointer paints a
+// barrier along its path, a ridge of potential above the packets'
+// energy that they scatter off or tunnel through, fading in seconds. A
+// click drops a short one.
 
 ;(function (root) {
   const NX = 128
@@ -23,6 +26,12 @@
   const V0 = 4
   const SCREEN = NX - 14
   const OMEGA = 0.05
+  // The painted barrier: its height, its radius in grid points, and its
+  // fade's time constant in seconds. A packet's energy is k^2 / 2, about
+  // 0.4 to 1.
+  const BAR_H = 2.5
+  const BAR_R = 1.6
+  const BAR_TAU = 4
   // The slits' centres and half widths, by layout; a circle for the last.
   const LAYOUTS = [
     { slits: [[24, 2], [40, 2]] },
@@ -204,6 +213,14 @@
     const wall = new Float64Array(NX * NY)
     const trap = new Float64Array(NX * NY)
     const mask = new Float64Array(NX * NY)
+    const bar = new Float64Array(NX * NY)
+    // The barrier's tallest point, the pointer's last grid point while
+    // pressed, the grid's place on the pane as last drawn, and the
+    // strokes painted so far.
+    let barTop = 0
+    let pen = null
+    let view = null
+    let strokes = 0
     const acc = new Float64Array(NY)
     const hist = new Float64Array(NY)
     let caught = 0
@@ -241,11 +258,35 @@
       held = -1
     }
 
-    // The potential for the idle level q: the wall fading into the trap.
+    // The potential for the idle level q: the wall fading into the trap,
+    // and the painted barrier.
     function blend (q) {
-      for (let i = 0; i < V.length; i++) V[i] = (1 - q) * wall[i] + q * trap[i]
+      for (let i = 0; i < V.length; i++) V[i] = (1 - q) * wall[i] + q * trap[i] + bar[i]
       wave.potential(V)
       held = q
+    }
+
+    // Raise the barrier in a disc about the grid point (gx, gy).
+    function paint (gx, gy) {
+      const r2 = BAR_R * BAR_R
+      for (let y = Math.max(0, Math.floor(gy - BAR_R)); y <= Math.min(NY - 1, Math.ceil(gy + BAR_R)); y++) {
+        for (let x = Math.max(0, Math.floor(gx - BAR_R)); x <= Math.min(NX - 1, Math.ceil(gx + BAR_R)); x++) {
+          const d2 = (x - gx) * (x - gx) + (y - gy) * (y - gy)
+          if (d2 > r2) continue
+          const i = y * NX + x
+          bar[i] = Math.max(bar[i], BAR_H * (1 - 0.5 * d2 / r2))
+        }
+      }
+      barTop = BAR_H
+      held = -1
+    }
+
+    // The pane's pixel (x, y) as a grid point, by the transform the last
+    // frame drew with.
+    function grid (x, y) {
+      if (!view) return null
+      const { turn, s, sy, ox, oy } = view
+      return turn ? [(y - ox) / s, (x - oy) / sy] : [(x - ox) / s, (y - oy) / sy]
     }
 
     function fire (y0, k) {
@@ -319,6 +360,16 @@
         const L = synth.level
         for (const e of synth.since(mark)) react(e, L.bass)
         const q = Math.min(1, L.idle * 1.4)
+        if (barTop > 0) {
+          const f = Math.exp(-Math.min(0.1, dt) / BAR_TAU)
+          for (let i = 0; i < bar.length; i++) bar[i] *= f
+          barTop *= f
+          if (barTop < 0.05) {
+            bar.fill(0)
+            barTop = 0
+          }
+          held = -1
+        }
         if (held < 0 || Math.abs(q - held) > 0.02 || (q === 0 && held !== 0)) blend(q)
         // An orbital at rest: a coherent state set circling in the trap.
         if (q > 0.6 && wave.norm() < 0.3) wave.packet(NX / 2 + 14, NY / 2, 1 / Math.sqrt(2 * OMEGA), 1 / Math.sqrt(2 * OMEGA), 0, OMEGA * 14)
@@ -360,9 +411,10 @@
             }
             const wl = wall[i] / V0 * (1 - q)
             const tp = Math.min(1, trap[i] / 2) * q
-            r += 0.42 * wl
-            gg += 0.42 * wl + 0.05 * tp
-            b += 0.45 * wl + 0.22 * tp
+            const br = bar[i] / BAR_H
+            r += 0.42 * wl + 0.55 * br
+            gg += 0.42 * wl + 0.05 * tp + 0.3 * br
+            b += 0.45 * wl + 0.22 * tp + 0.08 * br
             if (x >= SCREEN) {
               r += 0.05 + 0.25 * hy
               gg += 0.06 + 0.3 * hy
@@ -382,6 +434,7 @@
         const sy = Math.min(H / NY, 1.5 * s)
         const ox = (W - NX * s) / 2
         const oy = (H - NY * sy) / 2
+        view = { turn, s, sy, ox, oy }
         if (w !== ow || h !== oh) {
           ow = w
           oh = h
@@ -417,6 +470,31 @@
         g.restore()
         g.setTransform(1, 0, 0, 1, 0, 0)
         out.drawImage(layer, 0, 0)
+      },
+
+      // Paint along the pointer's path while it is pressed, the gaps
+      // between its reports filled in steps of half a point.
+      pointer (kind, x, y, down) {
+        const at = grid(x, y)
+        if (!down || !at) {
+          pen = null
+          return
+        }
+        if (kind === 'down' || !pen) {
+          strokes++
+          paint(at[0], at[1])
+        } else {
+          const n = Math.max(1, Math.ceil(Math.hypot(at[0] - pen[0], at[1] - pen[1]) / 0.5))
+          for (let k = 1; k <= n; k++) paint(pen[0] + (at[0] - pen[0]) * k / n, pen[1] + (at[1] - pen[1]) * k / n)
+        }
+        pen = at
+      },
+
+      // For the live checks: the barrier's height and extent.
+      probe () {
+        let cells = 0
+        for (let i = 0; i < bar.length; i++) if (bar[i] > 0.5) cells++
+        return { strokes, barrier: barTop, cells }
       }
     }
   }

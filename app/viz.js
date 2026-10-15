@@ -1,18 +1,18 @@
 'use strict'
 // The visualization window (decision 0015): never takes focus, gets a
 // receive-only numeric feed at 30 Hz, one pane per tab from that tab's
-// bus. Each pane's mode is kept here: a left click in a pane steps it,
-// the space bar and the menu act on the active tab's pane, and each pick
+// bus. Each pane's mode is kept here: the space bar and the menu act on
+// the active tab's pane, and each pick
 // is recorded as the last skin is (decision 0022), one file per window,
 // the newest read at launch. The input, the sessions, the sound output or
 // both, is recorded the same way, and the sound output is recorded only
-// while the window is open on an input that takes it.
+// while the window is open on an input that takes it. The pointer belongs
+// to the page, whose modes answer it.
 
 const { BrowserWindow, screen } = require('electron')
 const path = require('path')
 const last = require('./skins/last')
 const { MODES } = require('./viz/modes')
-const layout = require('./viz/layout')
 const { Sound } = require('./viz/sound')
 const pages = require('./pages')
 
@@ -175,18 +175,12 @@ class Viz {
     this.win.on('page-title-updated', e => e.preventDefault())
     this.win.webContents.on('will-navigate', e => e.preventDefault())
     this.win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-    // The page sends nothing, so its input is read here: a click steps
-    // the pane under it, laid out as the page lays it out, the space bar
-    // the active tab's. A real key comes as rawKeyDown, one from the
+    // The page sends nothing, so the space bar is read here: it steps
+    // the active tab's pane. A real key comes as rawKeyDown, one from the
     // DevTools protocol as keyDown.
     this.win.webContents.on('input-event', (_e, ie) => {
       const space = (ie.type === 'rawKeyDown' || ie.type === 'keyDown') && ie.code === 'Space' && !ie.isAutoRepeat
       if (space) this.step(this.activePane())
-      else if (ie.type === 'mouseDown' && ie.button === 'left') {
-        const panes = this.panes()
-        const [w, h] = this.win.getContentSize()
-        this.step(panes[layout.at(ie.x, ie.y, panes.length, w, h)])
-      }
     })
     this.win.once('ready-to-show', () => {
       this.win.showInactive()

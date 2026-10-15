@@ -9,7 +9,8 @@
 // captures, a subagent plays two moves. Neither side fills its own eye,
 // so groups with two live. When neither side has a move, or the board
 // is nearly full, it is counted and cleared. While the agent idles the
-// board shades the territory each side holds.
+// board shades the territory each side holds. A click on a point plays
+// it for the side to move, if the rules allow.
 
 ;(function (root) {
   const N = 13
@@ -207,20 +208,29 @@
     let cw = 0
     let ch = 0
     let geo = null
+    // The signal's clock at the last frame, and the moves clicked.
+    let tick = 0
+    let clicks = 0
 
     function move (kind, cls, t) {
       if (ending) return
       const i = choose(board, color, kind, last)
-      if (i < 0) {
-        passes++
-      } else {
-        passes = 0
-        const taken = board.play(i, color)
-        placed.push({ i, color, t, hue: kind === 2 ? CLASS_HUE[cls] ?? 200 : null })
-        for (const s of taken) fallen.push({ i: s, color: 3 - color, t })
-        last = i
-        dirty = true
-      }
+      if (i < 0) passes++
+      else place(i, board.play(i, color), kind === 2 ? CLASS_HUE[cls] ?? 200 : null, t)
+      turn(t)
+    }
+
+    // Color's stone at i, which took the stones taken.
+    function place (i, taken, hue, t) {
+      passes = 0
+      placed.push({ i, color, t, hue })
+      for (const s of taken) fallen.push({ i: s, color: 3 - color, t })
+      last = i
+      dirty = true
+    }
+
+    // The other side to move, the board counted when it is done.
+    function turn (t) {
       color = 3 - color
       let stones = 0
       for (const c of board.cells) if (c) stones++
@@ -305,6 +315,7 @@
         const h = canvas.height
         if (w < 8 || h < 8) return
         const t = synth.t
+        tick = t
         if (w !== cw || h !== ch) {
           cw = w
           ch = h
@@ -391,6 +402,30 @@
           g.fillRect(geo.x, geo.y, size, size)
         }
         out.drawImage(layer, 0, 0)
+      },
+
+      // A click within half a step of a point plays it, if it is legal.
+      pointer (kind, x, y) {
+        if (kind !== 'down' || !geo || ending) return
+        const { step, m } = geo
+        const gx = Math.round((x - geo.x - m) / step)
+        const gy = Math.round((y - geo.y - m) / step)
+        if (gx < 0 || gy < 0 || gx >= N || gy >= N) return
+        if (Math.hypot(x - geo.x - m - gx * step, y - geo.y - m - gy * step) > step / 2) return
+        const i = gy * N + gx
+        const taken = board.play(i, color)
+        if (!taken) return
+        clicks++
+        place(i, taken, null, tick)
+        turn(tick)
+      },
+
+      // For the live checks: the stones on the board and the clicks
+      // played.
+      probe () {
+        let stones = 0
+        for (const c of board.cells) if (c) stones++
+        return { clicks, stones }
       }
     }
   }

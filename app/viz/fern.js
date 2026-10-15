@@ -6,7 +6,8 @@
 // tool call feeds the leaflets on the side its class picks and lights
 // them in the class's colour, a stop and the treble blow wind through
 // it, a subagent sprouts a small frond at its foot, and an idle spell
-// slows the growth and turns it amber.
+// slows the growth and turns it amber. A click lights the leaflets on
+// its side of the frond in gold and blows a gust.
 
 ;(function (root) {
   // Each map [a, b, c, d, e, f, p]: x' = a x + b y + e, y' = c x + d y + f,
@@ -84,6 +85,9 @@
     let gust = 0
     let burst = 0
     let flash = null
+    // The signal's clock at the last frame, and the clicks.
+    let tick = 0
+    let clicks = 0
     const sprouts = []
     const orbit = { x: 0, y: 0 }
     // The view box, eased toward the box the points fill.
@@ -147,6 +151,7 @@
         react(synth)
         const L = synth.level
         const t = synth.t
+        tick = t
         const idle = L.idle
         morph = Math.min(1, morph + dt / 2.5)
         gust *= Math.exp(-dt / 1.5)
@@ -250,6 +255,20 @@
         bg.putImageData(img, 0, 0)
         g.imageSmoothingEnabled = false
         g.drawImage(buf, 0, 0, w, h)
+      },
+
+      // Map 2 holds the leaflets on the left of the frond, map 3 those on
+      // the right.
+      pointer (kind, x) {
+        if (kind !== 'down') return
+        flash = { map: x < canvas.width / 2 ? 2 : 3, rgb: hueRgb(48), t: tick }
+        gust = Math.max(gust, 0.7)
+        clicks++
+      },
+
+      // For the live checks: the clicks.
+      probe () {
+        return { clicks }
       }
     }
   }

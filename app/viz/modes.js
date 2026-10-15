@@ -1,6 +1,6 @@
 'use strict'
-// The visualization's modes (decision 0015), in the order click and space
-// cycle them and the menu lists them: the id the menu and the record
+// The visualization's modes (decision 0015), in the order the space bar
+// cycles them and the menu lists them: the id the menu and the record
 // use, the name the menu shows, and what draws it. milk: a butterchurn
 // preset of presets.js. canvas: a Canvas2D renderer that scope.js,
 // classic.js, avs.js or the procedural mode's own file (fern.js, go.js,

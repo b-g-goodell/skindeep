@@ -81,8 +81,8 @@ test('preset equations give finite numbers for quiet and loud input', () => {
   }
 })
 
-// The main process maps a click to a pane with the arithmetic the page
-// lays the panes out with.
+// The page maps the pointer to a pane with the arithmetic it lays the
+// panes out with.
 test('the panes tile the window, and a point maps back to its pane', () => {
   const layout = require('../app/viz/layout')
   const { window } = loadPage()

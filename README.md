@@ -85,8 +85,8 @@ and the cache ratio.
 The visualizer turns each tab's session into a made-up sound, so output
 thumps, tool calls ring and the picture calms when the agent idles.
 **Visualization input** in the menu switches it to what your speakers
-play, and it never records a microphone. Click a pane or press space to
-step through fifteen modes, five of which
+play, and it never records a microphone. Press space to step through
+fifteen modes, five of which
 [docs/viz-modes.png](docs/viz-modes.png) shows.
 
 ## Skins

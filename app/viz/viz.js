@@ -5,8 +5,9 @@
 // its own signal and the index of its mode in modes.js, and the input:
 // the sessions, the sound output's samples, which every pane shares, or
 // both. The main process
-// owns the modes, and sees the clicks and the space bar that step them,
-// so the page sends nothing. The panes tile the window by layout.js.
+// owns the modes, and sees the space bar that steps them, so the page
+// sends nothing. The panes tile the window by layout.js. The pointer
+// goes to the mode in the pane under it, read here and never sent.
 
 ;(function () {
   // Butterchurn panes at most: each holds a WebGL2 context, and Chromium
@@ -20,6 +21,10 @@
   let note = ''
   let gl = 0
   let sound = { src: 0, st: 0, s: new Float32Array(0) }
+  // The pane a press went to, which holds the pointer until the release,
+  // and the time of the last pointer tone.
+  let held = null
+  let tone = -Infinity
   const SOURCE = ['', 'sound output', 'session and sound output']
 
   try {
@@ -42,7 +47,7 @@
   }
 
   function make (k) {
-    const p = { k, i: 0, a: 0, w: 0, h: 0, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
+    const p = { k, i: 0, a: 0, x: 0, y: 0, w: 0, h: 0, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
     p.el = el('div', 'pane')
     p.milkCanvas = el('canvas')
     p.flatCanvas = el('canvas')
@@ -76,6 +81,7 @@
       if (lose) lose.loseContext()
       gl--
     }
+    if (held === p) held = null
     p.el.remove()
   }
 
@@ -119,6 +125,8 @@
       const r = VizLayout.rect(i, list.length, W, H)
       Object.assign(p.el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' })
       p.el.classList.toggle('active', list.length > 1 && p.a === 1)
+      p.x = r.x
+      p.y = r.y
       if (r.w === p.w && r.h === p.h) return
       p.w = r.w
       p.h = r.h
@@ -132,6 +140,29 @@
   }
 
   window.addEventListener('resize', layout)
+
+  // The pointer, in the pane's canvas pixels, to the mode's pointer(kind,
+  // x, y, down), kind down, move or up. A mode without the method hears a
+  // tone in its pane's signal instead, at the press and every 60 ms of a
+  // drag. Moves come unpressed too. The left button alone.
+  function point (kind, e) {
+    const list = [...panes.values()]
+    const p = held || list[VizLayout.at(e.clientX, e.clientY, list.length, window.innerWidth, window.innerHeight)]
+    if (!p) return
+    if (kind === 'down') held = p
+    const down = kind !== 'up' && held === p
+    if (kind === 'up') held = null
+    const x = e.clientX - p.x
+    const y = e.clientY - p.y
+    if (p.flat && p.flat.pointer) p.flat.pointer(kind, x, y, down)
+    else if (down && p.shown >= 0 && (kind === 'down' || e.timeStamp - tone > 60)) {
+      tone = e.timeStamp
+      p.synth.touch(x / Math.max(1, p.w), y / Math.max(1, p.h))
+    }
+  }
+  window.addEventListener('mousedown', e => { if (e.button === 0) point('down', e) })
+  window.addEventListener('mousemove', e => point(held && !(e.buttons & 1) ? 'up' : 'move', e))
+  window.addEventListener('mouseup', e => { if (e.button === 0 && held) point('up', e) })
   window.vizFeed.onFrame(f => {
     const was = sound.src + ':' + sound.st
     sound = { src: f.src, st: f.st, s: f.s }
@@ -188,7 +219,7 @@
       mode: id(main),
       webgl: !!bc,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
-      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), milk: !!p.milk, x: parseInt(p.el.style.left), y: parseInt(p.el.style.top), w: p.w, h: p.h }))
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), milk: !!p.milk, x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   requestAnimationFrame(loop)

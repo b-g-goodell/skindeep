@@ -2,8 +2,8 @@
 /* global requestAnimationFrame */
 // Live check of the viz window's panes (decision 0015) under xvfb-run:
 //   node scripts/checks/vizsplit.js OUT
-// One pane per tab, distinct modes, a click steps the pane under it
-// alone, the menu's pick the active tab's, a closed tab's pane goes, and
+// One pane per tab, distinct modes, a click steps no pane, the menu's
+// pick the active tab's, a closed tab's pane goes, and
 // more butterchurn panes than the cap show the scope. Fakes only.
 // Every read of the page waits, bounded, for the state it asserts: a
 // pane that turns to butterchurn compiles its preset in software GL,
@@ -67,9 +67,10 @@ const brief = s => s.panes.map(p => [p.tab, p.mode, p.milk, p.active ? 'active' 
 
   const p2 = s.panes[1]
   await viz.mouse.click(p2.x + p2.w / 2, p2.y + p2.h / 2)
-  const t = await panes(t => t.panes[1].mode !== p2.mode)
+  await sleep(600)
+  const t = await state()
   console.log('after click', JSON.stringify(t.panes.map(p => p.mode)))
-  check(t.panes[1].mode !== p2.mode && t.panes[0].mode === s.panes[0].mode && t.panes[2].mode === s.panes[2].mode, 'a click in pane 2 must step pane 2 alone', brief(t))
+  check(t.panes.map(p => p.mode).join() === s.panes.map(p => p.mode).join(), 'a click in pane 2 must step no pane', brief(t))
 
   const r = await win.evaluate(() => window.skinned.selectViz('scope'))
   const u = await panes(u => u.panes[2].mode === 'scope')

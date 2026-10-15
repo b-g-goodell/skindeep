@@ -23,6 +23,9 @@ window.Synth = (function () {
       this.samples = new Float32Array(N)
       this.bands = new Float32Array(BANDS)
       this.flashes = []
+      // Tones of the pointer (a mode without a pointer method of its
+      // own), heard in every input, neither events nor beats.
+      this.touches = []
       // Events so far: a renderer that keeps the count sees a beat.
       this.beats = 0
       // Rises of the sound output's loudness so far, while it drives the
@@ -53,6 +56,15 @@ window.Synth = (function () {
       this.flashes.push({ kind, cls, t })
       this.beats++
       if (this.voices.length > 64) this.voices.splice(0, this.voices.length - 64)
+    }
+
+    // A tone for the pointer at u across the pane, 0 the left edge and
+    // 1 the right: its pitch on the bands' scale, so a band display
+    // rises under the pointer, its loudness from v, 0 the top.
+    touch (u, v) {
+      const hz = 40 * Math.pow(12000 / 40, Math.max(0, Math.min(1, u)))
+      this.touches.push({ t: this.t, hz, amp: 0.35 + 0.45 * (1 - Math.max(0, Math.min(1, v))), life: 0.5 })
+      if (this.touches.length > 16) this.touches.splice(0, this.touches.length - 16)
     }
 
     // Levels from the sound output alone: its loudness for the bass, its
@@ -91,16 +103,22 @@ window.Synth = (function () {
       }
       this.voices = this.voices.filter(v => t0 - v.t < v.life)
       this.flashes = this.flashes.filter(f => t0 - f.t < 1.5)
+      this.touches = this.touches.filter(v => t0 - v.t < v.life)
       const bassHz = 55 + 50 * Math.min(1, L.bass)
       const bassAmp = 0.06 + 0.8 * Math.min(1, L.bass) + 0.1 * L.busy
       const s = this.samples
       for (let n = 0; n < N; n++) {
+        const t = t0 + n / RATE
+        let y = 0
+        for (const v of this.touches) {
+          const age = t - v.t
+          if (age >= 0 && age <= v.life) y += v.amp * Math.exp(-age / (v.life / 3)) * Math.sin(2 * Math.PI * v.hz * age)
+        }
         if (only) {
-          s[n] = Math.tanh(1.5 * a[n])
+          s[n] = Math.tanh(1.5 * a[n] + y)
           continue
         }
-        const t = t0 + n / RATE
-        let x = (a ? 1.5 * a[n] : 0) + bassAmp * Math.sin(2 * Math.PI * bassHz * t)
+        let x = y + (a ? 1.5 * a[n] : 0) + bassAmp * Math.sin(2 * Math.PI * bassHz * t)
         x += 0.07 * L.idle * Math.sin(2 * Math.PI * 38 * t) * (0.6 + 0.4 * Math.sin(2 * Math.PI * 0.3 * t))
         x += 0.22 * L.treble * (Math.random() * 2 - 1) * (n % 2 ? 1 : -1)
         for (const v of this.voices) {

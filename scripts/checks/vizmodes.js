@@ -4,7 +4,7 @@
 // under xvfb-run:
 //   node scripts/checks/vizmodes.js OUT
 // The fakes of scripts/fake come first on PATH. The menu lists every
-// mode, and the space bar and a click step a pane through all of them.
+// mode, and the space bar steps a pane through all of them.
 // It reports the frame rate of three panes in butterchurn modes and in
 // the procedural modes, measured in turn, and asserts nothing of it,
 // since the host's load moves it. Then one pane
@@ -88,25 +88,18 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
 
   const menu = await win.evaluate(() => window.skinned.vizState())
   check(menu.modes.map(m => m.id).join() === MODES.map(m => m.id).join(), 'the menu does not list every mode')
-  // The space bar, then a click, steps the one pane through every mode
-  // and back.
-  for (const how of ['space', 'click']) {
-    const start = (await state()).mode
-    const seen = [start]
-    for (let i = 0; i < MODES.length; i++) {
-      if (how === 'space') await viz.keyboard.press('Space')
-      else {
-        const p = (await state()).panes[0]
-        await viz.mouse.click(p.x + p.w / 2, p.y + p.h / 2)
-      }
-      await sleep(250)
-      seen.push((await state()).mode)
-    }
-    const at = MODES.findIndex(m => m.id === start)
-    const want = Array.from({ length: MODES.length + 1 }, (_, k) => MODES[(at + k) % MODES.length].id)
-    console.log(how, seen.join(' '))
-    check(seen.join() === want.join(), `${how} does not step through every mode`)
+  // The space bar steps the one pane through every mode and back.
+  const start = (await state()).mode
+  const seen = [start]
+  for (let i = 0; i < MODES.length; i++) {
+    await viz.keyboard.press('Space')
+    await sleep(250)
+    seen.push((await state()).mode)
   }
+  const at = MODES.findIndex(m => m.id === start)
+  const want = Array.from({ length: MODES.length + 1 }, (_, k) => MODES[(at + k) % MODES.length].id)
+  console.log('space', seen.join(' '))
+  check(seen.join() === want.join(), 'space does not step through every mode')
 
   // Three panes in butterchurn modes, as vizsplit.js measures them, and
   // in the procedural modes, five rounds in turn so each set sees the

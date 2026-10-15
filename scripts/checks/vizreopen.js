@@ -4,8 +4,9 @@
 // Run under xvfb-run:
 //   node scripts/checks/vizreopen.js OUT rounds|build
 // rounds: three rounds of Hide and Show from the menu, each reopened
-// window showing the panes and modes it showed before, and a mode step
-// by click, space and menu shown at once, with no page or console error.
+// window showing the panes and modes it showed before, a click leaving
+// the modes, and a mode step by space and menu shown at once, with no
+// page or console error.
 // build: a copy of the app tree, whose viz page is made to throw on disk
 // after launch. The reopened window must still draw, from the launch's
 // build. The copy is removed on exit.
@@ -73,7 +74,7 @@ async function rounds () {
     await viz.mouse.click(p.x + p.w / 2, p.y + p.h / 2)
     await sleep(400)
     const clicked = await modes(viz)
-    check(clicked[0] !== again[0] && clicked[1] === again[1], `round ${r}: a click must step the first pane at once`)
+    check(clicked.join() === again.join(), `round ${r}: a click must leave the modes`)
     await viz.keyboard.press('Space')
     await sleep(400)
     const spaced = await modes(viz)

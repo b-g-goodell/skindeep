@@ -1,9 +1,8 @@
 'use strict'
 // The panes of the visualization window (decision 0015): one per tab, in
 // a grid of equal panes whose column count gives each pane the longest
-// shorter side. Loaded by the main process, which maps a click to its
-// pane, and by the viz page, which lays the panes out, so both agree. In
-// CSS pixels, the main process's DIP.
+// shorter side. Loaded by the viz page, which lays the panes out and
+// maps the pointer to its pane. In CSS pixels.
 
 ;(function (root) {
   function grid (n, w, h) {

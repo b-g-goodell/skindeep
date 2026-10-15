@@ -9,7 +9,10 @@ single visualizer window"), for the sound output as an input (maintainer:
 for five procedural modes (maintainer: "invent new procedural visuals.
 One based on fractals and the Barnsley fern, one on the board game Go,
 one that zooms out progressively and reveals surprises, one on
-gravitational dynamics, and one on quantum mechanics").
+gravitational dynamics, and one on quantum mechanics"), and 2026-10-15
+for the pointer (maintainer: "the visualizations should respond to
+clicks and be moderately interactive. example: the quantum physics
+visualizer should allow me to click and drag to put up barriers").
 
 ## Context
 
@@ -78,11 +81,9 @@ butterchurn-presets is MIT for its conversion only.
     slits onto a screen that records detections, a stop measuring and
     collapsing the state. With the sound output alone, which brings no
     events, a rise of its loudness counts as one.
-- Each pane's mode belongs to the main process. A left click steps the
-  pane under it: the main process reads the click from the window's
-  input events and finds the pane with `layout.js` over the window's
-  content size, both in DIP, so the page sends nothing. The space bar
-  steps the active tab's pane. The menu's Visualization mode flyout
+- Each pane's mode belongs to the main process. The space bar steps the
+  active tab's pane: the main process reads it from the window's input
+  events, so the page sends nothing. A click steps no mode. The menu's Visualization mode flyout
   lists every mode, the active tab's marked, and shows the one picked in
   the active tab's pane, opening the window when it is hidden. Each pick
   is recorded as the last skin is (decision 0022), one file per window
@@ -90,6 +91,36 @@ butterchurn-presets is MIT for its conversion only.
   the first mode no other pane shows, counting from the last pick, and a
   launch's first pane in the newest record's mode, else in Drift. The
   modes are not kept per tab across launches.
+- The pointer belongs to the page, which reads it and sends nothing:
+  the left button's press, moves and release go to the pane under the
+  press, found with `layout.js`, in the pane's canvas pixels, through
+  the renderer's optional `pointer(kind, x, y, down)`. The press holds
+  the pointer to its pane until the release. Nothing the pointer does
+  changes a mode, the pane layout or the tab, and the keyboard stays
+  with the terminal. Each mode answers in its own way:
+  - Quantum: a press and drag paints a barrier along the path, a ridge
+    of potential 2.5 high and about three points wide, above the
+    packets' energy of 0.4 to 1 and below the wall's 4, so a packet
+    mostly scatters off it and partly tunnels through. It fades with a
+    time constant of 4 s and is gone in about 16. A click drops a short
+    one. The barrier is drawn in amber over the wave.
+  - Gravity: the release throws a moon from the press: a click puts it
+    on a circular orbit about the heaviest body, a drag gives it a
+    velocity in proportion to the drag, its aim drawn while pressed.
+  - Go: a click on a point plays it for the side to move, if the rules
+    allow it.
+  - Zoom out: a click leaves a white ring where it lands on the scene
+    in view, which recedes with the scene, and sets off that scene's
+    surprise.
+  - Fern: a click lights the leaflets on its side of the frond in gold
+    and blows a gust.
+  - Every other mode, the five butterchurn presets, Scope, the two
+    analyzers, Superscope and Dot plane, has no method of its own: a
+    press adds a short tone to the pane's signal, its pitch on the
+    bands' scale by the pointer's place across the pane and its
+    loudness by its height, again every 60 ms of a drag, so a band
+    display rises under the pointer and a drag sweeps it. The tone is
+    no event and no beat, and it sounds on every input.
 - A butterchurn pane holds a WebGL2 context, made the first time the
   pane shows a butterchurn mode and released with the pane. Chromium
   drops a page's oldest context past about 16, so at most 8 panes hold
@@ -131,7 +162,12 @@ the main process keeps the page receive-only and numeric when it shows
 the sound output, and a monitor source records what plays, never a
 room. With the mode
 in the main process the menu can mark it and the record keep it, and the
-page still cannot send. A flyout keeps the drop-down short: fifteen more
+page still cannot send. The pointer acts on what the page draws, so the
+page reads it, and nothing of it needs to reach the main process. A
+click that stepped the mode would take the click from the modes. The
+pointer's tone, for the modes that only draw the signal, makes each of
+them answer with no code of its own, and it is kept out of the events
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: fifteen more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -145,7 +181,10 @@ at a fifth of the rate there.
 - butterchurn-presets, and copying any MilkDrop preset: no license from
   the presets' authors.
 - A send from the viz page for each click: the main process sees the
-  input itself.
+  space bar itself, and the page answers the pointer itself.
+- A click, or a right click, that steps the mode: the maintainer wants the
+  click to go to the mode, and a mode drop-down in each pane is to
+  come.
 - The modes as a section of the drop-down: too long, see Why.
 - A silent AudioContext: opens a device stream.
 - `getUserMedia` on the monitor source in the page: the page would open

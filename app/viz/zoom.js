@@ -11,7 +11,8 @@
 // depends only on z, so the loop is seamless. The bass and the busy
 // level speed the pull, a prompt surges it, an idle spell all but stops
 // it, and each event leaves a ring on the scene in view, which recedes
-// with it.
+// with it. A click leaves a white ring where it lands and sets off the
+// surprise of the scene in view.
 
 ;(function (root) {
   const R = 4
@@ -361,6 +362,10 @@
     let pulse = 0
     let hue = 200
     let marks = []
+    // The scene in view as last drawn, its level, scale and origin on
+    // the pane, the signal's clock then, and the clicks.
+    let view = null
+    let clicks = 0
 
     return {
       draw (synth, dt) {
@@ -402,6 +407,7 @@
         const at = { [n + 1]: [S1, w / 2 - S1 * c[0] * (1 - e), h / 2 - S1 * c[1] * (1 - e)] }
         at[n + 2] = [S1 * R, at[n + 1][1] - S1 * R * anchor(n + 2)[0], at[n + 1][2] - S1 * R * anchor(n + 2)[1]]
         at[n] = [S1 / R, at[n + 1][1] + S1 * c[0], at[n + 1][2] + S1 * c[1]]
+        view = { level: n, S: at[n][0], x: at[n][1], y: at[n][2], t }
         const a0 = anchor(n)
         at[n - 1] = [S1 / R / R, at[n][1] + at[n][0] * a0[0], at[n][2] + at[n][0] * a0[1]]
         const alpha = { [n - 1]: 1 - f, [n]: 1, [n + 1]: 1, [n + 2]: f }
@@ -424,7 +430,7 @@
           for (const m of marks) {
             if (((m.level - k) % K + K) % K !== 0) continue
             const age = (t - m.t) / 6
-            g.strokeStyle = `hsla(${m.hue}, 100%, 65%, ${1 - age})`
+            g.strokeStyle = m.white ? `rgba(255, 255, 255, ${1 - age})` : `hsla(${m.hue}, 100%, 65%, ${1 - age})`
             g.lineWidth = 0.012
             g.beginPath()
             g.arc(m.x, m.y, 0.04 + 0.3 * age, 0, TAU)
@@ -434,6 +440,19 @@
         g.globalAlpha = 1
         g.setTransform(1, 0, 0, 1, 0, 0)
         out.drawImage(layer, 0, 0)
+      },
+
+      pointer (kind, x, y) {
+        if (kind !== 'down' || !view) return
+        const { level, S, t } = view
+        marks.push({ level, x: (x - view.x) / S, y: (y - view.y) / S, hue: 0, white: true, t })
+        pulse = 1
+        clicks++
+      },
+
+      // For the live checks: the clicks and the rings in view.
+      probe () {
+        return { clicks, rings: marks.length }
       }
     }
   }
