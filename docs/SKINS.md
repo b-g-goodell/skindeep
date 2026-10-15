@@ -44,18 +44,22 @@ terminal always paint above the skin. Nothing a skin does can cover them.
 
 A window with two tabs or more shows the tab strip (24 px) below the
 identity strip, and the skin area is that much shorter. The window's
-minimum height grows by as much, so at the minimum window the skin area
-is never smaller than the one the validator checks.
+minimum height grows by as much, so the skin area's floor, below, holds
+with any number of tabs.
 
-`minWidth` is the narrowest the skin is drawn at full size. A narrower
-window, such as one snapped to half a 1920 px screen, draws the whole
-skin scaled by the window's width over `minWidth`, laid out at the
-height that scale leaves. The terminal is not scaled: it keeps its font
-and gets the scaled rect, so it loses columns. The window cannot be
-narrower than half of `minWidth`, nor narrower than where the terminal
-would fall below 40 columns of the skin's own font
-(`app/skins/scale.js`). Draw for `minWidth` and the skin fits smaller
-screens with no work of yours.
+`minWidth` and `minHeight` are the smallest window the skin is drawn
+at full size. A smaller window, such as one snapped to half or a
+quarter of a 1920 x 1080 screen, draws the whole skin scaled by the
+smaller of two ratios: the window's width over `minWidth`, and the skin
+area's height over `minHeight` less the 22 px strip. The skin is laid
+out at the size that scale leaves, never smaller than the minimum. The
+terminal is not scaled: it keeps its font and gets the scaled rect, so
+it loses columns and rows. The window cannot be narrower than half of
+`minWidth`, nor narrower than where the terminal would fall below 40
+columns of the skin's own font. Its skin area cannot be shorter than
+half of the minimum, nor shorter than where the terminal would fall
+below 10 rows (`app/skins/scale.js`). Draw for `minWidth` and
+`minHeight` and the skin fits smaller screens with no work of yours.
 
 ## skin.json
 
@@ -83,7 +87,7 @@ Top-level fields:
 | --- | --- | --- |
 | `name` | yes | lowercase letters, digits and dashes. A shipped skin's name is its directory's. A skin opened with `--skin PATH` under a shipped skin's name replaces that skin for the run, and the menu shows its folder |
 | `version`, `author`, `description`, `license` | no | strings, shown nowhere yet |
-| `window` | yes | `width`, `height` (initial content size), `minWidth` (narrowest at full size, see above), `minHeight`, all at least 200 |
+| `window` | yes | `width`, `height` (initial content size), `minWidth` and `minHeight` (smallest at full size, see above), all at least 200 |
 | `terminal` | yes | see below |
 | `menu` | yes | the menu button, see below |
 | `fonts` | no | `[{ "family", "file", "weight"?, "style"? }]`, registered by the app so CSS and the terminal can use the family |
