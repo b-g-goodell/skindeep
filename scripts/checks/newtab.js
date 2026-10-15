@@ -106,9 +106,12 @@ async function profiles () {
   const chain = Buffer.from(line.split(' ').pop(), 'base64url').toString('utf8')
   check(chain === 'echo work-line', `want the work tab's relay chained to its profile's statusline, saw ${JSON.stringify(chain)}`)
 
-  c = await chooser(win)
-  console.log('chooser again', JSON.stringify(c))
-  check(c.profile === work && c.profiles.join() === [dflt, lab, work].join() && c.forget, 'want the default, the open tabs\' profiles, work remembered')
+  // From the second tab on, + opens the same chooser.
+  await win.locator('#tabs .new').click()
+  await sleep(600)
+  c = await read(win)
+  console.log('chooser again, from +', JSON.stringify(c))
+  check(c.profile === work && c.profiles.slice(0, 3).join() === [dflt, lab, work].join() && c.forget, 'want the default, the open tabs\' profiles, work remembered, then the scan\'s')
   await win.selectOption('#chooser .profile', dflt)
   await sleep(200)
   c = await read(win)

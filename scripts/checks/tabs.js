@@ -114,10 +114,17 @@ async function strip () {
   check(await stripShown(win), 'want the strip with two tabs')
   check(s1.content[1] === s1.min[1], 'want the window at its minimum before the second tab')
   check(s2.min[1] === s1.min[1] + 24 && s2.content[1] === s2.min[1], 'want the minimum height and the window 24 px more')
+  // + opens the chooser and no tab, Ctrl+Shift+T a tab at once.
   await win.locator('#tabs .new').click()
+  await sleep(600)
+  const chooserShown = await win.evaluate(() => !document.getElementById('chooser').hidden)
+  check(chooserShown && (await probe(app)).tabs.length === 2, 'want + to open the chooser and no tab')
+  await win.keyboard.press('Escape')
+  await sleep(300)
+  await win.keyboard.press('Control+Shift+T')
   await sleep(1500)
   let t = (await probe(app)).tabs
-  check(t.length === 3, 'want three tabs after +')
+  check(t.length === 3, 'want three tabs after Ctrl+Shift+T')
   await shot(win, path.join(out, 'strip-three.png'))
   const ids = t.map(x => x.id)
   const box = async id => win.locator(`#tabs .tab[data-id="${id}"]`).boundingBox()
