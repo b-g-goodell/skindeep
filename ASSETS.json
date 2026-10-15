@@ -217,6 +217,286 @@
     "notes": "google/fonts apache/specialelite at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
   },
   {
+    "path": "skins/coffee/images/slate.jpg",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a black menu board"
+  },
+  {
+    "path": "skins/coffee/images/doodles.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: chalk doodles beside the board's title"
+  },
+  {
+    "path": "skins/coffee/images/doodle.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a chalk mug and \"pay what you can\", lettered in Amatic SC (OFL-1.1, shipped in this skin)"
+  },
+  {
+    "path": "skins/coffee/images/lights-off.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a tile of string lights, softly lit"
+  },
+  {
+    "path": "skins/coffee/images/lights-on.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: the same tile, the bulbs flaring"
+  },
+  {
+    "path": "skins/coffee/images/cork.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a corkboard of handbills, lettered in Shrikhand and Cutive Mono (OFL-1.1, shipped in this skin). Wood grain from images/counter.jpg (ambientCG Wood049, CC0)."
+  },
+  {
+    "path": "skins/coffee/images/lava.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a lava lamp's cap, base and glass"
+  },
+  {
+    "path": "skins/coffee/images/deck.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a turntable's plinth, platter and controls, numbers set in DejaVu Sans Bold. Wood grain from images/counter.jpg (ambientCG Wood049, CC0)."
+  },
+  {
+    "path": "skins/coffee/images/record.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a record and its label"
+  },
+  {
+    "path": "skins/coffee/images/tonearm.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a tonearm"
+  },
+  {
+    "path": "skins/coffee/images/amp.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a tube amp's face, lettered in DejaVu Sans Bold. Wood grain from images/counter.jpg (ambientCG Wood049, CC0)."
+  },
+  {
+    "path": "skins/coffee/images/vu.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy, numbers set in DejaVu Sans Bold: a VU meter face"
+  },
+  {
+    "path": "skins/coffee/images/knob.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a bakelite knob with a brass cap"
+  },
+  {
+    "path": "skins/coffee/images/lps.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a cubby of LPs. Wood grain from images/counter.jpg (ambientCG Wood049, CC0)."
+  },
+  {
+    "path": "skins/coffee/images/press.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a French press"
+  },
+  {
+    "path": "skins/coffee/images/jar.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a mason jar"
+  },
+  {
+    "path": "skins/coffee/images/bottle.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a candle in a straw-covered wine bottle"
+  },
+  {
+    "path": "skins/coffee/images/plant.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a pothos in a terracotta pot"
+  },
+  {
+    "path": "skins/coffee/images/typewriter.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a manual typewriter"
+  },
+  {
+    "path": "skins/coffee/images/mugs.png",
+    "source": "scripts/art/coffee.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a plank of none to four mismatched mugs. Wood grain from images/counter.jpg (ambientCG Wood049, CC0)."
+  },
+  {
+    "path": "skins/coffee/images/menu.svg",
+    "source": "hand-written SVG",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project: a small menu board with three lines"
+  },
+  {
+    "path": "skins/coffee/images/wall.jpg",
+    "source": "https://ambientcg.com/get?file=Bricks097_1K-JPG.zip",
+    "author": "ambientCG",
+    "license": "CC0-1.0",
+    "notes": "Bricks097, asset page https://ambientcg.com/a/Bricks097. Derived from Bricks097_1K-JPG_Color.jpg in the zip: 1024 x 512 kept, ImageMagick -modulate 70,90,100, JPEG quality 82. Tileable old brick. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
+  },
+  {
+    "path": "skins/coffee/images/counter.jpg",
+    "source": "https://ambientcg.com/get?file=Wood049_1K-JPG.zip",
+    "author": "ambientCG",
+    "license": "CC0-1.0",
+    "notes": "Wood049, asset page https://ambientcg.com/a/Wood049. Derived from Wood049_1K-JPG_Color.jpg in the zip: resized from 1024 to 512 px square, ImageMagick -modulate 92,120,100, JPEG quality 82. Tileable wood. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
+  },
+  {
+    "path": "skins/coffee/fonts/AmaticSC/AmaticSC-Bold.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/amaticsc/AmaticSC-Bold.ttf",
+    "author": "The Amatic SC Project Authors",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/amaticsc at commit 66928797f271fed5ee428544e7229685e2d90127. Hand-lettered capitals for the menu board."
+  },
+  {
+    "path": "skins/coffee/fonts/AmaticSC/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/amaticsc/OFL.txt",
+    "author": "The Amatic SC Project Authors",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/amaticsc at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
+  },
+  {
+    "path": "skins/coffee/fonts/Shrikhand/Shrikhand-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/shrikhand/Shrikhand-Regular.ttf",
+    "author": "Jonny Pinhorn",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/shrikhand at commit 66928797f271fed5ee428544e7229685e2d90127. Hand-painted display face for the handbills and the lava lamp's shelf."
+  },
+  {
+    "path": "skins/coffee/fonts/Shrikhand/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/shrikhand/OFL.txt",
+    "author": "Jonny Pinhorn",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/shrikhand at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim, its CRLF line ends stored as LF by .gitattributes."
+  },
+  {
+    "path": "skins/coffee/fonts/CutiveMono/CutiveMono-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/cutivemono/CutiveMono-Regular.ttf",
+    "author": "The Cutive Project Authors",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/cutivemono at commit 66928797f271fed5ee428544e7229685e2d90127. Typewriter face for the handbill readout and the amp."
+  },
+  {
+    "path": "skins/coffee/fonts/CutiveMono/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/cutivemono/OFL.txt",
+    "author": "The Cutive Project Authors",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/cutivemono at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
+  },
+  {
+    "path": "skins/coffee/sounds/murmur.ogg",
+    "source": "https://freesound.org/people/moxobna/sounds/46310/",
+    "author": "moxobna (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 46310, 0105coffeehouse.wav, a small crowd quietly talking in a coffeehouse. Preview https://cdn.freesound.org/previews/46/46310_43834-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 225 to 265 s, high-pass 120 Hz, the last 4 s crossfaded into the head for a 36 s loop without a seam, RMS -24 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/guitar.ogg",
+    "source": "https://freesound.org/people/TheScriabin/sounds/404952/",
+    "author": "TheScriabin (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 404952, Spanishy Guitar Thing.wav, an acoustic guitar noodling over two chords. Preview https://cdn.freesound.org/previews/404/404952_3480533-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 24.95 to 37.5 s, high-pass 70 Hz, fades 0.02 s in and 1.2 s out, RMS -27 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/bongos.ogg",
+    "source": "https://freesound.org/people/Heigh-hoo/sounds/34531/",
+    "author": "Heigh-hoo (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 34531, playing_around_with_bongos.aif. Preview https://cdn.freesound.org/previews/34/34531_21830-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 0 to 6 s, high-pass 60 Hz, fades 0.01 s in and 1 s out, RMS -28 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/needle.ogg",
+    "source": "https://freesound.org/people/Breviceps/sounds/556722/",
+    "author": "Breviceps (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 556722, Record Player Needle is dropped & Vinyl crackling. Preview https://cdn.freesound.org/previews/556/556722_9159316-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 0 to 6.8 s, high-pass 40 Hz, fades 0.005 s in and 1.5 s out, peak set to -2 dBFS then limited. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/typewriter.ogg",
+    "source": "https://freesound.org/people/kyles/sounds/637926/",
+    "author": "kyles (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 637926, typewriter manual typing roomy.flac. Preview https://cdn.freesound.org/previews/637/637926_612689-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 4 to 9.5 s, high-pass 120 Hz, fades 0.01 s in and 0.6 s out, peak set to -1 dBFS then limited. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/beads.ogg",
+    "source": "https://freesound.org/people/Sadiquecat/sounds/789008/",
+    "author": "Sadiquecat (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 789008, Wooden beaded doorway curtain XY - 7. Preview https://cdn.freesound.org/previews/789/789008_5287430-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 0 to 5.6 s, high-pass 80 Hz, fades 0.005 s in and 1 s out, RMS -28 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/grinder.ogg",
+    "source": "https://freesound.org/people/apintofmild/sounds/642772/",
+    "author": "apintofmild (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 642772, Manual Coffee Grinder, beans in a hand grinder. Preview https://cdn.freesound.org/previews/642/642772_9813501-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 25 to 30.5 s, high-pass 80 Hz, fades 0.25 s in and 0.8 s out, RMS -28 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/pour.ogg",
+    "source": "https://freesound.org/people/kvgarlic/sounds/348268/",
+    "author": "kvgarlic (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 348268, CoffeePouringInCupSennheiserME66.WAV, coffee poured into a mug. Preview https://cdn.freesound.org/previews/348/348268_1050391-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 1 to 6.8 s, high-pass 80 Hz, fades 0.1 s in and 0.8 s out, RMS -31 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/mug-1.ogg",
+    "source": "https://freesound.org/people/Nightflame/sounds/397600/",
+    "author": "Nightflame (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 397600, Setting Down Cup, a ceramic cup put down on a hard surface. Preview https://cdn.freesound.org/previews/397/397600_3302499-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 4.2 to 4.8 s, one take, high-pass 80 Hz, fades 0.003 s in and 0.2 s out, peak -6 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/mug-2.ogg",
+    "source": "https://freesound.org/people/Nightflame/sounds/397600/",
+    "author": "Nightflame (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "freesound sound 397600, Setting Down Cup, a ceramic cup put down on a hard surface. Preview https://cdn.freesound.org/previews/397/397600_3302499-hq.ogg, fetched by plain GET. Derived by scripts/art/sounds.py: cut 7.05 to 7.65 s, another take, high-pass 80 Hz, fades 0.003 s in and 0.2 s out, peak -6 dBFS. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per the sound page."
+  },
+  {
+    "path": "skins/coffee/sounds/snaps.ogg",
+    "source": "https://freesound.org/people/RutgerMuller/sounds/50758/",
+    "author": "RutgerMuller and JohnsonBrandEditing (freesound.org)",
+    "license": "CC0-1.0",
+    "notes": "Beatnik applause built from single finger snaps of freesound sounds 50758 (RutgerMuller, Snapping Fingers.wav, preview https://cdn.freesound.org/previews/50/50758_179538-hq.ogg) and 369549 (JohnsonBrandEditing, Finger Snaps, page https://freesound.org/people/JohnsonBrandEditing/sounds/369549/, preview https://cdn.freesound.org/previews/369/369549_3229685-hq.ogg), both fetched by plain GET. Derived by scripts/art/sounds.py: each snap above -22 dB of its file cut out, high-pass 300 Hz, laid out as four listeners snapping for about two seconds, a 0.35 s room tail. Output 44.1 kHz mono Ogg Vorbis q3, peaks at most -6 dBFS. CC0 per both sound pages."
+  },
+  {
     "path": "app/viz/avs.js",
     "source": "https://codeberg.org/exo-cortex/vis_avs/src/commit/1cee1f3d4f783b830538c3e4d2082a2c59521dee/avs/vis_avs",
     "author": "Nullsoft, Inc. (the AVS source release of 2005), as kept by the vis_avs port's contributors",

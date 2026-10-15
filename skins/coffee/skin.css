@@ -1,0 +1,162 @@
+/* coffee: a bohemian basement cafe. Old brick, string lights, a chalkboard
+   with doodles, handbills on a corkboard, a lava lamp, a thrift-store
+   cabinet holding a turntable, a tube amp and LPs, and a table under a
+   block-print cloth with a French press, jars of cold brew, a candle in a
+   straw bottle, a pothos, a typewriter and mismatched mugs. */
+.room { background: #2a1610 url(images/wall.jpg) 0 0 / 640px 320px; }
+.room::after { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 176, 90, 0.16), rgba(0, 0, 0, 0) 70%),
+    radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 40%, rgba(12, 4, 0, 0.62) 100%); }
+
+/* The chalkboard in a thrift-store frame. */
+.frame { border-radius: 4px; background: url(images/counter.jpg) 0 0 / 260px 260px, #c08a48; background-blend-mode: multiply;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 170, 0.3), inset 0 0 8px rgba(0, 0, 0, 0.6), 0 5px 14px rgba(0, 0, 0, 0.6); }
+.slate { background: #1e1d1b url(images/slate.jpg) center / cover; box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8); }
+.board-title::after { content: "Tonight"; display: block; font: bold 34px/34px "Amatic SC", cursive; color: #f4ead6; letter-spacing: 2px;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.35); }
+.doodles { background: url(images/doodles.png) 0 0 / 300px 28px no-repeat; opacity: 0.8; }
+.doodle { background: url(images/doodle.png) 0 0 / 92px 116px no-repeat; opacity: 0.8; }
+
+.line { flex-direction: row; justify-content: flex-start; align-items: baseline; color: #f4ead6; gap: 4px; }
+.line .label { flex: 1 1 auto; overflow: hidden; font: bold 22px/24px "Amatic SC", cursive; letter-spacing: 1.5px; text-transform: none; color: #f4ead6; }
+.line .label::after { content: " . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ."; color: rgba(244, 234, 214, 0.45); }
+.line .value { flex: none; font: bold 24px/24px "Amatic SC", cursive; letter-spacing: 1px; color: #ffe2a8; }
+
+/* String lights across the wall: they flare at each tool call. */
+.lights { display: block; }
+.lights.nodata { opacity: 1; }
+.lights .label { display: none; }
+.lights .lamp, .lights .lamp.on { position: absolute; inset: 0; width: auto; height: auto; border-radius: 0; box-shadow: none;
+  background: url(images/lights-off.png) 0 0 / 240px 30px repeat-x; }
+.lights .lamp.on { background-image: url(images/lights-on.png); }
+
+/* The corkboard, and the open mic flyer's readout, turned with the flyer. */
+.cork { background: url(images/cork.png) 0 0 / 228px 140px no-repeat; border-radius: 3px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55); }
+.handbill { transform: rotate(-3deg); gap: 2px; color: #3a2a22; }
+.handbill .label { font: 11px/12px "Cutive Mono", monospace; letter-spacing: 1px; text-transform: none; }
+.handbill .value { font: 22px/22px "Cutive Mono", monospace; color: #b0381e; }
+
+/* The lava lamp on its shelf: wax pooled and dark while idle, glowing
+   and rising while the agent works. */
+.shelf { border-radius: 2px; background: url(images/counter.jpg) 0 0 / 200px 200px, #9a6638; background-blend-mode: multiply;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.4), 0 4px 6px rgba(0, 0, 0, 0.6); }
+.lava { display: block; }
+.lava.nodata { opacity: 1; }
+.lava::after { content: ""; position: absolute; inset: 0; background: url(images/lava.png) 0 0 / 68px 150px no-repeat; }
+.lava:has(.lamp.on)::before { content: ""; position: absolute; left: -90px; right: -40px; top: -10px; bottom: -20px;
+  background: radial-gradient(ellipse 50% 50% at 62% 45%, rgba(255, 110, 90, 0.32), rgba(255, 110, 90, 0) 100%); }
+.lava .lamp, .lava .lamp.on { position: absolute; left: 14px; top: 30px; width: 40px; height: 74px; border-radius: 0; box-shadow: none;
+  clip-path: polygon(7px 0, 33px 0, 40px 50px, 37px 74px, 3px 74px, 0 50px);
+  background: radial-gradient(ellipse 70% 16% at 50% 100%, #7a2a4a 85%, rgba(122, 42, 74, 0) 100%), linear-gradient(#5c3c24, #48301c 60%, #50321e); }
+.lava .lamp::before, .lava .lamp::after { content: ""; position: absolute; border-radius: 48% 52% 44% 56% / 56% 50% 50% 44%; background: #7a2a4a; }
+.lava .lamp::before { left: 9px; bottom: 6px; width: 15px; height: 12px; }
+.lava .lamp::after { left: 22px; bottom: 4px; width: 10px; height: 9px; }
+.lava .lamp.on { background: radial-gradient(ellipse 70% 16% at 50% 100%, #ff3f8e 85%, rgba(255, 63, 142, 0) 100%),
+  radial-gradient(ellipse 90% 70% at 50% 100%, #fff3b0, #ffb54a 45%, #ff8040 100%); }
+.lava .lamp.on::before, .lava .lamp.on::after { background: radial-gradient(circle at 38% 32%, #ff9ac6, #f0287a 70%); filter: blur(0.4px); }
+.lava .lamp.on::before { animation: rise 7s ease-in-out infinite; }
+.lava .lamp.on::after { animation: rise 9.5s ease-in-out -4s infinite; }
+@keyframes rise {
+  0% { transform: translateY(0) scale(1, 1); }
+  45% { transform: translateY(-50px) scale(0.85, 1.25); }
+  55% { transform: translateY(-54px) scale(1.05, 0.9); }
+  100% { transform: translateY(0) scale(1, 1); } }
+.lava .label { position: absolute; left: -12px; right: -12px; top: 150px; text-align: center; font: 10px/14px Shrikhand, cursive;
+  letter-spacing: 1px; text-transform: none; color: #5a3420; transition: color 0.4s, text-shadow 0.4s; }
+.lava .lamp.on + .label { color: #ffd6b0; text-shadow: 0 0 4px #ff7a3c, 0 0 10px #ff4f6a; }
+
+/* The cabinet: a turntable, a tube amp, a cubby of LPs. */
+.cabinet { border-radius: 4px; background: url(images/counter.jpg) 0 0 / 280px 280px, #7a4c2c; background-blend-mode: multiply;
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 160, 0.25), inset 0 0 12px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.6); }
+.deck { border-radius: 6px; background: url(images/deck.png) 0 0 / 284px 200px no-repeat; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6); }
+.amp { border-radius: 5px; background: url(images/amp.png) 0 0 / 284px 168px no-repeat; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6); }
+.lps { border-radius: 2px; background: #1a100b url(images/lps.png) left bottom / 284px 210px no-repeat;
+  box-shadow: inset 0 10px 14px rgba(0, 0, 0, 0.75); }
+
+/* The record turns while the terminal prints. */
+.spin { display: block; }
+.spin.nodata { opacity: 1; }
+.spin .label { display: none; }
+.spin .lamp, .spin .lamp.on { position: absolute; left: 16px; top: 16px; width: 140px; height: 140px; border-radius: 50%;
+  background: url(images/record.png) 0 0 / 140px 140px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+  animation: turn 1.8s linear infinite; animation-play-state: paused; }
+.spin .lamp.on { animation-play-state: running; }
+@keyframes turn { to { transform: rotate(360deg); } }
+
+/* The context rings the platter, the compact threshold a red mark. The
+   tonearm rides above. */
+.platter { display: block; }
+.platter .dial { position: absolute; inset: 0; width: 172px; height: 172px; }
+.platter .track { stroke: rgba(255, 220, 160, 0.16); }
+.platter .fill { stroke: #f0a040; filter: drop-shadow(0 0 2px rgba(255, 170, 60, 0.8)); }
+.platter .mark { stroke: #ff4a3a; stroke-width: 2; }
+.platter text.value { font-family: "Amatic SC", cursive; font-weight: bold; font-size: 14px; fill: #2a1206; }
+.platter .label { position: absolute; left: 184px; top: 138px; width: 80px; height: 14px; text-align: center;
+  font: 9px/14px "Cutive Mono", monospace; letter-spacing: 2px; color: #e8e4dc; }
+.platter::after { content: ""; position: absolute; left: -12px; top: -14px; width: 284px; height: 200px;
+  background: url(images/tonearm.png) 0 0 / 284px 200px no-repeat; }
+
+/* The amp's VU meter reads tokens per second, its knob the CPU. */
+.vu { display: block; }
+.vu .dial { position: absolute; inset: 0; width: 160px; height: 120px; }
+.vu .needle { stroke: #1a1410; stroke-width: 1.3; }
+.vu .pivot { fill: #2a2018; }
+.vu .label { display: none; }
+.vu .value { position: absolute; right: 9px; bottom: 5px; font: 13px/13px "Cutive Mono", monospace; color: #6a2e14; }
+.vu::after { content: ""; position: absolute; inset: 0; border-radius: 3px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 38%), radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0) 50%, rgba(40, 20, 0, 0.35) 100%); }
+.cpu { justify-content: flex-start; gap: 0; color: #2a2420; }
+.cpu .knob-box { flex: none; width: 76px; height: 76px; }
+.cpu .knob-image { filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.55)); }
+.cpu .label { margin-top: 2px; font: 10px/14px "Cutive Mono", monospace; letter-spacing: 2px; text-transform: uppercase; }
+.cpu .value { font: 13px/16px "Cutive Mono", monospace; }
+
+/* The window onto the terminal: painted teal wood. */
+.sash { border-radius: 3px; background: url(images/counter.jpg) 0 0 / 240px 240px, #4f8f86; background-blend-mode: multiply;
+  box-shadow: inset 0 0 0 1px rgba(200, 255, 240, 0.22), inset 0 0 10px rgba(0, 0, 0, 0.6), 0 5px 14px rgba(0, 0, 0, 0.6); }
+
+/* The table under its block-print cloth. */
+.tabletop { background: url(images/counter.jpg) 0 0 / 300px 300px, #c08a52; background-blend-mode: multiply;
+  box-shadow: inset 0 2px 0 rgba(255, 220, 170, 0.35), inset 0 14px 18px rgba(0, 0, 0, 0.35); }
+.cloth { border-radius: 0 0 3px 3px;
+  background: linear-gradient(#e8a848 0 3px, #5a1e12 3px 5px, rgba(0, 0, 0, 0) 5px) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle, #f0bc52 1.8px, rgba(0, 0, 0, 0) 2.3px) 0 6px / 22px 22px,
+    radial-gradient(circle, rgba(0, 0, 0, 0) 3px, #22385a 3.5px, #22385a 5.5px, rgba(0, 0, 0, 0) 6px) 11px 17px / 22px 22px,
+    linear-gradient(rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.3)),
+    #9a3e24;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6); }
+.cloth::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px;
+  background: repeating-linear-gradient(90deg, #d89a3e 0 2px, rgba(0, 0, 0, 0) 2px 5px); }
+.press, .jar { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5)); }
+.bottle { background: url(images/bottle.png) 0 0 / 44px 112px no-repeat; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5)); }
+.bottle::after { content: ""; position: absolute; left: -19px; top: -26px; width: 82px; height: 64px;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 196, 100, 0.42), rgba(255, 196, 100, 0) 60%); animation: flicker 2.6s ease-in-out infinite; }
+@keyframes flicker { 0%, 100% { opacity: 0.85; } 30% { opacity: 1; } 55% { opacity: 0.7; } 75% { opacity: 0.95; } }
+.plant { background: url(images/plant.png) 0 0 / 86px 120px no-repeat; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45)); }
+.typewriter { background: url(images/typewriter.png) 0 0 / 168px 96px no-repeat; }
+
+/* Masking tape labels on the press, the jars and the mugs' plank. */
+.tape .label { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-4deg); padding: 1px 5px;
+  background: rgba(236, 224, 190, 0.94); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  font: bold 15px/15px "Amatic SC", cursive; letter-spacing: 1px; text-transform: none; color: #3a2a1c; }
+
+/* The French press: coffee under a bloom of crema. */
+.press { display: block; }
+.press::after { content: ""; position: absolute; inset: 0; background: url(images/press.png) 0 0 / 70px 118px no-repeat; }
+.press .track { position: absolute; left: 12px; top: 28px; width: 40px; height: 74px; flex: none; background: rgba(255, 240, 220, 0.07); }
+.press .fill { background: linear-gradient(#c8925a 0 3px, #3e1e0c 3px, #22100a); box-shadow: none; }
+.press .label { top: 62%; }
+
+/* Mason jars of cold brew. */
+.jar { display: block; }
+.jar::after { content: ""; position: absolute; inset: 0; background: url(images/jar.png) 0 0 / 56px 100px no-repeat; }
+.jar .track { position: absolute; left: 8px; top: 22px; width: 40px; height: 72px; flex: none; border-radius: 3px 3px 9px 9px;
+  background: rgba(255, 255, 255, 0.06); }
+.jar .fill { border-radius: 0 0 9px 9px; box-shadow: none;
+  background: linear-gradient(rgba(226, 150, 70, 0.95) 0 2px, rgba(126, 60, 22, 0.92) 2px, rgba(66, 28, 10, 0.95)); }
+.jar .label { top: 60%; }
+
+/* Mismatched mugs on a plank, one for each subagent. */
+.mugs { justify-content: flex-start; }
+.mugs .sheet { flex: none; width: 186px; height: 84px; image-rendering: auto; }
+.mugs .label { top: 92px; }
