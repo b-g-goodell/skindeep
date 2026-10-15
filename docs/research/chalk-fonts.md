@@ -3,8 +3,10 @@
 Status: current, gathered 2026-10-13 from github.com/google/fonts (main
 branch, files fetched that day) and from screenshots of this checkout at
 under Xvfb with the fake agent.
-The maintainer picked Fredericka the Great, 2026-10-13, and the skin now
-draws the board in it. Gochi Hand is gone.
+The maintainer picked Fredericka the Great, 2026-10-13. By the owner's
+word of 2026-10-15 the chalkboard now uses Permanent Marker, the
+whiteboard's face, with the lamp labels cut from 18 to 16 px to fit.
+Gochi Hand and Fredericka the Great are gone from the skin.
 
 ## 1. The question
 

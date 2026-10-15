@@ -34,7 +34,6 @@
     }
   },
   "fonts": [
-    { "family": "Fredericka the Great", "file": "fonts/FrederickatheGreat/FrederickatheGreat-Regular.ttf" },
     { "family": "Permanent Marker", "file": "fonts/PermanentMarker/PermanentMarker-Regular.ttf" },
     { "family": "Special Elite", "file": "fonts/SpecialElite/SpecialElite-Regular.ttf" }
   ],
