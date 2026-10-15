@@ -26,10 +26,21 @@ otherwise.
   entries of decision 0023, Open skin...
   (a folder picker, folders only), the skins with the current one
   marked, the visualization toggle, a flyout of the visualization's
-  modes with the current one marked, and Housekeeping: this launch's
+  modes with the current one marked, Settings, and Housekeeping: this
+  launch's
   problems, Forget remembered skin, Open log folder, and Clear logs,
   which removes the logs of windows that have ended. A problem not yet
   seen puts a dot on the button. The right-click menu is gone.
+- Settings: one list in `app/settings.js`, the same in every skin.
+  A skin cannot add, remove or rename a setting. Each overrides one
+  manifest value, offers the skin's own value first as Skin default,
+  applies at once to every tab, survives a skin switch, and is kept in
+  `$XDG_STATE_HOME/claude-skins/settings.json`. The first and only one
+  is the terminal font size, 8 to 32 px. It sizes the terminal alone:
+  the menu, the chooser and the dashboard keep their own sizes. Another
+  launch reads the file at its start, so two windows open at once each
+  keep their own until relaunched. The window's minimum width stays
+  that of the skin's own font (decision 0006).
 - Keys. No native menu bar and no accelerators. The app takes only the
   copy and paste keys of decision 0002 and the tab shortcuts of decision
   0023, none of which sends the CLI a byte it would otherwise get, so
