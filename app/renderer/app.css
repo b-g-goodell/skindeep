@@ -134,14 +134,16 @@ body.tabbed #stage { top: 46px; }
 #chooser .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 #chooser .open { background: #2f5d8a; }
 /* Agent sessions in the menu (decision 0027). */
+#menu .sessions { overflow-y: auto; }
 #menu .session { display: flex; gap: 10px; white-space: nowrap; }
+#menu .session.ended { opacity: 0.55; }
 #menu .session span { flex: none; }
 #menu .session .s-label { width: 120px; overflow: hidden; text-overflow: ellipsis; }
 #menu .session .s-folder { flex: 1 1 auto; min-width: 60px; overflow: hidden; text-overflow: ellipsis; color: #a7b0ba; }
 #menu .session .s-state { width: 58px; }
 #menu .session .working { color: #e0b050; }
 #menu .session .waiting { color: #8fd18f; }
-#menu .session .idle, #menu .session .unknown { color: #8a929c; }
+#menu .session .idle, #menu .session .unknown, #menu .session .ended { color: #8a929c; }
 #menu .session .s-age { width: 38px; text-align: right; color: #8a929c; }
 #menu .session .s-where { width: 52px; color: #6fa8dc; }
 #menu .none { color: #8a929c; }

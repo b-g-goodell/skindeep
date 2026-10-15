@@ -76,47 +76,77 @@ window.AppMenu = (function () {
     return s < 60 ? `${s} s` : s < 3600 ? `${Math.floor(s / 60)} m` : s < 86400 ? `${Math.floor(s / 3600)} h` : `${Math.floor(s / 86400)} d`
   }
 
+  function sessionRow (s) {
+    const el = document.createElement('div')
+    el.className = 'item session' + (s.tab !== null ? ' in-tab' : '')
+    el.dataset.key = s.key
+    for (const [cls, text] of [['s-label', s.label], ['s-folder', s.folder], ['s-state ' + s.state, s.state], ['s-age', age(s.age)], ['s-where', s.where]]) {
+      if (cls === 's-folder') {
+        el.appendChild(pathSpan(cls, text))
+        continue
+      }
+      const sp = document.createElement('span')
+      sp.className = cls
+      sp.textContent = text
+      el.appendChild(sp)
+    }
+    el.addEventListener('click', e => { e.stopPropagation(); act(api.openSession(s.key)) })
+    return el
+  }
+
   // Agent sessions (decision 0027): every live session of this user,
   // refreshed while the menu is open. One in a tab makes that tab
-  // active, any other opens a read-only monitor tab.
+  // active, any other opens a read-only monitor tab. A refresh moves no
+  // row: a session still running is redrawn in its place, a new
+  // one is added last, and one that ended stays, marked ended, until the
+  // menu closes.
   function fillSessions (box, list) {
-    box.textContent = ''
-    if (!list.length) {
+    const rows = new Map([...box.querySelectorAll('.session')].map(el => [el.dataset.key, el]))
+    if (!rows.size) box.textContent = ''
+    if (!list.length && !box.childElementCount) {
       const none = document.createElement('div')
       none.className = 'item none'
       none.textContent = 'none running'
       box.appendChild(none)
     }
+    if (list.length) for (const el of box.querySelectorAll('.none')) el.remove()
     for (const s of list) {
-      const el = document.createElement('div')
-      el.className = 'item session' + (s.tab !== null ? ' in-tab' : '')
-      el.dataset.key = s.key
-      for (const [cls, text] of [['s-label', s.label], ['s-folder', s.folder], ['s-state ' + s.state, s.state], ['s-age', age(s.age)], ['s-where', s.where]]) {
-        if (cls === 's-folder') {
-          el.appendChild(pathSpan(cls, text))
-          continue
-        }
-        const sp = document.createElement('span')
-        sp.className = cls
-        sp.textContent = text
-        el.appendChild(sp)
-      }
-      el.addEventListener('click', e => { e.stopPropagation(); act(api.openSession(s.key)) })
-      box.appendChild(el)
+      const el = sessionRow(s)
+      if (rows.has(s.key)) rows.get(s.key).replaceWith(el)
+      else box.appendChild(el)
+      rows.delete(s.key)
+    }
+    for (const el of rows.values()) {
+      el.classList.add('ended')
+      el.querySelector('.s-state').className = 's-state ended'
+      el.querySelector('.s-state').textContent = 'ended'
     }
   }
 
-  // The visualization's modes (decision 0015) in a flyout beside their
-  // row, the current one marked. A pick shows it, opening the window.
-  function vizModes (modes) {
-    const row = item('Visualization mode', null, 'submenu')
+  // The sessions list keeps the height it opened with, so its refresh
+  // moves nothing below it, and no more than the window leaves
+  // the menu, the rest scrolling inside it. Not below two rows.
+  function fitSessions (box, below) {
+    box.style.height = ''
+    const room = window.innerHeight - 4 - below
+    const over = menu.getBoundingClientRect().height - room
+    const h = box.getBoundingClientRect().height
+    const row = box.firstElementChild ? box.firstElementChild.getBoundingClientRect().height : 0
+    box.style.height = Math.max(Math.min(h, 2 * row), over > 0 ? h - over : h) + 'px'
+  }
+
+  // A list beside its row, the current entry marked: the visualization's
+  // modes and inputs (decision 0015), where a pick shows it, opening the
+  // window, and each setting's choices.
+  function flyout (title, list, pick) {
+    const row = item(title, null, 'submenu')
     const sub = document.createElement('div')
     sub.className = 'sub'
-    for (const m of modes) {
+    for (const m of list) {
       const el = document.createElement('div')
       el.className = 'item' + (m.current ? ' current' : '')
       el.textContent = (m.current ? '* ' : '  ') + m.label
-      el.addEventListener('click', e => { e.stopPropagation(); act(api.selectViz(m.id)) })
+      el.addEventListener('click', e => { e.stopPropagation(); act(pick(m.id)) })
       sub.appendChild(el)
     }
     row.appendChild(sub)
@@ -135,7 +165,7 @@ window.AppMenu = (function () {
   }
 
   async function open () {
-    const [skins, viz, house, muted, tm, live] = await Promise.all([api.listSkins(), api.vizState(), api.housekeeping(), api.soundMuted(), api.tabsMenu(), api.sessions()])
+    const [skins, viz, house, muted, tm, live, prefs] = await Promise.all([api.listSkins(), api.vizState(), api.housekeeping(), api.soundMuted(), api.tabsMenu(), api.sessions(), api.settingsMenu()])
     menu.textContent = ''
     const then = fn => () => { fn(); close() }
     item('New tab', then(() => api.newTab()), '', 'Ctrl+Shift+T')
@@ -166,8 +196,12 @@ window.AppMenu = (function () {
     }
     rule()
     item(viz.open ? 'Hide visualization' : 'Show visualization', () => { api.toggleViz(); close() })
-    vizModes(viz.modes)
+    flyout('Visualization mode', viz.modes, api.selectViz)
+    flyout('Visualization input', viz.inputs, api.selectVizInput)
     item(muted ? 'Unmute skin sounds' : 'Mute skin sounds', () => { api.toggleSound(); close() })
+    rule()
+    item('Settings', null, 'heading')
+    for (const s of prefs) flyout(s.label, s.choices.map(c => ({ id: c.value, label: c.label, current: c.current })), v => api.setSetting(s.id, v))
     rule()
     item('Housekeeping', null, 'heading')
     for (const p of house.problems) item(p.title, () => say(p.detail, 'error'), 'problem')
@@ -175,6 +209,7 @@ window.AppMenu = (function () {
     item('Open log folder', () => { api.openLogs(); close() })
     item('Clear logs', () => act(api.clearLogs()))
     menu.hidden = false
+    fitSessions(box, button.getBoundingClientRect().bottom + 2)
     refresh = setInterval(async () => {
       const list = await api.sessions()
       if (!menu.hidden) fillSessions(box, list)

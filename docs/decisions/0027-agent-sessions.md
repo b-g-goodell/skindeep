@@ -5,6 +5,7 @@ the maintainer's ruling of one window: the sessions of different agents
 are tabs of it, never separate windows (decision 0023). Revised the
 same day by the maintainer's ruling to read three fields of Claude
 Code's per-pid record.
+Revised 2026-10-13 for the menu list's height and stable rows.
 
 ## Context
 
@@ -19,8 +20,16 @@ them all and shows any of them on the meters.
   tabs first, each with its label, folder, state and running time, and
   `tab` or `monitor` when this window shows it. The list refreshes every
   2 s while the menu is open, so sessions that start appear and
-  sessions that end leave. A session is started from here by New tab...
-  (decision 0025), in the window's skin.
+  sessions that end show as ended. A session is started from here by
+  New tab... (decision 0025), in the window's skin.
+- The list moves nothing: a refresh redraws a running session in
+  its row, adds a new one last, and marks one that ended, which stays
+  until the menu closes. The list keeps the height it opened with, so
+  no entry below it moves under the pointer.
+- The list fits: it opens no taller than the room the window
+  leaves the rest of the menu, at least two rows, and scrolls inside,
+  so every entry of the menu is in reach in a window at the skin's
+  minimum size, however many sessions run.
 - Discovery reads `/proc` alone: every process of this user named
   `claude` or `codex`, or a `node` running a script of that name as an
   npm install does, but Codex's `app-server` and `mcp-server` daemons,
