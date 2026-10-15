@@ -100,9 +100,11 @@ butterchurn-presets is MIT for its conversion only.
   with the terminal. Each mode answers in its own way:
   - Quantum: a press and drag paints a barrier along the path, a ridge
     of potential 2.5 high and about three points wide, above the
-    packets' energy of 0.4 to 1 and below the wall's 4, so a packet
-    mostly scatters off it and partly tunnels through. It fades with a
-    time constant of 4 s and is gone in about 16. A click drops a short
+    packets' energy of 0.4 to 1 and below the wall's 4. Fresh, it
+    lets through about one part in 100000 of a packet, so a packet
+    scatters off it, and it leaks only as it fades toward their energy,
+    after about 5 s. It fades
+    with a time constant of 4 s and is gone in about 16. A click drops a short
     one. The barrier is drawn in amber over the wave.
   - Gravity: the release throws a moon from the press: a click puts it
     on a circular orbit about the heaviest body, a drag gives it a

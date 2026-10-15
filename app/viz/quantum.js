@@ -15,8 +15,8 @@
 // fades into a harmonic trap holding a coherent state that circles in
 // it, an orbital at rest. A press and drag of the pointer paints a
 // barrier along its path, a ridge of potential above the packets'
-// energy that they scatter off or tunnel through, fading in seconds. A
-// click drops a short one.
+// energy that they scatter off, and leak through as it fades. A click
+// drops a short one.
 
 ;(function (root) {
   const NX = 128
