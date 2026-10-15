@@ -23,3 +23,4 @@ merged, in plain words, with a picture.
 | <a href="16-readme.md"><img src="heroes/16-readme.png" width="240" alt=""></a> | [Chapter 16: The front page](16-readme.md) | Wednesday, October 14, 2026, at 9:11 PM |
 | <a href="17-chooser-and-strip.md"><img src="heroes/17-chooser-and-strip.png" width="240" alt=""></a> | [Chapter 17: Every profile on the machine](17-chooser-and-strip.md) | Wednesday, October 14, 2026, at 9:33 PM |
 | <a href="18-viz-panes-and-sound.md"><img src="heroes/18-viz-panes-and-sound.png" width="240" alt=""></a> | [Chapter 18: One pane per tab, and the room's sound](18-viz-panes-and-sound.md) | Wednesday, October 14, 2026, at 9:56 PM |
+| <a href="19-window-fit.md"><img src="heroes/19-window-fit.png" width="240" alt=""></a> | [Chapter 19: Half a screen, a Settings menu and a tab popped out](19-window-fit.md) | Wednesday, October 14, 2026, at 10:16 PM |
