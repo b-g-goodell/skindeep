@@ -26,3 +26,4 @@ merged, in plain words, with a picture.
 | <a href="19-window-fit.md"><img src="heroes/19-window-fit.png" width="240" alt=""></a> | [Chapter 19: Half a screen, a Settings menu and a tab popped out](19-window-fit.md) | Wednesday, October 14, 2026, at 10:16 PM |
 | <a href="20-usage-limits.md"><img src="heroes/20-usage-limits.png" width="240" alt=""></a> | [Chapter 20: When the limits reset](20-usage-limits.md) | Wednesday, October 14, 2026, at 10:37 PM |
 | <a href="21-fuzz.md"><img src="heroes/21-fuzz.png" width="240" alt=""></a> | [Chapter 21: Random clicks, written down first](21-fuzz.md) | Wednesday, October 14, 2026, at 10:57 PM |
+| <a href="22-procedural-modes.md"><img src="heroes/22-procedural-modes.png" width="240" alt=""></a> | [Chapter 22: Ferns, Go, gravity and a wave](22-procedural-modes.md) | Wednesday, October 14, 2026, at 11:16 PM |
