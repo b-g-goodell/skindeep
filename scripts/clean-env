@@ -1,0 +1,8 @@
+#!/bin/sh
+# Dev helper: run a command with the calling agent session's variables removed,
+# so a nested claude starts as a fresh top-level session.
+exec env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_SESSION_ID \
+  -u CLAUDE_PID -u CLAUDE_EFFORT -u CLAUDE_CODE_MESSAGING_SOCKET \
+  -u CLAUDE_CODE_MESSAGING_TOKEN -u CLAUDE_CODE_BRIDGE_SESSION_ID \
+  -u CLAUDE_CODE_SESSION_ATTENDED -u CLAUDE_CODE_ENTRYPOINT \
+  -u CLAUDE_CODE_EXECPATH "$@"
