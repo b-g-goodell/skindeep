@@ -210,20 +210,6 @@
     "notes": "Wood049, asset page https://ambientcg.com/a/Wood049. Derived from Wood049_1K-JPG_Color.jpg in the zip: resized from 1024 to 512 px square, JPEG quality 82. Tileable light wood. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
   },
   {
-    "path": "skins/library/fonts/GochiHand/GochiHand-Regular.ttf",
-    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/GochiHand-Regular.ttf",
-    "author": "Juan Pablo del Peral (Huerta Tipografica)",
-    "license": "OFL-1.1",
-    "notes": "google/fonts ofl/gochihand at commit 66928797f271fed5ee428544e7229685e2d90127. Handwriting face, used as chalk."
-  },
-  {
-    "path": "skins/library/fonts/GochiHand/OFL.txt",
-    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/OFL.txt",
-    "author": "Juan Pablo del Peral (Huerta Tipografica)",
-    "license": "OFL-1.1",
-    "notes": "google/fonts ofl/gochihand at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
-  },
-  {
     "path": "skins/library/fonts/PermanentMarker/PermanentMarker-Regular.ttf",
     "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/apache/permanentmarker/PermanentMarker-Regular.ttf",
     "author": "Font Diner",
@@ -663,5 +649,19 @@
     "author": "claude-skins",
     "license": "project-original",
     "notes": "the picture of the dev diary entry of the same name. It shows skins whose fonts and images are listed in this file"
+  },
+  {
+    "path": "skins/library/fonts/GochiHand/GochiHand-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/GochiHand-Regular.ttf",
+    "author": "Juan Pablo del Peral (Huerta Tipografica)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/gochihand at commit 66928797f271fed5ee428544e7229685e2d90127. Handwriting face, used as chalk."
+  },
+  {
+    "path": "skins/library/fonts/GochiHand/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/OFL.txt",
+    "author": "Juan Pablo del Peral (Huerta Tipografica)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/gochihand at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
   }
 ]

@@ -46,3 +46,42 @@ test('a tab\'s environment: the variable set, or unset for the default', () => {
   assert.strictEqual(profiles.of(env, 'claude'), '/p/lab')
   assert.strictEqual(profiles.of(env, 'codex'), profiles.defaultDir('codex'))
 })
+
+test('the scan: config dirs by the names they hold, bounded, links not followed', t => {
+  const root = path.dirname(tempDir(t))
+  const mk = (rel, ...files) => {
+    const d = path.join(root, rel)
+    fs.mkdirSync(d, { recursive: true })
+    for (const f of files) {
+      if (f.endsWith('/')) fs.mkdirSync(path.join(d, f), { recursive: true })
+      else fs.writeFileSync(path.join(d, f), '')
+    }
+    return d
+  }
+  fs.writeFileSync(path.join(root, '.claude.json'), '')
+  mk('.claude', '.credentials.json', 'projects/')
+  const split = mk('.split/a/.claude', '.claude.json', 'sessions/')
+  mk('.split/a/.claude/inner', '.credentials.json')
+  mk('.split/b/.claude', '.claude.json')
+  mk('.codex', 'auth.json', 'config.toml')
+  mk('.decoy', 'settings.json', 'config.toml')
+  mk('a/b/c/d/.claude', '.credentials.json')
+  mk('x/node_modules/.claude', '.credentials.json')
+  fs.symlinkSync(path.join(root, '.claude'), path.join(root, 'link'))
+  fs.symlinkSync(root, path.join(root, 'loop'))
+  const found = profiles.scan(root, { depth: 4 })
+  assert.deepStrictEqual(found, [
+    { agent: 'claude', dir: path.join(root, '.claude') },
+    { agent: 'codex', dir: path.join(root, '.codex') },
+    { agent: 'claude', dir: split }
+  ])
+  assert.deepStrictEqual(profiles.scan(root, { depth: 5 }).map(r => r.dir).filter(d => d.includes('/a/b/')), [path.join(root, 'a/b/c/d/.claude')])
+  assert.ok(profiles.scan(root, { cap: 1 }).length === 0)
+  const dflt = profiles.defaultDir('claude')
+  assert.deepStrictEqual(profiles.list('claude', [{ t: 1, agent: 'claude', dir: '/p/a' }], [], [...found, { agent: 'claude', dir: '/p/a' }]), [
+    { dir: dflt, isDefault: true, remembered: false },
+    { dir: '/p/a', isDefault: false, remembered: true },
+    { dir: path.join(root, '.claude'), isDefault: false, remembered: false },
+    { dir: split, isDefault: false, remembered: false }
+  ])
+})

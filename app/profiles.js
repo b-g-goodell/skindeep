@@ -3,8 +3,8 @@
 // dir: CLAUDE_CONFIG_DIR of Claude Code, CODEX_HOME of Codex (decision
 // 0003). Each profile a tab was opened on is recorded in a file of its
 // own, <dir>/<agent>-<hash>, by write and rename, as the last skins are
-// (decision 0022), so no two windows write one file. Nothing inside a
-// profile is read here: its path, and whether the default one exists.
+// (decision 0022), so no two windows write one file. The scan of the
+// home directory reads directory listings, never a file's contents.
 
 const crypto = require('crypto')
 const fs = require('fs')
@@ -72,18 +72,53 @@ function forget (d, agent, p) {
   fs.rmSync(file(d, agent, p), { force: true })
 }
 
-// What New tab... lists for `agent`, each profile once: the default, the
-// profiles of the open tabs in tab order, then those recorded, newest
-// first. open: profile dirs. remembered: a record exists, so it can be
-// forgotten.
-function list (agent, records, open) {
-  const mine = records.filter(r => r.agent === agent).map(r => r.dir)
+// A config dir is told by the names it holds. Claude Code: its
+// .credentials.json, or a .claude.json beside its projects, sessions or
+// settings.json. Codex: its auth.json beside its config.toml, sessions or
+// history.jsonl.
+function kindOfDir (names) {
+  if (names.has('.credentials.json') || (names.has('.claude.json') && ['projects', 'sessions', 'settings.json'].some(n => names.has(n)))) return 'claude'
+  if (names.has('auth.json') && ['config.toml', 'sessions', 'history.jsonl'].some(n => names.has(n))) return 'codex'
+  return null
+}
+
+const SKIP = new Set(['.git', 'node_modules', '.cache'])
+
+// Every config dir under root, at most `depth` levels below it, root
+// itself excepted. Breadth first, symlinks not followed, a config dir not
+// entered, at most `cap` dirs listed. Sorted by path.
+function scan (root, { depth = 4, cap = 20000 } = {}) {
   const out = []
-  for (const p of [defaultDir(agent), ...open, ...mine]) {
+  let level = [root]
+  let listed = 0
+  for (let d = 0; d <= depth && level.length; d++) {
+    const next = []
+    for (const p of level) {
+      if (listed++ >= cap) return out.sort((a, b) => a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0)
+      let ents
+      try { ents = fs.readdirSync(p, { withFileTypes: true }) } catch (e) { continue }
+      const agent = d > 0 && kindOfDir(new Set(ents.map(e => e.name)))
+      if (agent) { out.push({ agent, dir: p }); continue }
+      if (d < depth) for (const e of ents) if (e.isDirectory() && !SKIP.has(e.name)) next.push(path.join(p, e.name))
+    }
+    level = next
+  }
+  return out.sort((a, b) => a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0)
+}
+
+// What New tab... lists for `agent`, each profile once: the default, the
+// profiles of the open tabs in tab order, those recorded, newest first,
+// then those the scan found. open: profile dirs. remembered: a record
+// exists, so it can be forgotten.
+function list (agent, records, open, found = []) {
+  const mine = records.filter(r => r.agent === agent).map(r => r.dir)
+  const seen = found.filter(r => r.agent === agent).map(r => r.dir)
+  const out = []
+  for (const p of [defaultDir(agent), ...open, ...mine, ...seen]) {
     if (out.some(e => e.dir === p)) continue
     out.push({ dir: p, isDefault: p === defaultDir(agent), remembered: mine.includes(p) })
   }
   return out
 }
 
-module.exports = { AGENTS, dir, defaultDir, of, envFor, record, read, forget, list }
+module.exports = { AGENTS, dir, defaultDir, of, envFor, record, read, forget, scan, list }
