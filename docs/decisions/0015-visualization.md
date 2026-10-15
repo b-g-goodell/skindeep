@@ -51,7 +51,7 @@ butterchurn-presets is MIT for its conversion only.
   shell, web, agent, other), a sweep on prompt submit and on stop, a low
   drone while idle, brightness from `tokens.out_rate`. Every mode draws
   from it.
-- Modes: fifteen, listed once in `app/viz/modes.js`, which the main process
+- Modes: sixteen, listed once in `app/viz/modes.js`, which the main process
   and the page both load, in the order they cycle and the menu lists
   them:
   - Drift, Rings, Plasma, Star dust and Whirlpool: butterchurn presets
@@ -68,23 +68,26 @@ butterchurn-presets is MIT for its conversion only.
     ported from its BSD source with its license in the file: three
     examples of the Superscope's built-in list over a fade, and the Dot
     Plane in its default colours.
-  - Fern, Go, Zoom out, Gravity and Quantum: the project's procedural
-    modes, one file each, no image or video. Each reacts to its pane's
-    events, a prompt, a tool call in its class's colour, a stop, a
-    subagent, and calms at idle. Fern: a forest of fronds, iterated
-    function systems of Barnsley's fern and three relatives grown by the
-    chaos game, in drifting hues, under an endless zoom into the hero
-    frond's copy of itself, each leaflet waving, a prompt morphing every
-    frond to the next species (Fern forest, below). Go: a 13 by 13 board, a stone per event,
-    played by the rules (liberties, capture, no suicide, ko) and cleared
-    when full. Zoom out: six scenes, each the detail of the next, the
-    sixth the first's detail, so the camera loops. Gravity: Newtonian
-    bodies by leapfrog, merging on contact, events adding bodies or
-    mass, the rates setting the clock. Quantum: the Schroedinger
-    equation by split-step Fourier on a 128 by 64 grid, packets through
-    slits onto a screen that records detections, a stop measuring and
-    collapsing the state. With the sound output alone, which brings no
-    events, a rise of its loudness counts as one.
+  - Fern, Go, Zoom out, Gravity, Gravity 3D and Quantum: the project's
+    procedural modes, one file each, no image or video. Each reacts to
+    its pane's events, a prompt, a tool call in its class's colour, a
+    stop, a subagent, and calms at idle. Fern: a forest of fronds,
+    iterated function systems of Barnsley's fern and three relatives
+    grown by the chaos game, in drifting hues, under an endless zoom
+    into the hero frond's copy of itself, each leaflet waving, a prompt
+    morphing every frond to the next species (Fern forest, below). Go:
+    a 13 by 13 board, a stone per event, played by the rules (liberties,
+    capture, no suicide, ko) and cleared when full. Zoom out: six
+    scenes, each the detail of the next, the sixth the first's detail,
+    so the camera loops. Gravity: Newtonian bodies by leapfrog, merging
+    on contact, events adding bodies or mass, the rates setting the
+    clock. Gravity 3D: Gravity's bodies in three dimensions with black
+    holes, spinning ones among them, before distant stars they lens
+    (see 2026-10-15: Gravity 3D). Quantum: the Schroedinger equation by
+    split-step Fourier on a 128 by 64 grid, packets through slits onto
+    a screen that records detections, a stop measuring and collapsing
+    the state. With the sound output alone, which brings no events, a
+    rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
   events, so the page sends nothing. A click steps no mode: it goes to
@@ -115,6 +118,8 @@ butterchurn-presets is MIT for its conversion only.
   - Gravity: the release throws a moon from the press: a click puts it
     on a circular orbit about the heaviest body, a drag gives it a
     velocity in proportion to the drag, its aim drawn while pressed.
+  - Gravity 3D: a drag turns the camera, a click throws a moon (see
+    2026-10-15: Gravity 3D).
   - Go: a click on a point plays it for the side to move, if the rules
     allow it.
   - Zoom out: a click leaves a white ring where it lands on the scene
@@ -223,7 +228,7 @@ page reads it, and nothing of it needs to reach the main process. A
 click that stepped the mode would take the click from the modes. The
 pointer's tone, for the modes that only draw the signal, makes each of
 them answer with no code of its own, and it is kept out of the events
-so a procedural mode never takes it for one. A flyout keeps the drop-down short: fifteen more
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: sixteen more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -296,3 +301,135 @@ Rejected:
 - A send from the page of the picked mode's index: one validated
   number would do, but it would be the page's first send, and the main
   process can read the press itself.
+
+## 2026-10-15: Gravity 3D
+
+Maintainer: "make a 3dgrav visualizer with the same visual style as the
+first 2d gravity visualizer, but which allows blackholes (schwarzchild
+radii, rotating black holes, etc) and has a thematically consistent,
+distant background of stars".
+
+- Gravity 3D is a mode of its own, after Gravity in `modes.js`, drawn by
+  `app/viz/gravity3d.js` on a canvas of the CPU as the other procedural
+  modes are. Its id, `gravity3d`, is the first with a digit, so an id is
+  a lowercase letter, then letters or digits. It copies the Gravity
+  mode's step, softening and drawing rather than sharing them: in three
+  dimensions and with horizons every term of the step differs, and the
+  Gravity mode stays as it was.
+- Units: $G = 1$ and $c = 11.5$, so a hole of mass $M$ has
+  $r_s = 2GM/c^2$, 13.6 for the seed's 900, which reads on screen.
+  Stars, planets, comets and dust are the Gravity mode's, in pairs
+  attracted by softened Newtonian gravity, stepped by leapfrog in the
+  frame of their centre of mass, merging on contact.
+- Potential: a hole pulls by Paczynski and Wiita's
+  $\Phi = -GM/(r - r_+)$, $r_+$ its horizon, $r_s$ at rest. Its
+  circular orbits have $v^2 = GMr/(r - r_s)^2$ and
+  $L^2 = GMr^3/(r - r_s)^2$, least at $r = 3 r_s$: the last stable
+  circular orbit, at $6GM/c^2$ as in Schwarzschild's geometry. The pair
+  force is symmetric, so momentum holds. Near a hole the step is cut
+  into substeps of at most 3% of the gap to the horizon over the speed
+  across it.
+- Spin: a hole carries $a = \chi GM/c^2$, $0 \le \chi \le 0.95$, about
+  a unit axis $\hat{j}$, and its horizon shrinks to
+  $r_+ = GM/c^2 + \sqrt{(GM/c^2)^2 - a^2}$. What moves at $\mathbf{v}$
+  relative to it, at $r \hat{n}$ from it, feels the Lense-Thirring
+  acceleration $\mathbf{a} = \mathbf{v} \times \mathbf{B}_g$ with
+  $\mathbf{B}_g = \frac{2GMa}{c r^3} (\hat{j} - 3 (\hat{j} \cdot \hat{n}) \hat{n})$,
+  the post-Newtonian term of the IERS conventions with $J = Mac$, and
+  the hole takes the reaction. It does no work. It pushes a prograde
+  orbit in the equator out and pulls a retrograde one in, and turns an
+  inclined orbit's node in the spin's sense at
+  $\dot{\Omega} = 2GJ/(c^2 r^3)$.
+- Capture: a body whose centre crosses $r_+$ is swallowed, its mass,
+  momentum and angular momentum about the hole the hole's, whose spin
+  follows, capped at $\chi = 0.95$. A grain of dust weighs 0.004. Two
+  holes merge when their horizons touch.
+- Checked by `test/viz-gravity3d.test.js`: $r_+ = r_s$ at rest and
+  $0.9 r_s$ at $\chi = 0.6$, the least $L$ at $3 r_s$ to within 0.002,
+  orbits at 3.3, 4 and 6 $r_s$ started 0.1% slow staying above $3 r_s$
+  for 30 periods, orbits at 2.5 and 2.9 $r_s$ started so falling in
+  within 5 with mass and momentum kept, a body inside the horizon
+  swallowed in one step, and an orbit at 8 $r_s$ inclined 60 degrees
+  about a hole of $\chi = 0.9$ turning its node to within 10% of the
+  Lense-Thirring rate, the other way for the opposite spin and not at
+  all at rest.
+- The seed: a hole of 900 spinning at $\chi = 0.7$, 420 grains in its
+  equator between 3.3 and 8 $r_s$, a companion star of 80 at 175 and
+  three planets. Within 10 $r_s$ of a hole and outside $3 r_s$, the
+  disc's viscosity relaxes a grain's velocity, at a rate of 0.01 per
+  unit of time, toward 99.5% of the circular velocity in the plane of
+  its orbit: grains settle on circles, spiral to the last stable orbit
+  and plunge. The star nearest a hole sheds grains from the point
+  between them where the pulls balance, L1, at 1.1 to 1.45 times its
+  own angular speed: a stream that feeds the disc.
+- Drawing: the camera, 620 from the centre of mass with a half view
+  angle of 0.42 rad, turns about it. Bodies, grains and trails fall
+  into layers between the holes' depths, so a hole's shadow hides what
+  lies behind it, and bodies are sized and dimmed with distance. A
+  trail is the places a body passed, kept every 1.5 units of time or 4
+  of travel and projected each frame. Matter at $d$ from a hole heats
+  as $\min(1, (2.3 r_s/d)^2)$, toward orange, white and then blue
+  white, larger and brighter, a hot grain beamed by
+  $(1 + 0.6 v_\parallel/c)^2$ toward the camera. Merger rings and the
+  idle dimming are the Gravity mode's.
+- A hole is drawn as its shadow, black, of radius
+  $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$, the image of its photon
+  sphere at $1.5 r_s$, ringed by its photon ring over a soft glow. The
+  ring brightens as the hole swallows. A spinning hole's shadow is
+  flattened on its approaching side by $0.22 \chi \sin i$ and shifted
+  toward its receding side by $2a \sin i$, $i$ the angle between the
+  spin and the line of sight.
+- Background: 3000 stars at infinity, a third of them in a band about
+  a great circle, a galaxy's disc seen from inside, under 120 soft dots
+  of its glow, warm toward one point. They are directions, turned with
+  the camera and never moved by it, so they show no parallax, in the
+  foreground's hues. Six bright ones lie on the circle that the line
+  from the camera through the centre sweeps at the camera's first
+  height, so a hole lines up with one now and then.
+- Lensing, per star on the CPU: the point-mass lens of Einstein angle
+  $\theta_E^2 = 2 r_s (D_s - D_l)/(D_l D_s)$, $2 r_s/D_l$ for a star at
+  infinity. A star at $\beta$ from a hole has its images at
+  $\theta_\pm = (\beta \pm \sqrt{\beta^2 + 4\theta_E^2})/2$, the outer
+  brightened by its magnification, the inner drawn above 2%. Within
+  $0.3 \theta_E$ both images are arcs, as a disc of radius
+  $0.05 \theta_E$ would make, and within $0.05 \theta_E$ an Einstein
+  ring. Dust behind a hole is lensed the same way, so the disc's far
+  side bends over the shadow. Bodies and trails are not.
+- Signal: a tool call adds a planet in its class's colour on a near
+  circular orbit about the heaviest body, tilted up to 0.5 rad, outside
+  a hole's disc. A prompt sends a comet from the edge, aimed to miss a
+  hole by 1.5 to 4.5 $r_s$, so some are swallowed, and rings the
+  heaviest body. A stop flares the heaviest body and adds 12% to its
+  mass, up to 1500. A subagent adds a black hole of 150 to 300 spinning
+  at $\chi$ of 0.3 to 0.9 about any axis, with a small disc, the next a
+  star, three of each at most, and a star first when none is left. A
+  compaction slows every body and grain to 0.6 of its speed, so
+  everything falls inward. An output event puffs 16 grains from a body
+  that is not a hole. The rates set the clock as in Gravity: an idle
+  spell all but stops it, shortens the trails and slows the camera.
+- Pointer: a drag past 5 pixels turns the camera, across about the
+  vertical and up and down in height, which holds for 4 s before the
+  camera turns by itself again. A click throws a moon from the point
+  under it, on the plane through the centre facing the camera, on a
+  circular orbit about the heaviest body in the plane of that body's
+  spin, at least 3.3 $r_s$ out. `scripts/checks/vizpointer.js` drags
+  and clicks it.
+- Frame rate: under swiftshader, three panes of a 720 by 460 window all
+  in one mode, each mode in turn for five rounds and counted as
+  `vizmodes.js` counts its sets, ran at a median of 46 frames per second
+  in Gravity 3D and 43.5 in Gravity. `vizmodes.js` itself gave 35.5 for
+  Gravity, Gravity 3D and Quantum together, 47 for Fern, Go and Zoom out
+  and 40 for three butterchurn presets. Each soft dot of glow is drawn
+  from a canvas of the CPU: one on the GPU, drawn onto the CPU's layer,
+  is read back at every draw, and that alone held three panes to about
+  15.
+
+Rejected:
+
+- Lensing per pixel: a ray traced per pixel on the CPU is far too slow,
+  and on WebGL the mode would take one of the eight contexts.
+- Geodesics of the Kerr metric: the pseudo-Newtonian potential and the
+  Lense-Thirring term keep the known radii and the frame dragging at a
+  fraction of the cost.
+- Lensing the bodies and their trails: a trail's places bent near the
+  Einstein ring drew zigzags, and a body apart from its trail.
