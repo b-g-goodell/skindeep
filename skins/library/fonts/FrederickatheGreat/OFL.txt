@@ -1,5 +1,5 @@
-Copyright (c) 2011, Juan Pablo del Peral (juandelperal@htfonts.com), 
-with Reserved Font Names "Gochi" and "Gochi Hand"
+Copyright (c) 2011, Tart Workshop (a DBA of Font Diner, Inc) (www.fontdiner.com),
+with Reserved Font Name "Fredericka the Great".
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

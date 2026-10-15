@@ -27,32 +27,33 @@
 
 /* Chalk: soft off-white strokes with a little dust around them. */
 .chalk { --text: #ece8dc; --fill: #f2eee2; --track: rgba(236, 232, 220, 0.16); --needle: #f2eee2; --glow: rgba(255, 255, 255, 0.45);
-  font-family: "Gochi Hand", cursive; }
-.chalk .label { font: 21px/22px "Gochi Hand", cursive; text-transform: none; letter-spacing: 0.5px; color: #ece8dc; opacity: 0.92; }
+  font-family: "Fredericka the Great", cursive; }
+.chalk .label { font: 21px/22px "Fredericka the Great", cursive; text-transform: none; letter-spacing: 0.5px; color: #ece8dc; opacity: 0.92; }
 .chalk.w-gauge .track { stroke-dasharray: 0.5 1.1; }
 .chalk.w-gauge .fill { opacity: 0.9; filter: drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.55)); }
 .chalk.w-gauge .tick { stroke: #ece8dc; opacity: 0.5; stroke-width: 1.4; }
 .chalk.w-gauge .mark { stroke: #f6dd7a; stroke-width: 3; opacity: 0.9; }
-.chalk.w-gauge text.value { font-family: "Gochi Hand", cursive; font-size: 19px; fill: #f4f0e6; }
+.chalk.w-gauge text.value { font-family: "Fredericka the Great", cursive; font-size: 19px; fill: #f4f0e6; }
 .chalk.w-needle .track { stroke: rgba(236, 232, 220, 0.6); stroke-width: 1.6; stroke-dasharray: 3 2; }
 .chalk.w-needle .tick { stroke: #ece8dc; opacity: 0.7; stroke-width: 1.4; }
 .chalk.w-needle .needle { stroke: #f6dd7a; stroke-width: 2.6; opacity: 0.92; }
 .chalk.w-needle .pivot { fill: #ece8dc; }
-.chalk.w-needle .value { font: 20px/20px "Gochi Hand", cursive; color: #f4f0e6; }
+.chalk.w-needle .value { font: 20px/20px "Fredericka the Great", cursive; color: #f4f0e6; }
 
 .chalk-note { align-items: center; color: #ece8dc; }
-.chalk-note .label { font: 16px/16px "Gochi Hand", cursive; text-transform: none; opacity: 0.75; }
-.chalk-note .value { font: 24px/26px "Gochi Hand", cursive; color: #f4f0e6; border-bottom: 2px solid rgba(236, 232, 220, 0.35); padding: 0 6px; }
+.chalk-note .label { font: 16px/16px "Fredericka the Great", cursive; text-transform: none; opacity: 0.75; }
+.chalk-note .value { font: 24px/26px "Fredericka the Great", cursive; color: #f4f0e6; border-bottom: 2px solid rgba(236, 232, 220, 0.35); padding: 0 6px; }
 
 .chalk-lamp { justify-content: flex-start; gap: 9px; color: #ece8dc; }
 .chalk-lamp .lamp { width: 13px; height: 13px; background: transparent; border: 2px solid rgba(236, 232, 220, 0.7); }
 .chalk-lamp .lamp.on { background: #f6dd7a; border-color: #f6dd7a; box-shadow: 0 0 8px rgba(246, 221, 122, 0.8); }
-.chalk-lamp .label { font: 18px/18px "Gochi Hand", cursive; text-transform: none; }
+.chalk-lamp .label { font: 18px/18px "Fredericka the Great", cursive; text-transform: none; }
 
 /* Marker on the whiteboard. */
 .marker { --off: rgba(150, 160, 170, 0.16); align-items: stretch; gap: 1px; }
 .marker .track { background: transparent; }
 .marker .label { align-self: flex-start; font: 14px/16px "Permanent Marker", cursive; text-transform: none; letter-spacing: 0.5px; color: #3a3f45; }
+.marker .resets { position: absolute; right: 2px; top: 0; font: 13px/16px "Permanent Marker", cursive; color: #5a6068; opacity: 1; }
 .marker .seg { border-radius: 2px; }
 .marker .seg.on { border-radius: 3px 1px 4px 2px; box-shadow: none; opacity: 0.88; }
 .marker.blue .seg.on { background: #2457b8; }
