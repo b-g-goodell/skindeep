@@ -53,6 +53,7 @@ class ClaudeWatch {
   report () {
     return {
       session: (this.core && this.core.session) || null,
+      title: (this.core && this.core.title) || null,
       channels: [{ name: 'transcript', state: this.tail ? 'live' : 'waiting', target: this.file, how: this.file ? 'folder' : null }],
       notice: this.core && !this.file ? 'meters waiting: no transcript found' : null,
       replaying: !!(this.tail && this.tail.replaying)

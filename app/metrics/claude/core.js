@@ -8,6 +8,7 @@
 
 const parse = require('./parse')
 const compact = require('./compact')
+const { titleOf } = require('./title')
 const { EVENT } = require('../bus')
 
 // What the core's writer source declares. The hook-fed defaults and
@@ -39,6 +40,8 @@ class ClaudeCore {
     this.facts = facts
     this.session = null
     this.transcript = null
+    // The session's custom title from its transcript (decision 0032).
+    this.title = null
     this.totals = new parse.TranscriptTotals()
     this.claims = new Set()
     this.agents = 0
@@ -60,6 +63,7 @@ class ClaudeCore {
       this.totals = new parse.TranscriptTotals()
       this.claims.clear()
       this.agents = 0
+      this.title = null
       this.quiet()
     }
     this.session = j.session_id
@@ -109,6 +113,8 @@ class ClaudeCore {
   // when the tail started.
   line (file, obj, replayed) {
     if (!this.transcript || file !== this.transcript || !isObject(obj)) return
+    const t = titleOf(obj, this.session)
+    if (t) this.title = t
     const dOut = this.totals.add(obj)
     if (dOut === null) return
     if (dOut > 0) this.src.sample('tokens.out_rate', dOut, { history: replayed })

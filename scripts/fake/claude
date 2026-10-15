@@ -12,6 +12,9 @@
 // history when the transcript is gone. Transcripts stay after exit, for
 // a later --resume, and are pruned after a day. While the file
 // FAKE_CLAUDE_PAUSE names exists, no new turn starts, so the session idles.
+// A typed `/rename NAME` and Enter records the name as Claude Code
+// 2.1.296 does: a custom-title line in the transcript and
+// <session id>/custom-title.json beside it (decision 0032).
 
 const fs = require('fs')
 const os = require('os')
@@ -73,7 +76,24 @@ function cleanup () {
 }
 for (const s of ['SIGHUP', 'SIGTERM', 'SIGINT']) process.on(s, cleanup)
 if (process.stdin.isTTY) process.stdin.setRawMode(true)
-process.stdin.on('data', d => { if (d.includes(3) || d.includes(4)) cleanup() })
+let typed = ''
+process.stdin.on('data', d => {
+  if (d.includes(3) || d.includes(4)) cleanup()
+  for (const ch of d.toString('utf8')) {
+    if (ch !== '\r' && ch !== '\n') { typed += ch; continue }
+    const m = /^\/rename\s+(.+)$/.exec(typed.trim())
+    typed = ''
+    if (m) rename(m[1].trim())
+  }
+})
+
+function rename (name) {
+  fs.appendFileSync(transcript, JSON.stringify({ type: 'custom-title', customTitle: name, sessionId: session }) + '\n')
+  const d = path.join(dir, session)
+  fs.mkdirSync(d, { recursive: true })
+  fs.writeFileSync(path.join(d, 'custom-title.json'), JSON.stringify({ customTitle: name }))
+  w(`\r\n\x1b[2mRenamed session to ${name}\x1b[0m\r\n`)
+}
 
 function hook (event, extra = {}) {
   if (!hookCmd) return

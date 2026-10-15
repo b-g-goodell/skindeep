@@ -6,6 +6,8 @@
 // released outside the window leaves for a new window there. A tab in the background marks work in
 // progress and output not yet seen. The tab chords are keys that send
 // the CLI nothing: Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab, Ctrl+Shift+Tab.
+// A right click on a tab opens a drop-down with Rename, which edits the
+// tab's name in place (decision 0032).
 
 window.TabStrip = (function () {
   const api = window.skinned
@@ -13,6 +15,9 @@ window.TabStrip = (function () {
   const TIMES = String.fromCharCode(0xd7)
   let state = { active: null, tabs: [] }
   let drag = null
+  // The drop-down and the editor, while one is open. render waits.
+  let popup = null
+  let editor = null
 
   function span (cls, text) {
     const el = document.createElement('span')
@@ -21,10 +26,11 @@ window.TabStrip = (function () {
     return el
   }
 
-  // Held while a tab is dragged, drawn when the drag ends.
+  // Held while a tab is dragged, a drop-down is open or a name is
+  // edited, drawn when that ends.
   function render (s) {
     state = s
-    if (drag) return
+    if (drag || popup || editor) return
     const shown = s.tabs.length > 1
     document.body.classList.toggle('tabbed', shown)
     strip.hidden = !shown
@@ -42,9 +48,83 @@ window.TabStrip = (function () {
     strip.appendChild(span('new', '+'))
   }
 
+  function closePopup () {
+    if (!popup) return
+    popup.remove()
+    popup = null
+    render(state)
+  }
+
+  // The drop-down at the pointer, Rename alone.
+  function openPopup (id, x, y) {
+    closePopup()
+    popup = document.createElement('div')
+    popup.id = 'tab-menu'
+    const item = document.createElement('div')
+    item.className = 'item'
+    item.textContent = 'Rename'
+    item.addEventListener('mousedown', e => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.button !== 0) return
+      popup.remove()
+      popup = null
+      edit(id)
+    })
+    popup.appendChild(item)
+    popup.style.left = `${Math.min(x, window.innerWidth - 120)}px`
+    popup.style.top = `${y}px`
+    document.body.appendChild(popup)
+  }
+
+  // The name edited in the tab's own place. Enter commits, Escape
+  // cancels, and leaving the field commits.
+  function edit (id) {
+    const el = strip.querySelector(`.tab[data-id="${id}"]`)
+    const t = state.tabs.find(x => x.id === id)
+    if (!el || !t) return render(state)
+    const input = document.createElement('input')
+    input.className = 'rename'
+    input.value = t.label
+    input.maxLength = 120
+    editor = { id, input, done: false }
+    const finish = commit => {
+      if (!editor || editor.input !== input || editor.done) return
+      editor.done = true
+      const v = input.value.trim()
+      editor = null
+      if (commit && v && v !== t.label) api.renameTab(id, v)
+      render(state)
+    }
+    input.addEventListener('keydown', e => {
+      e.stopPropagation()
+      if (e.key === 'Enter') finish(true)
+      else if (e.key === 'Escape') finish(false)
+    })
+    input.addEventListener('blur', () => finish(true))
+    el.querySelector('.label').replaceWith(input)
+    if (el.querySelector('.folder')) el.querySelector('.folder').remove()
+    input.focus()
+    input.select()
+  }
+
+  strip.addEventListener('contextmenu', e => {
+    e.preventDefault()
+    const el = e.target.closest('.tab')
+    if (!el || editor) return
+    openPopup(Number(el.dataset.id), e.clientX, e.clientY)
+  })
+
+  // A press anywhere but in the drop-down closes it.
+  window.addEventListener('mousedown', e => {
+    if (popup && !popup.contains(e.target)) closePopup()
+  }, true)
+
   // mousedown, not click: the terminal keeps the focus.
   strip.addEventListener('mousedown', e => {
+    if (e.target.closest('.rename')) return
     e.preventDefault()
+    if (editor) return
     if (e.target.closest('.new')) {
       if (e.button === 0) window.Chooser.open()
       return
@@ -85,7 +165,7 @@ window.TabStrip = (function () {
   // After the menu's own handler: an open menu takes every key first, and
   // an open New tab... dialog leaves the chords to its fields.
   window.addEventListener('keydown', e => {
-    if (e.defaultPrevented || !e.ctrlKey || e.altKey || e.metaKey || document.body.classList.contains('modal')) return
+    if (e.defaultPrevented || editor || !e.ctrlKey || e.altKey || e.metaKey || document.body.classList.contains('modal')) return
     let act = null
     if (e.shiftKey && e.code === 'KeyT') act = () => api.newTab()
     else if (e.shiftKey && e.code === 'KeyW') act = () => api.closeTab(null)
@@ -96,5 +176,5 @@ window.TabStrip = (function () {
     if (!e.repeat || e.code === 'Tab') act()
   }, true)
 
-  return { render }
+  return { render, editing: () => !!editor, menuOpen: () => !!popup }
 })()

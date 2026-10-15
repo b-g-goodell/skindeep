@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('skinned', {
   activateTab: id => ipcRenderer.send('tab:activate', id),
   stepTab: d => ipcRenderer.send('tab:step', d),
   moveTab: (id, index) => ipcRenderer.send('tab:move', id, index),
+  renameTab: (id, name) => ipcRenderer.send('tab:rename', id, name),
   tabsMenu: () => ipcRenderer.invoke('tabs:menu'),
   sessions: () => ipcRenderer.invoke('sessions:list'),
   openSession: key => ipcRenderer.invoke('sessions:open', key),

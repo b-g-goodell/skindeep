@@ -119,7 +119,8 @@ In the window:
   the profile and the folder. You can reopen a closed tab, or fork the
   current one with Duplicate. Ctrl+Shift+W closes a tab, and Ctrl+Tab
   and Ctrl+Shift+Tab move between them. Drag a tab to reorder it, or drag it out of the
-  window to give it a window of its own.
+  window to give it a window of its own. A session's name, from the
+  CLI's own rename or from Rename on a right click, is its tab's title.
 - **Agent sessions** in the menu lists every Claude Code and Codex
   session running on your machine. Click one to watch its meters in a
   read-only tab. **Sessions dashboard** graphs them all, with each

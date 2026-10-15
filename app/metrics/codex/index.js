@@ -7,6 +7,7 @@
 const { Tail } = require('../tail')
 const { CodexState } = require('./parse')
 const { Discovery } = require('./discovery')
+const { ThreadNames } = require('./thread-name')
 const { EVENT } = require('../bus')
 
 // The writer source: the defaults appear once a rollout is followed.
@@ -15,8 +16,10 @@ const SOURCE = {
   rates: ['tokens.out_rate', 'tools.rate']
 }
 
-// Discovery and the subagent count run at most once a second.
+// Discovery and the subagent count run at most once a second, the
+// thread's name every 5 s.
 const POLL_MS = 1000
+const NAME_MS = 5000
 
 class CodexAdapter {
   // clock: { now() }, the seam's (decision 0021). launched: the session's
@@ -25,6 +28,9 @@ class CodexAdapter {
   constructor (bus, { cmd, cwd, env, log, clock = { now: Date.now }, launched = null }) {
     Object.assign(this, { cmd, cwd, log, clock, launched })
     this.discovery = new Discovery({ env, argv: cmd.slice(1), cwd, launched: clock.now() })
+    this.names = new ThreadNames(env)
+    this.title = null
+    this.lastName = -Infinity
     this.file = null
     this.thread = null
     this.how = null
@@ -56,6 +62,7 @@ class CodexAdapter {
   report () {
     return {
       session: this.thread,
+      title: this.title,
       channels: [{ name: 'rollout', state: this.file ? 'live' : 'waiting', target: this.file, how: this.how }],
       notice: this.prepared && !this.file ? 'meters waiting: no rollout found' : null,
       replaying: !!(this.tail && (this.tail.replaying || this.pending.length))
@@ -121,6 +128,10 @@ class CodexAdapter {
       this.lastPoll = now
       if (!this.file) this.follow()
       this.countSubagents()
+    }
+    if (now - this.lastName >= NAME_MS) {
+      this.lastName = now
+      this.title = this.names.of(this.thread)
     }
     if (this.tail) {
       this.tail.poll(now)

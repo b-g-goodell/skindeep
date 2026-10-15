@@ -46,9 +46,10 @@ listening. The dispatch rule lived in three places and disagreed:
   and its subagent count every 1000 ms, `/proc` every 1000 ms. An error
   from a poll is logged once per message and reaches nobody else.
   `close()` cancels the timer.
-- The following report: `report()` returns `{ agent, session,
-  channels, notice }`. `session` is Claude's session id or Codex's
-  thread id. Each channel (`hooks`, `statusline`, `transcript`,
+- The following report: `report()` returns `{ agent, session, title,
+  channels, notice, replaying }`. `session` is Claude's session id or
+  Codex's thread id, `title` the session's name in the CLI's own record
+  or null (decision 0032). Each channel (`hooks`, `statusline`, `transcript`,
   `rollout`, `pty`, `proc`) is `off` (not injected), `waiting` or
   `live`, with the file it follows and the route that found it. The
   notice derives from the states: `meters limited: --settings given`,

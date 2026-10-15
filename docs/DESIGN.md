@@ -118,5 +118,6 @@ own keys, pastes and mouse reports.
 | [0028](decisions/0028-sessions-dashboard.md) | The sessions dashboard |
 | [0029](decisions/0029-issue-board.md) | The issue board in the sessions dashboard |
 | [0030](decisions/0030-background-sessions.md) | Background sessions, subcommands and the last screen |
+| [0032](decisions/0032-rename.md) | A session's name in its tab, by /rename or a right click |
 
 Channel facts: `docs/research/side-channels.md`.

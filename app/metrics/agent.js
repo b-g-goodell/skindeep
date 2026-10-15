@@ -109,10 +109,18 @@ class Agent {
   // The following report: what the session follows and by which
   // channels, for the strip's notice and the live checks. replaying: the
   // history of the file followed is still being read, so its totals are
-  // not yet whole.
+  // not yet whole. title: the session's name in the CLI's own record,
+  // else null (decision 0032).
   report () {
     const r = this.adapter.report()
-    return { agent: this.kind, session: r.session, channels: [...r.channels, ...this.generic.report().channels], notice: this.failed || r.notice, replaying: !!r.replaying }
+    return { agent: this.kind, session: r.session, title: r.title || null, channels: [...r.channels, ...this.generic.report().channels], notice: this.failed || r.notice, replaying: !!r.replaying }
+  }
+
+  // A rename made in the tab, into the CLI's record where the adapter
+  // keeps one (decision 0032). True when recorded.
+  rename (name) {
+    if (this.closed || typeof this.adapter.rename !== 'function') return false
+    return this.adapter.rename(name)
   }
 
   // Idempotent, valid at any point: no part is left running.

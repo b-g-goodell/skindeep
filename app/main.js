@@ -509,19 +509,42 @@ function chooserOpen ({ agent, profile, folder, line }) {
   return { ok: true }
 }
 
-// The renderer's view of one window's tabs. Tabs of one label add their
+// The name a tab shows (decision 0032): the newer of the CLI's own
+// record of its session's title and a rename made in the tab, else the
+// derived label. tab.named holds the rename with the record's title at
+// that moment, so a record set later wins over it.
+function nameOf (t) {
+  const r = t.agent.report().title || null
+  if (t.named && r === t.named.over) return t.named.title
+  return r || (t.named ? t.named.title : null) || t.label
+}
+
+// A rename made in the tab, into the CLI's record where the adapter
+// keeps one, and kept by the tab for its life either way.
+function renameTab (id, name) {
+  const t = tabOf(id)
+  const n = typeof name === 'string' ? name.trim().slice(0, 120) : ''
+  if (!t || !n) return
+  t.named = { title: n, over: t.agent.report().title || null }
+  if (typeof t.agent.rename === 'function' && t.agent.rename(n)) log(`tab ${id}: renamed ${JSON.stringify(n)} in the CLI's record`)
+  else log(`tab ${id}: renamed ${JSON.stringify(n)}`)
+  sendTabs()
+}
+
+// The renderer's view of one window's tabs. Tabs of one name add their
 // folder's name (decision 0004).
 function tabState (win = tabs.current) {
   const n = new Map()
   const mine = tabs.inWin(win)
-  for (const t of mine) n.set(t.label, (n.get(t.label) || 0) + 1)
+  const names = new Map(mine.map(t => [t, nameOf(t)]))
+  for (const t of mine) n.set(names.get(t), (n.get(names.get(t)) || 0) + 1)
   const a = tabs.activeOf(win)
   return {
     active: a ? a.id : null,
     tabs: mine.map(t => ({
       id: t.id,
-      label: t.label,
-      folder: n.get(t.label) > 1 ? path.basename(t.cwd) || t.cwd : null,
+      label: names.get(t),
+      folder: n.get(names.get(t)) > 1 ? path.basename(t.cwd) || t.cwd : null,
       busy: t.bus.get('state.busy') === 1,
       unseen: t.unseen,
       kind: t.dashboard ? 'dashboard' : 'term'
@@ -529,6 +552,8 @@ function tabState (win = tabs.current) {
   }
 }
 
+// The titles of a window and of the viz follow the active tab's name
+// as it changes (decision 0032).
 function sendTabs () {
   for (const w of wins.values()) {
     const s = tabState(w.id)
@@ -536,6 +561,9 @@ function sendTabs () {
     if (key === w.sentTabs) continue
     w.sentTabs = key
     w.view.send('tabs', s)
+    const a = tabs.activeOf(w.id)
+    if (a) w.view.setTitle(identity.title(nameOf(a)))
+    if (viz && a && w.id === tabs.current) viz.setTitle('visualization: ' + identity.title(nameOf(a)))
   }
 }
 
@@ -557,10 +585,10 @@ tabs.on('active', tab => {
   tab.session.sendStrip()
   const v = viewOf(tab)
   if (v) {
-    v.setTitle(identity.title(tab.label))
+    v.setTitle(identity.title(nameOf(tab)))
     v.send('metrics', tab.bus.snapshot())
   }
-  if (viz && tab === tabs.active) viz.setTitle('visualization: ' + identity.title(tab.label))
+  if (viz && tab === tabs.active) viz.setTitle('visualization: ' + identity.title(nameOf(tab)))
 })
 tabs.on('change', () => {
   sendTabs()
@@ -617,7 +645,7 @@ global.skinnedProbe = () => {
     lastDashboard: lastDashboard ? lastDashboard.session.report() : null,
     boards: boards.report(),
     windows: [...wins.values()].map(w => ({ id: w.id, bounds: w.view.bounds(), active: tabs.activeOf(w.id) ? tabs.activeOf(w.id).id : null, tabs: tabs.inWin(w.id).map(t => t.id) })),
-    tabs: tabs.list.map(t => ({ id: t.id, win: t.win, childPid: t.session.pid, monitor: t.monitor ? t.monitor.pid : null, dashboard: t.dashboard ? t.session.report() : null, label: t.label, cwd: t.cwd, argv: t.cmd, active: t === a, following: t.agent.report(), snapshot: t.bus.snapshot() }))
+    tabs: tabs.list.map(t => ({ id: t.id, win: t.win, childPid: t.session.pid, monitor: t.monitor ? t.monitor.pid : null, dashboard: t.dashboard ? t.session.report() : null, label: t.label, title: nameOf(t), cwd: t.cwd, argv: t.cmd, active: t === a, following: t.agent.report(), snapshot: t.bus.snapshot() }))
   }
 }
 
@@ -657,6 +685,7 @@ on('tab:close', (_e, id) => tabs.close(id === null ? tabs.active && tabs.active.
 on('tab:activate', (_e, id) => tabs.activate(id))
 on('tab:step', (_e, d) => tabs.step(d === -1 ? -1 : 1))
 on('tab:move', (_e, id, index) => tabs.move(id, index))
+on('tab:rename', (_e, id, name) => renameTab(id, name))
 handle('tabs:menu', () => tabsMenu())
 handle('sessions:list', () => liveSessions())
 handle('sessions:open', (_e, key) => openSession(String(key)))
@@ -800,7 +829,7 @@ app.whenReady().then(async () => {
     bounds: () => { const w = wins.get(tabs.current) || first; return w.view.bounds() },
     focus: () => { const w = wins.get(tabs.current) || first; w.view.focus() }
   }
-  viz = new Viz(vizTabs, 'visualization: ' + identity.title(tabs.active.label), beside, log)
+  viz = new Viz(vizTabs, 'visualization: ' + identity.title(nameOf(tabs.active)), beside, log)
   if (opts.viz) first.view.whenLoaded(() => viz.open())
 })
 
@@ -817,7 +846,7 @@ function openWindow (bounds) {
     minWidth: skin ? floorWidth(skin) : sw.minWidth,
     minHeight: sw.minHeight,
     useContentSize: true,
-    title: identity.title(a ? a.label : ''),
+    title: identity.title(a ? nameOf(a) : ''),
     backgroundColor: '#000000',
     webPreferences: {
       preload: pages.preload('main'),

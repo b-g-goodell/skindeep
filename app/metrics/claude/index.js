@@ -16,6 +16,7 @@ const { ClaudeCore, source } = require('./core')
 const { Tail } = require('../tail')
 const { carry } = require('./carry')
 const claudeWatch = require('./watch')
+const title = require('./title')
 const plain = require('../plain')
 const { slug } = require('../../sessions')
 
@@ -86,12 +87,27 @@ class ClaudeAdapter {
     if (this.tail && !this.closed) this.tail.poll(now)
   }
 
+  // A rename made in the tab goes into the CLI's own record (decision
+  // 0032) once the session and its transcript are known. True when
+  // recorded.
+  rename (name) {
+    if (this.closed || !this.core || !this.core.session || !this.core.transcript) return false
+    try {
+      title.record(this.core.transcript, this.core.session, name)
+      return true
+    } catch (e) {
+      this.log(`claude adapter: rename not recorded: ${e.message}`)
+      return false
+    }
+  }
+
   // Each channel off (not injected), waiting or live.
   report () {
     const state = name => !this.armed[name] ? 'off' : this.seen[name] ? 'live' : 'waiting'
     const transcript = (this.core && this.core.transcript) || null
     return {
       session: (this.core && this.core.session) || null,
+      title: (this.core && this.core.title) || null,
       channels: [
         { name: 'hooks', state: state('hooks'), target: null, how: null },
         { name: 'statusline', state: state('statusline'), target: null, how: null },

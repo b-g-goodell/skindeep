@@ -187,11 +187,11 @@ for (const kind of Object.keys(ADAPTERS)) {
   test(`${kind}: row 7, a report from open to close`, async t => {
     const h = await harness(t, kind)
     const keys = r => Object.keys(r).sort()
-    assert.deepStrictEqual(keys(h.agent.report()), ['agent', 'channels', 'notice', 'replaying', 'session'])
+    assert.deepStrictEqual(keys(h.agent.report()), ['agent', 'channels', 'notice', 'replaying', 'session', 'title'])
     assert.strictEqual(h.agent.report().agent, kind)
     if (h.a.first) await h.a.first(h)
     h.agent.close()
-    assert.deepStrictEqual(keys(h.agent.report()), ['agent', 'channels', 'notice', 'replaying', 'session'])
+    assert.deepStrictEqual(keys(h.agent.report()), ['agent', 'channels', 'notice', 'replaying', 'session', 'title'])
   })
 }
 

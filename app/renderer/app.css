@@ -39,6 +39,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 #tabs .close { flex: none; width: 16px; text-align: center; color: #777; border-radius: 3px; }
 #tabs .close:hover { background: #3a3a3a; color: #fff; }
 #tabs .new { flex: none; width: 26px; text-align: center; }
+#tabs .rename {
+  flex: 1 1 auto; min-width: 40px; height: 18px; padding: 0 3px; box-sizing: border-box;
+  font: inherit; line-height: 16px; color: #fff; background: #000; border: 1px solid #6fa8dc; border-radius: 2px; outline: none;
+}
+/* The tab's drop-down (decision 0032), styled as the File menu is. */
+#tab-menu {
+  position: absolute; z-index: 40; min-width: 110px; padding: 4px 0;
+  background: #1b1f26; color: #e6e9ee; border: 1px solid #3a3f47; border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); font: 13px/24px "DejaVu Sans", sans-serif; user-select: none;
+}
+#tab-menu .item { padding: 0 14px; cursor: default; }
+#tab-menu .item:hover { background: #2f5d8a; }
 
 #stage { position: absolute; top: 22px; left: 0; right: 0; bottom: 0; }
 body.tabbed #stage { top: 46px; }
