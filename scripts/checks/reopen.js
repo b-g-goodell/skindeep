@@ -19,8 +19,19 @@ const bytesDir = path.join(out, 'bytes')
 for (const d of [codexHome, bytesDir]) fs.mkdirSync(d, { recursive: true })
 const env = { SKINNED_GL: 'swiftshader', PATH: `${fakes}:${process.env.PATH}`, CODEX_HOME: codexHome, SKINNED_CHECK_OUT: bytesDir }
 
-function check (ok, msg) {
-  if (!ok) throw new Error(msg)
+function check (ok, msg, seen) {
+  if (!ok) throw new Error(seen === undefined ? msg : `${msg}, saw ${JSON.stringify(seen)}`)
+}
+
+// get() once ok(value) holds, else after ms the last value seen.
+async function until (get, ok, ms, step = 500) {
+  const t0 = Date.now()
+  let v = await get()
+  while (!ok(v) && Date.now() - t0 < ms) {
+    await sleep(step)
+    v = await get()
+  }
+  return v
 }
 
 const alive = pid => { try { process.kill(pid, 0); return true } catch (e) { return false } }
@@ -128,28 +139,47 @@ async function plain () {
 }
 
 // Codex: resume <id> follows the same rollout, fork <id> a new thread.
+// Each read waits, bounded, for the state it asserts, and a failed
+// check quotes the tabs it saw. The fake replays the fixture from
+// its start on resume and on fork, so a tab's cumulative token meter
+// drops from the history's last total to the fixture's first within one
+// tail poll: the meters are compared once both replays have ended, at
+// the fixture's last total, where the fork's tool count carries the
+// history it references and its own replay.
 async function codex () {
+  const fixture = fs.readFileSync(path.join(root, 'test', 'fixtures', 'codex', 'rollout.jsonl'), 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
+  const totals = fixture.filter(o => o.type === 'event_msg' && o.payload.type === 'token_count' && o.payload.info && o.payload.info.total_token_usage)
+  const FINAL = totals[totals.length - 1].payload.info.total_token_usage.input_tokens
+  const TOOLS = fixture.filter(o => o.type === 'response_item' && ['function_call', 'custom_tool_call', 'local_shell_call', 'web_search_call'].includes(o.payload.type)).length
+  const roll = t => t.following.channels.find(x => x.name === 'rollout')
+  const live = t => !!(t && session(t) && roll(t).state === 'live')
+  const seen = t => t && { argv: t.argv.slice(1), session: session(t), rollout: roll(t), replaying: t.following.replaying, in: t.snapshot['tokens.in'], tools: t.snapshot['tools.total'], alive: alive(t.childPid) }
   const { app, win } = await start([codexFake])
   await win.keyboard.press('Control+Shift+T')
-  await sleep(4000)
-  const [, b] = await tabs(app)
-  const roll = t => t.following.channels.find(x => x.name === 'rollout')
-  check(session(b) && roll(b).state === 'live', 'want the second codex tab following its rollout')
+  let t = await until(() => tabs(app), t => t.length === 2 && live(t[1]), 30000)
+  const b = t[1]
+  check(t.length === 2 && live(b), 'want the second codex tab following its rollout', t.map(seen))
   await win.keyboard.press('Control+Shift+W')
-  await sleep(2000)
+  t = await until(() => tabs(app), t => t.length === 1, 10000)
+  check(t.length === 1, 'want the second tab closed', t.map(seen))
   await menu(win, /^Reopen closed tab$/)
-  await sleep(4000)
-  let t = await tabs(app)
+  t = await until(() => tabs(app), t => t.length === 2 && live(t[1]) && !t[1].following.replaying, 30000)
+  check(t.length === 2 && live(t[1]), 'want the closed tab back, following its rollout', t.map(seen))
   const c = t[1]
   console.log('reopened', JSON.stringify({ argv: c.argv.slice(1), rollout: roll(c), was: roll(b).target }))
-  check(c.argv.slice(1).join(' ') === `resume ${session(b)}` && session(c) === session(b) && roll(c).how === 'argv' && roll(c).target === roll(b).target, 'want codex resume <id> on the same rollout')
+  check(c.argv.slice(1).join(' ') === `resume ${session(b)}` && session(c) === session(b) && roll(c).how === 'argv' && roll(c).target === roll(b).target, 'want codex resume <id> on the same rollout', t.map(seen))
+  const cFork = (await tabs(app))[1]
   await menu(win, /^Duplicate tab$/)
-  await sleep(4000)
-  t = await tabs(app)
+  t = await until(() => tabs(app), t => t.length === 3 && live(t[2]) && !t[2].following.replaying, 30000)
+  check(t.length === 3 && live(t[2]), 'want the duplicate beside the reopened tab, following its rollout', t.map(seen))
   const d = t[2]
   console.log('duplicate', JSON.stringify({ argv: d.argv.slice(1), rollout: roll(d), session: session(d) }))
-  check(d.argv.slice(1).join(' ') === `fork ${session(b)}` && roll(d).how === 'forked' && session(d) !== session(b) && roll(d).target !== roll(b).target, 'want codex fork <id> on a new thread\'s rollout')
-  check(d.snapshot['tokens.in'] >= c.snapshot['tokens.in'] && alive(c.childPid), 'want the fork\'s meters from the history it references, the original running')
+  check(d.argv.slice(1).join(' ') === `fork ${session(b)}` && roll(d).how === 'forked' && session(d) !== session(b) && roll(d).target !== roll(b).target, 'want codex fork <id> on a new thread\'s rollout', t.map(seen))
+  const ended = t => t.length === 3 && t[1].snapshot['tokens.in'] === FINAL && t[2].snapshot['tokens.in'] === FINAL
+  t = await until(() => tabs(app), ended, 90000)
+  console.log('replays ended', JSON.stringify({ final: FINAL, tools: TOOLS, before: seen(cFork).tools, original: seen(t[1]), fork: seen(t[2]) }))
+  check(ended(t), `want both replays ended at the fixture's last total ${FINAL}`, t.map(seen))
+  check(t[2].snapshot['tools.total'] >= cFork.snapshot['tools.total'] + TOOLS && alive(c.childPid), `want the fork's tools to count the history it references plus its own ${TOOLS}, the original running`, { before: seen(cFork), original: seen(t[1]), fork: seen(t[2]) })
   await end(app)
 }
 
