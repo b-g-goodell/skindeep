@@ -37,9 +37,9 @@ validator checks, a player the app owns, and a way to silence them.
 - `skin://` serves byte ranges (206) and the scheme is registered with
   `stream`, so a long loop has a duration and loops. The CSP adds
   `media-src skin:`.
-- Nothing is captured. No microphone, no AudioContext, no analysis of
-  the output: decision 0015's rule against an audio stream is about the
-  visualization window, which still opens none.
+- Nothing is captured for the skin's sounds. No microphone, no
+  AudioContext. The visualization's sound output input (decision 0015)
+  records the default sink's monitor, which carries these sounds too.
 - The live checks (`scripts/drive.js`) pass Chromium's `--mute-audio`
   and set `PULSE_SERVER` to no server, so a checked skin never reaches
   the speakers, and `scripts/checks/sounds.js` reads the player's state

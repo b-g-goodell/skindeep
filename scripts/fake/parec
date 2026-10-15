@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+'use strict'
+// Fake of PulseAudio's recorder for the viz's sound output input
+// (decision 0015): whatever the arguments, 44.1 kHz mono s16le on stdout
+// in real time, a 220 Hz tone that swells and fades every 2 s. Records
+// nothing. SKINNED_FAKE_PAREC=fail exits 1 at once, as parec does with
+// no sound server.
+if (process.env.SKINNED_FAKE_PAREC === 'fail') {
+  process.stderr.write('Connection failure: Connection refused\n')
+  process.exit(1)
+}
+const RATE = 44100
+const CHUNK = 882
+let n = 0
+setInterval(() => {
+  const b = Buffer.alloc(CHUNK * 2)
+  for (let k = 0; k < CHUNK; k++, n++) {
+    const t = n / RATE
+    const amp = 0.6 * (0.5 - 0.5 * Math.cos(2 * Math.PI * t / 2))
+    b.writeInt16LE(Math.round(32767 * amp * Math.sin(2 * Math.PI * 220 * t)), k * 2)
+  }
+  process.stdout.write(b)
+}, 20)
+process.stdout.on('error', () => process.exit(0))

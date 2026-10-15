@@ -1,86 +1,195 @@
 'use strict'
-/* global Synth, VizModes, VizCanvas, VizPresets, butterchurn */
+/* global Synth, VizModes, VizCanvas, VizPresets, VizLayout, butterchurn */
 // The visualization page (decision 0015), fed only by window.vizFeed
-// numeric frames. Each frame names the mode to show by its index in
-// modes.js: the main process owns the mode, and sees the clicks and the
-// space bar that cycle it, so the page sends nothing.
+// numeric frames: one entry per pane, each a tab of the main window with
+// its own signal and the index of its mode in modes.js, and the input:
+// the sessions, the sound output's samples, which every pane shares, or
+// both. The main process
+// owns the modes, and sees the clicks and the space bar that step them,
+// so the page sends nothing. The panes tile the window by layout.js.
 
 ;(function () {
-  const synth = new Synth.Synth()
-  const milkCanvas = document.getElementById('milk')
-  const flatCanvas = document.getElementById('flat')
-  const label = document.getElementById('mode')
-  let milk = null
+  // Butterchurn panes at most: each holds a WebGL2 context, and Chromium
+  // drops the oldest context of a page past about 16.
+  const MAX_GL = 8
+  const root = document.getElementById('panes')
+  const panes = new Map()
+  let order = ''
+  let bc = null
+  let audio = null
   let note = ''
-  let shown = -1
-  let flat = null
-
-  function size () {
-    for (const c of [milkCanvas, flatCanvas]) {
-      c.width = window.innerWidth
-      c.height = window.innerHeight
-    }
-    if (milk) milk.setRendererSize(window.innerWidth, window.innerHeight)
-  }
+  let gl = 0
+  let sound = { src: 0, st: 0, s: new Float32Array(0) }
+  const SOURCE = ['', 'sound output', 'session and sound output']
 
   try {
-    const gl = document.createElement('canvas').getContext('webgl2')
-    if (!gl) throw new Error('no WebGL2')
+    const probe = document.createElement('canvas').getContext('webgl2')
+    if (!probe) throw new Error('no WebGL2')
+    const lose = probe.getExtension('WEBGL_lose_context')
+    if (lose) lose.loseContext()
     // An OfflineAudioContext gives butterchurn its analysers without
     // opening any audio device. Levels come from render({audioLevels}).
-    const ctx = new OfflineAudioContext(2, 44100, 44100)
-    const bc = butterchurn.default || butterchurn
-    milk = bc.createVisualizer(ctx, milkCanvas, { width: window.innerWidth, height: window.innerHeight, pixelRatio: 1 })
+    audio = new OfflineAudioContext(2, 44100, 44100)
+    bc = butterchurn.default || butterchurn
   } catch (e) {
     note = 'needs WebGL2, showing scope: ' + e.message
   }
 
-  // Show mode m. A butterchurn preset blends from the one before; from a
-  // Canvas2D mode it starts at once, since its canvas holds no frame. A
-  // milk mode without WebGL2 shows the scope.
-  function show (m) {
-    if (!(m >= 0 && m < VizModes.length) || m === shown) return
-    const prev = shown >= 0 ? VizModes[shown] : null
-    const mode = VizModes[m]
-    shown = m
-    const gl = mode.kind === 'milk' && milk
-    if (gl) {
-      milk.loadPreset(VizPresets[mode.id], prev && prev.kind === 'milk' ? 1.5 : 0)
-      flat = null
-    } else {
-      const g = flatCanvas.getContext('2d')
-      g.fillStyle = '#000'
-      g.fillRect(0, 0, flatCanvas.width, flatCanvas.height)
-      flat = VizCanvas[mode.kind === 'milk' ? 'scope' : mode.id](flatCanvas)
-    }
-    milkCanvas.hidden = !gl
-    flatCanvas.hidden = !!gl
-    label.textContent = mode.label + (mode.kind === 'milk' && note ? '  (' + note + ')' : '')
+  function el (tag, cls) {
+    const e = document.createElement(tag)
+    if (cls) e.className = cls
+    return e
   }
 
-  window.addEventListener('resize', size)
+  function make (k) {
+    const p = { k, i: 0, a: 0, w: 0, h: 0, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
+    p.el = el('div', 'pane')
+    p.milkCanvas = el('canvas')
+    p.flatCanvas = el('canvas')
+    p.label = el('div', 'mode')
+    p.el.append(p.milkCanvas, p.flatCanvas, p.label)
+    root.appendChild(p.el)
+    return p
+  }
+
+  // The pane's butterchurn, made the first time it shows a milk mode, or
+  // null with the reason in p.why.
+  function milkOf (p) {
+    if (p.milk || p.why) return p.milk
+    if (!bc) p.why = note
+    else if (gl >= MAX_GL) p.why = `scope: ${MAX_GL} WebGL2 panes at most`
+    else {
+      try {
+        p.milk = bc.createVisualizer(audio, p.milkCanvas, { width: p.w || 1, height: p.h || 1, pixelRatio: 1 })
+        gl++
+      } catch (e) {
+        p.why = 'needs WebGL2, showing scope: ' + e.message
+      }
+    }
+    return p.milk
+  }
+
+  function drop (p) {
+    if (p.milk) {
+      const ctx = p.milkCanvas.getContext('webgl2')
+      const lose = ctx && ctx.getExtension('WEBGL_lose_context')
+      if (lose) lose.loseContext()
+      gl--
+    }
+    p.el.remove()
+  }
+
+  function caption (p) {
+    if (p.shown < 0) return
+    const mode = VizModes[p.shown]
+    const why = mode.kind === 'milk' && !p.milk && p.why ? '  (' + p.why + ')' : ''
+    const src = sound.src > 0 ? '  [' + SOURCE[sound.src] + (sound.st === 2 ? ': none, see the log' : '') + ']' : ''
+    p.label.textContent = (panes.size > 1 ? p.i + '  ' : '') + mode.label + src + why
+  }
+
+  // Show mode m in pane p. A butterchurn preset blends from the one
+  // before; from a Canvas2D mode it starts at once, since its canvas
+  // holds no frame. A milk mode without WebGL2 shows the scope.
+  function show (p, m) {
+    if (!(m >= 0 && m < VizModes.length) || m === p.shown) return
+    const prev = p.shown >= 0 ? VizModes[p.shown] : null
+    const mode = VizModes[m]
+    p.shown = m
+    const milk = mode.kind === 'milk' && milkOf(p)
+    if (milk) {
+      milk.loadPreset(VizPresets[mode.id], prev && prev.kind === 'milk' ? 1.5 : 0)
+      p.flat = null
+    } else {
+      const g = p.flatCanvas.getContext('2d')
+      g.fillStyle = '#000'
+      g.fillRect(0, 0, p.flatCanvas.width, p.flatCanvas.height)
+      p.flat = VizCanvas[mode.kind === 'milk' ? 'scope' : mode.id](p.flatCanvas)
+    }
+    p.milkCanvas.hidden = !milk
+    p.flatCanvas.hidden = !!milk
+    caption(p)
+  }
+
+  // Each pane's place, in the order of the frame.
+  function layout () {
+    const list = [...panes.values()]
+    const W = window.innerWidth
+    const H = window.innerHeight
+    list.forEach((p, i) => {
+      const r = VizLayout.rect(i, list.length, W, H)
+      Object.assign(p.el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' })
+      p.el.classList.toggle('active', list.length > 1 && p.a === 1)
+      if (r.w === p.w && r.h === p.h) return
+      p.w = r.w
+      p.h = r.h
+      for (const c of [p.milkCanvas, p.flatCanvas]) {
+        c.width = r.w
+        c.height = r.h
+      }
+      if (p.milk) p.milk.setRendererSize(r.w, r.h)
+    })
+    for (const p of list) caption(p)
+  }
+
+  window.addEventListener('resize', layout)
   window.vizFeed.onFrame(f => {
-    synth.input(f)
-    show(f.m)
+    const was = sound.src + ':' + sound.st
+    sound = { src: f.src, st: f.st, s: f.s }
+    const keys = f.p.map(e => e.k)
+    for (const [k, p] of panes) {
+      if (!keys.includes(k)) {
+        drop(p)
+        panes.delete(k)
+      }
+    }
+    // The map keeps the frame's order.
+    const next = new Map()
+    for (const e of f.p) next.set(e.k, panes.get(e.k) || make(e.k))
+    panes.clear()
+    for (const [k, p] of next) panes.set(k, p)
+    const now = f.p.map(e => `${e.k}:${e.i}:${e.a}`).join()
+    for (const e of f.p) {
+      const p = panes.get(e.k)
+      p.i = e.i
+      p.a = e.a
+      if (sound.src !== 1) p.synth.input(e)
+    }
+    if (now !== order || was !== sound.src + ':' + sound.st) {
+      order = now
+      layout()
+    }
+    for (const e of f.p) show(panes.get(e.k), e.m)
   })
 
   let prev = performance.now()
   function loop (now) {
     const dt = Math.min(0.1, (now - prev) / 1000)
     prev = now
-    synth.step(dt)
-    if (shown >= 0) {
-      if (flat) {
-        flat.draw(synth, dt)
+    for (const p of panes.values()) {
+      p.synth.step(dt, sound)
+      if (p.shown < 0) continue
+      if (p.flat) {
+        p.flat.draw(p.synth, dt)
       } else {
-        const b = synth.bytes()
-        milk.render({ audioLevels: { timeByteArray: b, timeByteArrayL: b, timeByteArrayR: b } })
+        const b = p.synth.bytes()
+        p.milk.render({ audioLevels: { timeByteArray: b, timeByteArrayL: b, timeByteArrayR: b } })
       }
     }
     requestAnimationFrame(loop)
   }
 
-  size()
-  window.vizState = () => ({ modes: VizModes.map(m => m.id), mode: shown >= 0 ? VizModes[shown].id : null, webgl: !!milk })
+  // mode: the active pane's, else the first's.
+  window.vizState = () => {
+    const list = [...panes.values()]
+    const main = list.find(p => p.a === 1) || list[0]
+    const id = p => p && p.shown >= 0 ? VizModes[p.shown].id : null
+    return {
+      modes: VizModes.map(m => m.id),
+      mode: id(main),
+      webgl: !!bc,
+      sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), milk: !!p.milk, x: parseInt(p.el.style.left), y: parseInt(p.el.style.top), w: p.w, h: p.h }))
+    }
+  }
   requestAnimationFrame(loop)
 })()

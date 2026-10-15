@@ -23,7 +23,7 @@ quiet sounds of its place.
         |-- runtime.js    per-pid runtime dir, userData, cleanup, logs
         |-- tabs.js       the window's tabs: order, the active one, the
         |                 app's end with the last tab's status
-        |-- profiles.js   the config dirs New tab... offers, recorded
+        |-- profiles.js   the config dirs New tab... offers, found, recorded
         |-- argv.js       New tab...'s command line split into words
         |-- sessions.js   the live agent sessions of this user, from /proc,
         |                 and the transcript or rollout of each
@@ -65,8 +65,9 @@ quiet sounds of its place.
         |     New tab... dialog |
         |     the skin's declared sounds (sounds.js)
         |
-        `-- viz window renderer (app/viz/)
-              receive-only numeric feed, the mode main chose ->
+        `-- viz window renderer (app/viz/), one pane per tab
+              receive-only numeric feed, the mode main chose, the
+              sound output's samples when asked (app/viz/sound.js) ->
               synthesiser -> butterchurn (own presets) or Canvas2D
               (scope, classic analyzer, AVS ports)
 
