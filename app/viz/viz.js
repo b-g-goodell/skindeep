@@ -5,15 +5,19 @@
 // its own signal and the index of its mode in modes.js, and the input:
 // the sessions, the sound output's samples, which every pane shares, or
 // both. The main process
-// owns the modes, and sees the space bar that steps them, so the page
-// sends nothing. The panes tile the window by layout.js. The pointer
-// goes to the mode in the pane under it, read here and never sent.
+// owns the modes, and sees the space bar that steps them and the presses
+// on each pane's mode drop-down, so the page sends nothing: it draws the
+// drop-downs where layout.js puts them, open as the frame says. The
+// panes tile the window by layout.js. The pointer goes to the mode in the
+// pane under it, read here and never sent, save a press on a drop-down.
 
 ;(function () {
   // Butterchurn panes at most: each holds a WebGL2 context, and Chromium
   // drops the oldest context of a page past about 16.
   const MAX_GL = 8
   const root = document.getElementById('panes')
+  const menu = document.getElementById('menu')
+  let listed = ''
   const panes = new Map()
   let order = ''
   let bc = null
@@ -47,14 +51,39 @@
   }
 
   function make (k) {
-    const p = { k, i: 0, a: 0, x: 0, y: 0, w: 0, h: 0, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
+    const p = { k, i: 0, a: 0, o: 0, x: 0, y: 0, w: 0, h: 0, menu: null, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
     p.el = el('div', 'pane')
     p.milkCanvas = el('canvas')
     p.flatCanvas = el('canvas')
     p.label = el('div', 'mode')
-    p.el.append(p.milkCanvas, p.flatCanvas, p.label)
+    p.button = el('div', 'pick')
+    p.el.append(p.milkCanvas, p.flatCanvas, p.label, p.button)
     root.appendChild(p.el)
+    watch(p)
     return p
+  }
+
+  // When the GPU process exits, every WebGL context of the page is lost
+  // and draws nothing again, so a butterchurn pane would stay blank while
+  // its mode steps. The pane drops its butterchurn and its canvas, whose
+  // context stays lost. The next frame shows a butterchurn mode afresh, on
+  // a new context or on the scope with the reason, and a Canvas2D mode
+  // draws on.
+  function watch (p) {
+    p.milkCanvas.addEventListener('webglcontextlost', () => {
+      if (!p.milk) return
+      p.milk = null
+      p.why = ''
+      gl--
+      const c = el('canvas')
+      c.width = p.w
+      c.height = p.h
+      c.hidden = p.milkCanvas.hidden
+      p.milkCanvas.replaceWith(c)
+      p.milkCanvas = c
+      if (!p.flat) p.shown = -1
+      watch(p)
+    })
   }
 
   // The pane's butterchurn, made the first time it shows a milk mode, or
@@ -76,10 +105,12 @@
 
   function drop (p) {
     if (p.milk) {
+      // Cleared first: the loss event below then counts nothing.
+      p.milk = null
+      gl--
       const ctx = p.milkCanvas.getContext('webgl2')
       const lose = ctx && ctx.getExtension('WEBGL_lose_context')
       if (lose) lose.loseContext()
-      gl--
     }
     if (held === p) held = null
     p.el.remove()
@@ -91,6 +122,26 @@
     const why = mode.kind === 'milk' && !p.milk && p.why ? '  (' + p.why + ')' : ''
     const src = sound.src > 0 ? '  [' + SOURCE[sound.src] + (sound.st === 2 ? ': none, see the log' : '') + ']' : ''
     p.label.textContent = (panes.size > 1 ? p.i + '  ' : '') + mode.label + src + why
+    p.button.textContent = mode.label + ' \u25be'
+  }
+
+  // The open drop-down, if any: a row per mode where layout.js puts it,
+  // the pane's own mode marked. Redrawn only when it changes.
+  function dropdown () {
+    const p = [...panes.values()].find(q => q.o === 1 && q.menu)
+    const key = p ? [p.k, p.shown, JSON.stringify(p.menu.items)].join() : ''
+    for (const q of panes.values()) q.button.classList.toggle('open', q === p)
+    if (key === listed) return
+    listed = key
+    menu.replaceChildren()
+    if (!p) return
+    VizModes.forEach((m, i) => {
+      const b = p.menu.items[i]
+      const row = el('div', i === p.shown ? 'item current' : 'item')
+      row.textContent = (i === p.shown ? '\u25b8 ' : '  ') + m.label
+      Object.assign(row.style, { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px' })
+      menu.appendChild(row)
+    })
   }
 
   // Show mode m in pane p. A butterchurn preset blends from the one
@@ -127,6 +178,9 @@
       p.el.classList.toggle('active', list.length > 1 && p.a === 1)
       p.x = r.x
       p.y = r.y
+      p.menu = VizLayout.menu(r, VizModes.length, W, H)
+      const b = p.menu.button
+      Object.assign(p.button.style, { left: (b.x - r.x) + 'px', top: (b.y - r.y) + 'px', width: b.w + 'px', height: b.h + 'px' })
       if (r.w === p.w && r.h === p.h) return
       p.w = r.w
       p.h = r.h
@@ -139,15 +193,23 @@
     for (const p of list) caption(p)
   }
 
-  window.addEventListener('resize', layout)
+  window.addEventListener('resize', () => {
+    layout()
+    dropdown()
+  })
 
   // The pointer, in the pane's canvas pixels, to the mode's pointer(kind,
   // x, y, down), kind down, move or up. A mode without the method hears a
   // tone in its pane's signal instead, at the press and every 60 ms of a
   // drag. Moves come unpressed too. The left button alone.
+  // A press on a drop-down's button, or any press while one is open, is
+  // the main process's, and no mode hears it.
   function point (kind, e) {
-    const list = [...panes.values()]
-    const p = held || list[VizLayout.at(e.clientX, e.clientY, list.length, window.innerWidth, window.innerHeight)]
+    const all = [...panes.values()]
+    const W = window.innerWidth
+    const H = window.innerHeight
+    if (kind === 'down' && (all.some(q => q.o === 1) || VizLayout.press(e.clientX, e.clientY, all.length, VizModes.length, W, H, -1))) return
+    const p = held || all[VizLayout.at(e.clientX, e.clientY, all.length, W, H)]
     if (!p) return
     if (kind === 'down') held = p
     const down = kind !== 'up' && held === p
@@ -183,6 +245,7 @@
       const p = panes.get(e.k)
       p.i = e.i
       p.a = e.a
+      p.o = e.o
       if (sound.src !== 1) p.synth.input(e)
     }
     if (now !== order || was !== sound.src + ':' + sound.st) {
@@ -190,6 +253,7 @@
       layout()
     }
     for (const e of f.p) show(panes.get(e.k), e.m)
+    dropdown()
   })
 
   let prev = performance.now()
@@ -201,7 +265,7 @@
       if (p.shown < 0) continue
       if (p.flat) {
         p.flat.draw(p.synth, dt)
-      } else {
+      } else if (p.milk) {
         const b = p.synth.bytes()
         p.milk.render({ audioLevels: { timeByteArray: b, timeByteArrayL: b, timeByteArrayR: b } })
       }
@@ -216,10 +280,11 @@
     const id = p => p && p.shown >= 0 ? VizModes[p.shown].id : null
     return {
       modes: VizModes.map(m => m.id),
+      menu: [...menu.children].map(r => ({ label: r.textContent.trim(), current: r.classList.contains('current'), x: parseFloat(r.style.left), y: parseFloat(r.style.top), w: parseFloat(r.style.width), h: parseFloat(r.style.height) })),
       mode: id(main),
       webgl: !!bc,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
-      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), milk: !!p.milk, x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   requestAnimationFrame(loop)

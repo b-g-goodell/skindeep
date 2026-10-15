@@ -2,17 +2,19 @@
 // The visualization window (decision 0015): never takes focus, gets a
 // receive-only numeric feed at 30 Hz, one pane per tab from that tab's
 // bus. Each pane's mode is kept here: the space bar and the menu act on
-// the active tab's pane, and each pick
-// is recorded as the last skin is (decision 0022), one file per window,
+// the active tab's pane, a pane's own drop-down on that pane, and each
+// pick is recorded as the last skin is (decision 0022), one file per window,
 // the newest read at launch. The input, the sessions, the sound output or
 // both, is recorded the same way, and the sound output is recorded only
 // while the window is open on an input that takes it. The pointer belongs
-// to the page, whose modes answer it.
+// to the page, whose modes answer it, save a press on a drop-down, which
+// is read here.
 
 const { BrowserWindow, screen } = require('electron')
 const path = require('path')
 const last = require('./skins/last')
 const { MODES } = require('./viz/modes')
+const layout = require('./viz/layout')
 const { Sound } = require('./viz/sound')
 const pages = require('./pages')
 
@@ -62,6 +64,8 @@ class Viz {
     // Tab id -> mode index. A new pane starts at the first mode no other
     // pane shows, counting from the last one picked.
     this.modeOf = new Map()
+    // The tab whose pane's drop-down is open, or null.
+    this.menu = null
     this.base = startMode(records)
     this.inputs = inputDir()
     const inputs = last.read(this.inputs)
@@ -83,6 +87,7 @@ class Viz {
   panes () {
     const out = this.tabs().filter(t => t.pane)
     for (const id of this.modeOf.keys()) if (!out.some(t => t.id === id)) this.modeOf.delete(id)
+    if (!out.some(t => t.id === this.menu)) this.menu = null
     for (const t of out) {
       if (this.modeOf.has(t.id)) continue
       const used = new Set(this.modeOf.values())
@@ -156,6 +161,21 @@ class Viz {
     if (pane) this.set(pane.id, (pane.mode + 1) % MODES.length)
   }
 
+  // A left press at (x, y) in the window: a pane's button opens its
+  // drop-down, or closes it, a row of the open drop-down shows that mode
+  // in that pane alone, and any other press closes the drop-down.
+  press (x, y) {
+    const list = this.panes()
+    const [w, h] = this.win.getContentSize()
+    const hit = layout.press(x, y, list.length, MODES.length, w, h, list.findIndex(t => t.id === this.menu))
+    const was = this.menu
+    this.menu = null
+    if (!hit) return
+    const tab = list[hit.pane].id
+    if (hit.button) this.menu = was === tab ? null : tab
+    else this.set(tab, hit.item)
+  }
+
   open () {
     const b = this.parent.bounds()
     if (this.isOpen() || !b) return
@@ -175,12 +195,14 @@ class Viz {
     this.win.on('page-title-updated', e => e.preventDefault())
     this.win.webContents.on('will-navigate', e => e.preventDefault())
     this.win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-    // The page sends nothing, so the space bar is read here: it steps
-    // the active tab's pane. A real key comes as rawKeyDown, one from the
-    // DevTools protocol as keyDown.
+    // The page sends nothing, so the space bar and the drop-downs'
+    // presses are read here: space steps the active tab's pane. A real
+    // key comes as rawKeyDown, one from the DevTools protocol as keyDown.
+    // A press's x and y are in CSS pixels, as the page lays out.
     this.win.webContents.on('input-event', (_e, ie) => {
       const space = (ie.type === 'rawKeyDown' || ie.type === 'keyDown') && ie.code === 'Space' && !ie.isAutoRepeat
       if (space) this.step(this.activePane())
+      else if (ie.type === 'mouseDown' && ie.button === 'left') this.press(ie.x, ie.y)
     })
     this.win.once('ready-to-show', () => {
       this.win.showInactive()
@@ -188,6 +210,7 @@ class Viz {
     })
     this.win.on('closed', () => {
       this.win = null
+      this.menu = null
       this.syncSound()
     })
     this.win.loadURL(pages.url('app/viz/index.html'))
@@ -204,9 +227,10 @@ class Viz {
   }
 
   // Numbers only, per pane in strip order: the tab's id, its place in
-  // the strip from 1, whether it is active, the mode's index, rates,
-  // levels and event codes. No session text. Every tab's events are
-  // drained, so none piles up while the window is closed.
+  // the strip from 1, whether it is active, the mode's index, whether its
+  // drop-down is open, rates, levels and event codes. No session text.
+  // Every tab's events are drained, so none piles up while the window is
+  // closed.
   feed () {
     const events = new Map(this.tabs().map(t => [t.id, t.bus.drainEvents()]))
     if (!this.isOpen()) return
@@ -217,7 +241,7 @@ class Viz {
         return typeof v === 'number' && isFinite(v) ? v : 0
       }
       const n = [g('pty.out_bps'), g('pty.in_kps'), g('pty.idle_s'), g('tokens.out_rate'), g('state.busy'), g('proc.cpu_pct'), g('context.used_pct')]
-      return { k: t.id, i: all.findIndex(x => x.id === t.id) + 1, a: t.active ? 1 : 0, m: t.mode, n, e: (events.get(t.id) || []).map(Number) }
+      return { k: t.id, i: all.findIndex(x => x.id === t.id) + 1, a: t.active ? 1 : 0, m: t.mode, o: t.id === this.menu ? 1 : 0, n, e: (events.get(t.id) || []).map(Number) }
     })
     // src: the input's index. st: the sound output's state, 0 none yet,
     // 1 live, 2 failed. s: its newest samples, while it takes them.

@@ -85,9 +85,11 @@ and the cache ratio.
 The visualizer turns each tab's session into a made-up sound, so output
 thumps, tool calls ring and the picture calms when the agent idles.
 **Visualization input** in the menu switches it to what your speakers
-play, and it never records a microphone. Press space to step through
-fifteen modes, five of which
-[docs/viz-modes.png](docs/viz-modes.png) shows.
+play, and it never records a microphone. Each pane has a drop-down at
+its top left to pick its mode, and space steps through them all, five
+of which [docs/viz-modes.png](docs/viz-modes.png) shows. A click goes
+to the mode: a drag in Quantum raises a barrier, and a click in Go
+plays a stone.
 
 ## Skins
 
