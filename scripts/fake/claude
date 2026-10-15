@@ -10,7 +10,8 @@
 // --resume <id> appends to that session's transcript, --fork-session with
 // it copies the transcript into a new session, each seeded from the same
 // history when the transcript is gone. Transcripts stay after exit, for
-// a later --resume, and are pruned after a day.
+// a later --resume, and are pruned after a day. While the file
+// FAKE_CLAUDE_PAUSE names exists, no new turn starts, so the session idles.
 
 const fs = require('fs')
 const os = require('os')
@@ -91,6 +92,13 @@ function statusline () {
   j.cost.total_cost_usd = cost
   j.cost.total_lines_added = added
   j.cost.total_lines_removed = removed
+  // The limits reset 3 h 12 min and 4 d 2 h from now, as a live session's do.
+  const now = Math.floor(Date.now() / 1000)
+  j.rate_limits.five_hour.resets_at = now + 3 * 3600 + 12 * 60
+  j.rate_limits.seven_day.resets_at = now + 4 * 86400 + 2 * 3600
+  // FAKE_CLAUDE_GATEWAY=1: a gateway session, a spend limit and no
+  // subscription limits, as Claude Code 2.1.299 builds them.
+  if (process.env.FAKE_CLAUDE_GATEWAY === '1') j.rate_limits = { spend_limit: { used_percentage: 42.5, resets_at: now + 9 * 86400, used_usd: 85, limit_usd: 200, period: 'month' } }
   const p = spawn('/bin/sh', ['-c', statusCmd], { stdio: ['pipe', 'ignore', 'ignore'] })
   p.on('error', () => {})
   p.stdin.on('error', () => {})
@@ -147,7 +155,9 @@ async function turn (k) {
   w(`\x1b[1;38;2;215;119;87mfake claude\x1b[0m replay for claude-skins, ${attached ? `attached to background session ${attached}` : `session ${session}`}\r\n`)
   hook('SessionStart', { source: 'startup', model: 'claude-fake' })
   statusline()
+  const pause = process.env.FAKE_CLAUDE_PAUSE
   for (let k = 1; ; k++) {
+    while (pause && fs.existsSync(pause)) await sleep(200)
     await turn(k)
     await sleep(2500 + rnd(3000))
   }

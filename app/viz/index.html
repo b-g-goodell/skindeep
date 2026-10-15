@@ -2,23 +2,30 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src data:">
 <style>
 html, body { margin: 0; height: 100%; overflow: hidden; background: #000; cursor: pointer; }
+#panes { position: absolute; inset: 0; }
+.pane { position: absolute; overflow: hidden; }
+.pane.active::after { content: ""; position: absolute; inset: 0; z-index: 3; box-shadow: inset 0 0 0 1px rgba(200, 255, 220, 0.45); pointer-events: none; }
 canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-#mode { position: absolute; left: 8px; bottom: 6px; z-index: 2; font: 11px "DejaVu Sans Mono", monospace; color: rgba(200, 255, 220, 0.55); pointer-events: none; }
+.mode { position: absolute; left: 8px; right: 8px; bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 2; font: 11px "DejaVu Sans Mono", monospace; color: rgba(200, 255, 220, 0.55); pointer-events: none; }
 </style>
 </head>
 <body>
-<canvas id="milk"></canvas>
-<canvas id="flat"></canvas>
-<div id="mode"></div>
+<div id="panes"></div>
 <script src="../../node_modules/butterchurn/lib/butterchurn.min.js"></script>
 <script src="modes.js"></script>
+<script src="layout.js"></script>
 <script src="synth.js"></script>
 <script src="scope.js"></script>
 <script src="classic.js"></script>
 <script src="avs.js"></script>
+<script src="fern.js"></script>
+<script src="go.js"></script>
+<script src="zoom.js"></script>
+<script src="gravity.js"></script>
+<script src="quantum.js"></script>
 <script src="presets.js"></script>
 <script src="viz.js"></script>
 </body>

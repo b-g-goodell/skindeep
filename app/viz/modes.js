@@ -3,8 +3,9 @@
 // cycle them and the menu lists them: the id the menu and the record
 // use, the name the menu shows, and what draws it. milk: a butterchurn
 // preset of presets.js. canvas: a Canvas2D renderer that scope.js,
-// classic.js or avs.js registers under the id. Loaded by the main
-// process and by the viz page.
+// classic.js, avs.js or the procedural mode's own file (fern.js, go.js,
+// zoom.js, gravity.js, quantum.js) registers under the id. Loaded by the
+// main process and by the viz page.
 
 ;(function (root) {
   const MODES = [
@@ -17,7 +18,12 @@
     { id: 'analyzer', label: 'Spectrum analyzer', kind: 'canvas' },
     { id: 'fire', label: 'Fire analyzer', kind: 'canvas' },
     { id: 'superscope', label: 'Superscope', kind: 'canvas' },
-    { id: 'dotplane', label: 'Dot plane', kind: 'canvas' }
+    { id: 'dotplane', label: 'Dot plane', kind: 'canvas' },
+    { id: 'fern', label: 'Fern', kind: 'canvas' },
+    { id: 'go', label: 'Go', kind: 'canvas' },
+    { id: 'zoom', label: 'Zoom out', kind: 'canvas' },
+    { id: 'gravity', label: 'Gravity', kind: 'canvas' },
+    { id: 'quantum', label: 'Quantum', kind: 'canvas' }
   ]
   if (typeof module === 'object' && module.exports) module.exports = { MODES }
   else root.VizModes = MODES
