@@ -236,5 +236,12 @@
     "author": "claude-skins",
     "license": "project-original",
     "notes": "the picture of the dev diary entry of the same name. It shows skins whose fonts and images are listed in this file"
+  },
+  {
+    "path": "docs/diary/heroes/14-window-and-install.png",
+    "source": "screen capture of the app under Xvfb, on the fake agent of scripts/fake, cropped",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "the picture of the dev diary entry of the same name. It shows skins whose fonts and images are listed in this file"
   }
 ]
