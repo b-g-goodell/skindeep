@@ -12,7 +12,9 @@ one that zooms out progressively and reveals surprises, one on
 gravitational dynamics, and one on quantum mechanics"), and 2026-10-15
 for the pointer (maintainer: "the visualizations should respond to
 clicks and be moderately interactive. example: the quantum physics
-visualizer should allow me to click and drag to put up barriers").
+visualizer should allow me to click and drag to put up barriers"),
+and 2026-10-15 for the fern forest (maintainer: "a full forest of fern
+leaves with drifting psychedelic colors and an infinite zoom-in").
 
 ## Context
 
@@ -69,9 +71,11 @@ butterchurn-presets is MIT for its conversion only.
   - Fern, Go, Zoom out, Gravity and Quantum: the project's procedural
     modes, one file each, no image or video. Each reacts to its pane's
     events, a prompt, a tool call in its class's colour, a stop, a
-    subagent, and calms at idle. Fern: the chaos game of an iterated
-    function system, Barnsley's fern and three relatives, a prompt
-    morphing to the next. Go: a 13 by 13 board, a stone per event,
+    subagent, and calms at idle. Fern: a forest of fronds, iterated
+    function systems of Barnsley's fern and three relatives grown by the
+    chaos game, in drifting hues, under an endless zoom into the hero
+    frond's copy of itself, each leaflet waving, a prompt morphing every
+    frond to the next species (Fern forest, below). Go: a 13 by 13 board, a stone per event,
     played by the rules (liberties, capture, no suicide, ko) and cleared
     when full. Zoom out: six scenes, each the detail of the next, the
     sixth the first's detail, so the camera loops. Gravity: Newtonian
@@ -116,7 +120,7 @@ butterchurn-presets is MIT for its conversion only.
   - Zoom out: a click leaves a white ring where it lands on the scene
     in view, which recedes with the scene, and sets off that scene's
     surprise.
-  - Fern: a click lights the leaflets on its side of the frond in gold
+  - Fern: a click lights the fronds on its side of the pane in gold
     and blows a gust.
   - Every other mode, the five butterchurn presets, Scope, the two
     analyzers, Superscope and Dot plane, has no method of its own: a
@@ -155,6 +159,54 @@ butterchurn-presets is MIT for its conversion only.
   audio device from the page. A skin's own sound files may play in the
   main window (decision 0024), and the sound output input records them
   too.
+
+### Fern forest
+
+Revised 2026-10-15 (maintainer: "the barnsley fern visualization is
+very boring").
+
+- Forest: the hero frond and its companions, of the four species and
+  of several sizes, overlapping. A companion hangs in the frame of one
+  of the hero's self-similar copies, its place, size, lean, mirror and
+  species a hash of the copy's depth, so it stays put as the zoom
+  passes. It fades in while small and out while larger than the pane.
+- Colour: each point takes a hue from a wheel that turns with time and
+  with the point's place and depth in the frond, over the full range.
+  An idle spell pulls the hues toward amber.
+- Zoom: each species is conjugated into one frame, the stem's foot at
+  the origin and the tip, the fixed point of the copy map, at (0, 1),
+  the copy map made a similarity. The camera at depth d sits at copy
+  floor(d), seen through the power d - floor(d) of the next copy map
+  about its fixed point. The path is continuous in d, so the loop has
+  no reset: a copy enters when it is a fiftieth of the view and leaves
+  when it is four times the view, each with no visible weight. A unit
+  test pins the frames across an integer depth, and
+  `scripts/checks/vizfern.js` captures 60 frames over more than an
+  octave and refuses a step between neighbouring frames that stands
+  out of the rest.
+- Waving: each map of a frond at depth k is composed with a rotation
+  of angle A sin(1.3 t - 0.55 k), the copy map by that angle and the
+  leaflets by three times it, so a wave runs out along each frond. A
+  companion carries its own phase and sways about its foot.
+- Warp: kept. The picture passes through a Moebius map
+  z -> (a z + b) / (c z + 1), its parameters eased from one random
+  draw near the identity to the next every 9 s. On the recorded run
+  the fronds bend and the forest swirls, and each frond stays
+  readable. `WARP` in `app/viz/fern.js` turns it off.
+- Cost: points are budgeted by the buffer's area, as before, and each
+  point takes six waved maps. Frame rate with three panes, the median
+  of five rounds on a loaded host (load average 16 to 20 on 16 cores),
+  fern 39.5, gravity 46.5, quantum 30.5.
+
+| Signal | Fern forest |
+| --- | --- |
+| bass, busy | zoom speed and growth rate |
+| prompt | every frond morphs to the next species, the old picture dims |
+| tool call | the fronds on one side light in the class's colour |
+| stop, treble | a gust: the waving's amplitude rises and settles |
+| subagent | a frond sprouts near the camera and grows |
+| idle | the zoom, the waving and the hue drift slow, the trails linger |
+| click | the fronds on its side light in gold, and a gust |
 
 ## Why
 
