@@ -2,13 +2,19 @@
    root before the skin's own stylesheet, which overrides any of it. */
 .skin { position: absolute; inset: 0; overflow: hidden; }
 .panel, .w { position: absolute; box-sizing: border-box; }
+/* A widget is a display, never text to select: the arrow, not the
+   I-beam. A widget that takes a click (decision 0033) shows the hand. */
 .w {
   --fill: #4fd06a; --track: #2a2f36; --needle: #ff6a3d; --glow: transparent;
   --on: #5cff70; --off: #20302a; --text: #c8d0d8;
   color: var(--text); font: 11px/1.2 "DejaVu Sans Mono", monospace;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: default; user-select: none;
 }
 .w.nodata { opacity: 0.55; }
+.w.click { cursor: pointer; }
+.w.click:hover { filter: brightness(1.3); }
+.w.click.open { outline: 1px solid var(--fill); outline-offset: -1px; }
 .w .label { text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
 .w .value { white-space: nowrap; }
 .w .resets { white-space: nowrap; opacity: 0.75; font-size: 0.85em; }

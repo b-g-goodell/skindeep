@@ -7,15 +7,17 @@
 // another session (/clear, /resume), whose totals are not a rise.
 
 // The meters a row draws, by bus name (decision 0011). tokens is the
-// output: input counts every request's whole context again.
+// output: input counts every request's whole context again. The dials
+// (decision 0033) are more series, keyed by their bus name.
 const METRICS = { tools: 'tools.total', tokens: 'tokens.out', cost: 'cost.usd', context: 'context.used_pct', compactions: 'session.compactions' }
 
 const num = v => typeof v === 'number' && isFinite(v) ? v : null
 
-// What a bus snapshot gives each metric.
-function pick (snapshot) {
+// What a bus snapshot gives each metric, and each dial.
+function pick (snapshot, dials = []) {
   const out = {}
   for (const [k, name] of Object.entries(METRICS)) out[k] = num(snapshot[name])
+  for (const name of dials) out[name] = num(snapshot[name])
   return out
 }
 
@@ -25,6 +27,23 @@ class History {
     Object.assign(this, { points, keepEndedMs, intervalMs })
     this.ticks = []
     this.rows = new Map()
+    this.dials = []
+  }
+
+  // The series every row keeps.
+  keys () {
+    return [...Object.keys(METRICS), ...this.dials]
+  }
+
+  // The dials open now (decision 0033). A new one starts as no data over
+  // the ticks so far, a closed one is dropped.
+  setDials (names) {
+    const next = [...new Set(names)].filter(n => !(n in METRICS))
+    for (const r of this.rows.values()) {
+      for (const n of this.dials) if (!next.includes(n)) delete r.series[n]
+      for (const n of next) if (!r.series[n]) r.series[n] = new Array(this.ticks.length).fill(null)
+    }
+    this.dials = next
   }
 
   // samples: Map key -> { values, meta, session }, session the agent's
@@ -35,13 +54,13 @@ class History {
       let r = this.rows.get(key)
       if (!r || r.ended !== null) {
         r = { meta, ended: null, session: null, breaks: new Array(this.ticks.length - 1).fill(false), series: {} }
-        for (const k of Object.keys(METRICS)) r.series[k] = new Array(this.ticks.length - 1).fill(null)
+        for (const k of this.keys()) r.series[k] = new Array(this.ticks.length - 1).fill(null)
         this.rows.set(key, r)
       }
       r.meta = meta
       r.breaks.push(!!(session && r.session && session !== r.session))
       if (session) r.session = session
-      for (const k of Object.keys(METRICS)) r.series[k].push(num(values[k]))
+      for (const k of this.keys()) r.series[k].push(num(values[k]))
     }
     for (const [key, r] of this.rows) {
       if (samples.has(key)) continue
@@ -51,7 +70,7 @@ class History {
         continue
       }
       r.breaks.push(false)
-      for (const k of Object.keys(METRICS)) r.series[k].push(null)
+      for (const k of this.keys()) r.series[k].push(null)
     }
     if (this.ticks.length > this.points) {
       const cut = this.ticks.length - this.points
@@ -81,7 +100,8 @@ class History {
   }
 
   // What the page draws: the ticks, the sums across the sessions that
-  // ran, and each row. Numbers and the menu's own strings only.
+  // ran, the dials open, and each row. Numbers, metric names and the
+  // menu's own strings only.
   view () {
     const n = this.ticks.length
     const across = { tokensPerMin: new Array(n).fill(0), toolsPerMin: new Array(n).fill(0), cost: new Array(n).fill(0) }
@@ -96,7 +116,7 @@ class History {
       }
       rows.push(Object.assign({ key, ended: r.ended !== null, series: r.series }, r.meta))
     }
-    return { ticks: this.ticks.slice(), intervalMs: this.intervalMs, across, rows }
+    return { ticks: this.ticks.slice(), intervalMs: this.intervalMs, across, dials: this.dials.slice(), rows }
   }
 }
 

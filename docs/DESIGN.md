@@ -1,6 +1,6 @@
 # skindeep design
 
-Status: current, 2026-10-12. User documentation is `README.md`, the skin
+Status: current, 2026-10-14. User documentation is `README.md`, the skin
 format `docs/SKINS.md`.
 
 Contents: Goal, Architecture, Decisions.
@@ -118,6 +118,8 @@ own keys, pastes and mouse reports.
 | [0028](decisions/0028-sessions-dashboard.md) | The sessions dashboard |
 | [0029](decisions/0029-issue-board.md) | The issue board in the sessions dashboard |
 | [0030](decisions/0030-background-sessions.md) | Background sessions, subcommands and the last screen |
+| [0031](decisions/0031-fuzz.md) | Fuzz testing with written predictions |
 | [0032](decisions/0032-rename.md) | A session's name in its tab, by /rename or a right click |
+| [0033](decisions/0033-dials.md) | Readouts open dials on the sessions dashboard |
 
 Channel facts: `docs/research/side-channels.md`.

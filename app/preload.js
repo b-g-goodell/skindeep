@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('skinned', {
   openSession: key => ipcRenderer.invoke('sessions:open', key),
   openDashboard: () => ipcRenderer.send('dashboard:open'),
   onDashboard: fn => ipcRenderer.on('dashboard', (_e, id, d) => fn(id, d)),
+  toggleDial: name => ipcRenderer.invoke('dial:toggle', name),
+  onDials: fn => ipcRenderer.on('dials', (_e, names) => fn(names)),
   reopenTab: () => ipcRenderer.send('tab:reopen'),
   duplicateTab: () => ipcRenderer.send('tab:duplicate'),
   chooser: () => ipcRenderer.invoke('chooser:get'),

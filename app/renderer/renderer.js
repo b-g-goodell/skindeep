@@ -136,14 +136,17 @@ api.onMetrics(snap => {
   metrics = snap
   SkinView.update(snap)
 })
+api.onDials(names => SkinView.setDials(names))
 
 // The page's probe for the live checks (decisions 0023, 0024): each
-// tab's terminal, the meters the skin was last given, the skin's sounds.
+// tab's terminal, the meters the skin was last given, the skin's sounds
+// and widgets.
 window.skinnedPage = () => ({
   active,
   metrics,
   sounds: SkinSounds.state(),
   scale: SkinView.scale(),
+  widgets: SkinView.state(),
   panes: [...panes.values()].map(p => {
     if (p.dash) return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', lines: [], dashboard: p.dash.state() }
     const b = p.term.buffer.active

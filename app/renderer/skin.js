@@ -16,6 +16,7 @@ window.SkinView = (function () {
   let stageEl = null
   let scale = 1
   let prefs = {}
+  let dials = new Set()
 
   function place (el, r, k = 1) {
     for (const key of ['left', 'right', 'top', 'bottom', 'width', 'height']) {
@@ -115,10 +116,12 @@ window.SkinView = (function () {
       if (s.image) s.imageUrl = base + s.image
       if (s.sheet) s.sheetUrl = base + s.sheet
       const w = Widgets[s.type](s)
+      w.spec = s
       place(w.el, s.rect)
       stage.appendChild(w.el)
       widgets.push(w)
     }
+    setDials(dials)
     terminal = skin.terminal
     current = skin
     stageEl = stage
@@ -152,6 +155,30 @@ window.SkinView = (function () {
     for (const w of widgets) w.update(snap, now)
   }
 
+  // The dials open on the sessions dashboard (decision 0033), marked on
+  // the widgets that open them.
+  function setDials (names) {
+    dials = new Set(names)
+    for (const w of widgets) if (w.dials) w.dials(dials)
+  }
+
+  // The widgets as drawn, for the live checks: the skin's shadow root
+  // is closed, so a check reads and clicks them through this.
+  function state () {
+    return widgets.map(w => {
+      const b = w.el.getBoundingClientRect()
+      return {
+        id: w.spec.id,
+        type: w.spec.type,
+        bind: w.spec.bind,
+        classes: [...w.el.classList],
+        cursor: getComputedStyle(w.el).cursor,
+        box: { x: b.x, y: b.y, width: b.width, height: b.height },
+        rows: w.rows ? w.rows() : undefined
+      }
+    })
+  }
+
   let prev = performance.now()
   function loop (now) {
     const dt = (now - prev) / 1000
@@ -161,5 +188,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
+  return { apply, update, setDials, state, styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
 })()

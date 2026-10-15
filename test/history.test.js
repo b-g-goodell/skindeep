@@ -67,3 +67,25 @@ test('a new session in the same row starts the minute again: its totals are no r
 test('pick takes the dashboard\'s meters from a bus snapshot, numbers only', () => {
   assert.deepStrictEqual(pick({ 'tools.total': 3, 'tokens.out': 'x', 'cost.usd': null, 'context.used_pct': 41.5, 'model.name': 'm' }), { tools: 3, tokens: null, cost: null, context: 41.5, compactions: null })
 })
+
+// Decision 0033: a dial opened mid-run is a series of its own, null
+// before it opened, and gone when closed.
+test('a dial opened mid-run starts as no data, is sampled by its name, and goes when closed', () => {
+  const h = new History({ intervalMs: 5000 })
+  const snap = { 'tools.total': 3, 'tools.Read': 2 }
+  h.tick(0, sample([['a', pick(snap, h.dials)]]))
+  h.setDials(['tools.Read'])
+  h.tick(5000, sample([['a', pick(snap, h.dials)]]))
+  snap['tools.Read'] = 5
+  h.tick(10000, sample([['a', pick(snap, h.dials)]]))
+  let v = h.view()
+  assert.deepStrictEqual(v.dials, ['tools.Read'])
+  assert.deepStrictEqual(v.rows[0].series['tools.Read'], [null, 2, 5])
+  assert.deepStrictEqual(v.rows[0].series.tools, [3, 3, 3])
+  h.setDials([])
+  h.tick(15000, sample([['a', pick(snap, h.dials)]]))
+  v = h.view()
+  assert.deepStrictEqual(v.dials, [])
+  assert.ok(!('tools.Read' in v.rows[0].series))
+  assert.deepStrictEqual(v.rows[0].series.tools, [3, 3, 3, 3])
+})

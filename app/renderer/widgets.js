@@ -337,6 +337,16 @@ function led (spec) {
   }
 }
 
+// A click on a numeric readout opens or closes its metric's dial on the
+// sessions dashboard (decision 0033). mousedown is swallowed so the
+// terminal keeps the keyboard.
+function clickable (el, name) {
+  el.classList.add('click')
+  el.addEventListener('mousedown', e => e.preventDefault())
+  el.addEventListener('click', () => window.skinned.toggleDial(name))
+  return open => el.classList.toggle('open', open.has(name))
+}
+
 function readout (spec) {
   const { el } = base(spec, 'readout')
   labelled(el, spec)
@@ -346,8 +356,10 @@ function readout (spec) {
   const sp = new Spring(spec.damping !== undefined ? spec.damping : 1, 4)
   let raw = null
   const affix = s => (spec.prefix || '') + s + (spec.suffix || '')
+  const dials = spec.format === 'text' ? null : clickable(el, spec.bind)
   return {
     el,
+    dials,
     update (snap) {
       const s = inForce(snap)
       raw = valueOf(snap, s.bind)

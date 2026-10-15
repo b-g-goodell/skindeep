@@ -9,7 +9,7 @@
 
 window.DashboardView = (function () {
   const api = window.skinned
-  const COLORS = { tokens: '#6fa8dc', tools: '#e0b050', cost: '#8fd18f', context: '#d48ad8', compactions: '#e07a6a', board: '#c8c8c8' }
+  const COLORS = { tokens: '#6fa8dc', tools: '#e0b050', cost: '#8fd18f', context: '#d48ad8', compactions: '#e07a6a', board: '#c8c8c8', dial: '#9fd3c7' }
   const SPARKS = [['tools', 'tool calls'], ['tokens', 'output tokens'], ['cost', 'cost'], ['context', 'context'], ['compactions', 'compactions']]
   const ACROSS = [['tokensPerMin', 'output tokens / min', 'tokens'], ['toolsPerMin', 'tool calls / min', 'tools'], ['cost', 'cost, all sessions', 'cost']]
 
@@ -117,9 +117,17 @@ window.DashboardView = (function () {
         spark(c, s, COLORS[color], true)
       }
       table.textContent = ''
+      // The meters' columns, then one per dial (decision 0033).
+      const columns = [...SPARKS.map(([k]) => [k, COLORS[k], false]), ...(data.dials || []).map(n => [n, COLORS.dial, true])]
       const header = el('div', 'd-row d-header')
       header.append(el('span', 'd-label', 'session'), el('span', 'd-folder', 'folder'), el('span', 'd-state', 'state'))
       for (const [, name] of SPARKS) header.appendChild(el('span', 'd-spark', name))
+      // The dials (decision 0033): a column per metric opened from a skin.
+      for (const name of data.dials || []) {
+        const h = el('span', 'd-spark d-dial', name)
+        h.title = name
+        header.appendChild(h)
+      }
       const bh = el('span', 'd-board', 'open / closed')
       bh.title = 'issues on the project\'s board: open now / closed in the last 14 days'
       header.appendChild(bh)
@@ -132,18 +140,18 @@ window.DashboardView = (function () {
         folder.title = r.folder
         row.append(el('span', 'd-label', r.label), folder, el('span', 'd-state ' + (r.ended ? 'ended' : r.state), r.ended ? 'ended' : r.state))
         const canvases = []
-        for (const [k] of SPARKS) {
-          const cell = el('span', 'd-spark')
+        for (const [k, color, dial] of columns) {
+          const cell = el('span', 'd-spark' + (dial ? ' d-dial' : ''))
           const c = el('canvas')
-          cell.append(c, el('span', 'd-num', fmt(k, last(r.series[k]))))
+          cell.append(c, el('span', 'd-num', fmt(k, last(r.series[k] || []))))
           row.appendChild(cell)
-          canvases.push([c, k])
+          canvases.push([c, k, color])
         }
         const b = boardCell(r.board)
         row.appendChild(b.cell)
         if (!r.ended) row.addEventListener('click', () => api.openSession(r.key))
         table.appendChild(row)
-        for (const [c, k] of canvases) spark(c, r.series[k], COLORS[k], false)
+        for (const [c, k, color] of canvases) spark(c, r.series[k] || [], color, false)
         if (b.canvas) spark(b.canvas, r.board.open, COLORS.board, false)
       }
     }
@@ -154,6 +162,7 @@ window.DashboardView = (function () {
       render,
       state: () => data && {
         ticks: data.ticks.length,
+        dials: data.dials || [],
         rows: data.rows.map(r => ({ key: r.key, label: r.label, state: r.state, ended: r.ended, points: r.series.tokens.filter(v => v !== null).length, last: Object.fromEntries(SPARKS.map(([k]) => [k, last(r.series[k])])), board: r.board || null, boardText: (table.querySelector(`.d-row[data-key="${r.key}"] .d-board`) || {}).textContent || '' })),
         shownRows: [...table.querySelectorAll('.d-row:not(.d-header)')].map(e => ({ key: e.dataset.key, ended: e.classList.contains('ended'), opacity: getComputedStyle(e).opacity }))
       }

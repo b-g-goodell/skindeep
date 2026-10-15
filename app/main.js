@@ -13,6 +13,7 @@ const cli = require('./cli')
 const identity = require('./identity')
 const runtime = require('./runtime')
 const { Bus } = require('./metrics/bus')
+const { known } = require('./metrics/names')
 const { open, watch, kindOf, carry } = require('./metrics/agent')
 const { createRegistry } = require('./skins/registry')
 const last = require('./skins/last')
@@ -373,6 +374,7 @@ function makeDashboard (id) {
     board: folder => boards.get(folder),
     log
   })
+  tab.session.setDials(dialList())
   lastDashboard = tab
   return tab
 }
@@ -386,6 +388,24 @@ function openDashboard () {
     log(`dashboard: ${e.stack || e}`)
     problem('Sessions dashboard failed', e.message)
   }
+}
+
+// The dials (decision 0033): the metrics a click on a readout opened on
+// the sessions dashboard, one set for the app. Opening the first dial
+// opens the dashboard as the menu does. Closing the last leaves it.
+const dials = new Set()
+const dialList = () => [...dials]
+function sendDials () {
+  broadcast('dials', dialList())
+  for (const t of tabs.list) if (t.dashboard) t.session.setDials(dialList())
+}
+function toggleDial (name) {
+  if (!known(name)) return dialList()
+  if (dials.has(name)) dials.delete(name)
+  else dials.add(name)
+  sendDials()
+  if (dials.has(name) && !tabs.list.some(t => t.dashboard)) openDashboard()
+  return dialList()
 }
 
 // A session of the list: its tab made active, else a monitor tab opened.
@@ -664,6 +684,7 @@ global.skinnedProbe = () => {
     following: a ? a.agent.report() : null,
     snapshot: a ? a.bus.snapshot() : {},
     lastDashboard: lastDashboard ? lastDashboard.session.report() : null,
+    dials: dialList(),
     boards: boards.report(),
     windows: [...wins.values()].map(w => ({ id: w.id, bounds: w.view.bounds(), active: tabs.activeOf(w.id) ? tabs.activeOf(w.id).id : null, tabs: tabs.inWin(w.id).map(t => t.id) })),
     tabs: tabs.list.map(t => ({ id: t.id, win: t.win, childPid: t.session.pid, monitor: t.monitor ? t.monitor.pid : null, dashboard: t.dashboard ? t.session.report() : null, label: t.label, title: nameOf(t), cwd: t.cwd, argv: t.cmd, active: t === a, following: t.agent.report(), snapshot: t.bus.snapshot() }))
@@ -711,6 +732,7 @@ handle('tabs:menu', () => tabsMenu())
 handle('sessions:list', () => liveSessions())
 handle('sessions:open', (_e, key) => openSession(String(key)))
 on('dashboard:open', () => openDashboard())
+handle('dial:toggle', (_e, name) => toggleDial(String(name)))
 on('tab:reopen', () => reopen())
 on('tab:duplicate', () => duplicate())
 handle('chooser:get', () => chooserState())
@@ -915,6 +937,7 @@ function openWindow (bounds) {
     if (t) t.session.sendStrip()
   })
   w.view.onLoad(() => sendSkin(w))
+  w.view.onLoad(() => w.view.send('dials', dialList()))
   win.loadURL(pages.url('app/renderer/index.html'))
   return w
 }

@@ -77,4 +77,6 @@
 .row .label::before { content: counter(row) ". "; }
 .row .value { font: 12px/14px "DejaVu Sans Mono", monospace; color: #3cff3c; }
 .row.nodata .value { color: #1d6d1d; }
-.row:hover { background: #0a2a8a; }
+.row:hover { background: #0a2a8a; filter: none; }
+.row.open { outline: none; background: #06301a; }
+.row.open .label { color: #d8e030; }

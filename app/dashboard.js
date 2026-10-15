@@ -87,12 +87,18 @@ class Dashboard extends EventEmitter {
       // A session whose history is still being read has no values yet:
       // its part-read totals would make the rest of the history a rise.
       const r = from.agent ? from.agent.report() : {}
-      const values = r.replaying ? {} : pick(from.bus.snapshot())
+      const values = r.replaying ? {} : pick(from.bus.snapshot(), this.history.dials)
       samples.set(key, { values, session: r.session || null, meta: { label: e.row.label, folder: e.row.folder, state: e.row.state, where: e.row.where, tab: e.row.tab, board } })
     }
     for (const key of [...this.watchers.keys()]) if (!samples.has(key)) this.unwatch(key)
     this.history.tick(Date.now(), samples)
     this.send(this.history.view())
+  }
+
+  // The dials open (decision 0033): the page draws a column of each.
+  setDials (names) {
+    this.history.setDials(names)
+    if (this.state === 'running') this.send(this.history.view())
   }
 
   // For the live checks: the watchers now and every one made.
@@ -101,6 +107,7 @@ class Dashboard extends EventEmitter {
     return {
       ticks: this.history.ticks.length,
       rows: [...this.history.rows.keys()],
+      dials: this.history.dials.slice(),
       watching: [...this.watchers.keys()],
       made: this.made.map(w => ({ key: w.key, closed: w.agent.closed, tailing: tailing(w) }))
     }

@@ -157,6 +157,15 @@ Values glide to each new reading on a spring, so widgets move smoothly
 between the 10 updates a second the app sends. A metric with no data
 yet shows `--` and gives the widget the class `nodata`.
 
+A widget is a display: the pointer over it is the arrow, never the
+I-beam, and its text cannot be selected. A `readout` whose `format` is
+not `text` takes a click, which opens or closes a dial of its metric on
+the sessions dashboard: a column of that metric on every session's
+row. Such a readout carries the class `click`, shows the hand, and
+brightens under the pointer. While its dial is open it carries `open`,
+outlined in `--fill`. Style `.click:hover` and `.open` to fit your
+skin.
+
 Type options:
 
 | Type | Options |
@@ -179,7 +188,8 @@ Class names you can style:
 
 - Panels: `.panel` plus the classes you gave.
 - Every widget: `.w`, `.w-<type>` (for example `.w-gauge`), your
-  classes, `.nodata` while it has no data.
+  classes, `.nodata` while it has no data, `.click` on a readout that
+  takes a click and `.open` while its dial is open.
 - Parts: `.label`, `.value`, `.track`, `.fill` (gauge arc, bar fill),
   `.tick`, `.mark`, `.needle`, `.pivot`, `.face`, `.knob-face`,
   `.knob-pointer`, `.knob-image`, `.seg` and `.seg.on` (bar segments),
