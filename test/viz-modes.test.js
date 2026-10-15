@@ -244,6 +244,32 @@ test('fern: every species is a set of contractions whose weights sum to one', ()
   assert.ok(box[0] > -2.3 && box[1] < 2.8 && box[2] >= 0 && box[3] < 10.1 && box[3] > 9.5, `Barnsley's fern spans ${box}`)
 })
 
+test('fern: each species in its own frame, its copy a similarity from the foot to the tip', () => {
+  const fern = require('../app/viz/fern')
+  for (const [k, m] of fern.UNIT.entries()) {
+    const [a, b, c, d, e, f] = m[1]
+    assert.ok(Math.abs(a - d) < 1e-12 && Math.abs(b + c) < 1e-12, `species ${k}: the copy is no similarity`)
+    const det = (1 - a) * (1 - a) + c * c
+    const tip = [((1 - a) * e - c * f) / det, (c * e + (1 - a) * f) / det]
+    assert.ok(Math.abs(tip[0]) < 1e-9 && Math.abs(tip[1] - 1) < 1e-9, `species ${k}: tip at ${tip}`)
+    assert.ok(Math.abs(m[0][4]) < 1e-9 && Math.abs(m[0][5] / (1 - m[0][3])) < 1e-9, `species ${k}: the stem's foot is not the origin`)
+  }
+})
+
+test('fern: the zoom\'s frames run on through the loop without a jump', () => {
+  const fern = require('../app/viz/fern')
+  const [a, , c, , e, f] = fern.UNIT[0][1]
+  const theta = k => 0.09 * Math.sin(1.7 - 0.55 * k)
+  for (const n of [1, 7, 40]) {
+    const before = fern.frames(a, c, e, f, theta, n - 1e-9, -4, 6)
+    const at = fern.frames(a, c, e, f, theta, n, -4, 6)
+    // Copy k's frame is at 4 (k - J + 4) in each, J = n - 1 before, n at.
+    for (let k = n - 3; k <= n + 5; k++) {
+      for (let j = 0; j < 4; j++) assert.ok(Math.abs(before[4 * (k - n + 5) + j] - at[4 * (k - n + 4) + j]) < 1e-6, `depth ${n}: copy ${k} jumps`)
+    }
+  }
+})
+
 // A fake Canvas2D context that records every stroke colour.
 function recorder () {
   const strokes = []
