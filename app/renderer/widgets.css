@@ -11,6 +11,7 @@
 .w.nodata { opacity: 0.55; }
 .w .label { text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
 .w .value { white-space: nowrap; }
+.w .resets { white-space: nowrap; opacity: 0.75; font-size: 0.85em; }
 
 .w-gauge .dial, .w-needle .dial { width: 100%; flex: 1 1 auto; min-height: 0; overflow: visible; }
 .w-gauge .track, .w-needle .track { stroke: var(--track); }

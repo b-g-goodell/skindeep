@@ -155,6 +155,11 @@
 .jar .fill { border-radius: 0 0 9px 9px; box-shadow: none;
   background: linear-gradient(rgba(226, 150, 70, 0.95) 0 2px, rgba(126, 60, 22, 0.92) 2px, rgba(66, 28, 10, 0.95)); }
 .jar .label { top: 60%; }
+/* The time to a limit's reset, a second strip of tape. */
+.jar .resets { position: absolute; z-index: 1; left: 50%; top: 86%; transform: translate(-50%, -50%) rotate(3deg); padding: 1px 4px;
+  background: rgba(236, 224, 190, 0.94); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); opacity: 1;
+  font: bold 13px/13px "Amatic SC", cursive; letter-spacing: 1px; color: #3a2a1c; }
+.jar .resets .word { display: none; }
 
 /* Mismatched mugs on a plank, one for each subagent. */
 .mugs { justify-content: flex-start; }

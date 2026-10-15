@@ -40,6 +40,7 @@
 
 .meter { align-items: stretch; }
 .meter .label { align-self: flex-start; font-size: 17px; }
+.meter .resets { position: absolute; right: 0; top: 0; font: 17px/18px VT323, monospace; letter-spacing: 1px; color: #3aff7e; opacity: 0.7; }
 .meter .seg { background: #0a2a16; }
 .meter .seg.on { background: #3aff7e; box-shadow: 0 0 5px rgba(58, 255, 126, 0.8); }
 

@@ -71,7 +71,15 @@ function fromStatusline (j, compaction) {
   if (j.prompt_cache) out.push(['cache.hit_ratio', num(j.prompt_cache.hit_ratio)])
   const rl = j.rate_limits || {}
   out.push(['limits.five_hour_pct', rl.five_hour ? num(rl.five_hour.used_percentage) : null],
-    ['limits.seven_day_pct', rl.seven_day ? num(rl.seven_day.used_percentage) : null])
+    ['limits.five_hour_resets_at', rl.five_hour ? num(rl.five_hour.resets_at) : null],
+    ['limits.seven_day_pct', rl.seven_day ? num(rl.seven_day.used_percentage) : null],
+    ['limits.seven_day_resets_at', rl.seven_day ? num(rl.seven_day.resets_at) : null])
+  // A gateway session's spend limit, absent elsewhere.
+  const sl = rl.spend_limit
+  if (sl) {
+    out.push(['limits.spend_pct', num(sl.used_percentage)], ['limits.spend_resets_at', num(sl.resets_at)],
+      ['limits.spend_usd', num(sl.used_usd)], ['limits.spend_limit_usd', num(sl.limit_usd)])
+  }
   if (j.model && j.model.display_name) out.push(['model.name', String(j.model.display_name).slice(0, 40)])
   return out
 }

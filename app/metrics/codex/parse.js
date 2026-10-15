@@ -53,8 +53,9 @@ class CodexState {
       const rl = p.rate_limits || {}
       for (const w of [rl.primary, rl.secondary]) {
         if (!w || !num(w.window_minutes)) continue
-        if (w.window_minutes <= 300) r.set.push(['limits.five_hour_pct', num(w.used_percent)])
-        else if (w.window_minutes >= 7 * 24 * 60) r.set.push(['limits.seven_day_pct', num(w.used_percent)])
+        const which = w.window_minutes <= 300 ? 'five_hour' : w.window_minutes >= 7 * 24 * 60 ? 'seven_day' : null
+        if (!which) continue
+        r.set.push([`limits.${which}_pct`, num(w.used_percent)], [`limits.${which}_resets_at`, num(w.resets_at)])
       }
     } else if (obj.type === 'event_msg' && p.type === 'task_started') {
       r.set.push(['state.busy', 1])

@@ -33,6 +33,7 @@ test('token counts follow the last token_count event', () => {
   const rl = lines.filter(o => o.payload.type === 'token_count' && o.payload.rate_limits.primary).pop().payload.rate_limits.primary
   assert.strictEqual(rl.window_minutes, 10080)
   assert.strictEqual(vals['limits.seven_day_pct'], rl.used_percent)
+  assert.strictEqual(vals['limits.seven_day_resets_at'], rl.resets_at)
   assert.strictEqual(vals['model.name'], 'gpt-6-astra')
 })
 

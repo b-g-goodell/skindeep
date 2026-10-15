@@ -29,3 +29,19 @@ test('hook metadata drops content fields', () => {
     assert.ok(m.hook_event_name)
   }
 })
+
+// Every usage figure the statusline carries, as Claude Code 2.1.299
+// builds rate_limits: five_hour and seven_day with their resets, and a
+// gateway session's spend_limit.
+test('the statusline\'s limits, their resets and a gateway spend limit become metrics', () => {
+  const j = JSON.parse(fs.readFileSync(fx('statusline.json'), 'utf8'))
+  j.rate_limits.spend_limit = { used_percentage: 42.5, resets_at: 1792400000, used_usd: 85, limit_usd: 200, period: 'month' }
+  const m = Object.fromEntries(parse.fromStatusline(j, compact.inputs({})))
+  assert.deepStrictEqual([m['limits.five_hour_pct'], m['limits.five_hour_resets_at']], [1, 1791787200])
+  assert.deepStrictEqual([m['limits.seven_day_pct'], m['limits.seven_day_resets_at']], [0, 1792357200])
+  assert.deepStrictEqual([m['limits.spend_pct'], m['limits.spend_resets_at'], m['limits.spend_usd'], m['limits.spend_limit_usd']], [42.5, 1792400000, 85, 200])
+  delete j.rate_limits
+  const none = Object.fromEntries(parse.fromStatusline(j, compact.inputs({})))
+  assert.strictEqual(none['limits.five_hour_resets_at'], null)
+  assert.ok(!('limits.spend_pct' in none))
+})
