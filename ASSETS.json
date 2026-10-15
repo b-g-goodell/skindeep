@@ -126,6 +126,97 @@
     "notes": "menu button, drawn by hand as SVG"
   },
   {
+    "path": "skins/library/images/books.png",
+    "source": "scripts/art/library.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a seamless shelf of book spines"
+  },
+  {
+    "path": "skins/library/images/chalkboard.jpg",
+    "source": "scripts/art/library.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow and numpy: a worn chalkboard"
+  },
+  {
+    "path": "skins/library/images/lamp.png",
+    "source": "scripts/art/library.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a banker's lamp, off and on"
+  },
+  {
+    "path": "skins/library/images/knob.png",
+    "source": "scripts/art/library.py",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project with Pillow: a knurled brass knob"
+  },
+  {
+    "path": "skins/library/images/menu.svg",
+    "source": "hand-written SVG",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "drawn by the project: an index card with three lines"
+  },
+  {
+    "path": "skins/library/images/paneling.jpg",
+    "source": "https://ambientcg.com/get?file=Wood051_1K-JPG.zip",
+    "author": "ambientCG",
+    "license": "CC0-1.0",
+    "notes": "Wood051, asset page https://ambientcg.com/a/Wood051. Derived from Wood051_1K-JPG_Color.jpg in the zip: resized from 1024 to 512 px square, JPEG quality 82. Tileable dark wood. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
+  },
+  {
+    "path": "skins/library/images/oak.jpg",
+    "source": "https://ambientcg.com/get?file=Wood049_1K-JPG.zip",
+    "author": "ambientCG",
+    "license": "CC0-1.0",
+    "notes": "Wood049, asset page https://ambientcg.com/a/Wood049. Derived from Wood049_1K-JPG_Color.jpg in the zip: resized from 1024 to 512 px square, JPEG quality 82. Tileable light wood. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
+  },
+  {
+    "path": "skins/library/fonts/GochiHand/GochiHand-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/GochiHand-Regular.ttf",
+    "author": "Juan Pablo del Peral (Huerta Tipografica)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/gochihand at commit 66928797f271fed5ee428544e7229685e2d90127. Handwriting face, used as chalk."
+  },
+  {
+    "path": "skins/library/fonts/GochiHand/OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/ofl/gochihand/OFL.txt",
+    "author": "Juan Pablo del Peral (Huerta Tipografica)",
+    "license": "OFL-1.1",
+    "notes": "google/fonts ofl/gochihand at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
+  },
+  {
+    "path": "skins/library/fonts/PermanentMarker/PermanentMarker-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/apache/permanentmarker/PermanentMarker-Regular.ttf",
+    "author": "Font Diner",
+    "license": "Apache-2.0",
+    "notes": "google/fonts apache/permanentmarker at commit 66928797f271fed5ee428544e7229685e2d90127. Marker face for the whiteboard."
+  },
+  {
+    "path": "skins/library/fonts/PermanentMarker/LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/apache/permanentmarker/LICENSE.txt",
+    "author": "Font Diner",
+    "license": "Apache-2.0",
+    "notes": "google/fonts apache/permanentmarker at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
+  },
+  {
+    "path": "skins/library/fonts/SpecialElite/SpecialElite-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/apache/specialelite/SpecialElite-Regular.ttf",
+    "author": "Astigmatic (Brian J. Bonislawsky)",
+    "license": "Apache-2.0",
+    "notes": "google/fonts apache/specialelite at commit 66928797f271fed5ee428544e7229685e2d90127. Typewriter face for the catalog cards."
+  },
+  {
+    "path": "skins/library/fonts/SpecialElite/LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/apache/specialelite/LICENSE.txt",
+    "author": "Astigmatic (Brian J. Bonislawsky)",
+    "license": "Apache-2.0",
+    "notes": "google/fonts apache/specialelite at commit 66928797f271fed5ee428544e7229685e2d90127. The font's license, verbatim."
+  },
+  {
     "path": "app/viz/avs.js",
     "source": "https://codeberg.org/exo-cortex/vis_avs/src/commit/1cee1f3d4f783b830538c3e4d2082a2c59521dee/avs/vis_avs",
     "author": "Nullsoft, Inc. (the AVS source release of 2005), as kept by the vis_avs port's contributors",
