@@ -243,3 +243,28 @@ test('fern: every species is a set of contractions whose weights sum to one', ()
   })
   assert.ok(box[0] > -2.3 && box[1] < 2.8 && box[2] >= 0 && box[3] < 10.1 && box[3] > 9.5, `Barnsley's fern spans ${box}`)
 })
+
+// A fake Canvas2D context that records every stroke colour.
+function recorder () {
+  const strokes = []
+  const g = new Proxy({}, {
+    get (t, k) {
+      if (k === 'strokes') return strokes
+      if (k === 'strokeStyle') return t.strokeStyle
+      return (v) => { if (k === 'stroke') strokes.push(g.strokeStyle) }
+    },
+    set (t, k, v) { if (k === 'strokeStyle') t.strokeStyle = v; return true }
+  })
+  return g
+}
+
+test('scope: a class 3 tool flash is red, hue 0, and an unknown class falls back to 200', () => {
+  const { window } = loadPage()
+  const g = recorder()
+  const r = window.VizCanvas.scope({ width: 400, height: 200, getContext: () => g })
+  const synth = { t: 1, level: { treble: 0, bass: 0, busy: 0 }, bands: [0, 0], samples: new Float32Array(16), flashes: [{ kind: 2, cls: 3, t: 0.9 }, { kind: 2, cls: 9, t: 0.9 }] }
+  r.draw(synth)
+  const hues = g.strokes.map(s => s.match(/^hsla\((\d+),/)).filter(Boolean).map(m => Number(m[1]))
+  assert.ok(hues.includes(0), `class 3 ring stroked with hue 0, got ${JSON.stringify(g.strokes)}`)
+  assert.ok(hues.includes(200), `unknown class falls back to hue 200, got ${JSON.stringify(g.strokes)}`)
+})

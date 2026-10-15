@@ -30,7 +30,7 @@ window.VizCanvas = window.VizCanvas || {}
         // Event rings, coloured by tool class or event kind.
         for (const f of synth.flashes) {
           const age = synth.t - f.t
-          const hue = f.kind === 2 ? CLASS_HUE[f.cls] || 200 : KIND_HUE[f.kind] || 160
+          const hue = f.kind === 2 ? CLASS_HUE[f.cls] ?? 200 : KIND_HUE[f.kind] || 160
           const cx = w * (f.kind === 2 ? 0.15 + 0.14 * f.cls : 0.5)
           const cy = h * 0.42
           g.strokeStyle = `hsla(${hue}, 95%, 60%, ${Math.max(0, 1 - age / 1.5)})`
