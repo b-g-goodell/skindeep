@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'">
+<style>
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; cursor: pointer; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#mode { position: absolute; left: 8px; bottom: 6px; z-index: 2; font: 11px "DejaVu Sans Mono", monospace; color: rgba(200, 255, 220, 0.55); pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="milk"></canvas>
+<canvas id="flat"></canvas>
+<div id="mode"></div>
+<script src="../../node_modules/butterchurn/lib/butterchurn.min.js"></script>
+<script src="modes.js"></script>
+<script src="synth.js"></script>
+<script src="scope.js"></script>
+<script src="classic.js"></script>
+<script src="avs.js"></script>
+<script src="presets.js"></script>
+<script src="viz.js"></script>
+</body>
+</html>

@@ -126,6 +126,27 @@
     "notes": "menu button, drawn by hand as SVG"
   },
   {
+    "path": "app/viz/avs.js",
+    "source": "https://codeberg.org/exo-cortex/vis_avs/src/commit/1cee1f3d4f783b830538c3e4d2082a2c59521dee/avs/vis_avs",
+    "author": "Nullsoft, Inc. (the AVS source release of 2005), as kept by the vis_avs port's contributors",
+    "license": "BSD-3-Clause",
+    "notes": "Ported to JavaScript and Canvas2D by the project from Advanced Visualization Studio, the visualization plugin of Winamp: the Superscope (e_superscope.cpp) running three examples of its built-in list, Spiral, Rotating Bow Thing and Spiral Graph Fun (e_superscope.h), and the Dot Plane (e_dotplane.cpp, e_dotplane.h, matrix.cpp) with its default colours. The license is LICENSE.TXT at the same commit, the BSD license under which Nullsoft opened the AVS source in May 2005, and the file's header carries it verbatim. The audio is the visualization's synthetic signal."
+  },
+  {
+    "path": "app/viz/classic.js",
+    "source": "this repository",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "Recreates from its look alone the spectrum analyzer in the main window of Winamp 2, in its normal and fire styles: 19 bars on a dotted panel with falling peak caps. No code, image or colour file of Winamp is used."
+  },
+  {
+    "path": "app/viz/presets.js",
+    "source": "this repository",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "Butterchurn presets written by the project. stardust and whirlpool recreate the look of two MilkDrop presets by Ryan Geiss from his screenshots named cosmic dust and vortex on https://geisswerks.com/milkdrop/screenshots.html. The page names no preset. Geiss - Cosmic Dust 2 is in the preset pack MilkDrop 2 shipped with Winamp, and no preset named Vortex is. The presets' own equations were not read: no license from their authors was found, the MilkDrop 2.25c source (BSD-3-Clause) ships no preset, and the MIT license of butterchurn-presets covers its conversion, not the presets. drift, rings and plasma are the project's own."
+  },
+  {
     "path": "docs/diary/heroes/01-design.png",
     "source": "drawn with Pillow for the dev diary",
     "author": "claude-skins",
