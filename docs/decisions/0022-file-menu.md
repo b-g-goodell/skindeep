@@ -2,7 +2,8 @@
 
 Status: accepted 2026-10-12, revised 2026-10-12 for
 the tab entries and shortcuts of decision 0023 and for the
-visualization's modes (decision 0015).
+visualization's modes (decision 0015). Revised 2026-10-14 (maintainer):
+several launches share one skin at once.
 
 ## Context
 
@@ -57,6 +58,16 @@ otherwise.
   per skin, the newest first and default. The answer deletes every
   record and the launch records its choice. Records older than 5 s
   before the newest are pruned at each launch.
+- Several launches share one skin at once (maintainer): each launch is
+  its own process with its own window, runtime dir and record, nothing
+  locks a skin, and no launch takes another's skin away. Two launches
+  given one skin, and two bare launches beside their records, each
+  open on it, with no refusal and no dialog, and a bare launch beside a
+  live launch of one skin opens that skin. The windows of one launch
+  stay on one skin (decision 0023). `scripts/checks/twoskins.js` shows
+  it, with one state home for every launch. Measured 2026-10-14 under
+  Xvfb, through the driver and through `bin/skinned`: nothing failed,
+  so no code changed.
 - A remembered skin that no longer loads gives way to the default skin.
   The fallback is not recorded, so a skin fixed on disk comes back on
   the next launch. The problem shows under Housekeeping. A given skin
