@@ -210,20 +210,6 @@
     "notes": "Wood049, asset page https://ambientcg.com/a/Wood049. Derived from Wood049_1K-JPG_Color.jpg in the zip: resized from 1024 to 512 px square, JPEG quality 82. Tileable light wood. The zip holds no license file: CC0 is stated on https://ambientcg.com/license and on the asset page."
   },
   {
-    "path": "skins/library/fonts/FrederickatheGreat/FrederickatheGreat-Regular.ttf",
-    "source": "https://raw.githubusercontent.com/google/fonts/f4e5d4d69ca9ea6a906345b45a04292315168f48/ofl/frederickathegreat/FrederickatheGreat-Regular.ttf",
-    "author": "Tart Workshop (Font Diner, Inc)",
-    "license": "OFL-1.1",
-    "notes": "google/fonts ofl/frederickathegreat at commit f4e5d4d69ca9ea6a906345b45a04292315168f48. Inline display face, used as chalk on the board (the maintainer's pick)."
-  },
-  {
-    "path": "skins/library/fonts/FrederickatheGreat/OFL.txt",
-    "source": "https://raw.githubusercontent.com/google/fonts/f4e5d4d69ca9ea6a906345b45a04292315168f48/ofl/frederickathegreat/OFL.txt",
-    "author": "Tart Workshop (Font Diner, Inc)",
-    "license": "OFL-1.1",
-    "notes": "google/fonts ofl/frederickathegreat at commit f4e5d4d69ca9ea6a906345b45a04292315168f48. The font's license, verbatim, with the Reserved Font Name \"Fredericka the Great\"."
-  },
-  {
     "path": "skins/library/fonts/PermanentMarker/PermanentMarker-Regular.ttf",
     "source": "https://raw.githubusercontent.com/google/fonts/66928797f271fed5ee428544e7229685e2d90127/apache/permanentmarker/PermanentMarker-Regular.ttf",
     "author": "Font Diner",
