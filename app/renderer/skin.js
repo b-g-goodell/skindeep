@@ -3,9 +3,10 @@
 // Builds a skin (decisions 0005, 0006): fonts through FontFace, a shadow
 // root inside the app-owned containment wrapper, panels and widgets from
 // their rects, the terminal's rect, theme and font from the manifest,
-// the same for every tab's terminal. Below the skin's minWidth the skin
-// is drawn scaled by width / minWidth, and the terminal and the menu
-// button, which live outside it, get their rects scaled (decision 0006).
+// the same for every tab's terminal. Below the skin's minWidth, or below
+// its minimum skin area height, the skin is drawn scaled by the smaller of
+// the two ratios, and the terminal and the menu button, which live
+// outside it, get their rects scaled (decision 0006).
 
 window.SkinView = (function () {
   let widgets = []
@@ -30,7 +31,8 @@ window.SkinView = (function () {
     const area = document.getElementById('stage')
     const W = area.clientWidth
     const H = area.clientHeight
-    const k = Math.min(1, W / current.window.minWidth)
+    const minH = current.window.minHeight - document.getElementById('strip').offsetHeight
+    const k = Math.min(1, W / current.window.minWidth, H / minH)
     scale = k
     Object.assign(stageEl.style, {
       inset: 'auto',

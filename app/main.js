@@ -17,7 +17,7 @@ const { known } = require('./metrics/names')
 const { open, watch, kindOf, carry } = require('./metrics/agent')
 const { createRegistry } = require('./skins/registry')
 const last = require('./skins/last')
-const { floorWidth } = require('./skins/scale')
+const { floorWidth, floorHeight } = require('./skins/scale')
 const settings = require('./settings')
 const pages = require('./pages')
 const profiles = require('./profiles')
@@ -608,13 +608,13 @@ function sendTabs () {
   }
 }
 
-// The minimum height grows by the tab strip while it shows, so the skin
-// area is never shorter than the validator checked. The minimum width is
-// the scaled skin's floor (decisions 0006, 0022, 0023).
+// The minimum size is the scaled skin's floor, its height grown by the
+// tab strip while it shows, so the skin area's floor holds at any count
+// of tabs (decisions 0006, 0022, 0023).
 function fitWindow (w) {
   const skin = skins.current()
   if (!skin) return
-  const h = skin.window.minHeight + (tabs.inWin(w.id).length > 1 ? TAB_STRIP : 0)
+  const h = floorHeight(skin) + (tabs.inWin(w.id).length > 1 ? TAB_STRIP : 0)
   w.view.setMinimumSize(floorWidth(skin), h)
   w.view.growTo(floorWidth(skin), h)
 }
@@ -887,7 +887,7 @@ function openWindow (bounds) {
     width: sw.width,
     height: sw.height,
     minWidth: skin ? floorWidth(skin) : sw.minWidth,
-    minHeight: sw.minHeight,
+    minHeight: skin ? floorHeight(skin) : sw.minHeight,
     useContentSize: true,
     title: identity.title(a ? nameOf(a) : ''),
     backgroundColor: '#000000',
