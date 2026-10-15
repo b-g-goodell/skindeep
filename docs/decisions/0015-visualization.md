@@ -83,7 +83,9 @@ butterchurn-presets is MIT for its conversion only.
     events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
-  events, so the page sends nothing. A click steps no mode. The menu's Visualization mode flyout
+  events, so the page sends nothing. A click steps no mode: it goes to
+  the mode, save a click on the pane's drop-down (see 2026-10-15
+  below). The menu's Visualization mode flyout
   lists every mode, the active tab's marked, and shows the one picked in
   the active tab's pane, opening the window when it is hidden. Each pick
   is recorded as the last skin is (decision 0022), one file per window
@@ -91,8 +93,8 @@ butterchurn-presets is MIT for its conversion only.
   the first mode no other pane shows, counting from the last pick, and a
   launch's first pane in the newest record's mode, else in Drift. The
   modes are not kept per tab across launches.
-- The pointer belongs to the page, which reads it and sends nothing:
-  the left button's press, moves and release go to the pane under the
+- The pointer belongs to the page, which reads it and sends nothing,
+  save a press on a drop-down: the left button's press, moves and release go to the pane under the
   press, found with `layout.js`, in the pane's canvas pixels, through
   the renderer's optional `pointer(kind, x, y, down)`. The press holds
   the pointer to its pane until the release. Nothing the pointer does
@@ -185,8 +187,7 @@ at a fifth of the rate there.
 - A send from the viz page for each click: the main process sees the
   space bar itself, and the page answers the pointer itself.
 - A click, or a right click, that steps the mode: the maintainer wants the
-  click to go to the mode, and a mode drop-down in each pane is to
-  come.
+  click to go to the mode, and each pane has its own mode drop-down.
 - The modes as a section of the drop-down: too long, see Why.
 - A silent AudioContext: opens a device stream.
 - `getUserMedia` on the monitor source in the page: the page would open
@@ -199,3 +200,47 @@ at a fifth of the rate there.
 - A window per tab: the maintainer asked for one window.
 - One pane per window, the active tab's: the maintainer asked for every
   tab's.
+
+## 2026-10-15: each pane's drop-down, and a lost GPU context
+
+Maintainer: "clicking on a visualization should manipulate the vis ...
+not cycle through the vis options. and the vis window itself should
+have drop down menus in each split screen to switch modes easily".
+
+- Each pane carries a button at its top left naming its mode. A click
+  on it opens a list of every mode, in the order of `modes.js`, the
+  pane's own marked, laid over the window below the button in as many
+  columns as the window's height needs. A click on a row shows that
+  mode in that pane alone and is recorded as the menu's pick is. A
+  press anywhere else closes the list and reaches no mode, and the
+  button closes its own list. One list is open at a time.
+- The channel: the main process reads the presses, as it reads the
+  space bar. `layout.js` gives the button and the rows in CSS pixels
+  from the pane's place, the mode count and the window's size, with no
+  text measured, and the main process and the page both load it. The
+  main process takes each left `mouseDown` of the window's input events,
+  whose x and y are CSS pixels at any device scale, finds what it hits,
+  and keeps which pane's list is open. The frame carries that as one
+  number per pane. The page draws the button and the open list, and
+  hands no press on a button, or any press while a list is open, to a
+  mode. The page still sends nothing.
+- A butterchurn pane whose WebGL2 context is lost, as every context of
+  the page is when the GPU process exits, drops its butterchurn and its
+  canvas, and the next frame shows its mode on a new context, or on the
+  scope with the reason. Before this, the pane stayed black while its
+  mode stepped through the five butterchurn modes, so stepping seemed
+  to stop part way. The maintainer's launch that ran overnight before
+  the report logged two GPU process exits.
+
+Why: the window never takes focus, and a native `<select>` opens its
+list only in a focused window, so the list is the page's own. Reading
+the presses in the main process keeps the channel receive-only, as the
+space bar did, at the cost of the geometry living in `layout.js` rather
+than in the page's CSS.
+
+Rejected:
+
+- A native `<select>` per pane: it needs the window focused.
+- A send from the page of the picked mode's index: one validated
+  number would do, but it would be the page's first send, and the main
+  process can read the press itself.
