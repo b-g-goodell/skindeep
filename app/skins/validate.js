@@ -24,12 +24,12 @@ const TYPES = {
   gauge: ['startAngle', 'endAngle', 'thickness', 'ticks', 'marks'],
   needle: ['startAngle', 'endAngle', 'face', 'ticks'],
   knob: ['image', 'startAngle', 'endAngle'],
-  bar: ['orientation', 'segments', 'gap'],
+  bar: ['orientation', 'segments', 'gap', 'resets', 'fallback'],
   led: ['on', 'pulse', 'pulseMs', 'blink'],
-  readout: ['prefix', 'suffix'],
+  readout: ['prefix', 'suffix', 'resets', 'fallback'],
   sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps']
 }
-const FORMAT = /^(int|fixed:[0-4]|pct|usd|tokens|duration|bytes|text)$/
+const FORMAT = /^(int|fixed:[0-4]|pct|usd|tokens|duration|until|bytes|text)$/
 const CLASS = /^[a-z0-9-]+( [a-z0-9-]+)*$/
 const ID = /^[a-z0-9-]+$/
 const COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
@@ -260,6 +260,17 @@ function validate (dir) {
         else ids.add(w.id)
         if (!isStr(w.bind)) err(`${fld}.bind`, 'missing metric name')
         else if (!names.known(w.bind)) err(`${fld}.bind`, `unknown metric "${w.bind}"`)
+        if ('resets' in w && (!isStr(w.resets) || !names.known(w.resets))) err(`${fld}.resets`, `unknown metric "${w.resets}"`)
+        if ('fallback' in w) {
+          const f = w.fallback
+          if (!f || typeof f !== 'object' || Array.isArray(f)) err(`${fld}.fallback`, 'must be an object of bind, label and resets')
+          else {
+            keys(f, `${fld}.fallback`, ['bind', 'label', 'resets'])
+            for (const k of ['bind', 'resets']) if (k in f && (!isStr(f[k]) || !names.known(f[k]))) err(`${fld}.fallback.${k}`, `unknown metric "${f[k]}"`)
+            if (!('bind' in f)) err(`${fld}.fallback.bind`, 'missing metric name')
+            if ('label' in f && typeof f.label !== 'string') err(`${fld}.fallback.label`, 'must be a string')
+          }
+        }
         rect(w.rect, `${fld}.rect`, false)
         if ('class' in w && (!isStr(w.class) || !CLASS.test(w.class))) err(`${fld}.class`, 'must be lowercase class names')
         if ('label' in w && typeof w.label !== 'string') err(`${fld}.label`, 'must be a string')
@@ -267,7 +278,7 @@ function validate (dir) {
           if (k in w && !isNum(w[k])) err(`${fld}.${k}`, 'must be a number')
         }
         if (isNum(w.min) && isNum(w.max) && w.max <= w.min) err(`${fld}.max`, 'must be larger than min')
-        if ('format' in w && (typeof w.format !== 'string' || !FORMAT.test(w.format))) err(`${fld}.format`, `"${w.format}": one of int, fixed:N, pct, usd, tokens, duration, bytes, text`)
+        if ('format' in w && (typeof w.format !== 'string' || !FORMAT.test(w.format))) err(`${fld}.format`, `"${w.format}": one of int, fixed:N, pct, usd, tokens, duration, until, bytes, text`)
         for (const k of ['prefix', 'suffix']) if (k in w && typeof w[k] !== 'string') err(`${fld}.${k}`, 'must be a string')
         if ('orientation' in w && !['horizontal', 'vertical'].includes(w.orientation)) err(`${fld}.orientation`, 'must be horizontal or vertical')
         if ('pulse' in w && typeof w.pulse !== 'boolean') err(`${fld}.pulse`, 'must be true or false')

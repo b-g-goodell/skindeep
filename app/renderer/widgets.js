@@ -44,6 +44,15 @@ function format (v, fmt) {
     const ss = String(s % 60).padStart(2, '0')
     return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`
   }
+  // Unix seconds to the time left until then.
+  if (f === 'until') {
+    const s = Math.floor(v - Date.now() / 1000)
+    if (s <= 0) return 'now'
+    const d = Math.floor(s / 86400)
+    const h = Math.floor(s / 3600) % 24
+    const m = Math.floor(s / 60) % 60
+    return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${Math.max(1, m)}m`
+  }
   if (f === 'bytes') {
     if (v < 1024) return Math.round(v) + ' B'
     if (v < 1048576) return (v / 1024).toFixed(1) + ' KB'
@@ -224,11 +233,48 @@ function knob (spec) {
   }
 }
 
+// A bar's or readout's resets: a metric of Unix seconds, shown as the
+// time left, for a usage limit. Its word and its time are spans
+// of their own, so a narrow skin can hide the word.
+function resetsOf (el, spec) {
+  if (!spec.resets && !(spec.fallback && spec.fallback.resets)) return () => {}
+  const box = div('resets', el)
+  const word = document.createElement('span')
+  word.className = 'word'
+  word.textContent = 'resets '
+  const left = document.createElement('span')
+  left.className = 'left'
+  box.append(word, left)
+  return (snap, name) => {
+    const at = name ? valueOf(snap, name) : null
+    box.classList.toggle('nodata', at === null)
+    left.textContent = at === null ? '--' : format(at, 'until')
+  }
+}
+
+// A bar's or readout's fallback, { bind, label, resets }: shown in the
+// widget's place, its label too, while the widget's own metric is
+// absent and the fallback's is present, as a gateway session's spend
+// limit in the place of a subscription's limit. Gives the spec
+// in force.
+function fallbackOf (el, spec) {
+  const label = el.querySelector('.label')
+  return snap => {
+    const f = spec.fallback
+    const use = f && valueOf(snap, spec.bind) === null && valueOf(snap, f.bind) !== null
+    el.classList.toggle('fallback', !!use)
+    if (label) label.textContent = use && f.label ? f.label : spec.label
+    return use ? Object.assign({}, spec, f) : spec
+  }
+}
+
 function bar (spec) {
   const { el, frac } = base(spec, 'bar')
   const vertical = spec.orientation === 'vertical'
   if (vertical) el.classList.add('vertical')
   labelled(el, spec)
+  const resets = resetsOf(el, spec)
+  const inForce = fallbackOf(el, spec)
   const track = div('track', el)
   const n = spec.segments || 0
   const gap = spec.gap !== undefined ? spec.gap : 2
@@ -247,9 +293,11 @@ function bar (spec) {
   return {
     el,
     update (snap) {
-      raw = valueOf(snap, spec.bind)
+      const s = inForce(snap)
+      raw = valueOf(snap, s.bind)
       sp.set(typeof raw === 'number' ? raw : null)
       el.classList.toggle('nodata', raw === null)
+      resets(snap, s.resets)
     },
     frame (now, dt) {
       const f = frac(sp.step(dt))
@@ -293,15 +341,19 @@ function readout (spec) {
   const { el } = base(spec, 'readout')
   labelled(el, spec)
   const val = div('value', el)
+  const resets = resetsOf(el, spec)
+  const inForce = fallbackOf(el, spec)
   const sp = new Spring(spec.damping !== undefined ? spec.damping : 1, 4)
   let raw = null
   const affix = s => (spec.prefix || '') + s + (spec.suffix || '')
   return {
     el,
     update (snap) {
-      raw = valueOf(snap, spec.bind)
+      const s = inForce(snap)
+      raw = valueOf(snap, s.bind)
       sp.set(typeof raw === 'number' && spec.format !== 'text' ? raw : null)
       el.classList.toggle('nodata', raw === null)
+      resets(snap, s.resets)
     },
     frame (now, dt) {
       const v = sp.step(dt)

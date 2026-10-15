@@ -205,7 +205,7 @@
   {
    "id": "lim5",
    "type": "bar",
-   "bind": "limits.five_hour_pct",
+   "bind": "limits.five_hour_pct", "resets": "limits.five_hour_resets_at",
    "label": "5h limit",
    "max": 100,
    "segments": 20,
@@ -221,7 +221,7 @@
   {
    "id": "lim7",
    "type": "bar",
-   "bind": "limits.seven_day_pct",
+   "bind": "limits.seven_day_pct", "resets": "limits.seven_day_resets_at", "fallback": { "bind": "limits.spend_pct", "label": "spend limit", "resets": "limits.spend_resets_at" },
    "label": "7d limit",
    "max": 100,
    "segments": 20,

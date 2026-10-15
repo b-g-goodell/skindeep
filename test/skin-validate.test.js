@@ -34,6 +34,12 @@ const BROKEN = {
   'broken-json': ['skin.json: (file): not valid JSON'],
   'broken-metric': ['skin.json: widgets[0].bind: unknown metric "foo.bar"'],
   'broken-type': ['skin.json: widgets[0].type: unknown widget type "slider"'],
+  'broken-fallback': [
+    'skin.json: widgets[0].resets: unknown metric "foo.when"',
+    'skin.json: widgets[0].fallback.color: unknown field',
+    'skin.json: widgets[0].fallback.bind: unknown metric "foo.spend"',
+    'skin.json: widgets[0].fallback.label: must be a string'
+  ],
   'broken-image': ['skin.json: widgets[1].image: "images/nope.png": file not found'],
   'broken-sprite': ['skin.json: widgets[1].sheet: is 512 x 32 px'],
   'broken-contrast': ['skin.json: terminal.theme.foreground: contrast with background is 1.26'],

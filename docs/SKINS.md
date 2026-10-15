@@ -47,6 +47,16 @@ identity strip, and the skin area is that much shorter. The window's
 minimum height grows by as much, so at the minimum window the skin area
 is never smaller than the one the validator checks.
 
+`minWidth` is the narrowest the skin is drawn at full size. A narrower
+window, such as one snapped to half a 1920 px screen, draws the whole
+skin scaled by the window's width over `minWidth`, laid out at the
+height that scale leaves. The terminal is not scaled: it keeps its font
+and gets the scaled rect, so it loses columns. The window cannot be
+narrower than half of `minWidth`, nor narrower than where the terminal
+would fall below 40 columns of the skin's own font
+(`app/skins/scale.js`). Draw for `minWidth` and the skin fits smaller
+screens with no work of yours.
+
 ## skin.json
 
 A minimal skin:
@@ -73,7 +83,7 @@ Top-level fields:
 | --- | --- | --- |
 | `name` | yes | lowercase letters, digits and dashes. A shipped skin's name is its directory's. A skin opened with `--skin PATH` under a shipped skin's name replaces that skin for the run, and the menu shows its folder |
 | `version`, `author`, `description`, `license` | no | strings, shown nowhere yet |
-| `window` | yes | `width`, `height` (initial content size), `minWidth`, `minHeight`, all at least 200 |
+| `window` | yes | `width`, `height` (initial content size), `minWidth` (narrowest at full size, see above), `minHeight`, all at least 200 |
 | `terminal` | yes | see below |
 | `menu` | yes | the menu button, see below |
 | `fonts` | no | `[{ "family", "file", "weight"?, "style"? }]`, registered by the app so CSS and the terminal can use the family |
@@ -121,7 +131,7 @@ whether it is there.
 | `rect` | all four of `left`, `top`, `right`, `bottom`: the terminal stretches with the window |
 | `theme` | xterm.js colours: `foreground` and `background` required (opaque `#rgb` or `#rrggbb`), optional `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `selectionInactiveBackground`, and the 16 ANSI colours `black` ... `white`, `brightBlack` ... `brightWhite` |
 | `fontFamily` | a family from `fonts`, or DejaVu Sans Mono, the default, which every install has. A skin that names a font only your machine has looks different everywhere else |
-| `fontSize` | 8 to 32, default 14 |
+| `fontSize` | 8 to 32, default 14. The user's Terminal font size setting overrides it |
 
 Two rules keep the CLI readable: foreground and background must have a
 contrast ratio of at least 4.5, and the terminal must keep at least 40
@@ -140,7 +150,7 @@ Every widget has:
 | `class` | optional extra CSS classes (lowercase, space separated) |
 | `label` | optional caption |
 | `min`, `max` | the value range, default 0 and 100 |
-| `format` | how numbers print: `int` (default), `fixed:N` (N decimals, 0 to 4), `pct`, `usd`, `tokens` (12.3k, 1.20M), `duration` (m:ss or h:mm:ss), `bytes`, `text` |
+| `format` | how numbers print: `int` (default), `fixed:N` (N decimals, 0 to 4), `pct`, `usd`, `tokens` (12.3k, 1.20M), `duration` (m:ss or h:mm:ss), `until` (Unix seconds as the time left: 45m, 3h 12m, 4d 2h, now), `bytes`, `text` |
 | `damping` | spring damping, 1 = no overshoot (default), lower = bouncier |
 
 Values glide to each new reading on a spring, so widgets move smoothly
@@ -154,9 +164,9 @@ Type options:
 | `gauge` | an arc that fills. `startAngle` (-135), `endAngle` (135), degrees clockwise from 12 o'clock. `thickness` (10, of a 100 unit box). `ticks` (0). `marks`: `[{ "bind": metric } or { "value": n }, "class"?]`, a line across the arc at that value, for example the auto-compact threshold |
 | `needle` | an analog dial, the needle pivots at the bottom centre. `startAngle` (-60), `endAngle` (60), `ticks` (0), `face` (an image behind the needle). Default damping 0.55 for a little overshoot |
 | `knob` | a rotating knob. `image` (rotated about its centre, else a drawn knob), `startAngle` (-135), `endAngle` (135) |
-| `bar` | a linear meter. `orientation` (`horizontal` or `vertical`), `segments` (0 = continuous, n = n LED-style segments), `gap` (2 px between segments) |
+| `bar` | a linear meter. `orientation` (`horizontal` or `vertical`), `segments` (0 = continuous, n = n LED-style segments), `gap` (2 px between segments), `resets` (a metric of Unix seconds, such as `limits.five_hour_resets_at`, shown as `.resets`, holding `.word` "resets " and `.left` the time left), `fallback` (`{ bind, label, resets }`: shown in the widget's place, its label too, while the widget's own metric is absent and the fallback's present, with the class `fallback`) |
 | `led` | a lamp. Either `on`: lit while the value is at least this, or `pulse: true`: lit for `pulseMs` (250) each time an event counter rises. `blink` (ms): flashes while lit |
-| `readout` | a number or text. `prefix`, `suffix` |
+| `readout` | a number or text. `prefix`, `suffix`, `resets` and `fallback` as for `bar` |
 | `sprite` | a sprite sheet, as in Winamp's sliders. `sheet` (a PNG), `frames`, `frameWidth`, `frameHeight`, `layout` (`row` or `column`). `mode`: `value` (default) picks the frame from the value between min and max, `run` cycles the frames at `fps` (12) while the value is above 0. The PNG must be exactly frames x frame size |
 
 ## Styling with CSS
@@ -221,7 +231,10 @@ any command fills the `pty.*`, `proc.*` and `session.clock_s` meters.
 | `cache.hit_ratio` | share of input read from the prompt cache, 0 to 1 |
 | `cost.usd` | session cost in US dollars as the CLI reports it |
 | `limits.five_hour_pct` | percent of the five-hour usage limit used |
+| `limits.five_hour_resets_at` | when the five-hour limit resets, Unix seconds |
 | `limits.seven_day_pct` | percent of the seven-day usage limit used |
+| `limits.seven_day_resets_at` | when the seven-day limit resets, Unix seconds |
+| `limits.spend_pct`, `limits.spend_usd`, `limits.spend_limit_usd`, `limits.spend_resets_at` | a gateway session's spend limit: percent used, dollars spent, the limit, its reset |
 | `tools.total` | tool calls this session |
 | `tools.rate` | tool calls in the last 60 s |
 | `agents.active` | subagents running now |
