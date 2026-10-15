@@ -27,3 +27,4 @@ merged, in plain words, with a picture.
 | <a href="20-usage-limits.md"><img src="heroes/20-usage-limits.png" width="240" alt=""></a> | [Chapter 20: When the limits reset](20-usage-limits.md) | Wednesday, October 14, 2026, at 10:37 PM |
 | <a href="21-fuzz.md"><img src="heroes/21-fuzz.png" width="240" alt=""></a> | [Chapter 21: Random clicks, written down first](21-fuzz.md) | Wednesday, October 14, 2026, at 10:57 PM |
 | <a href="22-procedural-modes.md"><img src="heroes/22-procedural-modes.png" width="240" alt=""></a> | [Chapter 22: Ferns, Go, gravity and a wave](22-procedural-modes.md) | Wednesday, October 14, 2026, at 11:16 PM |
+| <a href="23-chalk-and-readme.md"><img src="heroes/23-chalk-and-readme.png" width="240" alt=""></a> | [Chapter 23: Chalk, and a shorter front page](23-chalk-and-readme.md) | Wednesday, October 14, 2026, at 11:42 PM |
