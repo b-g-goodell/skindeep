@@ -41,9 +41,9 @@ function pane (id, kind) {
     panes.set(id, p)
     return p
   }
-  const { term, fit } = createTerminal(el, id)
+  const { term, fit, ser } = createTerminal(el, id)
   SkinView.styleTerminal(term)
-  const p = { id, el, term, fit }
+  const p = { id, el, term, fit, ser }
   panes.set(id, p)
   return p
 }
@@ -95,6 +95,13 @@ api.onScreenAsk((id, n) => {
   if (!p || !p.term) return api.screen(n, null)
   p.term.write('', () => api.screen(n, screenText(p.term)))
 })
+// A tab leaving for another window takes its buffer, scrollback
+// included, once the bytes before the ask are drawn.
+api.onSerializeAsk((id, n) => {
+  const p = panes.get(id)
+  if (!p || !p.term) return api.serialized(n, null)
+  p.term.write('', () => api.serialized(n, p.ser.serialize({ scrollback: p.term.options.scrollback })))
+})
 api.onDashboard((id, d) => {
   const p = panes.get(id)
   if (p && p.dash) p.dash.update(d)
@@ -123,6 +130,8 @@ api.onSkin(skin => {
     focusActive()
   })
 })
+api.settings().then(s => SkinView.setSettings(s, terms))
+api.onSettings(s => SkinView.setSettings(s, terms))
 api.onMetrics(snap => {
   metrics = snap
   SkinView.update(snap)
@@ -134,11 +143,12 @@ window.skinnedPage = () => ({
   active,
   metrics,
   sounds: SkinSounds.state(),
+  scale: SkinView.scale(),
   panes: [...panes.values()].map(p => {
     if (p.dash) return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', lines: [], dashboard: p.dash.state() }
     const b = p.term.buffer.active
     const lines = []
     for (let i = 0; i < b.length; i++) lines.push(b.getLine(i).translateToString(true))
-    return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', cols: p.term.cols, rows: p.term.rows, viewportY: b.viewportY, lines }
+    return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', cols: p.term.cols, rows: p.term.rows, fontSize: p.term.options.fontSize, viewportY: b.viewportY, lines }
   })
 })

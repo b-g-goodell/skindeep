@@ -2,7 +2,8 @@
 // The tab strip (decision 0023): app DOM between the identity strip and
 // the stage, out of reach of skin CSS, shown from the second tab on. A
 // press picks a tab, a drag moves it, a middle click or its close button
-// closes it, + opens a new tab. A tab in the background marks work in
+// closes it, + opens the New tab... chooser (decision 0025). A tab
+// released outside the window leaves for a new window there. A tab in the background marks work in
 // progress and output not yet seen. The tab chords are keys that send
 // the CLI nothing: Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab, Ctrl+Shift+Tab.
 
@@ -45,7 +46,7 @@ window.TabStrip = (function () {
   strip.addEventListener('mousedown', e => {
     e.preventDefault()
     if (e.target.closest('.new')) {
-      if (e.button === 0) api.newTab()
+      if (e.button === 0) window.Chooser.open()
       return
     }
     const el = e.target.closest('.tab')
@@ -71,11 +72,13 @@ window.TabStrip = (function () {
     strip.insertBefore(drag.el, before || strip.querySelector('.new'))
   })
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', e => {
     if (!drag) return
     const d = drag
     drag = null
-    if (d.moved) api.moveTab(d.id, [...strip.querySelectorAll('.tab')].indexOf(d.el))
+    const out = e.clientX < 0 || e.clientY < 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight
+    if (d.moved && out && state.tabs.length > 1) api.popTab(d.id, e.screenX, e.screenY)
+    else if (d.moved) api.moveTab(d.id, [...strip.querySelectorAll('.tab')].indexOf(d.el))
     render(state)
   })
 

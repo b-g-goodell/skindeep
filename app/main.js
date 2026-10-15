@@ -16,6 +16,9 @@ const { Bus } = require('./metrics/bus')
 const { open, watch, kindOf, carry } = require('./metrics/agent')
 const { createRegistry } = require('./skins/registry')
 const last = require('./skins/last')
+const { floorWidth } = require('./skins/scale')
+const settings = require('./settings')
+const pages = require('./pages')
 const profiles = require('./profiles')
 const { split } = require('./argv')
 // SKINNED_SKINS_DIR points the skin list elsewhere, for checks over fixtures.
@@ -97,13 +100,18 @@ if (opts.skin) {
 
 // corsEnabled: fonts are fetched in CORS mode, so FontFace needs it.
 // stream: a skin's sounds play from it (decision 0024).
-protocol.registerSchemesAsPrivileged([{ scheme: 'skin', privileges: { standard: true, secure: true, corsEnabled: true, stream: true } }])
+// shell: the launch's own pages.
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'skin', privileges: { standard: true, secure: true, corsEnabled: true, stream: true } },
+  { scheme: pages.SCHEME, privileges: { standard: true, secure: true } }
+])
 
 if (process.env.SKINNED_GL === 'swiftshader') app.commandLine.appendSwitch('use-angle', 'swiftshader')
 
 let runDir = null
 try {
   runDir = runtime.create()
+  pages.init(runDir)
   app.setPath('userData', path.join(runDir, 'electron'))
   runtime.rotateLogs()
 } catch (e) {
@@ -111,9 +119,15 @@ try {
   process.exit(cli.EXIT_APP)
 }
 
-let win = null
-const view = new View()
+// The launch's windows (decision 0023): id -> { id, win, view,
+// sentTabs, asking }. Window 0 is the first. A tab's window is tab.win.
+const wins = new Map()
+let nextWin = 0
 let viz = null
+const winOf = tab => wins.get(tab.win) || null
+const viewOf = tab => { const w = winOf(tab); return w ? w.view : null }
+const broadcast = (channel, ...args) => { for (const w of wins.values()) w.view.send(channel, ...args) }
+const senderWin = e => [...wins.values()].find(w => !w.view.gone() && w.view.wc === e.sender) || null
 
 function log (msg) {
   process.stderr.write(`[${new Date().toISOString()}] ${msg}\n`)
@@ -123,23 +137,30 @@ function log (msg) {
 // menu button (decision 0022).
 function problem (title, detail) {
   problems.push({ title, detail })
-  view.send('house', { unseen: problems.length - problemsSeen })
+  broadcast('house', { unseen: problems.length - problemsSeen })
 }
 
 // The view of one tab, as its Session sees app/view.js: its bytes carry
-// its id, and its strip shows while it is the active tab. The page load
-// is the window's, which sends the active tab's strip.
+// its id, and its strip shows while it is its window's active tab. The
+// window is looked up at each send, so a tab that moves needs no
+// rebinding. While it moves its bytes wait in tab.held. The page load is
+// the window's, which sends the active tab's strip.
 function tabView (tab) {
   return {
     send (channel, payload) {
       if (channel === 'pty:data') {
-        if (tab !== tabs.active && !tab.unseen) {
+        if (tab.held) return tab.held.push(payload)
+        if (tab !== tabs.activeOf(tab.win) && !tab.unseen) {
           tab.unseen = true
           sendTabs()
         }
-        return view.send('pty:data', tab.id, payload)
+        const v = viewOf(tab)
+        return v && v.send('pty:data', tab.id, payload)
       }
-      if (channel === 'strip' && tab === tabs.active) view.send('strip', payload)
+      if (channel === 'strip' && tab === tabs.activeOf(tab.win)) {
+        const v = viewOf(tab)
+        if (v) v.send('strip', payload)
+      }
     },
     onLoad () {}
   }
@@ -166,18 +187,21 @@ function makeTab (id, { cmd, cwd, env = process.env, file = resolved, note = nul
 // them first.
 let screenAsks = 0
 const screenWaits = new Map()
-function screenOf (tab) {
-  if (view.gone()) return Promise.resolve(null)
+function screenOf (tab, ask = 'screen:ask') {
+  const v = viewOf(tab)
+  if (!v || v.gone()) return Promise.resolve(null)
   const n = ++screenAsks
   return new Promise(resolve => {
     screenWaits.set(n, resolve)
-    view.send('screen:ask', tab.id, n)
+    v.send(ask, tab.id, n)
   }).finally(() => screenWaits.delete(n))
 }
-ipcMain.on('screen:text', (_e, n, text) => {
+const answered = (_e, n, text) => {
   const resolve = screenWaits.get(n)
   if (resolve) resolve(typeof text === 'string' ? text : null)
-})
+}
+ipcMain.on('screen:text', answered)
+ipcMain.on('serialize:text', answered)
 
 // A Claude tab whose CLI refused to open a background session the user
 // picked opens it with `claude attach ID` in its place (decision 0030).
@@ -322,7 +346,7 @@ function makeDashboard (id) {
   tab.session = new Dashboard({
     list: listSessions,
     watcher: s => { const b = new Bus({ log }); return { agent: watchAgent(s, b), bus: b } },
-    send: d => view.send('dashboard', tab.id, d),
+    send: d => { const v = viewOf(tab); if (v) v.send('dashboard', tab.id, d) },
     view: tabView(tab),
     board: folder => boards.get(folder),
     log
@@ -421,8 +445,12 @@ function tabsMenu () {
 // when the window runs that agent, else the bare CLI. The agent and the
 // folder of the active tab come first.
 const profilesDir = profiles.dir()
+let found = []
 
-function chooserState () {
+// fresh: scan the home directory again, as each opening of the dialog
+// does. Forget keeps the scan of the open dialog.
+function chooserState (fresh = true) {
+  if (fresh) found = profiles.scan(os.homedir())
   const from = tabs.active && !readOnly(tabs.active) ? tabs.active : null
   const windowKind = kindOf(opts.cmd)
   const records = profiles.read(profilesDir)
@@ -436,7 +464,7 @@ function chooserState () {
       variable: a.variable,
       line: [own ? opts.cmd[0] : a.cmd, ...c.args].map(identity.quote).join(' '),
       dropped: c.dropped.map(identity.quote).join(' '),
-      profiles: profiles.list(kind, records, open).map(p => Object.assign(p, { shown: identity.tildify(p.dir) })),
+      profiles: profiles.list(kind, records, open, found).map(p => Object.assign(p, { shown: identity.tildify(p.dir) })),
       profile: from && kindOf(from.cmd) === kind ? profiles.of(from.env, kind) : profiles.defaultDir(kind)
     }
   })
@@ -481,14 +509,16 @@ function chooserOpen ({ agent, profile, folder, line }) {
   return { ok: true }
 }
 
-// The renderer's view of the tabs. Tabs of one label add their folder's
-// name (decision 0004).
-function tabState () {
+// The renderer's view of one window's tabs. Tabs of one label add their
+// folder's name (decision 0004).
+function tabState (win = tabs.current) {
   const n = new Map()
-  for (const t of tabs.list) n.set(t.label, (n.get(t.label) || 0) + 1)
+  const mine = tabs.inWin(win)
+  for (const t of mine) n.set(t.label, (n.get(t.label) || 0) + 1)
+  const a = tabs.activeOf(win)
   return {
-    active: tabs.active ? tabs.active.id : null,
-    tabs: tabs.list.map(t => ({
+    active: a ? a.id : null,
+    tabs: mine.map(t => ({
       id: t.id,
       label: t.label,
       folder: n.get(t.label) > 1 ? path.basename(t.cwd) || t.cwd : null,
@@ -499,36 +529,50 @@ function tabState () {
   }
 }
 
-let sentTabs = ''
 function sendTabs () {
-  const s = tabState()
-  const key = JSON.stringify(s)
-  if (key === sentTabs) return
-  sentTabs = key
-  view.send('tabs', s)
+  for (const w of wins.values()) {
+    const s = tabState(w.id)
+    const key = JSON.stringify(s)
+    if (key === w.sentTabs) continue
+    w.sentTabs = key
+    w.view.send('tabs', s)
+  }
 }
 
-// The minimum size grows by the tab strip while it shows, so the skin
-// area is never smaller than the validator checked (decisions 0006,
-// 0022, 0023).
-function fitWindow () {
+// The minimum height grows by the tab strip while it shows, so the skin
+// area is never shorter than the validator checked. The minimum width is
+// the scaled skin's floor (decisions 0006, 0022, 0023).
+function fitWindow (w) {
   const skin = skins.current()
   if (!skin) return
-  const h = skin.window.minHeight + (tabs.list.length > 1 ? TAB_STRIP : 0)
-  view.setMinimumSize(skin.window.minWidth, h)
-  view.growTo(skin.window.minWidth, h)
+  const h = skin.window.minHeight + (tabs.inWin(w.id).length > 1 ? TAB_STRIP : 0)
+  w.view.setMinimumSize(floorWidth(skin), h)
+  w.view.growTo(floorWidth(skin), h)
 }
+const fitAll = () => { for (const w of wins.values()) fitWindow(w) }
 
-// The strip, the title, the meters and the viz follow the active tab.
+// The strip, the title and the meters of a window follow its active tab,
+// the viz's title the current window's.
 tabs.on('active', tab => {
   tab.session.sendStrip()
-  view.setTitle(identity.title(tab.label))
-  view.send('metrics', tab.bus.snapshot())
-  if (viz) viz.follow(tab.bus, 'visualization: ' + identity.title(tab.label))
+  const v = viewOf(tab)
+  if (v) {
+    v.setTitle(identity.title(tab.label))
+    v.send('metrics', tab.bus.snapshot())
+  }
+  if (viz && tab === tabs.active) viz.setTitle('visualization: ' + identity.title(tab.label))
 })
 tabs.on('change', () => {
   sendTabs()
-  fitWindow()
+  fitAll()
+})
+// A window whose last tab left while others remain closes.
+tabs.on('empty', id => {
+  const w = wins.get(id)
+  if (!w) return
+  wins.delete(id)
+  if (tabs.current === id) tabs.current = tabs.wins()[0]
+  if (!w.view.gone()) w.win.destroy()
 })
 // A CLI that exits on its own with a status other than 0 is a problem,
 // unless it was the last tab and the app ends with it.
@@ -572,45 +616,73 @@ global.skinnedProbe = () => {
     snapshot: a ? a.bus.snapshot() : {},
     lastDashboard: lastDashboard ? lastDashboard.session.report() : null,
     boards: boards.report(),
-    tabs: tabs.list.map(t => ({ id: t.id, childPid: t.session.pid, monitor: t.monitor ? t.monitor.pid : null, dashboard: t.dashboard ? t.session.report() : null, label: t.label, cwd: t.cwd, argv: t.cmd, active: t === a, following: t.agent.report(), snapshot: t.bus.snapshot() }))
+    windows: [...wins.values()].map(w => ({ id: w.id, bounds: w.view.bounds(), active: tabs.activeOf(w.id) ? tabs.activeOf(w.id).id : null, tabs: tabs.inWin(w.id).map(t => t.id) })),
+    tabs: tabs.list.map(t => ({ id: t.id, win: t.win, childPid: t.session.pid, monitor: t.monitor ? t.monitor.pid : null, dashboard: t.dashboard ? t.session.report() : null, label: t.label, cwd: t.cwd, argv: t.cmd, active: t === a, following: t.agent.report(), snapshot: t.bus.snapshot() }))
   }
 }
 
 const tabOf = id => tabs.get(id)
-ipcMain.handle('tabs:get', () => tabState())
-ipcMain.on('pty:ready', (_e, id, cols, rows) => { const t = tabOf(id); if (t) t.session.start(cols, rows) })
-ipcMain.on('pty:input', (_e, id, d) => { const t = tabOf(id); if (t) t.session.input(d) })
-ipcMain.on('pty:resize', (_e, id, cols, rows) => { const t = tabOf(id); if (t) t.session.resize(cols, rows) })
-ipcMain.on('tab:new', () => newTab())
-ipcMain.on('tab:close', (_e, id) => tabs.close(id === null ? tabs.active && tabs.active.id : id))
-ipcMain.on('tab:activate', (_e, id) => tabs.activate(id))
-ipcMain.on('tab:step', (_e, d) => tabs.step(d === -1 ? -1 : 1))
-ipcMain.on('tab:move', (_e, id, index) => tabs.move(id, index))
-ipcMain.handle('tabs:menu', () => tabsMenu())
-ipcMain.handle('sessions:list', () => liveSessions())
-ipcMain.handle('sessions:open', (_e, key) => openSession(String(key)))
-ipcMain.on('dashboard:open', () => openDashboard())
-ipcMain.on('tab:reopen', () => reopen())
-ipcMain.on('tab:duplicate', () => duplicate())
-ipcMain.handle('chooser:get', () => chooserState())
-ipcMain.handle('chooser:open', (_e, pick) => chooserOpen(pick || {}))
-ipcMain.handle('chooser:forget', (_e, agent, dir) => {
-  if (profiles.AGENTS[agent] && typeof dir === 'string') try { profiles.forget(profilesDir, agent, dir) } catch (e) { log(`profiles: ${e.message}`) }
-  return chooserState()
+// Every call from a window makes it the current window, so the code that
+// reads tabs.active acts on the window the user acts in.
+function touch (e) {
+  const w = senderWin(e)
+  if (w && tabs.inWin(w.id).length) tabs.current = w.id
+}
+const on = (channel, fn) => ipcMain.on(channel, (e, ...args) => { touch(e); fn(e, ...args) })
+const handle = (channel, fn) => ipcMain.handle(channel, (e, ...args) => { touch(e); return fn(e, ...args) })
+const parentOf = e => BrowserWindow.fromWebContents(e.sender)
+handle('tabs:get', e => { const w = senderWin(e); return tabState(w ? w.id : tabs.current) })
+// A tab that moved gets its old window's buffer and the bytes that
+// waited, then its new size. Its CLI started long ago.
+on('pty:ready', (_e, id, cols, rows) => {
+  const t = tabOf(id)
+  if (!t) return
+  if (t.held) {
+    const v = viewOf(t)
+    if (t.restore) v.send('pty:data', t.id, t.restore)
+    for (const d of t.held) v.send('pty:data', t.id, d)
+    t.held = null
+    t.restore = null
+    if (cols && rows) t.session.resize(cols, rows)
+    if (t.dashboard) t.session.sample()
+    return
+  }
+  t.session.start(cols, rows)
 })
-// Other profile...: config dirs are hidden folders.
-ipcMain.handle('chooser:profile', async () => {
-  const r = await dialog.showOpenDialog(win, { title: 'Other profile', defaultPath: os.homedir(), properties: ['openDirectory', 'showHiddenFiles'] })
+on('tab:pop', (e, id, x, y) => popTab(senderWin(e), id, x, y))
+on('pty:input', (_e, id, d) => { const t = tabOf(id); if (t) t.session.input(d) })
+on('pty:resize', (_e, id, cols, rows) => { const t = tabOf(id); if (t) t.session.resize(cols, rows) })
+on('tab:new', () => newTab())
+on('tab:close', (_e, id) => tabs.close(id === null ? tabs.active && tabs.active.id : id))
+on('tab:activate', (_e, id) => tabs.activate(id))
+on('tab:step', (_e, d) => tabs.step(d === -1 ? -1 : 1))
+on('tab:move', (_e, id, index) => tabs.move(id, index))
+handle('tabs:menu', () => tabsMenu())
+handle('sessions:list', () => liveSessions())
+handle('sessions:open', (_e, key) => openSession(String(key)))
+on('dashboard:open', () => openDashboard())
+on('tab:reopen', () => reopen())
+on('tab:duplicate', () => duplicate())
+handle('chooser:get', () => chooserState())
+handle('chooser:open', (_e, pick) => chooserOpen(pick || {}))
+handle('chooser:forget', (_e, agent, dir) => {
+  if (profiles.AGENTS[agent] && typeof dir === 'string') try { profiles.forget(profilesDir, agent, dir) } catch (e) { log(`profiles: ${e.message}`) }
+  return chooserState(false)
+})
+// Other profile...: a config dir the scan missed. Config dirs are hidden
+// folders.
+handle('chooser:profile', async (_e) => {
+  const r = await dialog.showOpenDialog(parentOf(_e), { title: 'Other profile', defaultPath: os.homedir(), properties: ['openDirectory', 'showHiddenFiles'] })
   return r.canceled || !r.filePaths.length ? { canceled: true } : { dir: r.filePaths[0], shown: identity.tildify(r.filePaths[0]) }
 })
-ipcMain.handle('chooser:folder', async (_e, typed) => {
+handle('chooser:folder', async (_e, typed) => {
   const at = folderOf(typed)
-  const r = await dialog.showOpenDialog(win, { title: 'Folder', defaultPath: isDir(at) ? at : os.homedir(), properties: ['openDirectory'] })
+  const r = await dialog.showOpenDialog(parentOf(_e), { title: 'Folder', defaultPath: isDir(at) ? at : os.homedir(), properties: ['openDirectory'] })
   return r.canceled || !r.filePaths.length ? { canceled: true } : { dir: identity.tildify(r.filePaths[0]) }
 })
-ipcMain.on('clip:write', (_e, { text, type }) => clipboard.writeText(text, type === 'selection' ? 'selection' : 'clipboard'))
-ipcMain.handle('clip:read', () => clipboard.readText('clipboard'))
-ipcMain.on('open-link', (_e, url) => {
+on('clip:write', (_e, { text, type }) => clipboard.writeText(text, type === 'selection' ? 'selection' : 'clipboard'))
+handle('clip:read', () => clipboard.readText('clipboard'))
+on('open-link', (_e, url) => {
   let u
   try { u = new URL(url) } catch (e) { return }
   if (!['http:', 'https:', 'file:'].includes(u.protocol)) return
@@ -619,11 +691,12 @@ ipcMain.on('open-link', (_e, url) => {
   p.unref()
 })
 
-function sendSkin () {
+function sendSkin (w = null) {
   const skin = skins.current()
   if (!skin) return
-  fitWindow()
-  view.send('skin:load', skin)
+  fitAll()
+  if (w) w.view.send('skin:load', skin)
+  else broadcast('skin:load', skin)
 }
 
 // A skin chosen in the menu: shown and recorded, or refused with the
@@ -638,40 +711,54 @@ function applied (what, r) {
   return { ok: true }
 }
 
-ipcMain.handle('skins:list', () => skins.list().map(s => Object.assign({}, s, { location: s.location && identity.tildify(s.location) })))
-ipcMain.handle('viz:state', () => ({ open: !!(viz && viz.isOpen()), modes: viz ? viz.modes() : [] }))
-ipcMain.on('viz:toggle', () => { if (viz) viz.toggle() })
-ipcMain.handle('viz:select', (_e, id) => viz && viz.select(id) ? { ok: true } : { error: `no visualization mode ${id}` })
+handle('skins:list', () => skins.list().map(s => Object.assign({}, s, { location: s.location && identity.tildify(s.location) })))
+handle('viz:state', () => ({ open: !!(viz && viz.isOpen()), modes: viz ? viz.modes() : [], inputs: viz ? viz.inputList() : [] }))
+on('viz:toggle', () => { if (viz) viz.toggle() })
+handle('viz:select', (_e, id) => viz && viz.select(id) ? { ok: true } : { error: `no visualization mode ${id}` })
+handle('viz:input', (_e, id) => viz && viz.selectInput(id) ? { ok: true } : { error: `no visualization input ${id}` })
 // Skin sounds (decision 0024): muted for the window, from --mute or
 // SKINNED_MUTE=1 at launch, toggled in the menu.
 let muted = opts.mute
-ipcMain.handle('sound:state', () => muted)
-ipcMain.on('sound:toggle', () => {
+handle('sound:state', () => muted)
+on('sound:toggle', () => {
   muted = !muted
-  view.send('sound:muted', muted)
+  broadcast('sound:muted', muted)
 })
-ipcMain.handle('skin:select', (_e, id) => applied(id, skins.select(id)))
-ipcMain.handle('skin:open', async () => {
-  const r = await dialog.showOpenDialog(win, { title: 'Open skin', properties: ['openDirectory'] })
+// The user's settings, the same for every skin, read at launch,
+// saved at each pick.
+const settingsFile = settings.file()
+let userSettings = settings.load(settingsFile)
+handle('settings:get', () => userSettings)
+handle('settings:menu', () => settings.menu(userSettings, skins.current()))
+handle('settings:set', (_e, id, value) => {
+  if (!settings.valid(id, value)) return { error: `no setting ${id} of ${value}` }
+  userSettings = Object.assign({}, userSettings, { [id]: value })
+  try { settings.save(settingsFile, userSettings) } catch (e) { log(`settings: ${e.message}`) }
+  broadcast('settings', userSettings)
+  return { ok: true }
+})
+handle('skin:select', (_e, id) => applied(id, skins.select(id)))
+handle('skin:open', async e => {
+  const r = await dialog.showOpenDialog(parentOf(e), { title: 'Open skin', properties: ['openDirectory'] })
   if (r.canceled || !r.filePaths.length) return { canceled: true }
   return applied(r.filePaths[0], skins.open(r.filePaths[0]))
 })
 
 // Housekeeping (decision 0022).
-ipcMain.handle('house:get', () => ({ problems, unseen: problems.length - problemsSeen }))
-ipcMain.on('house:seen', () => { problemsSeen = problems.length })
-ipcMain.handle('house:forget', () => {
+handle('house:get', () => ({ problems, unseen: problems.length - problemsSeen }))
+on('house:seen', () => { problemsSeen = problems.length })
+handle('house:forget', () => {
   try { last.forget(lastDir) } catch (e) { return { error: `forget: ${e.message}` } }
   return { note: 'Forgotten. The next launch opens the default skin, unless a window records another.' }
 })
-ipcMain.on('house:logs', () => {
+on('house:logs', () => {
   const dir = runtime.logDir()
   try { fs.mkdirSync(dir, { recursive: true }) } catch (e) {}
   const p = spawn('xdg-open', [dir], { detached: true, stdio: 'ignore' })
   p.on('error', e => log(`open log folder: ${e.message}`))
   p.unref()
 })
-ipcMain.handle('house:clear', () => {
+handle('house:clear', () => {
   try {
     const n = runtime.clearLogs()
     return { note: `Removed ${n} log${n === 1 ? '' : 's'} of ended windows.` }
@@ -697,69 +784,111 @@ app.whenReady().then(async () => {
     startRemembered(raced[response])
   }
   protocol.handle('skin', skins.handle)
+  protocol.handle(pages.SCHEME, pages.handle)
+  const first = openWindow({})
+  setInterval(() => {
+    for (const w of wins.values()) {
+      const a = tabs.activeOf(w.id)
+      if (a) w.view.send('metrics', a.bus.snapshot())
+    }
+    sendTabs()
+  }, 100).unref()
+  // A pane for each tab with a session, the dashboard's none. The viz
+  // sits beside the current window.
+  const vizTabs = () => tabs.list.map(t => ({ id: t.id, bus: t.bus, active: t === tabs.active, pane: !t.dashboard }))
+  const beside = {
+    bounds: () => { const w = wins.get(tabs.current) || first; return w.view.bounds() },
+    focus: () => { const w = wins.get(tabs.current) || first; w.view.focus() }
+  }
+  viz = new Viz(vizTabs, 'visualization: ' + identity.title(tabs.active.label), beside, log)
+  if (opts.viz) first.view.whenLoaded(() => viz.open())
+})
+
+// A window of the launch, at bounds when given. Its tabs are those
+// whose tab.win is its id.
+function openWindow (bounds) {
   const skin = skins.current()
   const sw = skin ? skin.window : { width: 1100, height: 760, minWidth: 600, minHeight: 400 }
-  const first = tabs.active
-  win = new BrowserWindow({
+  const id = nextWin++
+  const a = tabs.activeOf(id) || tabs.active
+  const win = new BrowserWindow(Object.assign({
     width: sw.width,
     height: sw.height,
-    minWidth: sw.minWidth,
+    minWidth: skin ? floorWidth(skin) : sw.minWidth,
     minHeight: sw.minHeight,
     useContentSize: true,
-    title: identity.title(first.label),
+    title: identity.title(a ? a.label : ''),
     backgroundColor: '#000000',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: pages.preload('main'),
       contextIsolation: true,
       sandbox: true,
       spellcheck: false
     }
-  })
+  }, bounds))
+  const w = { id, win, view: new View(), sentTabs: '', asking: false }
+  wins.set(id, w)
   win.on('page-title-updated', e => e.preventDefault())
+  win.on('focus', () => { if (tabs.inWin(id).length) tabs.current = id })
   // app.exit closes the window with no close event, so every close seen
-  // here is the user's. Several live tabs ask first (decision 0023).
-  let asking = false
+  // here is the user's. Several live tabs of this window ask first
+  // (decision 0023).
   win.on('close', e => {
     e.preventDefault()
-    if (asking || tabs.ending) return
-    if (tabs.list.length < 2) return closeWindow()
-    asking = true
+    const n = tabs.inWin(id).length
+    if (w.asking || tabs.ending) return
+    if (n < 2) return closeWindow(w)
+    w.asking = true
     dialog.showMessageBox(win, {
       type: 'question',
       title: 'claude-skins',
-      message: `Close ${tabs.list.length} tabs?`,
+      message: `Close ${n} tabs?`,
       detail: 'Each tab\'s CLI is hung up.',
       buttons: ['Close tabs', 'Cancel'],
       defaultId: 0,
       cancelId: 1
     }).then(({ response }) => {
-      asking = false
-      if (response === 0) closeWindow()
+      w.asking = false
+      if (response === 0) closeWindow(w)
     }, err => {
-      asking = false
+      w.asking = false
       tabs.fail(err)
     })
   })
   win.webContents.on('will-navigate', e => e.preventDefault())
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  view.attach(win)
-  view.onLoad(() => {
-    sentTabs = ''
+  w.view.attach(win)
+  w.view.onLoad(() => {
+    w.sentTabs = ''
     sendTabs()
-    if (tabs.active) tabs.active.session.sendStrip()
+    const t = tabs.activeOf(id)
+    if (t) t.session.sendStrip()
   })
-  view.onLoad(sendSkin)
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'))
-  setInterval(() => {
-    if (tabs.active) view.send('metrics', tabs.active.bus.snapshot())
-    sendTabs()
-  }, 100).unref()
-  viz = new Viz(first.bus, 'visualization: ' + identity.title(first.label), view, log)
-  if (opts.viz) view.whenLoaded(() => viz.open())
-})
+  w.view.onLoad(() => sendSkin(w))
+  win.loadURL(pages.url('app/renderer/index.html'))
+  return w
+}
 
-// The Session of each tab ends its child, then the app ends.
-function closeWindow () {
+// A tab dragged out of its window opens in a new window at the drop
+// point, x and y in screen pixels. Same process, same pty: its
+// bytes wait from the ask on, its old window serializes its buffer, and
+// the new window's pane gets both once it is ready.
+async function popTab (from, id, x, y) {
+  const tab = tabs.get(id)
+  if (!from || !tab || tab.win !== from.id || tabs.inWin(from.id).length < 2 || tabs.ending || tab.held) return
+  tab.held = []
+  tab.restore = tab.dashboard ? null : await screenOf(tab, 'serialize:ask')
+  if (!tabs.list.includes(tab)) return
+  const [width, height] = from.win.getContentSize()
+  const w = openWindow({ x: Math.max(0, Math.round(x) - 40), y: Math.max(0, Math.round(y) - 10), width, height })
+  tabs.detach(id, w.id)
+  tabs.current = w.id
+}
+
+// The Session of each tab of w ends its child. The last window's close
+// ends the app.
+function closeWindow (w) {
+  if (tabs.wins().some(id => id !== w.id)) return tabs.closeWin(w.id)
   if (viz) viz.close()
   tabs.hangupAll()
 }

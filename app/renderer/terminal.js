@@ -1,5 +1,5 @@
 'use strict'
-/* global Terminal, FitAddon, Unicode11Addon, WebLinksAddon, WebglAddon */
+/* global Terminal, FitAddon, Unicode11Addon, WebLinksAddon, WebglAddon, SerializeAddon */
 // The terminal of one tab. Input reaches the tab's pty only from xterm.js
 // onData, output reaches xterm.js only as the pty's bytes (decision
 // 0002), which the page routes by tab id.
@@ -16,6 +16,9 @@ window.createTerminal = function createTerminal (host, id) {
   })
   const fit = new FitAddon.FitAddon()
   term.loadAddon(fit)
+  // The buffer as escapes, for a tab that moves to another window.
+  const ser = new SerializeAddon.SerializeAddon()
+  term.loadAddon(ser)
   term.loadAddon(new Unicode11Addon.Unicode11Addon())
   term.unicode.activeVersion = '11'
   term.loadAddon(new WebLinksAddon.WebLinksAddon(openLink))
@@ -54,5 +57,5 @@ window.createTerminal = function createTerminal (host, id) {
   term.onData(d => api.input(id, d))
   term.onBinary(d => api.input(id, d))
   term.onResize(({ cols, rows }) => api.resize(id, cols, rows))
-  return { term, fit }
+  return { term, fit, ser }
 }
