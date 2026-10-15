@@ -284,7 +284,7 @@
       mode: id(main),
       webgl: !!bc,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
-      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, beats: p.synth.beats, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   requestAnimationFrame(loop)

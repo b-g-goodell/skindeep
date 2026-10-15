@@ -64,8 +64,8 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
   check(viz, 'no viz window')
   const state = () => viz.evaluate(() => window.vizState())
   const tabs = async () => (await win.evaluate(() => window.skinned.tabs())).tabs
-  async function until (f, msg) {
-    for (let i = 0; i < 40; i++) {
+  async function until (f, msg, n = 40) {
+    for (let i = 0; i < n; i++) {
       if (await f()) return
       await sleep(100)
     }
@@ -143,8 +143,15 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
   // The longest fake turn, then the idle level's rise.
   await sleep(28000)
   await take('idle')
+  // The prompt frame waits for the prompt itself, the first event after
+  // the pause, in every pane, and for the idle level it ends to fall. A
+  // fixed wait raced the fake under load, and a static mode such as go
+  // still showed its idle frame.
+  const before = (await state()).panes.map(p => p.beats)
+  const lifted = Date.now()
   fs.rmSync(pause)
-  await sleep(1000)
+  await until(async () => (await state()).panes.every((p, j) => p.beats > before[j] && p.idle < 0.05), 'the prompt did not end the idle spell in every pane', 150)
+  console.log('prompt reached every pane after', Date.now() - lifted, 'ms')
   await take('prompt')
   await sleep(2400)
   await take('tool')
