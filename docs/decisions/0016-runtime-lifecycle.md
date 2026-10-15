@@ -2,7 +2,8 @@
 
 Status: accepted 2026-10-11, revised 2026-10-12 for the Session, again
 2026-10-12 for tabs (decision 0023), and for the hook links, the kept
-settings and the last screen (decision 0030).
+settings and the last screen (decision 0030), and 2026-10-13 for the launch's
+pages.
 
 ## Context
 
@@ -17,6 +18,14 @@ Closing the window must end the session the way closing a terminal does.
   userData and one dir per tab, `tab-<id>/`, mode 0700, for that tab's
   hook socket. A tab's dir is removed when the tab ends, the runtime dir
   on exit. At start, dirs whose pid is dead are removed.
+- The launch's pages: at start every file of `app/renderer` and
+  `app/viz`, and each `node_modules` file their pages name, about 1.1 MB,
+  is read into memory and served as `shell://launch/<path>`. The two
+  preloads are copied into the runtime dir's `preload/`. A window opened
+  later, such as a visualization window closed and shown again, runs the
+  build its main process started with, even after a pull or
+  `./install.sh` changed the checkout. Before, it loaded the new page
+  against the old main process, which drew nothing.
 - The runtime root's `pids/`, mode 0700: one link per tab's CLI, named
   for its pid, to that tab's socket (decision 0030). The tab's end
   removes it, and at start a link whose socket is gone is removed.

@@ -8,7 +8,8 @@ const os = require('os')
 
 const root = path.join(__dirname, '..')
 
-// Each launch gets a state dir of its own unless the caller names one,
+// opts.root: an app tree other than this checkout. Each launch gets a
+// state dir of its own unless the caller names one,
 // so the last skin one check records never steers the next launch
 // (decision 0022). No session bus: a file dialog would otherwise go
 // through the desktop's portal to the user's display, not Xvfb. No
@@ -21,7 +22,7 @@ async function launch (cmd, opts = {}) {
   delete env.DBUS_SESSION_BUS_ADDRESS
   const app = await _electron.launch({
     executablePath: require('electron'),
-    args: ['--no-sandbox', '--mute-audio', ...(opts.require ? ['-r', opts.require] : []), root, ...(opts.appArgs || []), '--', ...cmd],
+    args: ['--no-sandbox', '--mute-audio', ...(opts.require ? ['-r', opts.require] : []), opts.root || root, ...(opts.appArgs || []), '--', ...cmd],
     cwd: opts.cwd || root,
     env
   })
