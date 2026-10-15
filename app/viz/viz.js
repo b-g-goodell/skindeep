@@ -54,7 +54,31 @@
     p.label = el('div', 'mode')
     p.el.append(p.milkCanvas, p.flatCanvas, p.label)
     root.appendChild(p.el)
+    watch(p)
     return p
+  }
+
+  // When the GPU process exits, every WebGL context of the page is lost
+  // and draws nothing again, so a butterchurn pane would stay blank while
+  // its mode steps. The pane drops its butterchurn and its canvas, whose
+  // context stays lost. The next frame shows a butterchurn mode afresh, on
+  // a new context or on the scope with the reason, and a Canvas2D mode
+  // draws on.
+  function watch (p) {
+    p.milkCanvas.addEventListener('webglcontextlost', () => {
+      if (!p.milk) return
+      p.milk = null
+      p.why = ''
+      gl--
+      const c = el('canvas')
+      c.width = p.w
+      c.height = p.h
+      c.hidden = p.milkCanvas.hidden
+      p.milkCanvas.replaceWith(c)
+      p.milkCanvas = c
+      if (!p.flat) p.shown = -1
+      watch(p)
+    })
   }
 
   // The pane's butterchurn, made the first time it shows a milk mode, or
@@ -76,10 +100,12 @@
 
   function drop (p) {
     if (p.milk) {
+      // Cleared first: the loss event below then counts nothing.
+      p.milk = null
+      gl--
       const ctx = p.milkCanvas.getContext('webgl2')
       const lose = ctx && ctx.getExtension('WEBGL_lose_context')
       if (lose) lose.loseContext()
-      gl--
     }
     if (held === p) held = null
     p.el.remove()
@@ -201,7 +227,7 @@
       if (p.shown < 0) continue
       if (p.flat) {
         p.flat.draw(p.synth, dt)
-      } else {
+      } else if (p.milk) {
         const b = p.synth.bytes()
         p.milk.render({ audioLevels: { timeByteArray: b, timeByteArrayL: b, timeByteArrayR: b } })
       }
@@ -219,7 +245,7 @@
       mode: id(main),
       webgl: !!bc,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
-      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), milk: !!p.milk, x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   requestAnimationFrame(loop)
