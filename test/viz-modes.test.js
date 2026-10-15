@@ -29,7 +29,7 @@ test('mode ids and labels are unique, and every kind is known', () => {
   assert.strictEqual(new Set(MODES.map(m => m.id)).size, MODES.length)
   assert.strictEqual(new Set(MODES.map(m => m.label)).size, MODES.length)
   for (const m of MODES) {
-    assert.match(m.id, /^[a-z]+$/, m.id)
+    assert.match(m.id, /^[a-z][a-z0-9]*$/, m.id)
     assert.ok(['milk', 'canvas'].includes(m.kind), `${m.id}: kind ${m.kind}`)
   }
 })
@@ -107,9 +107,9 @@ test('the panes tile the window, and a point maps back to its pane', () => {
 })
 
 test('the procedural modes follow the ten, each its own renderer file', () => {
-  assert.deepStrictEqual(MODES.map(m => m.id), ['drift', 'rings', 'plasma', 'stardust', 'whirlpool', 'scope', 'analyzer', 'fire', 'superscope', 'dotplane', 'fern', 'go', 'zoom', 'gravity', 'quantum'])
+  assert.deepStrictEqual(MODES.map(m => m.id), ['drift', 'rings', 'plasma', 'stardust', 'whirlpool', 'scope', 'analyzer', 'fire', 'superscope', 'dotplane', 'fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum'])
   const html = fs.readFileSync(path.join(VIZ, 'index.html'), 'utf8')
-  for (const id of ['fern', 'go', 'zoom', 'gravity', 'quantum']) assert.ok(html.includes(`<script src="${id}.js">`), `${id}.js not loaded`)
+  for (const id of ['fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum']) assert.ok(html.includes(`<script src="${id}.js">`), `${id}.js not loaded`)
 })
 
 // Go on a 5 by 5 board. at(x, y) is the point.
