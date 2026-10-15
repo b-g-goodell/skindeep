@@ -126,6 +126,41 @@
     "notes": "menu button, drawn by hand as SVG"
   },
   {
+    "path": "docs/screenshot.png",
+    "source": "screen capture of the app under Xvfb, composed with ImageMagick",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "shows the deck skin, whose fonts and textures are listed above, and the terminal output of Claude Code, which belongs to its makers"
+  },
+  {
+    "path": "docs/skins/deck.png",
+    "source": "screen capture of the app under Xvfb",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "shows the deck skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
+  },
+  {
+    "path": "docs/skins/phosphor.png",
+    "source": "screen capture of the app under Xvfb",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "shows the phosphor skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
+  },
+  {
+    "path": "docs/skins/library.png",
+    "source": "screen capture of the app under Xvfb",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "shows the library skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
+  },
+  {
+    "path": "docs/skins/coffee.png",
+    "source": "screen capture of the app under Xvfb",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "shows the coffee skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
+  },
+  {
     "path": "skins/library/images/books.png",
     "source": "scripts/art/library.py",
     "author": "claude-skins",
