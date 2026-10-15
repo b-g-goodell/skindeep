@@ -14,3 +14,4 @@ merged, in plain words, with a picture.
 | <a href="07-visualization.md"><img src="heroes/07-visualization.png" width="240" alt=""></a> | [Chapter 7: A visualizer with no music](07-visualization.md) | Wednesday, October 14, 2026, at 6:07 PM |
 | <a href="08-finding-sessions.md"><img src="heroes/08-finding-sessions.png" width="240" alt=""></a> | [Chapter 8: Who else is running?](08-finding-sessions.md) | Wednesday, October 14, 2026, at 6:30 PM |
 | <a href="09-claude.md"><img src="heroes/09-claude.png" width="240" alt=""></a> | [Chapter 9: Plugging into Claude Code](09-claude.md) | Wednesday, October 14, 2026, at 6:50 PM |
+| <a href="10-codex.md"><img src="heroes/10-codex.png" width="240" alt=""></a> | [Chapter 10: Codex, one log at a time](10-codex.md) | Wednesday, October 14, 2026, at 7:10 PM |
