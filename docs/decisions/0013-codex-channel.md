@@ -59,6 +59,13 @@ that holds the rollout open, so the child tree rarely holds it.
   resume, before any prompt, and `resumed` found it within 3 s. A new
   session's rollout appears only at its first prompt, so its meters wait
   for it (docs/research/side-channels.md).
+- Route 3 misses when the rollout's cwd or `$CODEX_HOME` is not the one
+  the app sees: `codex resume --all` of a session from another
+  directory, `--worktree`, and a `CODEX_HOME` set inside a wrapper
+  script rather than in the app's environment. The meters then show
+  nothing, and follow a wrong rollout only when another session of the
+  same directory matches. Two old sessions of one directory resumed and
+  written at once may follow each other's rollout.
 
 ## Why
 
