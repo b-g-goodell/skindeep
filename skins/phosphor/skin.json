@@ -44,6 +44,9 @@
    "brightWhite": "#e0fff0"
   }
  },
+ "splits": [
+  { "id": "systems", "edge": "bottom", "min": 168, "max": 288 }
+ ],
  "fonts": [
   {
    "family": "VT323",
@@ -117,6 +120,7 @@
   },
   {
    "class": "bezel",
+   "follow": { "bottom": "systems" },
    "rect": {
     "left": 320,
     "top": 60,
@@ -300,6 +304,7 @@
   },
   {
    "id": "cpu",
+   "follow": { "height": "systems" },
    "type": "needle",
    "bind": "proc.cpu_pct",
    "label": "cpu",
@@ -314,6 +319,7 @@
   },
   {
    "id": "rate",
+   "follow": { "height": "systems" },
    "type": "needle",
    "bind": "tokens.out_rate",
    "label": "tokens/s",
@@ -328,6 +334,7 @@
   },
   {
    "id": "cell-0",
+   "follow": { "bottom": "systems" },
    "type": "readout",
    "bind": "cost.usd",
    "label": "cost",
@@ -342,6 +349,7 @@
   },
   {
    "id": "cell-1",
+   "follow": { "bottom": "systems" },
    "type": "readout",
    "bind": "session.clock_s",
    "label": "uptime",
@@ -356,6 +364,7 @@
   },
   {
    "id": "cell-2",
+   "follow": { "bottom": "systems" },
    "type": "readout",
    "bind": "tools.total",
    "label": "tool calls",

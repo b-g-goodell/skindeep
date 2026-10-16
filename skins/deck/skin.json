@@ -44,6 +44,10 @@
    "brightWhite": "#ffffff"
   }
  },
+ "splits": [
+  { "id": "playlist", "edge": "right", "min": 236, "max": 600 },
+  { "id": "meters", "edge": "top", "min": 174, "max": 254 }
+ ],
  "fonts": [
   {
    "family": "DSEG7",
@@ -76,6 +80,7 @@
   },
   {
    "class": "lcd display",
+   "follow": { "height": "meters" },
    "rect": {
     "left": 12,
     "top": 24,
@@ -85,6 +90,7 @@
   },
   {
    "class": "lcd analyzer-box",
+   "follow": { "height": "meters" },
    "rect": {
     "left": 354,
     "top": 24,
@@ -94,6 +100,7 @@
   },
   {
    "class": "plate",
+   "follow": { "height": "meters" },
    "rect": {
     "left": 578,
     "top": 22,
@@ -103,6 +110,7 @@
   },
   {
    "class": "plate",
+   "follow": { "height": "meters" },
    "rect": {
     "right": 10,
     "top": 22,
@@ -112,6 +120,7 @@
   },
   {
    "class": "well",
+   "follow": { "right": "playlist", "top": "meters" },
    "rect": {
     "left": 8,
     "top": 168,
@@ -121,6 +130,7 @@
   },
   {
    "class": "lcd playlist",
+   "follow": { "width": "playlist", "top": "meters" },
    "rect": {
     "right": 12,
     "top": 174,
@@ -216,6 +226,7 @@
   },
   {
    "id": "an-out",
+   "follow": { "height": "meters" },
    "type": "bar",
    "bind": "pty.out_bps",
    "label": "out",
@@ -233,6 +244,7 @@
   },
   {
    "id": "an-tok",
+   "follow": { "height": "meters" },
    "type": "bar",
    "bind": "tokens.out_rate",
    "label": "tok",
@@ -250,6 +262,7 @@
   },
   {
    "id": "an-tpm",
+   "follow": { "height": "meters" },
    "type": "bar",
    "bind": "tools.rate",
    "label": "tpm",
@@ -267,6 +280,7 @@
   },
   {
    "id": "an-cpu",
+   "follow": { "height": "meters" },
    "type": "bar",
    "bind": "proc.cpu_pct",
    "label": "cpu",
@@ -284,6 +298,7 @@
   },
   {
    "id": "an-agt",
+   "follow": { "height": "meters" },
    "type": "bar",
    "bind": "agents.active",
    "label": "agt",
@@ -301,6 +316,7 @@
   },
   {
    "id": "an-key",
+   "follow": { "height": "meters" },
    "type": "bar",
    "bind": "pty.in_kps",
    "label": "key",
@@ -318,6 +334,7 @@
   },
   {
    "id": "ctx",
+   "follow": { "height": "meters" },
    "type": "gauge",
    "bind": "context.used_pct",
    "format": "pct",
@@ -339,6 +356,7 @@
   },
   {
    "id": "tps",
+   "follow": { "height": "meters" },
    "type": "needle",
    "bind": "tokens.out_rate",
    "label": "tokens/s",
@@ -353,6 +371,7 @@
   },
   {
    "id": "cpu",
+   "follow": { "height": "meters" },
    "type": "knob",
    "bind": "proc.cpu_pct",
    "label": "cpu",
@@ -402,6 +421,7 @@
   },
   {
    "id": "lims",
+   "follow": { "height": "meters" },
    "type": "limits",
    "bind": "limits.items",
    "meter": "bar",
@@ -420,6 +440,7 @@
   },
   {
    "id": "pl-0",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.total",
    "label": "tool calls",
@@ -434,6 +455,7 @@
   },
   {
    "id": "pl-1",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Read",
    "label": "read",
@@ -448,6 +470,7 @@
   },
   {
    "id": "pl-2",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Edit",
    "label": "edit",
@@ -462,6 +485,7 @@
   },
   {
    "id": "pl-3",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Write",
    "label": "write",
@@ -476,6 +500,7 @@
   },
   {
    "id": "pl-4",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Bash",
    "label": "bash",
@@ -490,6 +515,7 @@
   },
   {
    "id": "pl-5",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Grep",
    "label": "grep",
@@ -504,6 +530,7 @@
   },
   {
    "id": "pl-6",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Glob",
    "label": "glob",
@@ -518,6 +545,7 @@
   },
   {
    "id": "pl-7",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.WebFetch",
    "label": "web fetch",
@@ -532,6 +560,7 @@
   },
   {
    "id": "pl-8",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tools.Agent",
    "label": "agent",
@@ -546,6 +575,7 @@
   },
   {
    "id": "pl-9",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tokens.in",
    "label": "tokens in",
@@ -560,6 +590,7 @@
   },
   {
    "id": "pl-10",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tokens.out",
    "label": "tokens out",
@@ -574,6 +605,7 @@
   },
   {
    "id": "pl-11",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "tokens.cache_read",
    "label": "cache read",
@@ -588,6 +620,7 @@
   },
   {
    "id": "pl-12",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "context.used_tokens",
    "label": "context",
@@ -602,6 +635,7 @@
   },
   {
    "id": "pl-13",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "context.compact_threshold",
    "label": "compact at",
@@ -616,6 +650,7 @@
   },
   {
    "id": "pl-14",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "lines.added",
    "label": "lines added",
@@ -630,6 +665,7 @@
   },
   {
    "id": "pl-15",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "lines.removed",
    "label": "lines removed",
@@ -644,6 +680,7 @@
   },
   {
    "id": "pl-17",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "readout",
    "bind": "proc.mem_mb",
    "label": "memory mb",
@@ -658,6 +695,7 @@
   },
   {
    "id": "todo",
+   "follow": { "width": "playlist", "top": "meters" },
    "type": "list",
    "bind": "checklist.items",
    "label": "tasks",
@@ -669,6 +707,7 @@
    },
    "class": "tracklist",
    "toggle": {
+    "follow": { "right": "playlist", "top": "meters" },
     "rect": {
      "right": 140,
      "top": 156,
