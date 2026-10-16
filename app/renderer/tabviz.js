@@ -10,8 +10,10 @@
 // silent tool call, and a quiet column is grey. When it is done, its
 // busy state 0 and the terminal quiet for DONE_S, the band fades and a
 // flat green line runs through it, the dashboard's colour for waiting.
-// Canvas2D on a small canvas, drawn at most every DRAW_MS, and not at
-// all while the strip is hidden.
+// Canvas2D on a small canvas backed by the CPU, every tab redrawn at
+// once as its columns close, a done tab whose line has settled not at
+// all, and nothing while the strip is hidden: under software GL each
+// redraw of the strip recomposites the window.
 
 window.TabViz = (function () {
   // The canvas in CSS pixels, a column per pixel. A crowded strip narrows
@@ -19,7 +21,6 @@ window.TabViz = (function () {
   const W = 44
   const H = 16
   const COL_MS = 125
-  const DRAW_MS = 33
   const DONE_S = 2
   // A column below this height is drawn grey.
   const QUIET = 0.15
@@ -33,7 +34,7 @@ window.TabViz = (function () {
     const s = {
       id,
       canvas,
-      g: canvas.getContext('2d'),
+      g: canvas.getContext('2d', { willReadFrequently: true }),
       level: { bass: 0, treble: 0, busy: 0 },
       target: { bass: 0, treble: 0, busy: 0 },
       done: 0,
@@ -42,8 +43,8 @@ window.TabViz = (function () {
       hue: new Float32Array(W),
       lit: new Float32Array(W),
       cur: { amp: 0, hue: 150, lit: 0 },
-      acc: 0,
-      flash: 0
+      flash: 0,
+      settled: false
     }
     tabs.set(id, s)
     return s
@@ -80,8 +81,7 @@ window.TabViz = (function () {
     }
   }
 
-  // Advance by dt seconds: ease the levels, add to the open column, and
-  // close a column every COL_MS.
+  // Advance by dt seconds: ease the levels and add to the open column.
   function step (s, dt) {
     const k = 1 - Math.exp(-dt * 6)
     for (const key of Object.keys(s.level)) s.level[key] += (s.target[key] - s.level[key]) * k
@@ -92,18 +92,21 @@ window.TabViz = (function () {
     const a = 0.08 + quiet * (0.7 * Math.min(1, L.bass) + 0.3 * L.treble * Math.random() + L.busy * (0.2 + 0.35 * Math.random()) + 0.6 * s.flash)
     s.cur.amp = Math.max(s.cur.amp, Math.min(1, a))
     if (!s.cur.lit) s.cur.hue = 150 - 110 * L.treble + 40 * L.busy
-    s.acc += dt * 1000
-    while (s.acc >= COL_MS) {
-      s.acc -= COL_MS
-      s.amp.copyWithin(0, 1)
-      s.hue.copyWithin(0, 1)
-      s.lit.copyWithin(0, 1)
-      s.amp[W - 1] = s.cur.amp
-      s.hue[W - 1] = s.cur.hue
-      s.lit[W - 1] = s.cur.lit
-      s.cur = { amp: 0, hue: s.cur.hue, lit: 0 }
-    }
   }
+
+  // Close the open column, the oldest scrolling out.
+  function close (s) {
+    s.amp.copyWithin(0, 1)
+    s.hue.copyWithin(0, 1)
+    s.lit.copyWithin(0, 1)
+    s.amp[W - 1] = s.cur.amp
+    s.hue[W - 1] = s.cur.hue
+    s.lit[W - 1] = s.cur.lit
+    s.cur = { amp: 0, hue: s.cur.hue, lit: 0 }
+  }
+
+  // Done, and every column quiet: the picture is the flat line alone.
+  const settled = s => s.done > 0.99 && s.amp.every((a, x) => a < QUIET && !s.lit[x])
 
   function draw (s) {
     const c = s.canvas
@@ -118,14 +121,13 @@ window.TabViz = (function () {
     const mid = H / 2
     const fade = 1 - 0.75 * s.done
     for (let x = 0; x < W; x++) {
-      const last = x === W - 1
-      const amp = last ? Math.max(s.amp[x], s.cur.amp) : s.amp[x]
-      const lit = last ? Math.max(s.lit[x], s.cur.lit) : s.lit[x]
+      const amp = s.amp[x]
+      const lit = s.lit[x]
       const h = Math.max(0.5, amp * (mid - 1))
       // A quiet column is grey, so colour means activity and green alone
       // means done.
       const quiet = amp < QUIET && !lit
-      g.fillStyle = `hsla(${last ? s.cur.hue : s.hue[x]}, ${quiet ? 0 : 90 - 70 * s.done}%, ${quiet ? 38 : 48 + 22 * lit}%, ${fade})`
+      g.fillStyle = `hsla(${s.hue[x]}, ${quiet ? 0 : 90 - 70 * s.done}%, ${quiet ? 38 : 48 + 22 * lit}%, ${fade})`
       g.fillRect(x, mid - h, 1, 2 * h)
     }
     if (s.done > 0.02) {
@@ -135,16 +137,22 @@ window.TabViz = (function () {
   }
 
   let prev = performance.now()
-  let drawn = 0
+  let acc = 0
   const strip = document.getElementById('tabs')
   function loop (now) {
     const dt = Math.min(0.1, (now - prev) / 1000)
     prev = now
     if (!strip.hidden) {
       for (const s of tabs.values()) step(s, dt)
-      if (now - drawn >= DRAW_MS) {
-        drawn = now
-        for (const s of tabs.values()) if (s.canvas.isConnected) draw(s)
+      acc += dt * 1000
+      if (acc >= COL_MS) {
+        acc %= COL_MS
+        for (const s of tabs.values()) {
+          close(s)
+          const still = settled(s)
+          if (s.canvas.isConnected && !(still && s.settled)) draw(s)
+          s.settled = still && s.canvas.isConnected
+        }
       }
     }
     requestAnimationFrame(loop)
