@@ -457,17 +457,21 @@ from a finished one.
   busy state, and an event lights its column in the scope's colour for
   its kind or tool class. While the agent is busy the band shimmers, so
   a tool call that prints nothing still reads as work.
-- Done: the busy state is not 1 and the terminal has been quiet 2 s.
-  Within about a second the band greys and fades to a quarter, and a
-  flat green line, the sessions dashboard's colour for waiting, runs
-  through it. The band scrolls out in 5.5 s and leaves the line alone.
-  A command with no busy state is done when its terminal is quiet.
+- Done: the busy state is not 1 and the tab has been quiet 2 s, no
+  terminal output and no event. Within about a second the band greys
+  and fades to a quarter, and a flat green line, the sessions
+  dashboard's colour for waiting, runs through it. The band scrolls out
+  in 5.5 s and leaves the line alone. A tab with no busy state, a plain
+  command or a Claude session watched from its transcript alone
+  (decision 0027), also needs its token rate over 10 s at zero. A
+  monitor tab has no terminal of its own, so its events alone count.
 - The numbers: `feed()` in `app/viz.js` drains each tab's events as
   before, and hands the same numbers, whether the window is open or
   not, to each main window that shows a strip, on the channel
-  `tab:viz`, each window its own tabs, 30 times a second. One drain
-  feeds both, so the pane and the tab see the same events. The page
-  eases the levels itself and runs no synthesiser.
+  `tab:viz`, each window its own tabs, 30 times a second, with two
+  numbers more: whether the tab lacks a busy state, and its quiet
+  seconds. One drain feeds both, so the pane and the tab see the same
+  events. The page eases the levels itself and runs no synthesiser.
 - The pulsing mark of a background tab at work (decision 0023) is gone:
   the band says the same of every tab. The mark of output not yet seen
   stays, so a finished tab whose result is unread shows both.
