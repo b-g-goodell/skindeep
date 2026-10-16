@@ -222,8 +222,15 @@ async function lookAt (skin) {
       await win.evaluate(() => window.skinned.newTab())
       await sleep(900)
     }
-    const tabs = (await probe(app)).tabs
-    check(tabs.length === 4, `${skin}: want four tabs, have ${tabs.length}`)
+    // A tab's child starts once its terminal has a size, so its pid can
+    // still be null here under load, and a held tab's pause file would
+    // name no process: the pids are waited for, bounded.
+    let tabs = []
+    for (const t0 = Date.now(); Date.now() - t0 < 15000; await sleep(250)) {
+      tabs = (await probe(app)).tabs
+      if (tabs.length === 4 && tabs.every(t => t.childPid)) break
+    }
+    check(tabs.length === 4 && tabs.every(t => t.childPid), `${skin}: want four tabs, each with its child, have ${JSON.stringify(tabs.map(t => t.childPid))}`)
     for (const t of [tabs[1], tabs[3]]) {
       const f = `${pause}.${t.childPid}`
       fs.writeFileSync(f, '')
