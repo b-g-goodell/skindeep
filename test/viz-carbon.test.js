@@ -36,6 +36,40 @@ test('carbon: levels and lines match the research data', () => {
   assert.strictEqual(D.limit, full.ionization.limits['2P1/2'].energy_cm)
 })
 
+test('carbon: each level\'s g_J is NIST\'s measured value or the LS formula, and J = 0 has none', () => {
+  // NIST ASD's three measured C I values (research, carbon-beyond.md 5.2).
+  const measured = { '2p2_3P_1': 1.5010623, '2p2_3P_2': 1.5010469, '2p3s_1Po_1': 0.97 }
+  const gs = 2.00231930436092
+  const ls = new Set()
+  let zero = 0
+  D.levels.forEach((l, i) => {
+    assert.strictEqual(l.gJ !== null, full.levels[i].J !== '0', l.id)
+    if (l.J === 0) {
+      assert.strictEqual(l.gJsrc, null, l.id)
+      zero++
+      return
+    }
+    if (measured[l.id] !== undefined) {
+      assert.deepStrictEqual([l.gJ, l.gJsrc], [measured[l.id], 'measured'], l.id)
+      return
+    }
+    const S = (Number(l.term[0]) - 1) / 2
+    const L = 'SPDF'.indexOf(l.term[1])
+    const J = l.J
+    const g = 1 + (gs - 1) * (J * (J + 1) + S * (S + 1) - L * (L + 1)) / (2 * J * (J + 1))
+    assert.ok(Math.abs(l.gJ - g) < 1e-12, `${l.id}: ${l.gJ} against ${g}`)
+    assert.strictEqual(l.gJsrc, 'LS', l.id)
+    ls.add(l.gJ.toFixed(4))
+  })
+  assert.strictEqual(Object.keys(measured).filter(id => D.levels.find(l => l.id === id).gJsrc === 'measured').length, 3)
+  assert.strictEqual(zero, 12)
+  // Nine LS values from 0.4988 to 2.0023, as the research prints; 3P at
+  // 1.501160 against the measured 1.50106 and 1.50105.
+  assert.deepStrictEqual([...ls].sort(), ['0.4988', '0.6659', '1.0000', '1.0835', '1.1671', '1.2506', '1.3341', '1.5012', '2.0023'])
+  assert.strictEqual(D.levels.find(l => l.id === '2p4p_3P_2').gJ.toFixed(6), '1.501160')
+  assert.strictEqual(D.levels.find(l => l.id === '2p4p_3D_3').gJ.toFixed(3), '1.334')
+})
+
 test('carbon: Ritz wavelengths from the level energies agree with NIST', () => {
   let worst = 0
   for (const l of D.lines) {

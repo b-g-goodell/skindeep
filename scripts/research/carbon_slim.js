@@ -3,7 +3,8 @@
 // docs/research/carbon-atom-data.json, written as app/viz/carbon-data.js,
 // a page script that also loads under node. Every level, every line,
 // the Rydberg ladder, the outer-electron model, the M_L components'
-// subshell occupations and the Bunge 1993 RHF basis, with the fields the mode draws from and nothing else. All 559
+// subshell occupations, the Bunge 1993 RHF basis and each level's Lande
+// g_J, with the fields the mode draws from and nothing else. All 559
 // lines are kept, so the branching ratios stay NIST's without a
 // renormalization.
 //   node scripts/research/carbon_slim.js          write the file
@@ -19,6 +20,24 @@ const OUT = path.join(ROOT, 'app', 'viz', 'carbon-data.js')
 // A level's outer-electron term key, as outer_electron.terms names it.
 const termKey = (conf, term) => conf + ' ' + term
 
+// The free electron's g factor, -g_e (CODATA 2022), for the LS g_J.
+const GS = 2.00231930436092
+const L_OF = { S: 0, P: 1, D: 2, F: 3 }
+
+// A level's Lande g_J and its source: NIST's measured value where the
+// research data lists one (lande_g, its uncertainty in parentheses
+// dropped), else the LS formula 1 + (g_s - 1) [J(J+1) + S(S+1) -
+// L(L+1)] / [2 J(J+1)], a model for a mixed level (research,
+// carbon-beyond.md 5.2). J = 0 has no moment: null.
+function lande (l) {
+  const J = Number(l.J)
+  if (J === 0) return { gJ: null, gJsrc: null }
+  if (l.lande_g) return { gJ: Number(l.lande_g.replace(/\(.*\)$/, '')), gJsrc: 'measured' }
+  const S = (Number(l.term[0]) - 1) / 2
+  const L = L_OF[l.term[1]]
+  return { gJ: 1 + (GS - 1) * (J * (J + 1) + S * (S + 1) - L * (L + 1)) / (2 * J * (J + 1)), gJsrc: 'LS' }
+}
+
 function build (full) {
   const levels = full.levels.map(l => ({
     id: l.id,
@@ -29,7 +48,8 @@ function build (full) {
     parity: l.parity,
     E: l.energy_cm,
     eV: l.energy_eV,
-    tau: l.tau_s
+    tau: l.tau_s,
+    ...lande(l)
   }))
   const index = new Map(levels.map((l, i) => [l.id, i]))
   const lines = full.lines.map(l => ({
@@ -60,8 +80,8 @@ function build (full) {
   }
   const rhf = full.orbitals.ground_rhf
   return {
-    about: 'Slim copy of docs/research/carbon-atom-data.json for the Carbon mode, written by scripts/research/carbon_slim.js. Energies in cm^-1 (E) and eV, tau in s, wavelengths in nm (Ritz, vacuum and standard air), A in s^-1, f the absorption oscillator strength, radii in bohr.',
-    sources: Object.fromEntries(Object.entries(full.sources).map(([k, s]) => [k, s.cite || s.citation || k])),
+    about: 'Slim copy of docs/research/carbon-atom-data.json for the Carbon mode, written by scripts/research/carbon_slim.js. Energies in cm^-1 (E) and eV, tau in s, wavelengths in nm (Ritz, vacuum and standard air), A in s^-1, f the absorption oscillator strength, radii in bohr. gJ the Lande g, gJsrc measured (NIST) or LS (the formula with the free-electron g_s of CODATA 2022), null for J = 0.',
+    sources: Object.assign(Object.fromEntries(Object.entries(full.sources).map(([k, s]) => [k, s.cite || s.citation || k])), { codata: 'CODATA 2022 recommended values, NIST: the free-electron g_s = -g_e = 2.00231930436092 of the LS g_J, and mu_B/h = 1.39962449171e10 Hz/T' }),
     limit: full.ionization.limits['2P1/2'].energy_cm,
     limitEV: full.ionization.limits['2P1/2'].energy_eV,
     bohrNm: 0.0529177210544,
@@ -106,4 +126,4 @@ if (require.main === module) {
   console.log('wrote', path.relative(ROOT, OUT), t.length, 'bytes')
 }
 
-module.exports = { build, render, text, SRC, OUT }
+module.exports = { build, render, text, SRC, OUT, GS }
