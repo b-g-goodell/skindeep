@@ -137,7 +137,7 @@ whether it is there.
 | `rect` | all four of `left`, `top`, `right`, `bottom`: the terminal stretches with the window |
 | `theme` | xterm.js colours: `foreground` and `background` required (opaque `#rgb` or `#rrggbb`), optional `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `selectionInactiveBackground`, and the 16 ANSI colours `black` ... `white`, `brightBlack` ... `brightWhite` |
 | `fontFamily` | a family from `fonts`, or DejaVu Sans Mono, the default, which every install has. A skin that names a font only your machine has looks different everywhere else |
-| `fontSize` | 8 to 32, default 14. The user's Terminal font size setting overrides it |
+| `fontSize` | 8 to 32, default 14. The user's Terminal font size setting overrides it. The window's minimum size is reckoned from this size, not the user's |
 
 Two rules keep the CLI readable: foreground and background must have a
 contrast ratio of at least 4.5, and the terminal must keep at least 40
@@ -327,6 +327,36 @@ What does not work, on purpose:
   z-indexes and `:host` rules stay inside it, under the strip and the
   terminal.
 - Scripts of any kind.
+
+## Text size
+
+The user sets the size of every text a skin draws, Skin text size in
+the File menu's Settings, from 70 to 150 percent of the sizes your
+stylesheet gives (decision 0036). You do nothing for it: the app serves
+your stylesheet with every font size and line height in px multiplied
+by the user's factor, in `font-size`, `line-height` and the `font`
+shorthand alike. Nothing else in your stylesheet changes, so widths,
+offsets, letter spacing and your art keep their pixels.
+
+- Size text in px, or in em or % of a size in px, which follows it. A
+  text size in any other unit (pt, rem, vh...) or an absolute keyword
+  (`large`) would not follow the user, and the skin is refused.
+- A smaller text always fits. A larger one grows as far as its widget's
+  or panel's rect holds it: the app gives each panel, widget and
+  toggle the largest factor up to the user's at which its texts stay in
+  its rect, or no further outside it than at your own sizes, overlap
+  no text of it they did not overlap at your sizes, and your
+  `overflow` cuts no text whole at your sizes, nor more of one than
+  at them, save a list's rows, which its rect cuts, so a list shows
+  fewer rows, and an animated text. Words your CSS draws with
+  `content` must stay in their element's box as at your sizes. Nothing
+  is wrapped or moved.
+- So leave room where you want text to grow: a label in a rect a line
+  taller than it, a value in a box wider than its widest reading. A
+  text in a rect packed to its line stays at your size.
+
+`scripts/checks/textsize.js` shows each shipped skin at 70 and 150
+percent.
 
 ## Metrics
 
