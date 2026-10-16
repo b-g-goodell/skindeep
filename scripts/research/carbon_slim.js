@@ -2,8 +2,8 @@
 // The Carbon mode's data (decision 0015, issue #144): a slim copy of
 // docs/research/carbon-atom-data.json, written as app/viz/carbon-data.js,
 // a page script that also loads under node. Every level, every line,
-// the Rydberg ladder, the outer-electron model and the Bunge 1993 RHF
-// basis, with the fields the mode draws from and nothing else. All 559
+// the Rydberg ladder, the outer-electron model, the M_L components'
+// subshell occupations and the Bunge 1993 RHF basis, with the fields the mode draws from and nothing else. All 559
 // lines are kept, so the branching ratios stay NIST's without a
 // renormalization.
 //   node scripts/research/carbon_slim.js          write the file
@@ -47,6 +47,17 @@ function build (full) {
   }))
   const outer = {}
   for (const t of full.outer_electron.terms) outer[termKey(t.conf, t.term)] = { n: t.n, l: t.l, nStar: t.n_star, nr: t.n_r, lambda: t.lambda, meanR: t.mean_r_bohr }
+  // The M_L components' subshell occupations (research 6.2 and 6.3), by
+  // configuration and term or L, for M_L >= 0: p the 2p subshell's n_m
+  // for m = -1, 0, 1, o the outer subshell's for m = -l to l.
+  const angular = {}
+  for (const st of full.orbitals.angular.states) {
+    const key = st.shells === '2p^2' ? '2p2 ' + st.term : 'l' + st.shells.slice(-1) + ' L' + st.L
+    const occ = (n, l) => Array.from({ length: 2 * l + 1 }, (_, i) => n[String(i - l)])
+    const e = angular[key] || (angular[key] = { L: st.L, M: {} })
+    e.M[st.M_L] = { p: occ(st.n_2p_m, 1) }
+    if (st.n_nl_m) e.M[st.M_L].o = occ(st.n_nl_m, Number(st.shells.slice(-1)))
+  }
   const rhf = full.orbitals.ground_rhf
   return {
     about: 'Slim copy of docs/research/carbon-atom-data.json for the Carbon mode, written by scripts/research/carbon_slim.js. Energies in cm^-1 (E) and eV, tau in s, wavelengths in nm (Ritz, vacuum and standard air), A in s^-1, f the absorption oscillator strength, radii in bohr.',
@@ -58,6 +69,7 @@ function build (full) {
     lines,
     rydberg: full.rydberg_draw_only.map(r => ({ series: r.series, n: r.n, E: r.energy_cm })),
     outer,
+    angular,
     rhf: {
       s: rhf.s_basis.map(b => [b.n, b.zeta, b.c1s, b.c2s]),
       p: rhf.p_basis.map(b => [b.n, b.zeta, b.c2p]),
