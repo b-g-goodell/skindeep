@@ -415,8 +415,31 @@ function sprite (spec) {
 
 // The agent's task list (decision 0034): one row per item, a mark and
 // the text, in the item's state. nodata while the list is empty or
-// absent, which hides the widget.
+// absent, which hides the widget. With spec.toggle, a button of two
+// options, the list and what it replaces: a click on an option calls
+// spec.pick(off), off true for the second. show(off) marks the option
+// shown with `on`.
 const MARK = { todo: '[ ]', doing: '[>]', done: '[x]' }
+
+function toggle (spec) {
+  const t = spec.toggle
+  const el = div(`w w-toggle${t.class ? ' ' + t.class : ''}`)
+  el.dataset.id = spec.id + ':toggle'
+  const opts = (t.labels || ['tasks', 'readouts']).map((text, i) => {
+    const o = div('option ' + (i ? 'other' : 'list'), el, text)
+    o.addEventListener('click', () => spec.pick(i === 1))
+    return o
+  })
+  return {
+    el,
+    rect: t.rect,
+    show (off) { opts.forEach((o, i) => o.classList.toggle('on', (i === 1) === off)) },
+    options: () => opts.map(o => {
+      const b = o.getBoundingClientRect()
+      return { text: o.textContent, on: o.classList.contains('on'), box: { x: b.x, y: b.y, width: b.width, height: b.height } }
+    })
+  }
+}
 
 function list (spec) {
   const { el } = base(spec, 'list')
@@ -426,6 +449,7 @@ function list (spec) {
   let drawn = null
   return {
     el,
+    toggle: spec.toggle ? toggle(spec) : null,
     rows: () => items.map(i => ({ text: i.text, state: i.state })),
     update (snap) {
       const v = valueOf(snap, spec.bind)

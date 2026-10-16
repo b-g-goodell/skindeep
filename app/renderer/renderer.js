@@ -64,6 +64,8 @@ function sync (state) {
   const fresh = state.tabs.filter(t => !panes.has(t.id)).map(t => pane(t.id, t.kind))
   const moved = state.active !== active
   active = state.active
+  const a = state.tabs.find(t => t.id === active)
+  SkinView.setListOff(!!(a && a.listOff))
   for (const p of panes.values()) p.el.classList.toggle('active', p.id === active)
   if (changed || fresh.length) fitAll()
   for (const p of fresh) api.ready(p.id, p.term ? p.term.cols : 0, p.term ? p.term.rows : 0)
@@ -137,6 +139,8 @@ api.onMetrics(snap => {
   SkinView.update(snap)
 })
 api.onDials(names => SkinView.setDials(names))
+// A toggle's choice is the active tab's, kept by main (decision 0034).
+SkinView.onPick(off => { if (active) api.setListOff(active, off) })
 
 // The page's probe for the live checks (decisions 0023, 0024): each
 // tab's terminal, the meters the skin was last given, the skin's sounds

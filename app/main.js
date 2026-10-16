@@ -587,7 +587,8 @@ function tabState (win = tabs.current) {
       label: names.get(t),
       folder: n.get(names.get(t)) > 1 ? path.basename(t.cwd) || t.cwd : null,
       unseen: t.unseen,
-      kind: t.dashboard ? 'dashboard' : 'term'
+      kind: t.dashboard ? 'dashboard' : 'term',
+      listOff: !!t.listOff
     }))
   }
 }
@@ -727,6 +728,13 @@ on('tab:activate', (_e, id) => tabs.activate(id))
 on('tab:step', (_e, d) => tabs.step(d === -1 ? -1 : 1))
 on('tab:move', (_e, id, index) => tabs.move(id, index))
 on('tab:rename', (_e, id, name) => renameTab(id, name))
+// The tab shows what its task list replaces, or the list (decision 0034).
+on('tab:list-off', (_e, id, off) => {
+  const t = tabOf(id)
+  if (!t) return
+  t.listOff = !!off
+  sendTabs()
+})
 handle('tabs:menu', () => tabsMenu())
 handle('sessions:list', () => liveSessions())
 handle('sessions:open', (_e, key) => openSession(String(key)))

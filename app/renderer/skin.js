@@ -18,6 +18,8 @@ window.SkinView = (function () {
   let scale = 1
   let prefs = {}
   let dials = new Set()
+  let listOff = false
+  let picked = () => {}
 
   function place (el, r, k = 1) {
     for (const key of ['left', 'right', 'top', 'bottom', 'width', 'height']) {
@@ -117,11 +119,16 @@ window.SkinView = (function () {
       if (s.face) s.faceUrl = base + s.face
       if (s.image) s.imageUrl = base + s.image
       if (s.sheet) s.sheetUrl = base + s.sheet
+      s.pick = off => picked(off)
       const w = Widgets[s.type](s)
       w.spec = s
       place(w.el, s.rect)
       stage.appendChild(w.el)
       widgets.push(w)
+      if (w.toggle) {
+        place(w.toggle.el, w.toggle.rect)
+        stage.appendChild(w.toggle.el)
+      }
     }
     setDials(dials)
     terminal = skin.terminal
@@ -152,14 +159,33 @@ window.SkinView = (function () {
   }
 
   // The stage carries `checklist` while the agent's task list has
-  // items (decision 0034), so a skin can hide what the list replaces.
+  // items and shows (decision 0034), so a skin can hide what the list
+  // replaces, and `checklist-off` while it has items and the tab shows
+  // what it replaces. Only a skin whose list has a toggle hides it.
   function update (snap) {
     lastSnap = snap
     const now = performance.now()
     for (const w of widgets) w.update(snap, now)
-    const items = snap['checklist.items']
-    if (stageEl) stageEl.classList.toggle('checklist', Array.isArray(items) && items.length > 0)
+    mark()
   }
+
+  function mark () {
+    if (!stageEl) return
+    const items = lastSnap['checklist.items']
+    const has = Array.isArray(items) && items.length > 0
+    const off = listOff && widgets.some(w => w.toggle)
+    stageEl.classList.toggle('checklist', has && !off)
+    stageEl.classList.toggle('checklist-off', has && off)
+    for (const w of widgets) if (w.toggle) w.toggle.show(off)
+  }
+
+  // The active tab's choice, from main, and the callback a click on a
+  // toggle's option calls with the choice.
+  function setListOff (off) {
+    listOff = !!off
+    mark()
+  }
+  function onPick (fn) { picked = fn }
 
   // The dials open on the sessions dashboard (decision 0033), marked on
   // the widgets that open them.
@@ -183,7 +209,18 @@ window.SkinView = (function () {
         box: { x: b.x, y: b.y, width: b.width, height: b.height },
         rows: w.rows ? w.rows() : undefined
       }
-    })
+    }).concat(widgets.filter(w => w.toggle).map(w => {
+      const el = w.toggle.el
+      return {
+        id: el.dataset.id,
+        type: 'toggle',
+        classes: [...el.classList],
+        cursor: getComputedStyle(el).cursor,
+        visible: getComputedStyle(el).visibility === 'visible' && getComputedStyle(el).display !== 'none',
+        box: (b => ({ x: b.x, y: b.y, width: b.width, height: b.height }))(el.getBoundingClientRect()),
+        options: w.toggle.options()
+      }
+    }))
   }
 
   let prev = performance.now()
@@ -195,5 +232,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, setDials, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
+  return { apply, update, setDials, setListOff, onPick, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
 })()

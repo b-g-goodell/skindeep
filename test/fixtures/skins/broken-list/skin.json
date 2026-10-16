@@ -25,6 +25,15 @@
    "type": "list",
    "bind": "tools.total",
    "rows": "six",
+   "toggle": {
+    "rect": {
+     "left": 20,
+     "top": 20,
+     "width": 30,
+     "height": 50
+    },
+    "labels": ["tasks"]
+   },
    "rect": {
     "left": 10,
     "top": 5,
