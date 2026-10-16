@@ -1,3 +1,4 @@
 .a { color: red; }
 @import "x.css";
 .b { background: url(https://example.org/x.png); }
+.c { font: bold 9pt/1.2 "DejaVu Sans", sans-serif; }

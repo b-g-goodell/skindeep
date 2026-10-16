@@ -1,5 +1,5 @@
 'use strict'
-/* global Widgets, SkinSplits */
+/* global Widgets, SkinSplits, TextFit */
 // Builds a skin (decisions 0005, 0006): fonts through FontFace, a shadow
 // root inside the app-owned containment wrapper, panels and widgets from
 // their rects, the terminal's rect, theme and font from the manifest,
@@ -68,6 +68,7 @@ window.SkinView = (function () {
     const t = SkinSplits.terminal(current, at)
     place(document.getElementById('term'), t, k)
     placeMenu(current, k)
+    schedule(true)
     // A handle lies along the terminal's edge, just outside it, the same
     // width at any scale, hidden while the window leaves its split no
     // room to move.
@@ -154,10 +155,49 @@ window.SkinView = (function () {
     term.options.fontSize = prefs['terminal.fontSize'] || t.fontSize || 14
   }
 
+  // The skin's text at the user's skin text size (decision 0036): the
+  // skin's stylesheet and widgets.css size text in calc(N px *
+  // var(--text-scale)), and the stage carries the factor. A larger
+  // text is fitted to its holder (app/renderer/textfit.js): every
+  // holder after a layout or a change of setting, and a holder whose
+  // text changed within a second of the change.
+  const textFactor = () => (prefs['text.skin'] || 100) / 100
+  let fitTimer = null
+  let fitAll = false
+  const pending = new Set()
+  function schedule (all) {
+    if (all) fitAll = true
+    else if (fitTimer) return
+    clearTimeout(fitTimer)
+    fitTimer = setTimeout(() => {
+      fitTimer = null
+      if (!stageEl) return
+      const hs = fitAll ? [...stageEl.children] : [...pending].filter(h => h.parentElement === stageEl)
+      fitAll = false
+      pending.clear()
+      TextFit.fit(hs, textFactor())
+    }, all ? 50 : 1000)
+  }
+  const changed = new MutationObserver(recs => {
+    if (!stageEl || !(textFactor() > 1)) return
+    for (const r of recs) {
+      let n = r.target.nodeType === 1 ? r.target : r.target.parentElement
+      while (n && n.parentElement !== stageEl) n = n.parentElement
+      if (n) pending.add(n)
+    }
+    if (pending.size) schedule(false)
+  })
+  function textScale () {
+    if (!stageEl) return
+    stageEl.style.setProperty('--text-scale', String(textFactor()))
+    schedule(true)
+  }
+
   // The user's settings, applied to every tab's terminal at once, and
   // the panel sizes kept for the skin.
   function setSettings (s, panes) {
     prefs = s || {}
+    textScale()
     layout()
     for (const p of panes()) {
       styleTerminal(p.term)
@@ -223,6 +263,9 @@ window.SkinView = (function () {
     terminal = skin.terminal
     current = skin
     stageEl = stage
+    changed.disconnect()
+    changed.observe(stage, { subtree: true, childList: true, characterData: true })
+    textScale()
     layout()
     document.getElementById('term').style.background = terminal.theme.background
     for (const p of panes()) {
@@ -334,6 +377,25 @@ window.SkinView = (function () {
     }))
   }
 
+  // Every text the skin shows, for the live checks: each text's
+  // holder, the stage's child it is in, by index and by widget id or
+  // panel class, its part and font size, the box of its ink, in client
+  // pixels, and whether a clip cuts it. CSS-drawn words come with their holder's box and
+  // its scroll extent.
+  function texts () {
+    if (!stageEl) return []
+    const out = []
+    ;[...stageEl.children].forEach((h, i) => {
+      const owner = h.dataset.id || h.className
+      for (const t of TextFit.texts(h)) out.push({ holder: i, owner, part: t.part, limit: t.limit, row: t.row, moving: t.moving, cut: t.cut, cutX: t.cutX, shownY: t.shownY, text: t.text, fontSize: t.fontSize, box: { x: t.box.x0, y: t.box.y0, width: t.box.x1 - t.box.x0, height: t.box.y1 - t.box.y0 } })
+      for (const w of TextFit.words(h)) {
+        const b = h.getBoundingClientRect()
+        out.push({ holder: i, owner, part: 'words', text: w.text, fontSize: w.fontSize, box: { x: b.x, y: b.y, width: b.width, height: b.height }, scroll: [h.scrollWidth, h.scrollHeight], client: [h.clientWidth, h.clientHeight] })
+      }
+    })
+    return out
+  }
+
   let prev = performance.now()
   function loop (now) {
     const dt = (now - prev) / 1000
@@ -343,5 +405,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, setDials, setListOff, onPick, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale, laid: () => laid }
+  return { apply, update, setDials, setListOff, onPick, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, texts, terminalTheme: () => terminal && terminal.theme, scale: () => scale, laid: () => laid }
 })()

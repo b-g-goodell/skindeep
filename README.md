@@ -113,6 +113,11 @@ Drag the edge between the terminal and a panel beside it to give the
 panel more room or less. The skin keeps the size, and **Reset panel
 sizes** in the File menu's Settings brings back its own.
 
+Settings also holds the size of every text: the terminal's font size,
+and from 70 to 150 percent the skin's text, the window's own (strips,
+tabs, menus, dialog, dashboard) and the visualization's. A larger text
+grows as far as the skin's art leaves it room.
+
 A plain `claude-skins` opens the skin you used last, and you can mute
 its sounds from the Visualization menu or start muted with
 `skinned --mute` or `SKINNED_MUTE=1`. To make your own, read

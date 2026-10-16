@@ -56,7 +56,7 @@ const BROKEN = {
   'broken-contrast': ['skin.json: terminal.theme.foreground: contrast with background is 1.26'],
   'broken-small': ['skin.json: terminal.rect: leaves about'],
   'broken-escape': ['skin.json: widgets[1].image: "../all-widgets/images/knob.png": outside the skin directory'],
-  'broken-css': ['skin.css: line 2: @import is not allowed', 'skin.css: line 3: url(https://example.org/x.png)'],
+  'broken-css': ['skin.css: line 2: @import is not allowed', 'skin.css: line 4: a text size in pt does not follow', 'skin.css: line 3: url(https://example.org/x.png)'],
   'broken-script': ['evil.js: (file): file type not allowed in a skin'],
   'broken-rect': ['skin.json: widgets[0].rect: needs exactly two of left, right, width'],
   'broken-menu': ['skin.json: menu: missing'],

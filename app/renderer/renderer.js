@@ -132,8 +132,13 @@ api.onSkin(skin => {
     focusActive()
   })
 })
-api.settings().then(s => SkinView.setSettings(s, terms))
-api.onSettings(s => SkinView.setSettings(s, terms))
+// The window's own text at the user's window text size (decision 0036).
+function settings (s) {
+  document.documentElement.style.setProperty('--window-text', String(((s && s['text.window']) || 100) / 100))
+  SkinView.setSettings(s, terms)
+}
+api.settings().then(settings)
+api.onSettings(settings)
 api.onMetrics(snap => {
   metrics = snap
   SkinView.update(snap)
@@ -159,6 +164,7 @@ window.skinnedPage = () => ({
   stage: SkinView.stageClasses(),
   splits: SkinView.splits(),
   panels: SkinView.panels(),
+  texts: SkinView.texts(),
   term: (b => ({ x: b.x, y: b.y, width: b.width, height: b.height }))(host.getBoundingClientRect()),
   panes: [...panes.values()].map(p => {
     if (p.dash) return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', lines: [], dashboard: p.dash.state() }

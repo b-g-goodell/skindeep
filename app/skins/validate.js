@@ -6,6 +6,7 @@ const fs = require('fs')
 const path = require('path')
 const names = require('../metrics/names')
 const splitsLib = require('../renderer/splits')
+const textscale = require('./textscale')
 
 const REPO = path.join(__dirname, '..', '..')
 const STRIP = 22
@@ -266,6 +267,9 @@ function validate (dir) {
       const text = fs.readFileSync(css, 'utf8').replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
       const lineOf = i => text.slice(0, i).split('\n').length
       for (const m of text.matchAll(/@import\b/gi)) err(`line ${lineOf(m.index)}`, '@import is not allowed', cf)
+      // Text sized in px, or in em or % of a px size, follows the user's
+      // skin text size (decision 0036). Any other unit escapes it.
+      for (const m of textscale.strays(text)) err(`line ${lineOf(m.index)}`, `a text size in ${m.what} does not follow the user's text size, use px, em or %`, cf)
       for (const m of text.matchAll(/url\(\s*(['"]?)([^'")]*)\1\s*\)/gi)) {
         const target = m[2].trim()
         if (/^data:image\//i.test(target)) continue

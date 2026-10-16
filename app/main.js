@@ -814,6 +814,7 @@ handle('settings:set', (_e, id, value) => {
   userSettings = Object.assign({}, userSettings, { [id]: value })
   try { settings.save(settingsFile, userSettings) } catch (e) { log(`settings: ${e.message}`) }
   broadcast('settings', userSettings)
+  if (viz) viz.setText(settings.scale(userSettings, 'text.viz'))
   return { ok: true }
 })
 // The sizes the user dragged the current skin's splits to, kept by the
@@ -903,6 +904,7 @@ app.whenReady().then(async () => {
     }
   }
   viz = new Viz(vizTabs, 'visualization: ' + identity.title(nameOf(tabs.active)), beside, log, strips)
+  viz.setText(settings.scale(userSettings, 'text.viz'))
   if (opts.viz) first.view.whenLoaded(() => viz.open())
 })
 
