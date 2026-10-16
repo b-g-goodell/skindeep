@@ -1,5 +1,6 @@
 'use strict'
-// Each skin in half a 1920 px screen and at its minimum width (decision 0006). Run under xvfb-run:
+// Each skin in half a 1920 px screen and at its minimum width (decision 0006),
+// every widget inside the window at both. Run under xvfb-run:
 //   node scripts/checks/halfscreen.js OUT
 // Writes OUT/<skin>-960.png and OUT/<skin>-floor.png to look at.
 const { launch, childPid, shot, sleep } = require('../drive.js')
@@ -28,7 +29,9 @@ const page = win => win.evaluate(() => {
   const t = p.panes.find(x => x.shown) || p.panes[0]
   const term = document.getElementById('term').getBoundingClientRect()
   const menu = document.getElementById('menu-button').getBoundingClientRect()
-  return { scale: p.scale, area: p.area, laid: p.laid, cols: t.cols, rows: t.rows, term: [term.left, term.right], menu: [menu.left, menu.right, menu.width, menu.height], width: innerWidth }
+  // The widgets whose box leaves the window, by id.
+  const out = p.widgets.filter(w => w.visible && w.box.width > 0 && (w.box.x < -0.5 || w.box.y < -0.5 || w.box.x + w.box.width > innerWidth + 0.5 || w.box.y + w.box.height > innerHeight + 0.5)).map(w => w.id)
+  return { scale: p.scale, area: p.area, laid: p.laid, cols: t.cols, rows: t.rows, term: [term.left, term.right], menu: [menu.left, menu.right, menu.width, menu.height], width: innerWidth, out }
 })
 
 async function one (skin) {
@@ -59,6 +62,7 @@ async function one (skin) {
   check(a.min[0] <= 960, `${skin}: minimum width ${a.min[0]} exceeds half a 1920 px screen`)
   check(a.content[0] === 960, `${skin}: the window did not take 960 px, ${a.content[0]}`)
   check(a.term[1] <= a.width && a.menu[1] <= a.width, `${skin}: the terminal or menu runs past the window at 960`)
+  check(!a.out.length && !b.out.length, `${skin}: widgets leave the window: ${a.out} at 960, ${b.out} at the floor`)
   check(a.cols >= 40 && b.cols >= 40, `${skin}: want 40 columns at 960 and at the floor, saw ${a.cols} and ${b.cols}`)
   check(b.content[0] === b.min[0] && b.scale < a.scale && a.scale < 1, `${skin}: want the floor smaller and scaled further than 960`)
 }
