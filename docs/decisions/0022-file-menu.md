@@ -104,9 +104,10 @@ entry's menu.
   each skin's art, coffee's on the chalkboard beside TONIGHT, deck's in
   its title bar: three more buttons would need new art in every skin
   and room the art does not have, and at the quarter tile (decision
-  0006) the skin draws them scaled by about 0.8. The bar is app text at
-  the app's own size, so it reads the same in every skin at every
-  size, as the drop-down always has.
+  0006) the skins are drawn at 0.69 to 0.75 of their size, the
+  buttons with them. The bar is app text at the app's own size, so it
+  reads the same in every skin at every size, as the drop-down always
+  has.
 - It opens on File, the menu of the tab entries and of Housekeeping,
   whose problems the button's dot points at, so opening it marks them
   seen as before. It does not remember the last menu shown: one press
