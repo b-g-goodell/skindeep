@@ -256,17 +256,20 @@ test('fern: each species in its own frame, its copy a similarity from the foot t
   }
 })
 
-test('fern: the zoom\'s frames run on through the loop without a jump', () => {
+test('fern: a strand open its whole length is straight, a coil turns its heading by T turns', () => {
   const fern = require('../app/viz/fern')
-  const [a, , c, , e, f] = fern.UNIT[0][1]
-  const theta = k => 0.09 * Math.sin(1.7 - 0.55 * k)
-  for (const n of [1, 7, 40]) {
-    const before = fern.frames(a, c, e, f, theta, n - 1e-9, -4, 6)
-    const at = fern.frames(a, c, e, f, theta, n, -4, 6)
-    // Copy k's frame is at 4 (k - J + 4) in each, J = n - 1 before, n at.
-    for (let k = n - 3; k <= n + 5; k++) {
-      for (let j = 0; j < 4; j++) assert.ok(Math.abs(before[4 * (k - n + 5) + j] - at[4 * (k - n + 4) + j]) < 1e-6, `depth ${n}: copy ${k} jumps`)
-    }
+  const P = new Float64Array(4 * 41)
+  const still = () => 0
+  assert.strictEqual(fern.strand(0, 0, 0, 10, 1, 3, 0, still, P, 40), 41)
+  assert.ok(Math.abs(P[160]) < 1e-9 && Math.abs(P[161] + 10) < 1e-9 && P[163] === 1, `open strand ends at ${P[160]}, ${P[161]}`)
+  for (const [c, T] of [[0, 2.5], [0.4, 1], [0.8, -0.6]]) {
+    fern.strand(0, 0, 0.3, 10, c, T, 0, still, P, 40)
+    assert.ok(Math.abs(P[162] - 0.3 - 2 * Math.PI * T) < 0.05, `c ${c}: heading turned ${P[162] - 0.3}, want ${2 * Math.PI * T}`)
+    let len = 0
+    for (let i = 1; i <= 40; i++) len += Math.hypot(P[4 * i] - P[4 * i - 4], P[4 * i + 1] - P[4 * i - 3])
+    assert.ok(Math.abs(len - 10) < 1e-9, `c ${c}: length ${len}`)
+    // The open part keeps its heading, the coil follows it.
+    for (let i = 1; i <= 40; i++) if (P[4 * i + 3] <= c) assert.ok(Math.abs(P[4 * i + 2] - 0.3) < 1e-12, `c ${c}: the open part bends at node ${i}`)
   }
 })
 

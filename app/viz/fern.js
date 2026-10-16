@@ -1,19 +1,15 @@
 'use strict'
-// Fern mode (decision 0015): a forest of fronds, iterated function
-// systems of Barnsley's fern and three relatives, under an infinite zoom
-// into the hero frond's own copy of itself, in hues that drift. Each
-// point is the image of a point of the attractor under a random address
-// of maps, each map bent by a small rotation of its own depth, so every
-// frond and leaflet waves with a phase lag that grows along the frond.
-// The camera follows the bent chain of copies by a continuous power of
-// its similarity, so the zoom has no seam. The forest's companions hang
-// in the frames of the copies, fade in small and out large. The picture
-// passes through a slowly drifting Moebius map. The signal steers it:
-// the activity the zoom's speed and the growth, a prompt morphs every
-// frond to the next species, a tool call lights the fronds on one side
-// in its class's colour, a stop and the treble blow wind through it, a
-// subagent sprouts a frond, an idle spell slows and stills it. A click
-// lights the fronds on its side in gold and blows a gust.
+// Fern mode (decision 0015): a night garden of fern fronds, one a turn.
+// A prompt sends up a fiddlehead, which unrolls along its spiral as the
+// turn works, pinna by pinna from the foot, and opens at the stop. A tool
+// call lights the pinna behind the coil in its class's colour, which
+// keeps a trace, and looses spores of that colour. An output event runs
+// light up the rachis, a subagent sprouts a small frond at the turn's
+// foot, a compaction withers the older half of the garden, and the
+// stop and the treble blow wind through it. At idle the fronds curl half
+// shut, the hues pale to moonlight and fireflies come out. Behind, a
+// still forest of the four species grown by the chaos game. A press
+// curls the fronds near it, and gold spores rise from it.
 
 ;(function (root) {
   // Each map [a, b, c, d, e, f, p]: x' = a x + b y + e, y' = c x + d y + f,
@@ -29,18 +25,6 @@
     // A fishbone fern.
     [[0, 0, 0, 0.25, 0, -0.4, 0.02], [0.95, 0.002, -0.002, 0.93, -0.002, 0.5, 0.84], [0.035, -0.11, 0.27, 0.01, -0.05, 0.005, 0.07], [-0.04, 0.11, 0.27, 0.01, 0.047, 0.06, 0.07]]
   ]
-  const CLASS_HUE = [200, 120, 40, 0, 280, 320]
-  const K = 4
-  // The picture through a drifting Moebius map, or not.
-  const WARP = true
-  // Waved maps per frond below a frond's or a leaflet's own frame.
-  const D = 6
-  // The phase lag of the wave per depth, in radians.
-  const LAG = 0.55
-  // The view: the camera frame's point at the pane's centre, and the
-  // camera units in half the pane's shorter side.
-  const QY = 0.58
-  const H = 0.62
 
   // A species in the frond's own frame: the copy map made a similarity
   // (its mean scale and rotation), then all four conjugated so the stem's
@@ -72,109 +56,6 @@
   }
   const UNIT = SPECIES.map(unit)
 
-  // The frames of the hero's copies, seen from the camera at depth d:
-  // copy k's frame is the root's under G_1 ... G_k, G_k(z) = a_k z + b,
-  // a_k = alpha e^{i theta(k)}, and the camera's frame is copy J's under
-  // the power u of G_{J+1}, J = floor(d), u = d - J. Returns, for k from
-  // J + lo to J + hi, the map from copy k's frame to the camera's, as
-  // [ar, ai, br, bi] per k. Continuous in d: at u = 1 the power is
-  // G_{J+1} itself.
-  function frames (ar, ai, br, bi, theta, d, lo, hi, out) {
-    const J = Math.floor(d)
-    const u = d - J
-    const n = hi - lo + 1
-    const F = out && out.length >= 4 * n ? out : new Float64Array(4 * n)
-    const sub = k => {
-      const c = Math.cos(theta(k))
-      const s = Math.sin(theta(k))
-      return [ar * c - ai * s, ar * s + ai * c]
-    }
-    // G_{J+1}^u about its fixed point z* = b / (1 - a).
-    const [gr, gi] = sub(J + 1)
-    const dr = 1 - gr
-    const di = -gi
-    const dd = dr * dr + di * di
-    const zr = (br * dr + bi * di) / dd
-    const zi = (bi * dr - br * di) / dd
-    const mod = Math.pow(Math.hypot(gr, gi), u)
-    const ang = u * Math.atan2(gi, gr)
-    const pr = mod * Math.cos(ang)
-    const pi = mod * Math.sin(ang)
-    // The power: z -> p z + z* (1 - p); its inverse, F_J.
-    const qr = zr * (1 - pr) + zi * pi
-    const qi = zi * (1 - pr) - zr * pi
-    const pd = pr * pr + pi * pi
-    const fr = pr / pd
-    const fi = -pi / pd
-    const er = -(fr * qr - fi * qi)
-    const ei = -(fr * qi + fi * qr)
-    const at = k => 4 * (k - J - lo)
-    const put = (k, a, b, c, e) => {
-      const o = at(k)
-      F[o] = a
-      F[o + 1] = b
-      F[o + 2] = c
-      F[o + 3] = e
-    }
-    if (lo <= 0 && hi >= 0) put(J, fr, fi, er, ei)
-    // Deeper: F_{k+1} = F_k o G_{k+1}.
-    let ar0 = fr
-    let ai0 = fi
-    let br0 = er
-    let bi0 = ei
-    for (let k = J + 1; k <= J + hi; k++) {
-      const [sr, sj] = sub(k)
-      const nbr = ar0 * br - ai0 * bi + br0
-      const nbi = ar0 * bi + ai0 * br + bi0
-      const nar = ar0 * sr - ai0 * sj
-      const nai = ar0 * sj + ai0 * sr
-      ar0 = nar
-      ai0 = nai
-      br0 = nbr
-      bi0 = nbi
-      if (k >= J + lo) put(k, ar0, ai0, br0, bi0)
-    }
-    // Shallower: F_{k-1} = F_k o G_k^{-1}, G_k^{-1}(z) = (z - b) / a_k.
-    ar0 = fr
-    ai0 = fi
-    br0 = er
-    bi0 = ei
-    for (let k = J; k > J + lo; k--) {
-      const [sr, sj] = sub(k)
-      const sd = sr * sr + sj * sj
-      const nar = (ar0 * sr + ai0 * sj) / sd
-      const nai = (ai0 * sr - ar0 * sj) / sd
-      br0 -= nar * br - nai * bi
-      bi0 -= nar * bi + nai * br
-      ar0 = nar
-      ai0 = nai
-      if (k - 1 <= J + hi) put(k - 1, ar0, ai0, br0, bi0)
-    }
-    return F
-  }
-
-  function hueRgb (h) {
-    const f = n => {
-      const k = (n + h / 30) % 12
-      return 0.5 - 0.5 * Math.max(-1, Math.min(k - 3, 9 - k, 1))
-    }
-    return [f(0), f(8), f(4)]
-  }
-
-  function smooth (x) {
-    const t = Math.max(0, Math.min(1, x))
-    return t * t * (3 - 2 * t)
-  }
-
-  // A number in [0, 1) from integers: the forest's companions are a
-  // function of their copy's depth, so they stay put as the zoom passes.
-  function hash (k, q, n) {
-    let h = (Math.imul(k, 374761393) + Math.imul(q, 668265263) + Math.imul(n, 2246822519)) | 0
-    h = Math.imul(h ^ (h >>> 13), 1274126177)
-    h ^= h >>> 16
-    return (h >>> 0) / 4294967296
-  }
-
   // The chaos game's orbit, bounded: a map set whose interpolation
   // diverges restarts at the origin.
   function iterate (maps, cum, n, p, out) {
@@ -198,120 +79,337 @@
     p.y = y
   }
 
-  // The hue wheel, 1024 steps.
-  const WHEEL = new Float32Array(3 * 1024)
-  for (let i = 0; i < 1024; i++) WHEEL.set(hueRgb(i * 360 / 1024), 3 * i)
+
+  const CLASS_HUE = [200, 120, 40, 0, 280, 320]
+  // Rachis nodes per frond, pinna stations per side, nodes per pinna.
+  const NN = 44
+  const NS = 22
+  const NP = 8
+  // Turns' fronds and subagents' fronds on the ground at most.
+  const MAXF = 6
+  const MAXB = 3
+  // The stipe: the stalk below the blade, open even in a fiddlehead.
+  const STIPE = 0.28
+
+  function smooth (x) {
+    const t = Math.max(0, Math.min(1, x))
+    return t * t * (3 - 2 * t)
+  }
+
+  function hsl (h, s, l) {
+    h = ((h % 360) + 360) % 360
+    const f = n => {
+      const k = (n + h / 30) % 12
+      return l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    }
+    return [f(0), f(8), f(4)]
+  }
+
+  // A strand, a rachis or a pinna, from its foot (x, y) heading a
+  // (radians from up, clockwise, y down), length len. Its part c from the
+  // foot is open, bent by bend in all and by sway(s) per unit length; the
+  // rest is a coil of T turns whose curvature grows as s^1.5 toward the
+  // tip, as a fiddlehead's. Fills P with x, y, heading and s per node,
+  // the coil given at least its share of the n segments; returns n + 1.
+  function strand (x, y, a, len, c, T, bend, sway, P, n) {
+    let k = 0
+    P[k++] = x
+    P[k++] = y
+    P[k++] = a
+    P[k++] = 0
+    const ub = 1 - Math.min(0.6, 1.6 * (1 - c))
+    let s0 = 0
+    for (let i = 1; i <= n; i++) {
+      const u = i / n
+      const s = u <= ub ? c * u / ub : c + (1 - c) * (u - ub) / (1 - ub)
+      const ds = s - s0
+      const mid = (s + s0) / 2
+      a += (bend + sway(mid)) * ds
+      if (mid > c) a += T * 2 * Math.PI * 2.5 * Math.pow((mid - c) / (1 - c), 1.5) * ds / (1 - c)
+      x += len * ds * Math.sin(a)
+      y -= len * ds * Math.cos(a)
+      P[k++] = x
+      P[k++] = y
+      P[k++] = a
+      P[k++] = s
+      s0 = s
+    }
+    return n + 1
+  }
+
+  const still = () => 0
 
   function create (canvas) {
-    const g = canvas.getContext('2d')
+    const out = canvas.getContext('2d')
     const buf = document.createElement('canvas')
     // On the CPU: the pixels are written there, and blitted once.
     const bg = buf.getContext('2d', { willReadFrequently: true })
     const mark = {}
+    const P = new Float64Array(4 * (NN + 1))
+    const Q = new Float64Array(4 * (NP + 1))
     let img = null
     let px = null
-    let r = null
-    let gr = null
-    let b = null
+    let R = null
+    let G = null
+    let B = null
+    let base = null
     let bw = 0
     let bh = 0
     let cw = 0
     let ch = 0
-    let from = 0
-    let to = 0
-    let morph = 1
+    let t = 0
     let gust = 0
-    let burst = 0
-    let flash = null
-    let tick = 0
+    let wake = 0
+    let hue = 360 * Math.random()
+    let ripe = 0
     let clicks = 0
-    // The camera's depth in copies of the hero, the octaves zoomed, and
-    // the hue's drift.
-    let depth = 0
-    let octaves = 0
-    let drift = 0
-    let wave = 0
-    let seed = 0x9e3779b9
-    const sprouts = []
-    // A map set per species slot, slot s showing species from + s
-    // morphing to to + s, the hero in slot 0; their weights, cumulative;
-    // an orbit of the attractor per slot.
-    const slots = [0, 1, 2, 3].map(() => ({ maps: [[], [], [], []], cum: new Float64Array(4), x: 0, y: 0 }))
-    // Waved maps: the hero's per depth, a companion's per depth below
-    // its foot, 6 numbers per map, 4 maps per depth.
-    let heroT = new Float64Array(0)
-    const compT = new Float64Array(24 * D)
-    let F = new Float64Array(0)
-    // The warp: z -> (a z + b) / (c z + 1), eased from one draw to the
-    // next, as [ar, ai, br, bi, cr, ci].
-    const warp = { at: [1, 0, 0, 0, 0, 0], from: [1, 0, 0, 0, 0, 0], to: [1, 0, 0, 0, 0, 0], t: -1e9 }
+    let grown = 0
+    const fronds = []
+    const spores = []
+    const flies = Array.from({ length: 40 }, () => ({ x: Math.random(), y: 0.25 + 0.65 * Math.random(), ph: 6.3 * Math.random(), v: 0.4 + Math.random() }))
 
-    function rnd () {
-      seed ^= seed << 13
-      seed ^= seed >>> 17
-      seed ^= seed << 5
-      return (seed >>> 0) * 2.3283064365386963e-10
+    // A line of light into the buffer, a dot a pixel.
+    function line (x0, y0, x1, y1, r, g, b) {
+      const dx = x1 - x0
+      const dy = y1 - y0
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))))
+      const sx = dx / n
+      const sy = dy / n
+      let x = x0
+      let y = y0
+      for (let i = 0; i < n; i++) {
+        const ix = x | 0
+        const iy = y | 0
+        if (ix >= 0 && iy >= 0 && ix < bw && iy < bh) {
+          const at = iy * bw + ix
+          R[at] += r
+          G[at] += g
+          B[at] += b
+        }
+        x += sx
+        y += sy
+      }
     }
 
-    function resize (w, h) {
-      cw = w
-      ch = h
-      const k = Math.max(1, Math.ceil(Math.sqrt(w * h / 120000)))
-      bw = Math.max(1, Math.ceil(w / k))
-      bh = Math.max(1, Math.ceil(h / k))
-      buf.width = bw
-      buf.height = bh
-      img = bg.createImageData(bw, bh)
-      px = new Uint32Array(img.data.buffer)
-      r = new Float32Array(bw * bh)
-      gr = new Float32Array(bw * bh)
-      b = new Float32Array(bw * bh)
-    }
-
-    function react (synth) {
-      for (const e of synth.since(mark)) {
-        if (e.kind === 3) {
-          from = to
-          to = (to + 1) % SPECIES.length
-          morph = 0
-          // The old forest dims at once, so the prompt shows before the
-          // morph has grown.
-          for (const a of [r, gr, b]) for (let i = 0; i < a.length; i++) a[i] *= 0.3
-        } else if (e.kind === 2) {
-          flash = { side: e.cls % 2 ? 1 : -1, rgb: hueRgb(CLASS_HUE[e.cls] ?? 200), t: synth.t }
-        } else if (e.kind === 4) {
-          gust = 1
-        } else if (e.kind === 5) {
-          // A frond at the foot of the copy just past the camera's.
-          const side = sprouts.length % 2 ? 1 : -1
-          sprouts.push({ k: Math.floor(depth) + 1, x: side * (0.12 + 0.2 * Math.random()), side, t: synth.t, hue: 360 * Math.random(), slot: Math.floor(4 * Math.random()), ph: 6.3 * Math.random() })
-          if (sprouts.length > 4) sprouts.shift()
-        } else if (e.kind === 6) {
-          r.fill(0)
-          gr.fill(0)
-          b.fill(0)
-        } else {
-          gust = Math.max(gust, 0.5)
-          burst = 1
+    // A soft dot of light of radius rad.
+    function glow (x, y, rad, r, g, b) {
+      const x0 = Math.max(0, Math.floor(x - rad))
+      const x1 = Math.min(bw - 1, Math.ceil(x + rad))
+      const y0 = Math.max(0, Math.floor(y - rad))
+      const y1 = Math.min(bh - 1, Math.ceil(y + rad))
+      const k = 1 / (rad * rad)
+      for (let iy = y0; iy <= y1; iy++) {
+        for (let ix = x0; ix <= x1; ix++) {
+          const d = ((ix - x) * (ix - x) + (iy - y) * (iy - y)) * k
+          if (d >= 1) continue
+          const w = (1 - d) * (1 - d)
+          const at = iy * bw + ix
+          R[at] += r * w
+          G[at] += g * w
+          B[at] += b * w
         }
       }
     }
 
-    // T's maps at depth slot s, each bent by its rotation: the copy's by
-    // th, the leaflets' by lf. f o R(angle) keeps f's translation.
-    function bend (T, s, maps, th, lf) {
-      for (let i = 0; i < 4; i++) {
-        const m = maps[i]
-        const t = i === 1 ? th : i === 0 ? 0 : lf
-        const c = Math.cos(t)
-        const n = Math.sin(t)
-        const o = 24 * s + 6 * i
-        T[o] = m[0] * c + m[1] * n
-        T[o + 1] = m[1] * c - m[0] * n
-        T[o + 2] = m[2] * c + m[3] * n
-        T[o + 3] = m[3] * c - m[2] * n
-        T[o + 4] = m[4]
-        T[o + 5] = m[5]
+    // The widest gap on the ground.
+    function place () {
+      let best = 0.5
+      let far = -1
+      for (let k = 0; k < 24; k++) {
+        const x = 0.18 + 0.64 * Math.random()
+        let d = 1
+        for (const f of fronds) if (!f.wither && !f.baby) d = Math.min(d, Math.abs(f.x - x))
+        if (d > far) {
+          far = d
+          best = x
+        }
+      }
+      return best
+    }
+
+    // A frond: a fiddlehead at the foot of the ground. Past the cap the
+    // oldest of its kind withers.
+    function sprout (opts) {
+      const x = opts.x ?? place()
+      hue = (hue + 67 + 40 * Math.random()) % 360
+      // Each leans away from the middle, as a crown of fronds spreads.
+      const side = x < 0.5 ? -1 : 1
+      const f = { x, scale: 0.8 + 0.2 * Math.random(), hue, open: 0, rise: 0, ph: 6.3 * Math.random(), side, lean: side * (0.05 + 0.15 * Math.random()), tint: new Float32Array(NS), thue: new Float32Array(NS), wither: 0, shy: 0, sap: [], born: t, baby: false, parent: null, puff: null, goal: 0, ...opts }
+      fronds.push(f)
+      const kin = fronds.filter(q => !q.wither && q.baby === f.baby)
+      if (kin.length > (f.baby ? MAXB : MAXF)) kin[0].wither = 0.001
+      return f
+    }
+    for (let i = 0; i < 4; i++) {
+      const f = sprout({ x: 0.18 + 0.64 * (i + 0.3 * Math.random()) / 3.3 })
+      f.open = 0.9 + 0.1 * Math.random()
+      f.rise = 1
+    }
+    const first = sprout({})
+    first.open = 0.2
+    first.rise = 1
+
+    // The turn's frond: the newest that is no subagent's and not
+    // withering.
+    function active () {
+      for (let i = fronds.length - 1; i >= 0; i--) if (!fronds[i].wither && !fronds[i].baby) return fronds[i]
+      return sprout({})
+    }
+
+    function react (e) {
+      const f = active()
+      if (e.kind === 3) {
+        // The last turn's frond opens the rest of the way.
+        f.goal = 1
+        sprout({})
+        wake = 1
+      } else if (e.kind === 2) {
+        // The pinna just behind the coil lights and keeps a trace.
+        const j = Math.max(0, Math.min(NS - 1, Math.floor(NS * (f.open - 0.1 * Math.random()))))
+        const h = CLASS_HUE[e.cls] ?? 200
+        f.tint[j] = 1
+        f.thue[j] = h
+        f.puff = { j, h }
+      } else if (e.kind === 4) {
+        gust = 1
+        f.goal = 1
+      } else if (e.kind === 5) {
+        sprout({ x: f.x - f.side * 0.045, baby: true, parent: f, scale: 0.3 + 0.1 * Math.random(), hue: f.hue + 40, side: -f.side, lean: -f.side * 0.3 })
+      } else if (e.kind === 6) {
+        const live = fronds.filter(q => !q.wither && q !== f)
+        for (const q of live.slice(0, Math.ceil(live.length / 2))) q.wither = 0.001
+      } else {
+        f.sap.push(t)
+        if (f.sap.length > 6) f.sap.shift()
+        f.open = Math.min(1, f.open + 0.01)
+      }
+    }
+
+    // The backdrop, once per size: the night, the far forest of the four
+    // species grown by the chaos game, the mist on the ground.
+    function backdrop () {
+      base = new Uint8ClampedArray(3 * bw * bh)
+      const sh = new Float32Array(bw * bh)
+      const p = { x: 0, y: 0 }
+      for (let k = 0; k < 22; k++) {
+        const maps = UNIT[k % 4]
+        let acc = 0
+        const cum = maps.map(m => (acc += m[6]))
+        for (let j = 0; j < 4; j++) cum[j] /= acc
+        const far = k % 2
+        const hh = bh * (0.3 + 0.35 * Math.random()) * (far ? 0.65 : 1)
+        const fx = bw * (k + Math.random()) / 22
+        const fy = bh * (far ? 0.88 : 1.02)
+        const mir = Math.random() < 0.5 ? -1 : 1
+        const tilt = 0.25 * (Math.random() - 0.5)
+        const co = Math.cos(tilt)
+        const si = Math.sin(tilt)
+        const w = far ? 0.35 : 0.7
+        iterate(maps, cum, Math.round(hh * 200), p, (x, y) => {
+          const ix = (fx + (mir * x * co - y * si) * hh) | 0
+          const iy = (fy - (mir * x * si + y * co) * hh) | 0
+          if (ix >= 0 && iy >= 0 && ix < bw && iy < bh) sh[iy * bw + ix] += w
+        })
+      }
+      for (let iy = 0; iy < bh; iy++) {
+        const mist = smooth((iy / bh - 0.5) / 0.5)
+        for (let ix = 0; ix < bw; ix++) {
+          const at = iy * bw + ix
+          const d = sh[at] / (sh[at] + 2)
+          base[3 * at] = 3 + 10 * mist + 24 * d
+          base[3 * at + 1] = 6 + 22 * mist + 54 * d
+          base[3 * at + 2] = 14 + 30 * mist + 60 * d
+        }
+      }
+    }
+
+    // One frond into the buffer. rank: 1 the newest, less the older.
+    function frond (f, L, idle, rank) {
+      const S = bh / 380
+      const H = bh * f.scale * (0.3 + 0.7 * smooth(f.rise)) * (1 - 0.4 * smooth(f.wither))
+      const bx = f.x * bw
+      const by = bh * 1.01 + bh * 0.5 * smooth(f.wither)
+      // Asleep at idle, shy of the pointer, curled back as it withers.
+      const open = f.open * (1 - 0.5 * idle) * (1 - 0.8 * f.shy) * (1 - f.wither)
+      const c = STIPE + (1 - STIPE) * open
+      const T = f.side * (0.35 + 2.2 * (1 - open))
+      // The wind: a wave out along the rachis, its own phase per frond.
+      const w0 = (0.12 + 0.35 * gust + 0.15 * L.treble) * (1 - 0.7 * idle)
+      const ph = 1.3 * t + f.ph
+      const n = strand(bx, by, f.lean + 0.06 * w0 * Math.sin(ph), H, c, T, f.side * 0.35, s => w0 * f.side * Math.sin(ph - 3.5 * s), P, NN)
+      // Hues drifting from the foot to the tip, moonlit at idle, amber
+      // and dim as it withers, the newest brightest.
+      const drift = f.hue + 14 * t * (1 - 0.8 * idle)
+      const sat = (0.9 - 0.6 * idle) * (1 - 0.6 * f.wither)
+      const fresh = Math.max(0, 1 - (t - f.born) / 4)
+      const lum = (0.25 + 0.75 * rank) * (1 - 0.35 * idle) * (1 - 0.7 * smooth(f.wither)) * (1 + 0.8 * fresh + 0.4 * wake * rank)
+      const amp = 0.55 * lum
+      const tone = h => h + (40 - h) * f.wither
+      for (let i = 1; i < n; i++) {
+        const v = hsl(tone(drift + 100 * P[4 * i + 3]), sat, 0.5)
+        const k = 1.2 * amp
+        line(P[4 * i - 4], P[4 * i - 3], P[4 * i], P[4 * i + 1], v[0] * k, v[1] * k, v[2] * k)
+        line(P[4 * i - 4] + 1, P[4 * i - 3], P[4 * i] + 1, P[4 * i + 1], v[0] * k, v[1] * k, v[2] * k)
+      }
+      // The pinnae at fixed stations of the blade, so they stay put as
+      // the rachis opens, each curled until the coil has passed it.
+      const flutter = 0.05 + 0.15 * L.treble + 0.2 * gust
+      let i = 1
+      for (let j = 0; j < NS; j++) {
+        const s = STIPE + (1 - STIPE) * (j + 0.5) / NS
+        while (i < n - 1 && P[4 * i + 3] < s) i++
+        const s0 = P[4 * i - 1]
+        const s1 = P[4 * i + 3]
+        const u = s1 > s0 ? Math.min(1, (s - s0) / (s1 - s0)) : 1
+        const x = P[4 * i - 4] + (P[4 * i] - P[4 * i - 4]) * u
+        const y = P[4 * i - 3] + (P[4 * i + 1] - P[4 * i - 3]) * u
+        const a = P[4 * i - 2] + (P[4 * i + 2] - P[4 * i - 2]) * u
+        const cp = smooth((c - s) / 0.18 + 0.1)
+        const b = (s - STIPE) / (1 - STIPE)
+        const lp = H * 0.24 * Math.min(1, 0.45 + 3 * b) * Math.pow(1 - b, 0.85) * (0.2 + 0.8 * cp)
+        if (lp < 1) continue
+        let v
+        let k = amp
+        if (f.tint[j] > 0.02) {
+          v = hsl(f.thue[j], 1, 0.55)
+          k = Math.max(amp, 0.6) * (0.8 + 1.2 * f.tint[j])
+        } else v = hsl(tone(drift + 100 * s + 25), sat, 0.5)
+        const r = v[0] * k
+        const g = v[1] * k
+        const bb = v[2] * k
+        for (let side = -1; side <= 1; side += 2) {
+          const ang = a + side * (0.2 + 0.85 * cp) * (1 - 0.15 * b) + flutter * Math.sin(2.7 * t + 9 * s + side + f.ph)
+          const m = strand(x, y, ang, lp, 0.15 + 0.85 * cp, -side * (0.25 + 1.2 * (1 - cp)), side * 0.25 * cp, still, Q, NP)
+          for (let q = 1; q < m; q++) line(Q[4 * q - 4], Q[4 * q - 3], Q[4 * q], Q[4 * q + 1], r, g, bb)
+          if (cp < 0.4 || lp < 6) continue
+          // The pinnules, a comb along the pinna.
+          for (let q = 1; q < m - 1; q++) {
+            const pl = lp * 0.16 * (1 - 0.8 * q / m) * cp
+            for (let sd = -1; sd <= 1; sd += 2) {
+              const aa = Q[4 * q + 2] + sd * 0.75
+              line(Q[4 * q], Q[4 * q + 1], Q[4 * q] + pl * Math.sin(aa), Q[4 * q + 1] - pl * Math.cos(aa), 0.8 * r, 0.8 * g, 0.8 * bb)
+            }
+          }
+        }
+        if (f.puff && f.puff.j === j) {
+          const h = hsl(f.puff.h, 1, 0.6)
+          for (let q = 0; q < 26; q++) spores.push({ x, y, vx: S * 50 * (Math.random() - 0.5), vy: S * (-15 - 40 * Math.random()), c: h, t })
+          f.puff = null
+        }
+      }
+      // Sap: an output event's light running up the rachis to the coil.
+      for (const s0 of f.sap) {
+        const u = (t - s0) / 1.2
+        if (u > 1) continue
+        const at = Math.min(n - 1, Math.floor(u * (n - 1)))
+        const v = hsl(drift + 140, 0.6, 0.7)
+        glow(P[4 * at], P[4 * at + 1], 4 * S + 2, 1.5 * v[0], 1.5 * v[1], 1.5 * v[2])
+      }
+      // The coil glows while it is a coil.
+      if (open < 0.9) {
+        const v = hsl(drift + 100, sat, 0.6)
+        const k = 0.5 * (1 - open) * lum
+        glow(P[4 * n - 4], P[4 * n - 3], 10 * S + 2, v[0] * k, v[1] * k, v[2] * k)
       }
     }
 
@@ -319,299 +417,119 @@
       draw (synth, dt) {
         const w = canvas.width
         const h = canvas.height
-        if (w < 2 || h < 2) return
-        if (w !== cw || h !== ch) resize(w, h)
-        react(synth)
+        if (w < 4 || h < 4) return
+        if (w !== cw || h !== ch) {
+          cw = w
+          ch = h
+          const k = Math.max(1, Math.sqrt(w * h / 160000))
+          bw = buf.width = Math.max(1, Math.round(w / k))
+          bh = buf.height = Math.max(1, Math.round(h / k))
+          img = bg.createImageData(bw, bh)
+          px = new Uint32Array(img.data.buffer)
+          R = new Float32Array(bw * bh)
+          G = new Float32Array(bw * bh)
+          B = new Float32Array(bw * bh)
+          backdrop()
+        }
+        for (const e of synth.since(mark)) react(e)
         const L = synth.level
-        const t = synth.t
-        tick = t
         const idle = L.idle
         const bass = Math.min(1, L.bass)
-        morph = Math.min(1, morph + dt / 2.5)
-        gust *= Math.exp(-dt / 1.5)
-        burst *= Math.exp(-dt / 0.8)
-        for (let i = sprouts.length - 1; i >= 0; i--) if (t - sprouts[i].t > 40) sprouts.splice(i, 1)
-        const fl = flash ? Math.max(0, 1 - (t - flash.t) / 1.6) : 0
-        if (fl === 0) flash = null
+        t += dt
+        gust *= Math.exp(-dt / 1.8)
+        wake *= Math.exp(-dt / 1.5)
 
-        // The species of the moment, per slot.
-        const m = smooth(morph)
-        for (const [s, sl] of slots.entries()) {
-          const fa = UNIT[(from + s) % 4]
-          const fb = UNIT[(to + s) % 4]
-          let acc = 0
-          for (let k = 0; k < 4; k++) {
-            for (let j = 0; j < 7; j++) sl.maps[k][j] = fa[k][j] + (fb[k][j] - fa[k][j]) * m
-            acc += sl.maps[k][6]
-            sl.cum[k] = acc
-          }
-          for (let k = 0; k < 4; k++) sl.cum[k] /= acc
-        }
-        const hero = slots[0].maps
-        const rho = hero[1][0] * hero[1][0] + hero[1][2] * hero[1][2]
-        const per = -Math.log(rho) / 2 / Math.LN2
-
-        // The zoom, in octaves a second, and the clocks of the wind and
-        // the hue.
-        const speed = (0.07 + 0.22 * bass + 0.1 * L.busy + 0.25 * burst) * (1 - 0.85 * idle)
-        octaves += speed * dt
-        depth += speed * dt / per
-        wave += dt * (1 - 0.9 * idle)
-        drift += dt * (14 + 30 * bass + 20 * L.treble) * (1 - 0.8 * idle)
-        const amp = (1 + 0.8 * L.treble + 2.5 * gust) * (1 - 0.9 * idle)
-        const A = 0.03 * amp
-        const th = k => A * Math.sin(1.3 * wave - LAG * k)
-
-        // The hero's copies from about 4 times the view down to a
-        // fiftieth of it.
-        const lo = -Math.ceil(2 / per)
-        const hi = Math.ceil(5.6 / per)
-        const J = Math.floor(depth)
-        const n = hi - lo + 1
-        if (F.length < 4 * n) F = new Float64Array(4 * n)
-        frames(hero[1][0], hero[1][2], hero[1][4], hero[1][5], th, depth, lo, hi, F)
-        const S = n + D + 1
-        if (heroT.length < 24 * S) heroT = new Float64Array(24 * S)
-        for (let s = 0; s < S; s++) bend(heroT, s, hero, th(J + lo + s), 3 * th(J + lo + s))
-
-        // The items to grow: the hero's shells, each a copy's stem and
-        // leaflets, and the companions. Each with its share of the points
-        // by the area it shows.
-        const items = []
-        const aspect = bw / bh
-        const big = Math.max(1, aspect) * H
-        const view = H * H * aspect * 4
-        for (let k = J + lo; k <= J + hi; k++) {
-          const o = 4 * (k - J - lo)
-          const sz = Math.hypot(F[o], F[o + 1])
-          const area = 0.3 * sz * sz * (1 - rho)
-          // Nothing of a copy is left when it leaves the window, at
-          // four times the view or more.
-          const out = 1 - smooth((sz - 2) / 1.5)
-          const share = (sz < 1.2 ? area : area * Math.pow(1.2 / sz, 4)) * out
-          items.push({ hero: true, k, o, w: share, a: 1, side: 0, hue: 24 * (k - depth) })
-          // The companions of copy k, one slot each side, more per copy
-          // the more copies an octave holds.
-          const p = 1.2 * per
-          for (let q = 0; q < 2; q++) {
-            const ex = Math.max(0, Math.min(1, (p - hash(k, q, 0)) / 0.08))
-            if (!ex) continue
-            const side = q ? 1 : -1
-            const size = 0.4 + 0.75 * hash(k, q, 1)
-            const s = sz * size
-            const a = ex * smooth((s - 0.025) / 0.1) * (1 - smooth((s - 1.6) / 2)) * out
-            if (a <= 0) continue
-            const rx = side * (0.06 + 0.6 * hash(k, q, 2))
-            const ry = -0.12 + 0.3 * hash(k, q, 3)
-            const X = F[o] * rx - F[o + 1] * ry + F[o + 2]
-            const Y = F[o] * ry + F[o + 1] * rx + F[o + 3]
-            if (Math.abs(X) > big + s || Math.abs(Y - QY) > H + s) continue
-            const ph = 6.3 * hash(k, q, 4)
-            const tilt = -side * (0.1 + 0.7 * hash(k, q, 5)) + 0.06 * amp * Math.sin(0.9 * wave + ph)
-            items.push({ k, o, rx, ry, size, tilt, mirror: hash(k, q, 6) < 0.5, slot: Math.floor(4 * hash(k, q, 7)), ph, a, side, w: Math.min(0.3 * s * s, view) * a, hue: 360 * hash(k, q, 8) + 24 * (k - depth) })
+        // The turn's frond rises and unrolls as the session works; on the
+        // sound output alone, a frond fully open sprouts the next while
+        // the sound goes on.
+        const f = active()
+        f.rise = Math.min(1, f.rise + dt / 2.5)
+        const was = f.open
+        f.open = Math.min(1, f.open + dt * (0.004 + 0.04 * bass + 0.02 * L.busy) * (1 - idle))
+        grown += f.open - was
+        if (f.open > 0.97) {
+          ripe += dt * bass
+          if (ripe > 4) {
+            ripe = 0
+            sprout({})
           }
         }
-        for (const sp of sprouts) {
-          const o = 4 * (sp.k - J - lo)
-          if (o < 0 || o >= 4 * n) continue
-          const sz = Math.hypot(F[o], F[o + 1])
-          const size = 0.85 * smooth((t - sp.t) / 2.5)
-          const s = sz * size
-          const a = (1 - smooth((s - 1.6) / 2)) * (1 - smooth((t - sp.t - 30) / 10)) * (1 - smooth((sz - 2) / 1.5))
-          if (a <= 0 || size <= 0) continue
-          const tilt = -sp.side * 0.35 + 0.06 * amp * Math.sin(0.9 * wave + sp.ph)
-          items.push({ k: sp.k, o, rx: sp.x, ry: 0, size, tilt, mirror: false, slot: sp.slot, ph: sp.ph, a: a * (1 + 2 * Math.max(0, 1 - (t - sp.t) / 2)), side: sp.side, w: Math.max(0.02, Math.min(0.3 * s * s, view)), hue: sp.hue + 24 * (sp.k - depth), sprout: t - sp.t })
+        for (const q of fronds) {
+          if (q.goal && q.open < 1) {
+            grown += Math.min(1 - q.open, dt * 0.5)
+            q.open = Math.min(1, q.open + dt * 0.5)
+          }
+          if (q.baby) {
+            q.rise = Math.min(1, q.rise + dt / 2)
+            q.open = Math.min(1, q.open + dt * 0.1 * (1 - 0.8 * idle))
+            if (!q.wither && q.parent.wither) q.wither = 0.001
+          }
+          if (q.wither) q.wither = Math.min(1, q.wither + dt / 5)
+          q.shy *= Math.exp(-dt / 2.5)
+          for (let j = 0; j < NS; j++) if (q.tint[j] > 0.3) q.tint[j] = Math.max(0.3, q.tint[j] * Math.exp(-dt / 3))
         }
+        for (let i = fronds.length - 1; i >= 0; i--) if (fronds[i].wither >= 1) fronds.splice(i, 1)
 
-        // The warp: a new draw every 9 s, kept near the identity.
-        if (WARP) {
-          if (t - warp.t > 9) {
-            warp.from = warp.at.slice()
-            const ang = 0.15 * (2 * Math.random() - 1)
-            const mag = 1 + 0.08 * (2 * Math.random() - 1)
-            const bb = 0.12 * Math.random()
-            const ba = 6.3 * Math.random()
-            const cc = 0.35 * Math.random()
-            const ca = 6.3 * Math.random()
-            warp.to = [mag * Math.cos(ang), mag * Math.sin(ang), bb * Math.cos(ba), bb * Math.sin(ba), cc * Math.cos(ca), cc * Math.sin(ca)]
-            warp.t = t
-          }
-          const e = smooth((t - warp.t) / 9)
-          for (let j = 0; j < 6; j++) warp.at[j] = warp.from[j] + (warp.to[j] - warp.from[j]) * e
+        // The light fades fast at work, lingers at idle.
+        const fade = Math.exp(-dt / (0.06 + 0.5 * idle))
+        for (let i = 0; i < R.length; i++) {
+          R[i] *= fade
+          G[i] *= fade
+          B[i] *= fade
         }
-        const [war, wai, wbr, wbi, wcr, wci] = warp.at
-
-        // Growth and fading: fast and short-lived at work, a slow
-        // trickle that lingers at idle.
-        const rate = bw * bh * (4.5 + 5 * bass + 3 * L.busy + 4 * burst) * (1 - 0.5 * idle)
-        const total = Math.min(20000, Math.round(rate * dt))
-        const fade = Math.exp(-dt / (0.45 + 0.6 * idle))
-        let sum = 0
-        for (const it of items) sum += it.w
-        const half = Math.min(bw, bh) / 2
-        const cx = bw / 2
-        const cy = bh / 2
-        const hue0 = drift + 1e5
-        const gc = Math.cos(0.11 * t)
-        const gs = Math.sin(0.11 * t)
-        const fr = flash ? flash.rgb : null
-        const au = 0.6 * idle
-
-        // One point into the buffer, in camera units, through the warp.
-        const plot = (X, Y, hue, a, lit) => {
-          let ux = (X) / H
-          let uy = (Y - QY) / H
-          if (WARP) {
-            const nr = war * ux - wai * uy + wbr
-            const ni = war * uy + wai * ux + wbi
-            const dr = wcr * ux - wci * uy + 1
-            const di = wcr * uy + wci * ux
-            const dd = dr * dr + di * di
-            if (dd < 1e-6) return
-            ux = (nr * dr + ni * di) / dd
-            uy = (ni * dr - nr * di) / dd
+        fronds.forEach((q, i) => frond(q, L, idle, (i + 1) / fronds.length))
+        const S = bh / 380
+        for (let i = spores.length - 1; i >= 0; i--) {
+          const p = spores[i]
+          const age = t - p.t
+          if (age > 5) {
+            spores.splice(i, 1)
+            continue
           }
-          const ix = (cx + ux * half) | 0
-          const iy = (cy - uy * half) | 0
-          if (ix < 0 || iy < 0 || ix >= bw || iy >= bh) return
-          const at = iy * bw + ix
-          const c = 3 * ((((hue0 + hue + 80 * (ux * gc + uy * gs)) * 2.8444444) | 0) & 1023)
-          let R = WHEEL[c]
-          let G = WHEEL[c + 1]
-          let B = WHEEL[c + 2]
-          if (au) {
-            const l = 0.35 * R + 0.5 * G + 0.15 * B
-            R += (1.2 * l - R) * au
-            G += (0.75 * l - G) * au
-            B += (0.25 * l - B) * au
-          }
-          if (lit) {
-            R += (1.4 * fr[0] - R) * lit
-            G += (1.4 * fr[1] - G) * lit
-            B += (1.4 * fr[2] - B) * lit
-          }
-          r[at] += R * a
-          gr[at] += G * a
-          b[at] += B * a
+          p.vy += 6 * S * dt
+          p.x += (p.vx + 14 * S * Math.sin(1.3 * t + i)) * dt
+          p.y += p.vy * dt
+          const a = 0.5 * (1 - age / 5)
+          glow(p.x, p.y, 2.2 * S + 1, p.c[0] * a, p.c[1] * a, p.c[2] * a)
         }
-
-        for (const it of items) {
-          let cnt = total * it.w / sum
-          cnt = Math.floor(cnt) + (rnd() < cnt % 1 ? 1 : 0)
-          if (!cnt) continue
-          const o = it.o
-          // Copy k's frame to the camera's, and for a companion its foot
-          // and lean in that frame: one similarity, z -> fa z + fb.
-          let far = F[o]
-          let fai = F[o + 1]
-          let fbr = F[o + 2]
-          let fbi = F[o + 3]
-          let T = heroT
-          let sl = slots[0]
-          let s0 = it.k + 1 - (J + lo)
-          const lit = fr && flash.side === it.side ? fl : 0
-          if (!it.hero) {
-            const c = it.size * Math.cos(it.tilt)
-            const s = it.size * Math.sin(it.tilt)
-            fbr += far * it.rx - fai * it.ry
-            fbi += far * it.ry + fai * it.rx
-            const nr = far * c - fai * s
-            fai = far * s + fai * c
-            far = nr
-            sl = slots[it.slot]
-            T = compT
-            s0 = 0
-            const ph = it.ph
-            for (let q = 0; q < D; q++) {
-              const th0 = A * Math.sin(1.1 * wave + ph - LAG * (q + 1))
-              bend(compT, q, sl.maps, th0, 3 * th0)
-            }
-          }
-          const cum = sl.cum
-          const maps = sl.maps
-          const c0 = cum[0]
-          const c1 = cum[1]
-          const c2 = cum[2]
-          const p0 = maps[0][6]
-          const p02 = p0 + maps[2][6]
-          const p023 = p02 + maps[3][6]
-          const mir = it.mirror ? -1 : 1
-          const a = it.a
-          let ox = sl.x
-          let oy = sl.y
-          for (let j = 0; j < cnt; j++) {
-            // A step of the slot's orbit: the base point.
-            let u = rnd()
-            let i = u < c0 ? 0 : u < c1 ? 1 : u < c2 ? 2 : 3
-            const m = maps[i]
-            let x = m[0] * ox + m[1] * oy + m[4]
-            let y = m[2] * ox + m[3] * oy + m[5]
-            if (!(Math.abs(x) < 1e3 && Math.abs(y) < 1e3)) {
-              x = 0
-              y = 0
-            }
-            ox = x
-            oy = y
-            // The waved address, the deepest map first.
-            let up = 0
-            const first = it.hero ? 1 : 0
-            for (let q = D - 1; q >= 0; q--) {
-              u = rnd()
-              i = u < c0 ? 0 : u < c1 ? 1 : u < c2 ? 2 : 3
-              if (i === 1) up++
-              const e = 24 * (s0 + first + q) + 6 * i
-              const nx = T[e] * x + T[e + 1] * y + T[e + 4]
-              y = T[e + 2] * x + T[e + 3] * y + T[e + 5]
-              x = nx
-            }
-            // The hero's shell: its copy's stem or a leaflet.
-            let side = it.side
-            if (it.hero) {
-              u = rnd() * p023
-              i = u < p0 ? 0 : u < p02 ? 2 : 3
-              side = i === 2 ? -1 : i === 3 ? 1 : 0
-              const e = 24 * s0 + 6 * i
-              const nx = T[e] * x + T[e + 1] * y + T[e + 4]
-              y = T[e + 2] * x + T[e + 3] * y + T[e + 5]
-              x = nx
-            }
-            x *= mir
-            const X = far * x - fai * y + fbr
-            const Y = far * y + fai * x + fbi
-            const lt = it.hero ? (fr && flash.side === side ? fl : 0) : lit
-            plot(X, Y, it.hue + 9 * up + 25 * side, a, lt)
-          }
-          sl.x = ox
-          sl.y = oy
+        if (spores.length > 400) spores.splice(0, spores.length - 400)
+        // Fireflies come out at idle.
+        for (const q of flies) {
+          const a = (0.05 + 0.6 * idle) * Math.max(0, Math.sin(1.7 * q.v * t + q.ph))
+          if (a < 0.02) continue
+          glow((q.x + 0.05 * Math.sin(0.23 * t * q.v + q.ph)) * bw, (q.y + 0.04 * Math.sin(0.31 * t + 2 * q.ph)) * bh, 2.5 * S + 1.2, a, 0.9 * a, 0.45 * a)
         }
-
+        const K = 0.6
         for (let i = 0; i < px.length; i++) {
-          const R = (r[i] *= fade)
-          const G = (gr[i] *= fade)
-          const B = (b[i] *= fade)
-          px[i] = 0xff000000 | (Math.min(255, 300 * B / (B + K)) << 16) | (Math.min(255, 300 * G / (G + K)) << 8) | Math.min(255, 300 * R / (R + K))
+          const r = R[i]
+          const g = G[i]
+          const b = B[i]
+          const o = 3 * i
+          px[i] = 0xff000000 | (Math.min(255, base[o + 2] + 280 * b / (b + K)) << 16) | (Math.min(255, base[o + 1] + 280 * g / (g + K)) << 8) | Math.min(255, base[o] + 280 * r / (r + K))
         }
         bg.putImageData(img, 0, 0)
-        g.imageSmoothingEnabled = true
-        g.drawImage(buf, 0, 0, w, h)
+        out.imageSmoothingEnabled = true
+        out.drawImage(buf, 0, 0, w, h)
       },
 
-      // A click lights the fronds on its side of the pane in gold and
-      // blows a gust.
-      pointer (kind, x) {
-        if (kind !== 'down') return
-        flash = { side: x < canvas.width / 2 ? -1 : 1, rgb: hueRgb(48), t: tick }
-        gust = Math.max(gust, 0.7)
+      // A press: the fronds near it curl up as a sensitive plant's do
+      // and slowly unroll, and a puff of gold spores rises from it.
+      pointer (kind, x, y) {
+        if (kind !== 'down' || !cw) return
         clicks++
+        for (const f of fronds) if (Math.abs(f.x * cw - x) < cw * 0.2) f.shy = 1
+        const S = bh / 380
+        const c = hsl(48, 1, 0.6)
+        for (let k = 0; k < 30; k++) spores.push({ x: x * bw / cw, y: y * bh / ch, vx: S * 70 * (Math.random() - 0.5), vy: S * (-20 - 50 * Math.random()), c, t })
       },
 
-      // For the live checks: the clicks and the octaves zoomed.
+      // For the live checks: the clicks, the unrolling so far, the fronds.
       probe () {
-        return { clicks, zoom: octaves }
+        return { clicks, grown, fronds: fronds.length }
       }
     }
   }
 
-  if (typeof module === 'object' && module.exports) module.exports = { SPECIES, UNIT, iterate, frames }
+  if (typeof module === 'object' && module.exports) module.exports = { SPECIES, UNIT, iterate, strand }
   else (root.VizCanvas = root.VizCanvas || {}).fern = create
 })(this)
