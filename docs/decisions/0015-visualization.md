@@ -18,7 +18,8 @@ leaves with drifting psychedelic colors and an infinite zoom-in") and
 then the fern garden (maintainer: "re: fern, get more creative"), and
 2026-10-15 for each tab's visualization in the tab strip (maintainer:
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
-(issue #144).
+(issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
+(issue #158).
 
 ## Context
 
@@ -131,7 +132,9 @@ butterchurn-presets is MIT for its conversion only.
   - Carbon: a drag turns the camera, a click on the atom lets the drawn
     atom absorb a photon from its present level, a click on the level
     diagram lifts it to the level under the click by a collision (see
-    2026-10-15: Carbon).
+    2026-10-15: Carbon). A press or drag on the dial sets the magnetic
+    field, a click on the pulse button fires a polarized pulse (see
+    2026-10-16: Carbon in a magnetic field).
   - Go: a click on a point plays it for the side to move, if the rules
     allow it.
   - Zoom out: a click leaves a white ring where it lands on the scene
@@ -645,9 +648,9 @@ ruling's starting point by `carbon-photon.md`.
   the light clock, $2.4189$ s on screen per atomic unit of time, at
   most 3 rad/s near the axis, where the density of $m \ne 0$ vanishes.
   A collision draws the atom's $M_L$ anew. A jump of component $q$ takes
-  $M_L$ to $M_L - q$, $q$ uniform among those the multipole's rank and
-  the lower level's $L$ allow, not weighted by Clebsch-Gordan
-  coefficients. The core is Bunge's, the outer electron the
+  $M_L$ to $M_L - q$, $q$ drawn by the squared Clebsch-Gordan
+  coefficient (see 2026-10-16: Carbon in a magnetic field, which
+  replaces the uniform draw). The core is Bunge's, the outer electron the
   quantum-defect model, drawn in amber and labelled a model.
 - The jump, by `carbon-photon.md` section 4: the drawn atom's cloud
   snaps to the lower level's, and for 0.4 s its transition density
@@ -701,7 +704,7 @@ ruling's starting point by `carbon-photon.md`.
   split, no two texts overlap: the ink box of every text the probe
   reports, and the drop-down's box. `vizmodes.js`
   captures Carbon in its phases with the other procedural modes,
-  `vizpointer.js` clicks it.
+  `vizpointer.js` clicks it, `vizzeeman.js` checks the magnetic field.
 - Frame rate, under swiftshader on a loaded host: at full activity,
   drawn alone on a 400 by 380 canvas with 158 fronts, a frame of Carbon
   costs a median 7.9 ms, Gravity 0.8 and Quantum 2.2. Three panes of a
@@ -726,6 +729,8 @@ ruling's starting point by `carbon-photon.md`.
 | drag on the atom | turns the camera, which holds 4 s |
 | click on the atom | a lamp: a photon absorbed by the drawn atom from its present level, any band |
 | click on the level diagram | an electron collision lifts the drawn atom to the level nearest the click in that column |
+| press or drag on the dial | sets the magnetic field $B$, 0 to 2 mT, at an angle to $z$ (see 2026-10-16) |
+| click on the pulse button | a pulse aligns every atom in the ground term on $2p4p\,{}^3P_2$, and the detector's rate beats (see 2026-10-16) |
 
 Rejected:
 
@@ -737,3 +742,148 @@ Rejected:
   for many.
 - A gradient for the visible band: the CIE table is not in the
   repository, and each line carries its own colour.
+
+## 2026-10-16: Carbon in a magnetic field
+
+Owner, 2026-10-15: "file a new issue to make the carbon atom precess",
+filed as issue #158 from the research `docs/research/carbon-beyond.md`
+section 5.2 and its candidate 1. The issue left two choices to the
+builder, settled here, and the rest follows its text.
+
+- The data: each level of `app/viz/carbon-data.js` carries `gJ` and
+  `gJsrc`, written by `scripts/research/carbon_slim.js`: NIST's measured
+  value for $2p^2\,{}^3P_1$ (1.5010623), ${}^3P_2$ (1.5010469) and
+  $2p3s\,{}^1P^o_1$ (0.97), `measured`, and for every other level the LS
+  formula $g_J = 1 + (g_s - 1)[J(J+1) + S(S+1) - L(L+1)]/[2J(J+1)]$ with
+  $g_s = 2.00231930436092$ (CODATA 2022), `LS`, a model for the mixed
+  levels. The twelve $J = 0$ levels carry null and do not precess.
+  `test/viz-carbon.test.js` checks the three measured values, every LS
+  value against the formula, and the nine distinct LS values from
+  0.4988 to 2.0023 the research prints.
+- The precession: an atom's $M_L$ is taken about its own axis, a unit
+  vector, which turns about $B$ at the Larmor rate $g_J\mu_B B/h$ of its
+  present level, $\mu_B/h = 1.39962449171\times10^{10}$ Hz/T (CODATA
+  2022), divided by the event clock's $10^6$: 14.0 Hz on screen per mT
+  per unit $g_J$. The turn is right-handed about $B$, as
+  $d\mathbf J/dt = \boldsymbol\Omega\times\mathbf J$ with
+  $\boldsymbol\Omega = g_J\mu_B\mathbf B/\hbar$. The level's $g_J$
+  moves the whole $M_L$-resolved state, cloud and pattern alike, as the
+  issue asks: the cloud is resolved by $M_L$ and the rate is the
+  level's, a model of LS coupling the pane does not hide. A state of
+  $M$ about $B$ stands. The drawn atom's cloud and its next photon's
+  pattern are drawn about that axis, the axis itself in cyan. Its frame
+  swings about $B$ and is turned back about its own axis by the share
+  of the turn along that axis, so a state round about its axis shows no
+  turn that is not a precession, and with $B$ along $z$ nothing turns.
+  A collision lifts an atom with its $M_L$ drawn anew about $z$ and its
+  axis $z$ turned about $B$ by a random phase: collisions are
+  incoherent, so atoms lifted at one instant, as a prompt lifts a
+  quarter of the ensemble, do not precess in step. A jump keeps the
+  axis, and the lower level turns at its own rate. When $B$ changes,
+  every atom keeps the axis it has then: an atom tilted from $z$ before
+  $B$ was set along $z$ turns about $z$ until its next collision, and
+  the pane says so.
+- Every atom of the ensemble precesses, not only the drawn one (the
+  issue's second question): the fronts are every atom's, and a beat
+  needs the ensemble. Each atom is a unit vector and a time, and its
+  photon's direction follows from them, so the cost is the vector's
+  turn at a jump.
+- The jump's component $q$ is drawn by the squared orbital
+  Clebsch-Gordan coefficient $\langle L_l\,M-q;\,k\,q\,|\,L_u\,M\rangle$
+  of the multipole's rank $k$, replacing the uniform draw of 2026-10-15:
+  under the uniform draw every atom radiates isotropically whatever its
+  $M$, and an aligned ensemble could not beat. Summed over $M$ every
+  level's photon is isotropic, so the incoherent ensemble makes no beat;
+  `test/viz-carbon.test.js` checks it. A line whose $L$ break the
+  triangle, which LS coupling forbids and only mixing allows, takes
+  every $q$ of its rank alike and radiates isotropically, and the jump
+  keeps $M_L$ within the lower level's $L$ (the uniform draw had let it
+  leave it on such lines).
+- Fronts keep the pattern of their moment of emission: each front
+  carries its atom's axis at the jump, its visible limb is bright by
+  the pattern about that axis as the camera sees it, and its detection
+  direction is drawn from the pattern about it. The invisible fronts'
+  pass over the atom's pixels takes each front's shape about its own
+  axis as harmonics of the screen angle, $\cos 2n\psi$ and $\sin 2n\psi$
+  to $n = 4$, in tables by radius: a pixel sums the tables at its radius
+  against its own angle's harmonics, so the cost does not grow with the
+  number of axes. Cut at the fourth harmonic, each shape stays within
+  0.14 of its largest value, the worst at the cusps of E2 with $q = 0$
+  seen side-on.
+- How the user sets $B$ (the issue's first question): a dial at the
+  atom's lower right. The pointer's angle from up on the dial is $B$'s
+  angle from $z$ toward $x$, in whole degrees, within 2 degrees of $z$
+  taken as $z$. Its distance from the centre over the radius, squared,
+  is $B$'s share of 2 mT, in steps of 0.01 mT, so the low fields where a
+  $2p4p$ emitter turns 1 to 5 times a lifetime take most of the dial.
+  $B$ starts at 0.30 mT at 60 degrees, so the mode precesses unasked.
+  $B$ lies in the $x$-$z$ plane: every excitation here is round about
+  $z$, so $B$'s azimuth about $z$ changes nothing. The 3D view draws $B$
+  as a violet axis through the atom with its arrow and name. A small
+  pane keeps the dial and writes no text over its atom: the field and
+  the drawn atom's rate go with the ensemble's caption above it.
+- The pane states the field ("B 0.30 mT at 60 deg to z, in the x-z
+  plane"), the drawn atom's rate on screen and its real value ("turns
+  about B at 6.30 Hz on screen, 6.30 MHz real"), and its $g_J$ marked
+  measured or "LS: a model". With $B$ along $z$ it says that an $M$
+  state about $B$ is stationary and nothing turns, with $B$ at 0 that
+  nothing precesses, and at $J = 0$ that the level has no moment.
+- The pulse: a click on the pulse button. A pulse of light linearly
+  polarized along $z$ lifts every atom in the ground term ${}^3P$ by two
+  photons to $2p4p\,{}^3P_2$ at one instant, each in $M_L = 0$ about $z$
+  and its axis $z$: a model of the alignment such a pulse makes, at its
+  largest. ${}^3P_2$ is spin-allowed from the ground term, keeps 141 ms
+  on screen, about 1.5 Larmor turns at 0.5 mT, and has a visible line,
+  477.2 nm, the filter's.
+- The beat (the issue's second question, how it is drawn): a detector
+  along $y$, perpendicular to $z$ and to $B$, where an aligned atom's
+  beat is deepest, drawn as a small square where $y$ meets the circle
+  on which fronts are detected, and named. It counts the 477.2 nm line
+  of $2p4p\,{}^3P_2$ through a filter, as a quantum-beat experiment
+  watches one line. Its rate is drawn as a trace of the last second
+  beside the dial, by detection time, a sample the light's travel to
+  the circle after its emission: the expected rate from the ensemble's
+  state, each atom on the line's upper level the line's $A$ on the event
+  clock times its photon's angular density toward $y$ over the
+  isotropic one, times the detector's 5 % of the sphere. A pulse of
+  about 130 atoms sends about 15 photons of the line, under one of them
+  to such a detector, so its counts would show the beat only folded
+  over many pulses; the expected rate is what their count converges to
+  over many pulses. After a pulse the aligned atoms turn in step and
+  the rate beats at $2g_J\mu_B B/h$, twice the Larmor rate since every
+  pattern is even in $\Theta$: 21.0 Hz on screen at 0.5 mT. The trace
+  marks the pulse in violet and says "pulse: beat at 2f = 21.0 Hz";
+  without a pulse in the last second it says "no pulse: M incoherent,
+  no beat". The trace needs an atom 260 pixels wide and 200 tall at
+  text size 1, and a smaller atom keeps the pulse button and the dial.
+- Checked by `scripts/checks/vizzeeman.js`, a suite job, on the fakes:
+  the drawn atom's axis read over time with $B$ set at 90 degrees by a
+  drag on the dial, the angle it turns about $B$ between readings at one
+  level against $2\pi g_J\mu_B B/h/10^6$ times the time between them,
+  $g_J$ from the data file, over 40 pairs and at least two turns; with
+  $B$ dragged onto $z$ and the drawn atom lifted since, its axis on $z$
+  and the pane saying why; after a click on the pulse button, the
+  spectrum of the detector's rate, its fitted decay taken out, peaking
+  within 5 % of $2g_J\mu_B B/h$, and detections drawn on the circle;
+  frames of a full pane and of a 360 by
+  230 one, no two texts overlapping in any.
+
+Rejected:
+
+- $B$ set in the pane's drop-down: the drop-down is the window's list
+  of modes, drawn and read by the main process, and holds no mode's
+  controls.
+- $B$ driven by the session's activity, as the activity drives the
+  excitation: $B$ is the viewer's instrument, and a field that moved
+  with the session would change every atom's rate under the viewer.
+- A handle at the tip of the drawn $B$ axis, dragged in 3D: its
+  projection shrinks to a point when $B$ points at the viewer, and one
+  drag would set the angle and the size at once.
+- Only the drawn atom precessing: the fronts and the beat are the
+  ensemble's.
+- A histogram of the detector's actual counts, folded over pulses:
+  at under one count a pulse, the beat stands above the shot noise only
+  after many pulses.
+- A static Zeeman split on the level diagram: 1 T spreads a $g = 1.5$,
+  $J = 1$ level over 1.4 $\mathrm{cm^{-1}}$, under a pixel (research
+  5.2).
