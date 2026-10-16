@@ -991,8 +991,9 @@
       })
       flush(g)
       g.restore()
-      // The axis, dashed through the atom, while a photon flies.
-      const flying = photons.find(p => now - p.t < FLIGHT)
+      // The axis, dashed through the atom, while a photon flies, and the
+      // newest one named.
+      const flying = photons.slice().reverse().find(p => now - p.t < FLIGHT)
       g.font = '10px ' + MONO
       if (flying) {
         const top = F.project(0, 0, 1.15 * view)
