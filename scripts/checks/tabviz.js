@@ -234,11 +234,15 @@ async function lookAt (skin) {
     // A held tab is done once its last turn ends and its terminal has
     // been quiet DONE_S, its band gone once it has scrolled out. A
     // working tab is caught inside a turn.
+    // Bounded by time, not by a count of reads, whose span moves with
+    // the host's load.
     const since = new Map()
     let ready = false
-    for (let i = 0; i < 160 && !ready; i++) {
+    let st = null
+    const t0 = Date.now()
+    while (Date.now() - t0 < 90000 && !ready) {
       await sleep(250)
-      const st = await state()
+      st = await state()
       for (const x of st) {
         if (!isHeld(x.id)) continue
         if (x.done < 0.95) since.delete(x.id)
@@ -246,7 +250,8 @@ async function lookAt (skin) {
       }
       ready = st.every(x => isHeld(x.id) ? since.has(x.id) && Date.now() - since.get(x.id) > 6500 : x.busy > 0.9 && x.done < 0.05)
     }
-    check(ready, `${skin}: the held tabs never read done while the others worked`)
+    console.log(skin, 'held tabs done, others working', ready, 'after', Date.now() - t0, 'ms')
+    check(ready, `${skin}: the held tabs never read done while the others worked, last ${JSON.stringify(st && st.map(x => ({ id: x.id, held: isHeld(x.id), busy: x.busy, done: x.done })))}`)
     const shots = async tag => {
       await shot(win, path.join(out, `${skin}-${tag}.png`))
       await strip(win, path.join(out, `${skin}-${tag}-strip.png`))
