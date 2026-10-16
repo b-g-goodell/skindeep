@@ -14,7 +14,8 @@ for the pointer (maintainer: "the visualizations should respond to
 clicks and be moderately interactive. example: the quantum physics
 visualizer should allow me to click and drag to put up barriers"),
 and 2026-10-15 for the fern forest (maintainer: "a full forest of fern
-leaves with drifting psychedelic colors and an infinite zoom-in"), and
+leaves with drifting psychedelic colors and an infinite zoom-in") and
+then the fern garden (maintainer: "re: fern, get more creative"), and
 2026-10-15 for each tab's visualization in the tab strip (maintainer:
 "visualizations in the tabs").
 
@@ -73,23 +74,22 @@ butterchurn-presets is MIT for its conversion only.
   - Fern, Go, Zoom out, Gravity, Gravity 3D and Quantum: the project's
     procedural modes, one file each, no image or video. Each reacts to
     its pane's events, a prompt, a tool call in its class's colour, a
-    stop, a subagent, and calms at idle. Fern: a forest of fronds,
-    iterated function systems of Barnsley's fern and three relatives
-    grown by the chaos game, in drifting hues, under an endless zoom
-    into the hero frond's copy of itself, each leaflet waving, a prompt
-    morphing every frond to the next species (Fern forest, below). Go:
-    a 13 by 13 board, a stone per event, played by the rules (liberties,
-    capture, no suicide, ko) and cleared when full. Zoom out: six
-    scenes, each the detail of the next, the sixth the first's detail,
-    so the camera loops. Gravity: Newtonian bodies by leapfrog, merging
-    on contact, events adding bodies or mass, the rates setting the
-    clock. Gravity 3D: Gravity's bodies in three dimensions with black
-    holes, spinning ones among them, before distant stars they lens
-    (see 2026-10-15: Gravity 3D). Quantum: the Schroedinger equation by
-    split-step Fourier on a 128 by 64 grid, packets through slits onto
-    a screen that records detections, a stop measuring and collapsing
-    the state. With the sound output alone, which brings no events, a
-    rise of its loudness counts as one.
+    stop, a subagent, and calms at idle. Fern: a night garden of fronds,
+    one a turn, each rising as a fiddlehead and unrolling as the turn
+    works, in drifting hues, before a still forest of Barnsley's fern
+    and three relatives grown by the chaos game (2026-10-15: the fern
+    garden, below). Go: a 13 by 13 board, a stone per event, played by
+    the rules (liberties, capture, no suicide, ko) and cleared when
+    full. Zoom out: six scenes, each the detail of the next, the sixth
+    the first's detail, so the camera loops. Gravity: Newtonian bodies
+    by leapfrog, merging on contact, events adding bodies or mass, the
+    rates setting the clock. Gravity 3D: Gravity's bodies in three
+    dimensions with black holes, spinning ones among them, before
+    distant stars they lens (see 2026-10-15: Gravity 3D). Quantum: the
+    Schroedinger equation by split-step Fourier on a 128 by 64 grid,
+    packets through slits onto a screen that records detections, a stop
+    measuring and collapsing the state. With the sound output alone,
+    which brings no events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
   events, so the page sends nothing. A click steps no mode: it goes to
@@ -127,8 +127,8 @@ butterchurn-presets is MIT for its conversion only.
   - Zoom out: a click leaves a white ring where it lands on the scene
     in view, which recedes with the scene, and sets off that scene's
     surprise.
-  - Fern: a click lights the fronds on its side of the pane in gold
-    and blows a gust.
+  - Fern: a click curls the fronds near it, which unroll again, and
+    gold spores rise from it.
   - Every other mode, the five butterchurn presets, Scope, the two
     analyzers, Superscope and Dot plane, has no method of its own: a
     press adds a short tone to the pane's signal, its pitch on the
@@ -170,50 +170,7 @@ butterchurn-presets is MIT for its conversion only.
 ### Fern forest
 
 Revised 2026-10-15 (maintainer: "the barnsley fern visualization is
-very boring").
-
-- Forest: the hero frond and its companions, of the four species and
-  of several sizes, overlapping. A companion hangs in the frame of one
-  of the hero's self-similar copies, its place, size, lean, mirror and
-  species a hash of the copy's depth, so it stays put as the zoom
-  passes. It fades in while small and out while larger than the pane.
-- Colour: each point takes a hue from a wheel that turns with time and
-  with the point's place and depth in the frond, over the full range.
-  An idle spell pulls the hues toward amber.
-- Zoom: each species is conjugated into one frame, the stem's foot at
-  the origin and the tip, the fixed point of the copy map, at (0, 1),
-  the copy map made a similarity. The camera at depth d sits at copy
-  floor(d), seen through the power d - floor(d) of the next copy map
-  about its fixed point. The path is continuous in d, so the loop has
-  no reset: a copy enters when it is a fiftieth of the view and leaves
-  when it is four times the view, each with no visible weight. A unit
-  test pins the frames across an integer depth, and
-  `scripts/checks/vizfern.js` captures 60 frames over more than an
-  octave and refuses a step between neighbouring frames that stands
-  out of the rest.
-- Waving: each map of a frond at depth k is composed with a rotation
-  of angle A sin(1.3 t - 0.55 k), the copy map by that angle and the
-  leaflets by three times it, so a wave runs out along each frond. A
-  companion carries its own phase and sways about its foot.
-- Warp: kept. The picture passes through a Moebius map
-  z -> (a z + b) / (c z + 1), its parameters eased from one random
-  draw near the identity to the next every 9 s. On the recorded run
-  the fronds bend and the forest swirls, and each frond stays
-  readable. `WARP` in `app/viz/fern.js` turns it off.
-- Cost: points are budgeted by the buffer's area, as before, and each
-  point takes six waved maps. Frame rate with three panes, the median
-  of five rounds on a loaded host (load average 16 to 20 on 16 cores),
-  fern 39.5, gravity 46.5, quantum 30.5.
-
-| Signal | Fern forest |
-| --- | --- |
-| bass, busy | zoom speed and growth rate |
-| prompt | every frond morphs to the next species, the old picture dims |
-| tool call | the fronds on one side light in the class's colour |
-| stop, treble | a gust: the waving's amplitude rises and settles |
-| subagent | a frond sprouts near the camera and grows |
-| idle | the zoom, the waving and the hue drift slow, the trails linger |
-| click | the fronds on its side light in gold, and a gust |
+very boring"), and replaced the same day by the fern garden, below.
 
 ## Why
 
@@ -523,3 +480,67 @@ Rejected:
   is closed, and a read back from the GPU for every frame.
 - A taller strip: a quarter tile's skin area would lose the rows.
 
+## 2026-10-15: the fern garden
+
+Maintainer, after the fern forest above: "re: fern, get more creative".
+The forest was rainbow point dust under an endless zoom: no figure to
+follow, and no event a viewer could name from a frame.
+
+Four sketches were built and looked at on one scripted session: a
+garden of fiddleheads that unroll as the session works, a walk through
+a forest of fern sprites at night, a fern mandala of N mirrored copies
+of a chaos-game frond, and the first and second together. The mandala
+read as a flower and lost the fern. The walk was a place without a
+story. The fiddlehead unrolling was the one frame worth stopping for,
+and the night forest gave it a stage, so the two together were kept.
+
+- Garden: each turn grows a frond. A prompt sends up a fiddlehead:
+  the stipe, the stalk below the blade, stands open, and the blade is
+  a coil whose curvature grows to its tip, about two and a half turns.
+  As the turn works the coil unrolls, its pinnae opening from the foot
+  behind it, each pinna a small coil of its own. The stop opens the
+  frond the rest of the way. Six turns' fronds stand at most, the
+  oldest withering past that.
+- Geometry: a rachis or a pinna is a strand, its open part bent by a
+  constant and by the wind, the rest a coil whose turning per unit
+  length grows as $s^{3/2}$ to the tip. The pinnae sit at fixed
+  stations of the blade, so they stay put as the rachis opens. A unit
+  test pins the strand: straight when open, its length kept, its
+  heading turned by $2 \pi T$ for a coil of $T$ turns.
+- Forest: kept as the backdrop, a still forest of the four species
+  grown by the chaos game, once per pane size, under mist on the
+  ground.
+- Colour drift: kept. Each frond takes a new hue, drifting with time
+  and from foot to tip. A tool call's pinna keeps its class's colour,
+  so an open frond shows the turn's tools as bands.
+- Waving: kept. A wave runs out along each rachis, its phase its own,
+  and the pinnae flutter. A stop and the treble blow a gust.
+- Zoom: dropped. The garden is a stage the session writes on, and a
+  camera always moving on would carry each frond out of view before it
+  opened.
+- Warp: dropped. It bent the forest as a whole, and here each
+  frond's shape is what tells the session, so the garden was not tried
+  under it.
+- Drawing: lines of light, a dot a pixel, into a buffer of the CPU,
+  faded each frame and blitted once over the backdrop, as the forest's
+  points were. Canvas2D strokes of a like garden cost 80 to 110 ms a
+  frame in a prototype at 600 by 380. Drawn alone at that size, a
+  frame of the garden costs a median 2.9 ms, quantum 2.2, gravity 0.3
+  and the fern forest before it 4.6. Frame rate with three panes, the
+  median of five rounds on a loaded host (load average 33 to 43 on 16
+  cores), fern 9.5, gravity 10.5, quantum 8.5: the rounds ran from 4.5
+  to 21.5, so the host's load sets them more than the modes.
+
+| Signal | Fern garden |
+| --- | --- |
+| prompt | a fiddlehead rises, the last turn's frond opens fully |
+| bass, busy | the turn's frond unrolls faster |
+| output event | light runs up the rachis to the coil |
+| tool call | the next pinna up from the foot lights in the class's colour, keeps it, and looses spores of it |
+| stop | the frond opens fully, and a gust |
+| treble | wind and flutter |
+| subagent | a small frond sprouts at the turn's foot, withering with it |
+| compaction | the older half of the garden curls back and sinks |
+| idle | the fronds curl half shut, the hues pale, fireflies come out, the light lingers |
+| sound output alone | a frond fully open sprouts the next while the sound goes on |
+| click | the fronds near it curl as a sensitive plant's do and unroll again, gold spores rise |
