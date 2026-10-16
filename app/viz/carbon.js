@@ -19,7 +19,9 @@
 // The session's events excite the atom, by collision or by a photon
 // absorbed from the present level (see react), and it decays by NIST's
 // branching ratios, each wait random about its level's lifetime on a
-// stated clock (see waitMean). The pointer: see pointer.
+// stated clock. The clock of the events, the cloud and the photon each
+// sit behind a small interface, Clock, Cloud and Photon, so each can be
+// replaced alone. The pointer: see pointer.
 
 ;(function (root) {
   const D = typeof module === 'object' && module.exports ? require('./carbon-data') : root.CarbonData
@@ -402,6 +404,75 @@
 
   const visible = ln => ln.band === 'visible' && !!ln.rgb
 
+  // ---- The clock -------------------------------------------------------
+
+  // The clock of the events: the mean wait on screen in a level, and a
+  // wait drawn from the exponential about it for u uniform on [0, 1).
+  const Clock = {
+    mean: waitMean,
+    wait (lv, u) {
+      const m = waitMean(lv)
+      return m === Infinity ? Infinity : -m * Math.log(1 - u)
+    }
+  }
+
+  // ---- The cloud ---------------------------------------------------------
+
+  // The electron density of a level as points drawn from it, in bohr:
+  // each electron's radius from its orbital's table, its direction
+  // uniform, the orientation-summed density. Cloud.make(lv) makes one,
+  // Cloud.step(c, dt) draws a share afresh, TWINKLE of them each 60th of
+  // a second, samples of where an electron would be found, none moving,
+  // and Cloud.draw(c, fr, area, dim, rect) projects them in the atom's
+  // frame, far points dimmer and smaller, the outer electron's in amber.
+  const Cloud = {
+    make (lv) {
+      const sh = shells(lv)
+      const n = sh.reduce((s, e) => s + e.count * (e.outer ? PTS_OUTER : PTS_CORE), 0)
+      const c = { pts: new Float32Array(3 * n), kinds: [], outerFrom: n, debt: 0 }
+      let k = 0
+      for (const e of sh) {
+        const m = e.count * (e.outer ? PTS_OUTER : PTS_CORE)
+        if (e.outer) c.outerFrom = k
+        for (let j = 0; j < m; j++, k++) {
+          c.kinds.push(e)
+          Cloud.place(c, k, e)
+        }
+      }
+      return c
+    },
+
+    place (c, k, e) {
+      const r = drawR(table(e.key), Math.random())
+      const z = 2 * Math.random() - 1
+      const ph = 2 * Math.PI * Math.random()
+      const s = Math.sqrt(1 - z * z)
+      c.pts[3 * k] = r * s * Math.cos(ph)
+      c.pts[3 * k + 1] = r * s * Math.sin(ph)
+      c.pts[3 * k + 2] = r * z
+    },
+
+    step (c, dt) {
+      const m = c.kinds.length
+      c.debt += m * TWINKLE * dt * 60
+      for (; c.debt >= 1; c.debt--) {
+        const k = Math.floor(Math.random() * m)
+        Cloud.place(c, k, c.kinds[k])
+      }
+    },
+
+    draw (c, fr, a, dim, rect) {
+      const p = c.pts
+      for (let i = 0; i < c.kinds.length; i++) {
+        const v = fr.project(p[3 * i], p[3 * i + 1], p[3 * i + 2])
+        if (v.x < a.x || v.x >= a.x + a.w || v.y < a.y || v.y >= a.y + a.h) continue
+        const near = Math.max(0, Math.min(1, (v.s - 0.8) / 0.45))
+        const outer = i >= c.outerFrom
+        rect(outer ? '#ffcf7a' : '#a9c8ff', (outer ? 0.4 + 0.5 * near : 0.3 + 0.45 * near) * dim, v.x, v.y, 1 + 1.6 * near)
+      }
+    }
+  }
+
   // ---- The photon --------------------------------------------------------
 
   // One emitted photon, as carbon-photon.md section 4 draws it, in the
@@ -582,10 +653,7 @@
     let last = null
     let cause = { text: 'at rest in the ground term', t: -10 }
     let photons = []
-    // The cloud: x, y, z per point, and which orbital drew it.
-    let pts = new Float32Array(0)
-    let kinds = []
-    let outerFrom = 0
+    let cl = null
     let view = 6
     // The camera's turn about the vertical and its height, the time the
     // pointer last turned it, and the press while the pointer is down.
@@ -595,42 +663,12 @@
 
     // ---- The atom's state ----
 
-    function cloud () {
-      const sh = shells(levels[level])
-      const n = sh.reduce((s, e) => s + e.count * (e.outer ? PTS_OUTER : PTS_CORE), 0)
-      pts = new Float32Array(3 * n)
-      kinds = []
-      outerFrom = n
-      let k = 0
-      for (const e of sh) {
-        const m = e.count * (e.outer ? PTS_OUTER : PTS_CORE)
-        if (e.outer) outerFrom = k
-        for (let j = 0; j < m; j++, k++) {
-          kinds.push(e)
-          place(k, e)
-        }
-      }
-    }
-
-    // Point k drawn afresh from orbital e: a radius from its table, a
-    // direction uniform on the sphere, the orientation-summed density.
-    function place (k, e) {
-      const r = drawR(table(e.key), Math.random())
-      const z = 2 * Math.random() - 1
-      const ph = 2 * Math.PI * Math.random()
-      const s = Math.sqrt(1 - z * z)
-      pts[3 * k] = r * s * Math.cos(ph)
-      pts[3 * k + 1] = r * s * Math.sin(ph)
-      pts[3 * k + 2] = r * z
-    }
-
     function enter (i, why) {
       level = i
-      const m = waitMean(levels[i])
-      shown = m === Infinity ? Infinity : -m * Math.log(1 - Math.random())
+      shown = Clock.wait(levels[i], Math.random())
       due = now + shown
       if (why) cause = { text: why, t: now }
-      cloud()
+      cl = Cloud.make(levels[i])
     }
 
     function excite (i, why) {
@@ -936,14 +974,7 @@
       // The cloud, far points dimmer and smaller, dimmed further while a
       // jump's source shows over it.
       if (photons.some(p => p.ph.src && now - p.t < SOURCE_T)) dim *= 0.45
-      const n = pts.length / 3
-      for (let i = 0; i < n; i++) {
-        const p = F.project(pts[3 * i], pts[3 * i + 1], pts[3 * i + 2])
-        if (p.x < a.x || p.x >= a.x + a.w || p.y < a.y || p.y >= a.y + a.h) continue
-        const near = Math.max(0, Math.min(1, (p.s - 0.8) / 0.45))
-        const outer = i >= outerFrom
-        rect(outer ? '#ffcf7a' : '#a9c8ff', (outer ? 0.4 + 0.5 * near : 0.3 + 0.45 * near) * dim, p.x, p.y, 1 + 1.6 * near)
-      }
+      Cloud.draw(cl, F, a, dim, rect)
       const c = F.project(0, 0, 0)
       rect('#ffffff', 1, c.x, c.y, 2)
       flush(g)
@@ -1159,13 +1190,7 @@
         for (const p of photons) if (p.ph.src && now - p.t < SOURCE_T) big = Math.max(big, size(p.ph.up))
         const want = Math.max(5, Math.min(60, 2.5 * big))
         view += (want - view) * (1 - Math.exp(-dt / 0.35))
-        // Twinkle: a few points drawn afresh each frame, as samples, none
-        // moving.
-        const m = pts.length / 3
-        for (let j = Math.ceil(m * TWINKLE); j > 0; j--) {
-          const k = Math.floor(Math.random() * m)
-          place(k, kinds[k])
-        }
+        Cloud.step(cl, dt)
         if (now - cam.held > 4) cam.yaw += dt * 0.25 * (1 - 0.7 * L.idle)
         const g = layer.g
         g.globalCompositeOperation = 'source-over'
@@ -1238,7 +1263,7 @@
     }
   }
 
-  const api = { slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, waitMean, decay, thermal, absorptions, pick, levelName, wlText, ground, SLOW, CAP }
+  const api = { Clock, Cloud, Photon, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, waitMean, decay, thermal, absorptions, pick, levelName, wlText, ground, SLOW, CAP }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
