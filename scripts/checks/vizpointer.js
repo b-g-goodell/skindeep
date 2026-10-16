@@ -5,9 +5,10 @@
 // One pane is shown in each mode in turn and clicked: the mode stays,
 // and the mode answers, by its probe or by a tone in the pane's signal.
 // A drag across the quantum pane paints a barrier along its path that
-// fades, a release throws a moon in gravity, and a click in a pane of a
-// split window leaves every pane's mode as it was. No page or console
-// error. Frames go to OUT/quantum-*.png. Fakes only.
+// fades, a release throws a moon in gravity, a drag turns gravity3d's
+// camera and throws nothing, and a click in a pane of a split window
+// leaves every pane's mode as it was. No page or console error. Frames
+// go to OUT/quantum-*.png. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -112,6 +113,17 @@ async function until (get, ok, ms, step = 100) {
   const g1 = (await pane()).probe
   console.log('gravity drag', JSON.stringify({ g0, g1 }))
   check(g1.thrown === g0.thrown + 1, 'want a moon thrown at the release', g1)
+
+  // Gravity 3D: a drag turns the camera and throws nothing.
+  p = await show('gravity3d')
+  const c0 = p.probe
+  await viz.mouse.move(p.x + p.w * 0.3, p.y + p.h * 0.5)
+  await viz.mouse.down()
+  await viz.mouse.move(p.x + p.w * 0.6, p.y + p.h * 0.4, { steps: 8 })
+  await viz.mouse.up()
+  const c1 = (await pane()).probe
+  console.log('gravity3d drag', JSON.stringify({ c0, c1 }))
+  check(c1.turns === c0.turns + 1 && c1.thrown === c0.thrown, 'want the camera turned and no moon thrown', c1)
 
   // A split window: a click in pane 2 steps no pane.
   for (let i = 0; i < 2; i++) await win.evaluate(() => window.skinned.newTab())
