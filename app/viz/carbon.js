@@ -44,6 +44,8 @@
   // 4.1 a second), so the visible lines still leave.
   const N_ATOMS = 160
   const FIELD_MAX = 1.2
+  // The ensemble's caption, longest first, for a pane's width.
+  const ENSEMBLE = ['one site, ' + N_ATOMS + ' atoms: cloud of 1, fronts of all', N_ATOMS + ' atoms: cloud of 1, fronts of all', N_ATOMS + ' atoms, cloud of 1']
   // Boltzmann's constant over hc, cm^-1 per K (CODATA 2022), and the
   // gas's temperature for the ground term's thermal populations.
   const K_CM = 0.6950348004
@@ -757,27 +759,33 @@
   // ---- The pane --------------------------------------------------------
 
   // The pane's parts, in pixels: the atom, the level diagram, the
-  // spectrum and the caption's place. The top 24 pixels hold the mode's
-  // drop-down at the left, the bottom 18 its label.
+  // spectrum and the captions' places. The top 24 pixels hold the mode's
+  // drop-down at the left, the bottom 18 its label. An atom smaller than
+  // SMALL a side has no room for captions over its cloud: the pane is
+  // small, and a band of two rows above the atom holds the jump's
+  // caption and the ensemble's, with nothing written over the atom.
+  const SMALL = 240
   function regions (w, h) {
     const narrow = w < 480
-    const top = narrow ? 44 : 26
     const bottom = 18
     const sh = Math.round(Math.max(34, Math.min(84, h * 0.17)))
     const spec = { x: 8, y: h - bottom - sh, w: w - 16, h: sh }
-    const body = { x: 0, y: top, w, h: spec.y - top - 6 }
-    let atom
-    let diag
-    if (w >= 1.15 * body.h) {
-      const aw = Math.round(Math.min(w * 0.52, body.h * 1.25))
-      atom = { x: 0, y: body.y, w: aw, h: body.h }
-      diag = { x: aw, y: body.y, w: w - aw - 6, h: body.h }
-    } else {
+    const parts = top => {
+      const body = { x: 0, y: top, w, h: spec.y - top - 6 }
+      if (w >= 1.15 * body.h) {
+        const aw = Math.round(Math.min(w * 0.52, body.h * 1.25))
+        return { atom: { x: 0, y: body.y, w: aw, h: body.h }, diag: { x: aw, y: body.y, w: w - aw - 6, h: body.h } }
+      }
       const ah = Math.round(body.h * 0.55)
-      atom = { x: 0, y: body.y, w, h: ah }
-      diag = { x: 0, y: body.y + ah, w: w - 6, h: body.h - ah }
+      return { atom: { x: 0, y: body.y, w, h: ah }, diag: { x: 0, y: body.y + ah, w: w - 6, h: body.h - ah } }
     }
-    return { atom, diag, spec, cap: narrow ? { x: 8, y: 36 } : { x: 162, y: 14 }, narrow }
+    const top = narrow ? 44 : 26
+    let r = parts(top)
+    const small = Math.min(r.atom.w, r.atom.h) < SMALL
+    if (small) r = parts(top + 12)
+    const cap = narrow ? { x: 8, y: 36 } : { x: 162, y: 14 }
+    const ens = small ? { x: 8, y: narrow ? 48 : 32 } : null
+    return { atom: r.atom, diag: r.diag, spec, cap, ens, narrow, small }
   }
 
   const inside = (b, x, y) => b && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h
@@ -944,12 +952,44 @@
     // Every text the pane draws, as its ink box in the pane's pixels:
     // the diagram's and the spectrum's, drawn once a resize, in still,
     // and the frame's in said.
+    // A text that would run off its canvas is moved in. A text placed
+    // only where it fits overlaps no text placed before it, with a pixel
+    // to spare.
     let still = []
     let said = []
-    function say (g, t, x, y, ox = 0, oy = 0, list = said) {
+    function box (g, t, x, y, ox = 0, oy = 0) {
       const m = g.measureText(t)
-      g.fillText(t, x, y)
-      list.push({ t, x: ox + x - m.actualBoundingBoxLeft, y: oy + y - m.actualBoundingBoxAscent, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent })
+      const l = m.actualBoundingBoxLeft
+      const r = m.actualBoundingBoxRight
+      const W = g.canvas.width
+      if (x - l < 1) x = 1 + l
+      else if (x + r > W - 1) x = Math.max(1 + l, W - 1 - r)
+      return { t, gx: x, gy: y, x: ox + x - l, y: oy + y - m.actualBoundingBoxAscent, w: l + r, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent }
+    }
+    function fits (b) {
+      for (const o of still.concat(said)) {
+        if (b.x < o.x + o.w + 1 && o.x < b.x + b.w + 1 && b.y < o.y + o.h + 1 && o.y < b.y + b.h + 1) return false
+      }
+      return true
+    }
+    function write (g, b, list = said) {
+      g.fillText(b.t, b.gx, b.gy)
+      list.push(b)
+    }
+    function say (g, t, x, y, ox = 0, oy = 0, list = said) {
+      write(g, box(g, t, x, y, ox, oy), list)
+    }
+    // Draws t at the first of the places [x, y] where it fits, or not at
+    // all, and tells whether it drew.
+    function place (g, t, at) {
+      for (const [x, y] of at) {
+        const b = box(g, t, x, y)
+        if (fits(b)) {
+          write(g, b)
+          return true
+        }
+      }
+      return false
     }
 
     function yOf (E) {
@@ -1013,13 +1053,14 @@
       }
       g.lineWidth = 1
       // The ground term's fine structure, magnified, in the triplet
-      // columns' empty band between 1.2 and 6 eV.
+      // columns' empty band between 1.2 and 6 eV, where that band is
+      // tall enough to part the labels of J = 0 and 1 by a row.
       R.inset = null
-      if (diag.h >= 140) {
+      const iy = Math.round(yOf(6 * perEV))
+      const ih = Math.round(Math.min(yOf(1.2 * perEV) - iy, 96))
+      if (diag.h >= 140 && ih >= 64) {
         const ix = Math.round(colX(2) + 4)
         const iw = Math.round(Math.min(dd.cw * 2 - 8, 130))
-        const iy = Math.round(yOf(6 * perEV))
-        const ih = Math.round(Math.min(yOf(1.2 * perEV) - iy, 96))
         const gl = levels.filter(ground)
         const span = gl[gl.length - 1].E
         const inner = ih - 30
@@ -1262,16 +1303,9 @@
       g.stroke()
       g.setLineDash([])
       g.font = '10px ' + MONO
-      g.fillStyle = '#7d89a1'
       g.textAlign = 'left'
       g.textBaseline = 'alphabetic'
-      say(g, 'z, chosen', tx + 4, Math.max(a.y + 10, ty))
-      // A scale bar.
-      const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
-      const bx = a.x + 10
-      const by = a.y + a.h - 6
-      g.fillRect(bx, by, step * F.k, 1)
-      say(g, step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', bx, by - 4)
+      if (R.small) return
       const o = shells(lv).find(e => e.outer)
       const rows = [['#e8eefc', levelName(lv) + '  M_L=' + ax.M + (cl.round ? ', round' : '')]]
       const tau = tauScreen(lv)
@@ -1286,25 +1320,36 @@
       }
       const rate = born.length
       const rest = [
-        ['#7d89a1', 'one site, ' + N_ATOMS + ' atoms: cloud of 1, fronts of all'],
+        ['#7d89a1', ENSEMBLE[0]],
         ['#7d89a1', 'events: NIST rates / ' + sci(EVENT) + ', light: c / ' + sci(LIGHT) + ' = ' + Clock.light.toFixed(1) + ' ' + A0 + '/s'],
         ['#7d89a1', 'field ' + Math.round(100 * field) + '%, ' + rate + ' photons/s, ' + fronts.length + ' fronts']
       ]
       const fit = a.w - 14
-      // A small pane keeps the level, its clock, its photon and the rate,
-      // a smaller one the level and the rate.
-      const keep = a.w < 200 ? [rows[0], rest[2]] : a.w < 320 ? [rows[0], rows[1], ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
-      keep.forEach(([col, t, swatch], j) => {
+      // A narrower atom keeps the level, its clock, its photon and the
+      // rate. Each row, then the axis's name, then the scale bar, is
+      // written where it overlaps no text before it, or left out.
+      const keep = a.w < 320 ? [rows[0], rows[1], ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
+      let j = 0
+      for (const [col, t, swatch] of keep) {
         const y = a.y + 11 + 12 * j
-        let x = a.x + 8
+        const x = a.x + 8 + (swatch ? 11 : 0)
+        const b = box(g, clip(g, t, fit - (x - a.x - 8)), x, y)
+        if (!fits(b)) continue
         if (swatch) {
           g.fillStyle = swatch
-          g.fillRect(x, y - 7, 7, 7)
-          x += 11
+          g.fillRect(a.x + 8, y - 7, 7, 7)
         }
         g.fillStyle = col
-        say(g, clip(g, t, fit - (x - a.x - 8)), x, y)
-      })
+        write(g, b)
+        j++
+      }
+      g.fillStyle = '#7d89a1'
+      place(g, 'z, chosen', [[tx + 4, Math.max(a.y + 10, ty)]])
+      // A scale bar, drawn only with its label.
+      const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
+      const bx = a.x + 10
+      const by = a.y + a.h - 6
+      if (place(g, step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', [[bx, by - 4]])) g.fillRect(bx, by, step * F.k, 1)
     }
 
     function clip (g, t, w) {
@@ -1346,7 +1391,8 @@
       const lv = levels[atoms[0].lv]
       // The drawn atom's last jump: an arrow from the upper level to the
       // lower, in its light's colour, or grey and dashed outside the
-      // visible.
+      // visible, its wavelength written after the level's name.
+      let arrow = null
       if (last && now - last.t < 3) {
         const ln = lines[last.k]
         const up = levels[ln.u]
@@ -1375,11 +1421,7 @@
         g.lineTo(x2 - 8 * Math.cos(ang - 0.4), y2 - 8 * Math.sin(ang - 0.4))
         g.lineTo(x2 - 8 * Math.cos(ang + 0.4), y2 - 8 * Math.sin(ang + 0.4))
         g.fill()
-        g.font = '10px ' + MONO
-        g.textAlign = 'left'
-        g.textBaseline = 'middle'
-        const t = wlText(wl(ln))
-        say(g, t, Math.min(d.x + d.w - g.measureText(t).width - 2, (x1 + x2) / 2 + 6), (y1 + y2) / 2)
+        arrow = { t: wlText(wl(ln)), fill: g.fillStyle, a, x1, y1, x2, y2 }
         g.restore()
       }
       // The drawn atom's level, lit, and in the inset its J.
@@ -1407,7 +1449,23 @@
       const label = levelName(lv)
       const right = x + cw + g.measureText(label).width + 4 < d.x + d.w
       g.textAlign = right ? 'left' : 'right'
-      say(g, label, right ? x + cw : x - 2, y - 7)
+      place(g, label, [[right ? x + cw : x - 2, y - 7], [right ? x + cw : x - 2, y + 8]])
+      if (arrow && !R.small) {
+        const { t, x1, y1, x2, y2 } = arrow
+        g.save()
+        g.globalAlpha = arrow.a
+        g.fillStyle = arrow.fill
+        g.textAlign = 'left'
+        const tw = g.measureText(t).width
+        const at = []
+        for (const f of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+          const mx = x1 + (x2 - x1) * f
+          const my = y1 + (y2 - y1) * f
+          at.push([Math.min(d.x + d.w - tw - 2, mx + 6), my], [mx - 6 - tw, my])
+        }
+        place(g, t, at)
+        g.restore()
+      }
     }
 
     function drawSpectrumNow (g, dt) {
@@ -1435,15 +1493,36 @@
       g.restore()
     }
 
-    function caption (g, w) {
-      if (!last) return
-      const ln = lines[last.k]
-      const t = levelName(levels[ln.u]) + TO + levelName(levels[ln.l]) + '  ' + wlText(wl(ln)) + (ln.type !== 'E1' ? ' ' + ln.type : '') + '  A ' + sci(ln.A) + ' s' + U(0x207b, 0xb9) + '  ' + TAU + ' ' + timeText(levels[ln.u].tau) + '  waited ' + timeText(last.waited)
-      g.font = '11px ' + MONO
+    // The captions above the atom, measured first so that no other text
+    // takes their place, and drawn last, over the fronts.
+    function captions (g, w) {
+      const out = []
       g.textAlign = 'left'
       g.textBaseline = 'middle'
-      g.fillStyle = '#c9d3e6'
-      say(g, clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)
+      if (last) {
+        const ln = lines[last.k]
+        const t = levelName(levels[ln.u]) + TO + levelName(levels[ln.l]) + '  ' + wlText(wl(ln)) + (ln.type !== 'E1' ? ' ' + ln.type : '') + '  A ' + sci(ln.A) + ' s' + U(0x207b, 0xb9) + '  ' + TAU + ' ' + timeText(levels[ln.u].tau) + '  waited ' + timeText(last.waited)
+        g.font = '11px ' + MONO
+        out.push(['11px', '#c9d3e6', box(g, clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)])
+      }
+      if (R.ens) {
+        g.font = '10px ' + MONO
+        const room = w - R.ens.x - 8
+        const t = ENSEMBLE.find(t => g.measureText(t).width <= room) || ENSEMBLE[ENSEMBLE.length - 1]
+        out.push(['10px', '#7d89a1', box(g, clip(g, t, room), R.ens.x, R.ens.y)])
+      }
+      for (const c of out) said.push(c[2])
+      return out
+    }
+
+    function caption (g, out) {
+      g.textAlign = 'left'
+      g.textBaseline = 'middle'
+      for (const [px, fill, b] of out) {
+        g.font = px + ' ' + MONO
+        g.fillStyle = fill
+        g.fillText(b.t, b.gx, b.gy)
+      }
     }
 
     redraw(null)
@@ -1475,6 +1554,7 @@
         })
         const g = layer.g
         said = []
+        const caps = captions(g, w)
         g.globalCompositeOperation = 'source-over'
         g.globalAlpha = 1
         g.fillStyle = '#03050a'
@@ -1483,7 +1563,7 @@
         drawDiagramNow(g)
         drawAtom(g, 1 - 0.3 * L.idle)
         labels(g)
-        caption(g, w)
+        caption(g, caps)
         out.drawImage(layer.c, 0, 0)
       },
 

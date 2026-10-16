@@ -589,9 +589,16 @@ ruling's starting point by `carbon-photon.md`.
   `carbon-photon.md` cites them.
 - The pane: the atom on the left, the level diagram on the right (below
   in a tall pane), the spectrum along the bottom, the drawn atom's last
-  jump as a caption at the top beside the drop-down. The code keeps
-  each part behind a small interface: `Clock`, `Ensemble`, `Cloud`,
-  `Front` and `Warp`.
+  jump as a caption at the top beside the drop-down. An atom under 240
+  pixels a side, as in a split of three panes, is small: a band of two
+  rows above it holds the jump's caption and the ensemble's, and nothing
+  is written over the cloud. Every text is written only where it
+  overlaps no text written before it, in this order: the jump's
+  caption, the ensemble's, the lit level's name, the arrow's
+  wavelength (left to the caption in a small pane), the atom's rows,
+  the axis's name and the scale bar, so that a crowded pane drops the
+  last first. The code keeps each part behind a small interface:
+  `Clock`, `Ensemble`, `Cloud`, `Front` and `Warp`.
 - One site, many atoms: an ensemble of 160 atoms at one site, so that
   hundreds of photons a second come from a picture of one atom. The pane
   says "one site, 160 atoms: cloud of 1, fronts of all". The cloud, the
@@ -689,7 +696,10 @@ ruling's starting point by `carbon-photon.md`.
 - Checked by `scripts/checks/vizcarbon.js`: one pane watched by its
   probe through the fake session's turns, frames of a source flash,
   visible, ultraviolet and infrared fronts, hundreds of fronts at full
-  activity and the spectrum, then the frame rate below. `vizmodes.js`
+  activity and the spectrum, then the frame rate below. At every frame
+  it captures, at 1200 by 760 and in each Carbon pane of the 720 by 460
+  split, no two texts overlap: the ink box of every text the probe
+  reports, and the drop-down's box. `vizmodes.js`
   captures Carbon in its phases with the other procedural modes,
   `vizpointer.js` clicks it.
 - Frame rate, under swiftshader on a loaded host: at full activity,
