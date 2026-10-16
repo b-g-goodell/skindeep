@@ -32,7 +32,7 @@ const JOBS = [
   ['settings'],
   ...['play', 'mute', 'start', 'skins', 'coffee'].map(m => ['sounds', m]),
   ...['keys', 'strip', 'exit', 'execfail', 'meters', 'closewin', 'carry'].map(m => ['tabs', m]),
-  ['tabviz', 'look'], ['twoskins'], ['vizfern'], ['vizmenu'], ['vizmodes'], ['vizpointer'],
+  ['tabviz', 'look'], ['twoskins'], ['vizcarbon'], ['vizfern'], ['vizmenu'], ['vizmodes'], ['vizpointer'],
   ['vizreopen', 'rounds'], ['vizreopen', 'build'], ['vizsound'], ['vizsplit'], ['vizstep']
 ]
 
