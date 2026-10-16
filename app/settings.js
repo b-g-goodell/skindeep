@@ -1,7 +1,9 @@
 'use strict'
 // The user's settings: one definition for every skin. A skin
-// cannot add, remove or rename a setting. Each setting overrides one
-// manifest value, and null returns to the skin's own. Beside them,
+// cannot add, remove or rename a setting. The terminal's font size
+// overrides the manifest's, and the three text sizes scale the text of
+// the skin, of the window's own parts and of the visualization window
+// (decision 0036). null returns to the skin's or the app's own. Beside them,
 // `panels` keeps the sizes the user dragged each skin's splits to,
 // by skin name and split id (decision 0035). Kept in
 // $XDG_STATE_HOME/claude-skins/settings.json, written by write and
@@ -12,15 +14,44 @@ const os = require('os')
 const path = require('path')
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30, 32]
+// The text sizes of decision 0036, in percent of the size the skin or
+// the app draws. The window's strips hold their text up to 150.
+const TEXT_SCALES = [70, 80, 90, 110, 125, 150]
 
+// own: the value null stands for, own(skin). show: a value as the menu
+// writes it.
 const SETTINGS = [
   {
     id: 'terminal.fontSize',
     label: 'Terminal font size',
-    overrides: 'terminal.fontSize',
     values: FONT_SIZES,
-    unit: 'px',
-    skinValue: skin => (skin && skin.terminal && skin.terminal.fontSize) || 14
+    own: skin => (skin && skin.terminal && skin.terminal.fontSize) || 14,
+    show: v => `${v} px`,
+    none: 'Skin default'
+  },
+  {
+    id: 'text.skin',
+    label: 'Skin text size',
+    values: TEXT_SCALES,
+    own: () => 100,
+    show: v => `${v}%`,
+    none: 'Skin default'
+  },
+  {
+    id: 'text.window',
+    label: 'Window text size',
+    values: TEXT_SCALES,
+    own: () => 100,
+    show: v => `${v}%`,
+    none: 'Default'
+  },
+  {
+    id: 'text.viz',
+    label: 'Visualization text size',
+    values: TEXT_SCALES,
+    own: () => 100,
+    show: v => `${v}%`,
+    none: 'Default'
   }
 ]
 
@@ -78,15 +109,17 @@ function save (f, values) {
 // the current one marked.
 function menu (values, skin) {
   return SETTINGS.map(s => {
-    const own = s.skinValue(skin)
     const cur = values[s.id]
     return {
       id: s.id,
       label: s.label,
-      choices: [{ value: null, label: `Skin default (${own} ${s.unit})`, current: cur === null }]
-        .concat(s.values.map(v => ({ value: v, label: `${v} ${s.unit}`, current: cur === v })))
+      choices: [{ value: null, label: `${s.none} (${s.show(s.own(skin))})`, current: cur === null }]
+        .concat(s.values.map(v => ({ value: v, label: s.show(v), current: cur === v })))
     }
   })
 }
 
-module.exports = { SETTINGS, file, load, save, valid, menu, setPanel, panelsOf }
+// A text size of decision 0036 as a factor: 1 for the default.
+const scale = (values, id) => (values && byId.has(id) && byId.get(id).values.includes(values[id]) ? values[id] : 100) / 100
+
+module.exports = { SETTINGS, TEXT_SCALES, file, load, save, valid, menu, scale, setPanel, panelsOf }

@@ -12,11 +12,11 @@ test('a missing or broken file, and any value outside a setting\'s list, read as
   const d = tmp()
   try {
     const f = path.join(d, 'settings.json')
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
     fs.writeFileSync(f, '{not json')
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
     fs.writeFileSync(f, JSON.stringify({ 'terminal.fontSize': 19, other: 3 }))
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
   } finally {
     fs.rmSync(d, { recursive: true, force: true })
   }
@@ -28,12 +28,34 @@ test('a saved setting reads back, and the menu marks it beside the skin\'s own v
     const f = path.join(d, 'deeper', 'settings.json')
     settings.save(f, { 'terminal.fontSize': 20 })
     const v = settings.load(f)
-    assert.deepStrictEqual(v, { 'terminal.fontSize': 20, panels: {} })
+    assert.deepStrictEqual(v, { 'terminal.fontSize': 20, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
     const [row] = settings.menu(v, { terminal: { fontSize: 19 } })
     assert.strictEqual(row.choices[0].label, 'Skin default (19 px)')
     assert.strictEqual(row.choices[0].current, false)
     assert.deepStrictEqual(row.choices.filter(c => c.current).map(c => c.value), [20])
     assert.deepStrictEqual(fs.readdirSync(path.dirname(f)), ['settings.json'])
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true })
+  }
+})
+
+// The text sizes of decision 0036: percents, null the default.
+test('a text size reads back as a factor, and the menu offers it beside the default', () => {
+  const d = tmp()
+  try {
+    const f = path.join(d, 'settings.json')
+    settings.save(f, { 'text.skin': 150, 'text.window': 80, 'text.viz': 133 })
+    const v = settings.load(f)
+    assert.deepStrictEqual([v['text.skin'], v['text.window'], v['text.viz']], [150, 80, null])
+    assert.deepStrictEqual(['text.skin', 'text.window', 'text.viz', 'terminal.fontSize'].map(id => settings.scale(v, id)), [1.5, 0.8, 1, 1])
+    const rows = settings.menu(v, null)
+    assert.deepStrictEqual(rows.map(r => r.label), ['Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size'])
+    const skin = rows[1]
+    assert.strictEqual(skin.choices[0].label, 'Skin default (100%)')
+    assert.deepStrictEqual(skin.choices.map(c => c.label).slice(1), settings.TEXT_SCALES.map(p => `${p}%`))
+    assert.deepStrictEqual(skin.choices.filter(c => c.current).map(c => c.value), [150])
+    assert.strictEqual(rows[3].choices[0].label, 'Default (100%)')
+    assert.strictEqual(rows[3].choices[0].current, true)
   } finally {
     fs.rmSync(d, { recursive: true, force: true })
   }
@@ -46,6 +68,9 @@ test('only a defined setting and one of its values is valid', () => {
   assert.ok(!settings.valid('terminal.fontSize', 33))
   assert.ok(!settings.valid('terminal.fontSize', '14'))
   assert.ok(!settings.valid('skin.css', null))
+  assert.ok(settings.valid('text.window', 150))
+  assert.ok(!settings.valid('text.window', 100))
+  assert.ok(!settings.valid('text.window', 1.5))
 })
 
 // Panel sizes (decision 0035): kept by skin name and split id, a
