@@ -28,6 +28,10 @@
 .chalk-list .item .mark { color: rgba(244, 234, 214, 0.7); }
 .chalk-list .item.doing { color: #ffe2a8; }
 .chalk-list .item.done { opacity: 0.6; }
+/* Its toggle: two chalked words above the lines, the one shown underlined. */
+.chalk-tabs { justify-content: flex-start; align-items: baseline; gap: 14px; }
+.chalk-tabs .option { font: bold 22px/22px "Amatic SC", cursive; letter-spacing: 1.5px; color: #f4ead6; opacity: 0.5; }
+.chalk-tabs .option.on { opacity: 1; border-bottom: 2px solid rgba(244, 234, 214, 0.75); }
 
 /* String lights across the wall: they flare at each tool call. */
 .lights { display: block; }

@@ -92,3 +92,11 @@
 .tracklist .item.doing .mark { color: #d8e030; }
 .tracklist .item.done { opacity: 1; color: #1d6d1d; }
 .tracklist .item.done .mark { color: #3cdc3c; }
+/* Its toggle: two tabs on the playlist's frame, the one shown joined to
+   the playlist's LCD. */
+.tabs { justify-content: flex-start; align-items: flex-end; gap: 3px; }
+.tabs .option { font: 8px/14px Silkscreen, monospace; letter-spacing: 1px; text-transform: uppercase; color: #2fae2f;
+  padding: 1px 8px 0; background: #0a0d10; border: 1px solid; border-color: #5c636d #05070a transparent #5c636d;
+  border-bottom: none; border-radius: 3px 3px 0 0; opacity: 1; }
+.tabs .option:hover { color: #3cff3c; background: #0a2a8a; }
+.tabs .option.on { padding-top: 3px; background: #020402; color: #3cff3c; text-shadow: 0 0 6px rgba(60, 255, 60, 0.55); }

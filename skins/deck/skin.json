@@ -679,7 +679,17 @@
     "width": 244,
     "bottom": 24
    },
-   "class": "tracklist"
+   "class": "tracklist",
+   "toggle": {
+    "rect": {
+     "right": 140,
+     "top": 156,
+     "width": 132,
+     "height": 18
+    },
+    "labels": ["tasks", "stats"],
+    "class": "tabs"
+   }
   }
  ]
 }
