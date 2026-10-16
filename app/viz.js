@@ -74,6 +74,8 @@ class Viz {
     this.modeOf = new Map()
     // The tab whose pane's drop-down is open, or null.
     this.menu = null
+    // The visualization text size as a factor (decision 0036).
+    this.text = 1
     this.base = startMode(records)
     this.inputs = inputDir()
     const inputs = last.read(this.inputs)
@@ -165,6 +167,11 @@ class Viz {
     try { last.record(this.dir, process.pid, MODES[i].id) } catch (e) { this.log(`last viz mode: ${e.message}`) }
   }
 
+  // The visualization text size, a factor, sent with every frame.
+  setText (t) {
+    this.text = t
+  }
+
   step (pane) {
     if (pane) this.set(pane.id, (pane.mode + 1) % MODES.length)
   }
@@ -175,7 +182,7 @@ class Viz {
   press (x, y) {
     const list = this.panes()
     const [w, h] = this.win.getContentSize()
-    const hit = layout.press(x, y, list.length, MODES.length, w, h, list.findIndex(t => t.id === this.menu))
+    const hit = layout.press(x, y, list.length, MODES.length, w, h, list.findIndex(t => t.id === this.menu), this.text)
     const was = this.menu
     this.menu = null
     if (!hit) return
@@ -268,9 +275,10 @@ class Viz {
       return { k: t.id, i: all.findIndex(x => x.id === t.id) + 1, a: t.active ? 1 : 0, m: t.mode, o: t.id === this.menu ? 1 : 0, n, e }
     })
     // src: the input's index. st: the sound output's state, 0 none yet,
-    // 1 live, 2 failed. s: its newest samples, while it takes them.
+    // 1 live, 2 failed. s: its newest samples, while it takes them. t:
+    // the text size.
     const st = SOUND_STATUS[this.sound.status]
-    this.win.webContents.send('frame', { p, src: this.input, st, s: this.input > 0 && st === 1 ? this.sound.samples() : new Float32Array(0) })
+    this.win.webContents.send('frame', { p, src: this.input, st, s: this.input > 0 && st === 1 ? this.sound.samples() : new Float32Array(0), t: this.text })
   }
 }
 

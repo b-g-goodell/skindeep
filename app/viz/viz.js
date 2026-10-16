@@ -30,6 +30,10 @@
   let held = null
   let tone = -Infinity
   const SOURCE = ['', 'sound output', 'session and sound output']
+  // The text size, a factor (decision 0036): the drop-downs, the
+  // captions and a mode's own text, which reads it through text().
+  let text = 1
+  const env = { text: () => text }
 
   try {
     const probe = document.createElement('canvas').getContext('webgl2')
@@ -160,7 +164,7 @@
       const g = p.flatCanvas.getContext('2d')
       g.fillStyle = '#000'
       g.fillRect(0, 0, p.flatCanvas.width, p.flatCanvas.height)
-      p.flat = VizCanvas[mode.kind === 'milk' ? 'scope' : mode.id](p.flatCanvas)
+      p.flat = VizCanvas[mode.kind === 'milk' ? 'scope' : mode.id](p.flatCanvas, env)
     }
     p.milkCanvas.hidden = !milk
     p.flatCanvas.hidden = !!milk
@@ -178,7 +182,7 @@
       p.el.classList.toggle('active', list.length > 1 && p.a === 1)
       p.x = r.x
       p.y = r.y
-      p.menu = VizLayout.menu(r, VizModes.length, W, H)
+      p.menu = VizLayout.menu(r, VizModes.length, W, H, text)
       const b = p.menu.button
       Object.assign(p.button.style, { left: (b.x - r.x) + 'px', top: (b.y - r.y) + 'px', width: b.w + 'px', height: b.h + 'px' })
       if (r.w === p.w && r.h === p.h) return
@@ -208,7 +212,7 @@
     const all = [...panes.values()]
     const W = window.innerWidth
     const H = window.innerHeight
-    if (kind === 'down' && (all.some(q => q.o === 1) || VizLayout.press(e.clientX, e.clientY, all.length, VizModes.length, W, H, -1))) return
+    if (kind === 'down' && (all.some(q => q.o === 1) || VizLayout.press(e.clientX, e.clientY, all.length, VizModes.length, W, H, -1, text))) return
     const p = held || all[VizLayout.at(e.clientX, e.clientY, all.length, W, H)]
     if (!p) return
     if (kind === 'down') held = p
@@ -228,6 +232,12 @@
   window.vizFeed.onFrame(f => {
     const was = sound.src + ':' + sound.st
     sound = { src: f.src, st: f.st, s: f.s }
+    if (f.t !== text) {
+      text = f.t
+      document.documentElement.style.setProperty('--viz-text', String(text))
+      order = ''
+      listed = ''
+    }
     const keys = f.p.map(e => e.k)
     for (const [k, p] of panes) {
       if (!keys.includes(k)) {

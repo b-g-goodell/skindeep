@@ -758,17 +758,19 @@
 
   // ---- The pane --------------------------------------------------------
 
-  // The pane's parts, in pixels: the atom, the level diagram, the
-  // spectrum and the captions' places. The top 24 pixels hold the mode's
-  // drop-down at the left, the bottom 18 its label. An atom smaller than
+  // The pane's parts, in pixels, at text size T (decision 0036): the
+  // atom, the level diagram, the spectrum and the captions' places. The
+  // top 24 pixels at T 1 hold the mode's drop-down at the left
+  // (app/viz/layout.js), the bottom 18 its label. An atom smaller than
   // SMALL a side has no room for captions over its cloud: the pane is
   // small, and a band of two rows above the atom holds the jump's
   // caption and the ensemble's, with nothing written over the atom.
   const SMALL = 240
-  function regions (w, h) {
-    const narrow = w < 480
-    const bottom = 18
-    const sh = Math.round(Math.max(34, Math.min(84, h * 0.17)))
+  function regions (w, h, T = 1) {
+    const narrow = w < 480 * T
+    const bottom = Math.round(18 * T)
+    const button = 4 + Math.round(20 * T)
+    const sh = Math.round(Math.max(34 * T, Math.min(84, h * 0.17)))
     const spec = { x: 8, y: h - bottom - sh, w: w - 16, h: sh }
     const parts = top => {
       const body = { x: 0, y: top, w, h: spec.y - top - 6 }
@@ -779,12 +781,12 @@
       const ah = Math.round(body.h * 0.55)
       return { atom: { x: 0, y: body.y, w, h: ah }, diag: { x: 0, y: body.y + ah, w: w - 6, h: body.h - ah } }
     }
-    const top = narrow ? 44 : 26
+    const top = Math.round(narrow ? button + 20 * T : button + 2)
     let r = parts(top)
     const small = Math.min(r.atom.w, r.atom.h) < SMALL
-    if (small) r = parts(top + 12)
-    const cap = narrow ? { x: 8, y: 36 } : { x: 162, y: 14 }
-    const ens = small ? { x: 8, y: narrow ? 48 : 32 } : null
+    if (small) r = parts(top + Math.round(12 * T))
+    const cap = narrow ? { x: 8, y: Math.round(button + 12 * T) } : { x: 4 + Math.round(150 * T) + 8, y: button / 2 + 2 }
+    const ens = small ? { x: 8, y: Math.round(narrow ? button + 24 * T : button + 8 * T) } : null
     return { atom: r.atom, diag: r.diag, spec, cap, ens, narrow, small }
   }
 
@@ -801,10 +803,15 @@
   const COL_NAME = ['singlet', 'singlet' + ODD, 'triplet', 'triplet' + ODD, 'quintet' + ODD]
   const colOf = lv => COLS.indexOf(lv.term[0] + lv.parity)
 
-  function create (canvas) {
+  // env.text(): the visualization text size, a factor (decision 0036).
+  function create (canvas, env) {
     // Composed on a canvas of the CPU and blitted once, as the other
     // procedural modes are.
     const out = canvas.getContext('2d')
+    // The text size this layout was made at, and a font of n pixels at
+    // it.
+    let T = 1
+    const font = n => n * T + 'px ' + MONO
     let layer = null
     let diagC = null
     let specC = null
@@ -979,6 +986,11 @@
     function say (g, t, x, y, ox = 0, oy = 0, list = said) {
       write(g, box(g, t, x, y, ox, oy), list)
     }
+    // Draws t where it overlaps no text before it, or not at all.
+    function sayIf (g, t, x, y, ox, oy, list) {
+      const b = box(g, t, x, y, ox, oy)
+      if (fits(b)) write(g, b, list)
+    }
     // Draws t at the first of the places [x, y] where it fits, or not at
     // all, and tells whether it drew.
     function place (g, t, at) {
@@ -1003,12 +1015,12 @@
       const { diag } = R
       diagC = cpu(diag.w, diag.h)
       const g = diagC.g
-      const put = (t, x, y) => say(g, t, x, y, diag.x, diag.y, still)
+      const put = (t, x, y) => sayIf(g, t, x, y, diag.x, diag.y, still)
       const small = diag.w < 260 || diag.h < 200
-      const left = small ? 30 : 46
-      const dd = { top: 16, bot: diag.h - (small ? 14 : 26), x0: left, cw: (diag.w - left - 6) / 5 }
+      const left = Math.round((small ? 30 : 46) * T)
+      const dd = { top: Math.round(16 * T), bot: diag.h - Math.round((small ? 14 : 26) * T), x0: left, cw: (diag.w - left - 6) / 5 }
       R.dd = dd
-      g.font = '10px ' + MONO
+      g.font = font(10)
       g.textBaseline = 'middle'
       // The ionization limit, dashed.
       g.strokeStyle = '#7d89a1'
@@ -1020,7 +1032,7 @@
       g.setLineDash([])
       g.fillStyle = '#7d89a1'
       g.textAlign = 'right'
-      put((small ? 'limit ' : 'ionization limit ') + D.limitEV.toFixed(2) + ' eV', diag.w - 6, dd.top - 8)
+      put((small ? 'limit ' : 'ionization limit ') + D.limitEV.toFixed(2) + ' eV', diag.w - 6, dd.top - 8 * T)
       // The energy axis in eV.
       g.strokeStyle = '#1f2838'
       g.beginPath()
@@ -1028,9 +1040,13 @@
       g.lineTo(dd.x0 - 6, dd.bot)
       g.stroke()
       const perEV = D.limit / D.limitEV
-      for (let e = 0; e <= 10; e += small ? 5 : 2) put(e + (small ? '' : ' eV'), dd.x0 - 9, yOf(e * perEV))
+      // Every 2 eV, or 5 in a small diagram, or wider where the labels'
+      // rows would meet.
+      const pxEV = (dd.bot - dd.top) / D.limitEV
+      const step = (small ? [5, 10] : [2, 5, 10]).find(s => s * pxEV >= 14 * T) || 10
+      for (let e = 0; e <= 10; e += step) put(e + (small ? '' : ' eV'), dd.x0 - 9, yOf(e * perEV))
       g.textAlign = 'center'
-      if (!small) COL_NAME.forEach((n, c) => put(n, colX(c) + dd.cw / 2, dd.bot + 13))
+      if (!small) COL_NAME.forEach((n, c) => put(n, colX(c) + dd.cw / 2, dd.bot + 13 * T))
       // The Rydberg ladders, faint, toward the limit.
       g.strokeStyle = '#2b3446'
       for (const r of D.rydberg) {
@@ -1057,14 +1073,14 @@
       // tall enough to part the labels of J = 0 and 1 by a row.
       R.inset = null
       const iy = Math.round(yOf(6 * perEV))
-      const ih = Math.round(Math.min(yOf(1.2 * perEV) - iy, 96))
-      if (diag.h >= 140 && ih >= 64) {
+      const ih = Math.round(Math.min(yOf(1.2 * perEV) - iy, 96 * T))
+      if (diag.h >= 140 && ih >= 64 * T) {
         const ix = Math.round(colX(2) + 4)
-        const iw = Math.round(Math.min(dd.cw * 2 - 8, 130))
+        const iw = Math.round(Math.min(dd.cw * 2 - 8, 130 * T))
         const gl = levels.filter(ground)
         const span = gl[gl.length - 1].E
-        const inner = ih - 30
-        R.inset = { x: ix, y: iy, w: iw, h: ih, y0: E => iy + ih - 10 - inner * E / span }
+        const inner = ih - 30 * T
+        R.inset = { x: ix, y: iy, w: iw, h: ih, y0: E => iy + ih - 10 * T - inner * E / span }
         g.strokeStyle = '#2e3a50'
         g.strokeRect(ix + 0.5, iy + 0.5, iw, ih)
         g.setLineDash([2, 3])
@@ -1076,7 +1092,7 @@
         g.textAlign = 'left'
         g.fillStyle = '#7d89a1'
         const mag = inner / ((dd.bot - dd.top) * span / D.limit)
-        put(SUP[3] + 'P ' + TIMES + Math.round(mag), ix + 4, iy + 9)
+        put(SUP[3] + 'P ' + TIMES + Math.round(mag), ix + 4, iy + 9 * T)
         for (const lv of gl) {
           const y = Math.round(R.inset.y0(lv.E)) + 0.5
           g.strokeStyle = '#4d5b77'
@@ -1087,7 +1103,7 @@
           g.stroke()
           g.lineWidth = 1
           g.fillStyle = '#8c97ad'
-          put('J=' + lv.J + (iw > 90 ? '  ' + lv.E.toFixed(1) + ' cm' + U(0x207b, 0xb9) : ''), ix + iw * 0.45 + 4, y)
+          put('J=' + lv.J + (iw > 90 * T ? '  ' + lv.E.toFixed(1) + ' cm' + U(0x207b, 0xb9) : ''), ix + iw * 0.45 + 4, y)
         }
       }
     }
@@ -1098,8 +1114,8 @@
     const LO = 110
     const HI = 10000
     function specX (nm) {
-      const x1 = R.spec.w - 46
-      if (nm > HI) return x1 + 26 + (Math.log10(nm) - 5.5) * 24
+      const x1 = R.spec.w - 46 * T
+      if (nm > HI) return x1 + (26 + (Math.log10(nm) - 5.5) * 24) * T
       return 6 + (x1 - 6) * Math.log(nm / LO) / Math.log(HI / LO)
     }
 
@@ -1107,8 +1123,8 @@
       const s = R.spec
       specC = cpu(s.w, s.h)
       const g = specC.g
-      const put = (t, x, y) => say(g, t, x, y, s.x, s.y, still)
-      const base = s.h - 14
+      const put = (t, x, y) => sayIf(g, t, x, y, s.x, s.y, still)
+      const base = s.h - Math.round(14 * T)
       R.base = base
       g.fillStyle = '#060a12'
       g.fillRect(0, 0, s.w, s.h)
@@ -1120,19 +1136,19 @@
       g.moveTo(4, base + 0.5)
       g.lineTo(specX(HI) + 2, base + 0.5)
       g.stroke()
-      g.font = '9px ' + MONO
+      g.font = font(9)
       g.fillStyle = '#7d89a1'
       g.textBaseline = 'top'
       g.textAlign = 'center'
-      const marks = s.w < 330 ? [[200, '200 nm'], [1000, '1 ' + MU + 'm']] : [[120, '120 nm'], [200, '200'], [380, '380'], [780, '780'], [2000, '2 ' + MU + 'm'], [5000, '5'], [10000, '10']]
+      const marks = s.w < 330 * T ? [[200, '200 nm'], [1000, '1 ' + MU + 'm']] : [[120, '120 nm'], [200, '200'], [380, '380'], [780, '780'], [2000, '2 ' + MU + 'm'], [5000, '5'], [10000, '10']]
       for (const [nm, t] of marks) {
         g.fillRect(specX(nm), base, 1, 3)
         put(t, specX(nm), base + 3)
       }
       put('far IR', specX(370000), base + 3)
       g.strokeStyle = '#33405a'
-      g.strokeRect(Math.round(specX(370000)) - 16.5, 2.5, 33, base - 3)
-      if (s.w >= 330) {
+      g.strokeRect(Math.round(specX(370000) - 16 * T) - 0.5, 2.5, Math.round(33 * T), base - 3)
+      if (s.w >= 330 * T) {
         g.textAlign = 'left'
         put('visible', specX(380) + 2, 3)
       }
@@ -1163,8 +1179,9 @@
 
     function resize (w, h) {
       layer = cpu(w, h)
-      R = regions(w, h)
+      R = regions(w, h, T)
       still = []
+      said = []
       drawDiagram()
       drawSpectrum()
       drawGrain()
@@ -1302,7 +1319,7 @@
       g.lineTo(bot.x, bot.y)
       g.stroke()
       g.setLineDash([])
-      g.font = '10px ' + MONO
+      g.font = font(10)
       g.textAlign = 'left'
       g.textBaseline = 'alphabetic'
       if (R.small) return
@@ -1328,23 +1345,23 @@
       // A narrower atom keeps the level, its clock, its photon and the
       // rate. Each row, then the axis's name, then the scale bar, is
       // written where it overlaps no text before it, or left out.
-      const keep = a.w < 320 ? [rows[0], rows[1], ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
+      const keep = a.w < 320 * T ? [rows[0], rows[1], ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
       let j = 0
       for (const [col, t, swatch] of keep) {
-        const y = a.y + 11 + 12 * j
-        const x = a.x + 8 + (swatch ? 11 : 0)
+        const y = a.y + (11 + 12 * j) * T
+        const x = a.x + 8 + (swatch ? 11 * T : 0)
         const b = box(g, clip(g, t, fit - (x - a.x - 8)), x, y)
         if (!fits(b)) continue
         if (swatch) {
           g.fillStyle = swatch
-          g.fillRect(a.x + 8, y - 7, 7, 7)
+          g.fillRect(a.x + 8, y - 7 * T, 7 * T, 7 * T)
         }
         g.fillStyle = col
         write(g, b)
         j++
       }
       g.fillStyle = '#7d89a1'
-      place(g, 'z, chosen', [[tx + 4, Math.max(a.y + 10, ty)]])
+      place(g, 'z, chosen', [[tx + 4, Math.max(a.y + 10 * T, ty)]])
       // A scale bar, drawn only with its label.
       const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
       const bx = a.x + 10
@@ -1443,13 +1460,13 @@
         g.stroke()
       }
       g.lineWidth = 1
-      g.font = '10px ' + MONO
+      g.font = font(10)
       g.textBaseline = 'middle'
       g.fillStyle = '#ffffff'
       const label = levelName(lv)
       const right = x + cw + g.measureText(label).width + 4 < d.x + d.w
       g.textAlign = right ? 'left' : 'right'
-      place(g, label, [[right ? x + cw : x - 2, y - 7], [right ? x + cw : x - 2, y + 8]])
+      place(g, label, [[right ? x + cw : x - 2, y - 7 * T], [right ? x + cw : x - 2, y + 8 * T]])
       if (arrow && !R.small) {
         const { t, x1, y1, x2, y2 } = arrow
         g.save()
@@ -1502,14 +1519,14 @@
       if (last) {
         const ln = lines[last.k]
         const t = levelName(levels[ln.u]) + TO + levelName(levels[ln.l]) + '  ' + wlText(wl(ln)) + (ln.type !== 'E1' ? ' ' + ln.type : '') + '  A ' + sci(ln.A) + ' s' + U(0x207b, 0xb9) + '  ' + TAU + ' ' + timeText(levels[ln.u].tau) + '  waited ' + timeText(last.waited)
-        g.font = '11px ' + MONO
-        out.push(['11px', '#c9d3e6', box(g, clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)])
+        g.font = font(11)
+        out.push([g.font, '#c9d3e6', box(g, clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)])
       }
       if (R.ens) {
-        g.font = '10px ' + MONO
+        g.font = font(10)
         const room = w - R.ens.x - 8
         const t = ENSEMBLE.find(t => g.measureText(t).width <= room) || ENSEMBLE[ENSEMBLE.length - 1]
-        out.push(['10px', '#7d89a1', box(g, clip(g, t, room), R.ens.x, R.ens.y)])
+        out.push([g.font, '#7d89a1', box(g, clip(g, t, room), R.ens.x, R.ens.y)])
       }
       for (const c of out) said.push(c[2])
       return out
@@ -1518,8 +1535,8 @@
     function caption (g, out) {
       g.textAlign = 'left'
       g.textBaseline = 'middle'
-      for (const [px, fill, b] of out) {
-        g.font = px + ' ' + MONO
+      for (const [f, fill, b] of out) {
+        g.font = f
         g.fillStyle = fill
         g.fillText(b.t, b.gx, b.gy)
       }
@@ -1532,9 +1549,11 @@
         const w = canvas.width
         const h = canvas.height
         if (w < 4 || h < 4) return
-        if (w !== ow || h !== oh) {
+        const t = env && env.text ? env.text() : 1
+        if (w !== ow || h !== oh || t !== T) {
           ow = w
           oh = h
+          T = t
           resize(w, h)
         }
         const L = synth.level

@@ -43,38 +43,44 @@
   // left, and, while it is open, a row per mode below the button in as
   // many columns as the window's height needs, over the other panes.
   // The main process reads the presses with it, the page draws with it,
-  // so neither measures text.
+  // so neither measures text. t: the visualization text size as a
+  // factor (decision 0036), which sizes the button, the rows and the
+  // columns with their text.
   const PAD = 4
   const BUTTON = { w: 150, h: 20 }
   const ROW = 18
   const ITEM = 160
 
+  // The button's and a row's size at text size t, in whole pixels.
+  const sized = t => ({ bw: Math.round(BUTTON.w * t), bh: Math.round(BUTTON.h * t), row: Math.round(ROW * t), item: Math.round(ITEM * t) })
+
   // The drop-down of the pane at r, for m modes, in a w by h window.
-  function menu (r, m, w, h) {
-    const button = { x: r.x + PAD, y: r.y + PAD, w: Math.max(0, Math.min(BUTTON.w, r.w - 2 * PAD)), h: BUTTON.h }
+  function menu (r, m, w, h, t = 1) {
+    const z = sized(t)
+    const button = { x: r.x + PAD, y: r.y + PAD, w: Math.max(0, Math.min(z.bw, r.w - 2 * PAD)), h: Math.min(z.bh, Math.max(0, r.h - 2 * PAD)) }
     const top = button.y + button.h + 2
-    const rows = Math.max(1, Math.min(m, Math.floor((h - PAD - top) / ROW)))
+    const rows = Math.max(1, Math.min(m, Math.floor((h - PAD - top) / z.row)))
     const cols = Math.ceil(m / rows)
-    const iw = Math.max(1, Math.min(ITEM, Math.floor((w - 2 * PAD) / cols)))
+    const iw = Math.max(1, Math.min(z.item, Math.floor((w - 2 * PAD) / cols)))
     const left = Math.max(PAD, Math.min(button.x, w - PAD - cols * iw))
     const items = []
-    for (let i = 0; i < m; i++) items.push({ x: left + Math.floor(i / rows) * iw, y: top + (i % rows) * ROW, w: iw, h: ROW })
+    for (let i = 0; i < m; i++) items.push({ x: left + Math.floor(i / rows) * iw, y: top + (i % rows) * z.row, w: iw, h: z.row })
     return { button, items }
   }
 
   const inside = (b, x, y) => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h
 
   // What a press at (x, y) hits, of n panes in a w by h window, each
-  // with m modes, pane open's drop-down open, -1 for none: { pane, item }
-  // for a row of the open drop-down, { pane, button: true } for a pane's
-  // button, else null.
-  function press (x, y, n, m, w, h, open) {
+  // with m modes, pane open's drop-down open, -1 for none, at text size
+  // t: { pane, item } for a row of the open drop-down, { pane, button:
+  // true } for a pane's button, else null.
+  function press (x, y, n, m, w, h, open, t = 1) {
     if (open >= 0 && open < n) {
-      const item = menu(rect(open, n, w, h), m, w, h).items.findIndex(b => inside(b, x, y))
+      const item = menu(rect(open, n, w, h), m, w, h, t).items.findIndex(b => inside(b, x, y))
       if (item >= 0) return { pane: open, item }
     }
     const i = at(x, y, n, w, h)
-    if (i >= 0 && inside(menu(rect(i, n, w, h), m, w, h).button, x, y)) return { pane: i, button: true }
+    if (i >= 0 && inside(menu(rect(i, n, w, h), m, w, h, t).button, x, y)) return { pane: i, button: true }
     return null
   }
 
