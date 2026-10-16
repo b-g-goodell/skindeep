@@ -19,6 +19,8 @@ window.SkinView = (function () {
   let current = null
   let stageEl = null
   let scale = 1
+  // The stage area's size the last layout used, for the live checks.
+  let laid = null
   let prefs = {}
   let dials = new Set()
   let listOff = false
@@ -51,6 +53,7 @@ window.SkinView = (function () {
     const minH = current.window.minHeight - document.getElementById('strip').offsetHeight
     const k = Math.min(1, W / current.window.minWidth, H / minH)
     scale = k
+    laid = [W, H]
     Object.assign(stageEl.style, {
       inset: 'auto',
       left: '0',
@@ -340,5 +343,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, setDials, setListOff, onPick, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
+  return { apply, update, setDials, setListOff, onPick, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale, laid: () => laid }
 })()

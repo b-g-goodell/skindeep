@@ -152,6 +152,9 @@ window.skinnedPage = () => ({
   metrics,
   sounds: SkinSounds.state(),
   scale: SkinView.scale(),
+  // The stage area's size now, and the size the skin was last laid out at.
+  area: (s => [s.clientWidth, s.clientHeight])(document.getElementById('stage')),
+  laid: SkinView.laid(),
   widgets: SkinView.state(),
   stage: SkinView.stageClasses(),
   splits: SkinView.splits(),
