@@ -10,6 +10,7 @@
 // silent tool call, and a quiet column is grey. When it is done, its
 // busy state 0 and the terminal quiet for DONE_S, the band fades and a
 // flat green line runs through it, the dashboard's colour for waiting.
+// A tab with no busy state is done once quiet and with no token rate.
 // Canvas2D on a small canvas backed by the CPU, every tab redrawn at
 // once as its columns close, a done tab whose line has settled not at
 // all, and nothing while the strip is hidden: under software GL each
@@ -60,18 +61,20 @@ window.TabViz = (function () {
     for (const id of tabs.keys()) if (!ids.has(id)) tabs.delete(id)
   }
 
-  // One frame of numbers per tab, { k, n, e }, n as the pane's: out_bps,
-  // in_kps, idle_s, out_rate, busy, cpu, ctx. The targets as Synth.input
-  // sets them.
+  // One frame of numbers per tab, { k, n, e, u, q }, n as the pane's:
+  // out_bps, in_kps, idle_s, out_rate, busy, cpu, ctx. u: 1 when the tab
+  // has no busy state, q: its quiet seconds (app/viz.js). The targets as
+  // Synth.input sets them. With no busy state, a token rate over its
+  // 10 s window also counts as work.
   function feed (list) {
     for (const f of list) {
       const s = tabs.get(f.k)
       if (!s) continue
-      const [outBps, inKps, idle, outRate, busy] = f.n
+      const [outBps, inKps, , outRate, busy] = f.n
       s.target.bass = Math.min(1, outBps / 2500) + Math.min(0.3, inKps / 30)
       s.target.treble = Math.min(1, outRate / 120)
       s.target.busy = busy === 1 ? 1 : 0
-      s.doneTarget = busy !== 1 && idle >= DONE_S ? 1 : 0
+      s.doneTarget = busy !== 1 && f.q >= DONE_S && !(f.u && outRate > 0) ? 1 : 0
       for (let i = 0; i + 1 < f.e.length; i += 2) {
         const kind = f.e[i]
         s.cur.hue = kind === 2 ? CLASS_HUE[f.e[i + 1]] ?? 200 : KIND_HUE[kind] ?? 160

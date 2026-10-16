@@ -54,13 +54,17 @@ class Viz {
   // false for a tab drawn by no pane, whose events are dropped. parent:
   // the main window's view (app/view.js). log: the app's log. strip:
   // called each frame, open or not, with every pane's tab's numbers,
-  // [{ k, n, e }], for the tab strip's own drawing of each.
+  // [{ k, n, e, u, q }], for the tab strip's own drawing of each: u 1
+  // when the tab has no busy state, q the seconds since its terminal's
+  // last output or its last event, whichever is nearer.
   constructor (tabs, title, parent, log = () => {}, strip = () => {}) {
     this.tabs = tabs
     this.title = title
     this.parent = parent
     this.log = log
     this.strip = strip
+    // Tab id -> the time of its last event, or of its first frame.
+    this.heard = new Map()
     this.win = null
     this.dir = modeDir()
     const records = last.read(this.dir)
@@ -236,16 +240,26 @@ class Viz {
   // Every tab's events are drained here alone, and the same numbers go
   // to the tab strip, so none piles up while the window is closed and
   // the strip and the pane see the same events.
-  feed () {
+  // A monitor tab (decision 0027) has no terminal of its own, so its
+  // pty.idle_s counts from its start, and a session read from its
+  // transcript alone has no busy state: the strip's q and u let it tell
+  // such a tab's work from its rest.
+  feed (now = Date.now()) {
     const all = this.tabs()
     const events = new Map(all.map(t => [t.id, t.bus.drainEvents()]))
+    for (const id of this.heard.keys()) if (!events.has(id)) this.heard.delete(id)
+    for (const [id, e] of events) if (e.length || !this.heard.has(id)) this.heard.set(id, now)
     const nums = new Map(all.filter(t => t.pane).map(t => {
       const g = n => {
         const v = t.bus.get(n)
         return typeof v === 'number' && isFinite(v) ? v : 0
       }
       const n = [g('pty.out_bps'), g('pty.in_kps'), g('pty.idle_s'), g('tokens.out_rate'), g('state.busy'), g('proc.cpu_pct'), g('context.used_pct')]
-      return [t.id, { k: t.id, n, e: (events.get(t.id) || []).map(Number) }]
+      const idle = t.bus.get('pty.idle_s')
+      const since = (now - this.heard.get(t.id)) / 1000
+      const q = typeof idle === 'number' && isFinite(idle) ? Math.min(idle, since) : since
+      const u = typeof t.bus.get('state.busy') === 'number' ? 0 : 1
+      return [t.id, { k: t.id, n, e: (events.get(t.id) || []).map(Number), u, q }]
     }))
     this.strip([...nums.values()])
     if (!this.isOpen()) return
