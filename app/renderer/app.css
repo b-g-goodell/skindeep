@@ -66,6 +66,18 @@ body.tabbed #stage { top: 46px; }
 #term .pane { position: absolute; inset: 0; visibility: hidden; }
 #term .pane.active { visibility: visible; }
 
+/* A split's handle on the terminal's edge (decision 0035): a grip at its
+   middle, the whole strip lit under the pointer and while dragged. */
+.split-handle { position: absolute; z-index: 14; touch-action: none; }
+.split-handle.across { cursor: col-resize; }
+.split-handle.along { cursor: row-resize; }
+.split-handle::after { content: ""; position: absolute; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45); }
+.split-handle.across::after { left: 2px; right: 2px; top: 50%; height: 40px; margin-top: -20px; }
+.split-handle.along::after { top: 2px; bottom: 2px; left: 50%; width: 40px; margin-left: -20px; }
+.split-handle:hover, .split-handle.dragging { background: rgba(255, 255, 255, 0.16); }
+.split-handle:hover::after, .split-handle.dragging::after { background: rgba(255, 255, 255, 0.8); }
+
 /* The skin's menu button, drawn by the app (decision 0022). A state the
    skin gives no image gets the app's effect. */
 #menu-button { position: absolute; z-index: 15; cursor: pointer; background: var(--img) center / 100% 100% no-repeat; }

@@ -33,6 +33,9 @@
       "brightWhite": "#ffffff"
     }
   },
+  "splits": [
+    { "id": "desk", "edge": "bottom", "min": 192, "max": 292 }
+  ],
   "fonts": [
     { "family": "Permanent Marker", "file": "fonts/PermanentMarker/PermanentMarker-Regular.ttf" },
     { "family": "Special Elite", "file": "fonts/SpecialElite/SpecialElite-Regular.ttf" }
@@ -45,8 +48,8 @@
     { "class": "plaque", "rect": { "right": 14, "top": 14, "width": 96, "height": 108 } },
     { "class": "frame", "rect": { "left": 12, "top": 140, "width": 296, "bottom": 12 } },
     { "class": "board", "rect": { "left": 24, "top": 152, "width": 272, "bottom": 24 } },
-    { "class": "frame", "rect": { "left": 316, "top": 138, "right": 10, "bottom": 184 } },
-    { "class": "whiteboard", "rect": { "left": 316, "bottom": 12, "width": 336, "height": 162 } },
+    { "class": "frame", "follow": { "bottom": "desk" }, "rect": { "left": 316, "top": 138, "right": 10, "bottom": 184 } },
+    { "class": "whiteboard", "follow": { "height": "desk" }, "rect": { "left": 316, "bottom": 12, "width": 336, "height": 162 } },
     { "class": "catalog", "rect": { "right": 10, "bottom": 12, "width": 432, "height": 162 } },
     { "class": "drawer", "rect": { "right": 302, "bottom": 92, "width": 134, "height": 76 } },
     { "class": "drawer", "rect": { "right": 160, "bottom": 92, "width": 134, "height": 76 } },
@@ -80,9 +83,9 @@
       "class": "lamp", "rect": { "right": 150, "top": 0, "width": 140, "height": 132 } },
     { "id": "pace", "type": "knob", "bind": "tools.rate", "max": 30, "image": "images/knob.png", "label": "pace",
       "format": "fixed:1", "class": "brass", "rect": { "right": 22, "top": 22, "width": 80, "height": 96 } },
-    { "id": "cache", "type": "bar", "bind": "cache.hit_ratio", "label": "cache hits", "max": 1, "segments": 14, "gap": 3,
+    { "id": "cache", "follow": { "bottom": "desk" }, "type": "bar", "bind": "cache.hit_ratio", "label": "cache hits", "max": 1, "segments": 14, "gap": 3,
       "class": "marker blue", "rect": { "left": 336, "bottom": 118, "width": 296, "height": 40 } },
-    { "id": "lims", "type": "limits", "bind": "limits.items", "meter": "bar", "suffix": " limit", "itemClass": "marker", "max": 100, "segments": 14, "gap": 3,
+    { "id": "lims", "follow": { "height": "desk" }, "type": "limits", "bind": "limits.items", "meter": "bar", "suffix": " limit", "itemClass": "marker", "max": 100, "segments": 14, "gap": 3,
       "class": "lims", "rect": { "left": 336, "bottom": 26, "width": 296, "height": 86 } },
     { "id": "cost", "type": "readout", "bind": "cost.usd", "format": "usd", "label": "cost",
       "class": "card", "rect": { "right": 313, "bottom": 112, "width": 112, "height": 50 } },

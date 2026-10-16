@@ -141,6 +141,8 @@ api.onMetrics(snap => {
 api.onDials(names => SkinView.setDials(names))
 // A toggle's choice is the active tab's, kept by main (decision 0034).
 SkinView.onPick(off => { if (active) api.setListOff(active, off) })
+// A dragged split's size, kept by main for the skin (decision 0035).
+SkinView.onDrag((id, v) => api.setPanel(id, v))
 
 // The page's probe for the live checks (decisions 0023, 0024): each
 // tab's terminal, the meters the skin was last given, the skin's sounds
@@ -152,6 +154,9 @@ window.skinnedPage = () => ({
   scale: SkinView.scale(),
   widgets: SkinView.state(),
   stage: SkinView.stageClasses(),
+  splits: SkinView.splits(),
+  panels: SkinView.panels(),
+  term: (b => ({ x: b.x, y: b.y, width: b.width, height: b.height }))(host.getBoundingClientRect()),
   panes: [...panes.values()].map(p => {
     if (p.dash) return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', lines: [], dashboard: p.dash.state() }
     const b = p.term.buffer.active

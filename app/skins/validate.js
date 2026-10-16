@@ -5,6 +5,7 @@
 const fs = require('fs')
 const path = require('path')
 const names = require('../metrics/names')
+const splitsLib = require('../renderer/splits')
 
 const REPO = path.join(__dirname, '..', '..')
 const STRIP = 22
@@ -19,7 +20,7 @@ const PLAIN_NAMES = /^(LICENSE|LICENCE|COPYING|README|NOTICE|AUTHORS|OFL)([._-].
 const THEME_KEYS = ['foreground', 'background', 'cursor', 'cursorAccent', 'selectionBackground', 'selectionForeground',
   'selectionInactiveBackground', 'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'brightBlack',
   'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite']
-const COMMON = ['id', 'type', 'bind', 'rect', 'class', 'label', 'min', 'max', 'format', 'damping']
+const COMMON = ['id', 'type', 'bind', 'rect', 'follow', 'class', 'label', 'min', 'max', 'format', 'damping']
 const TYPES = {
   gauge: ['startAngle', 'endAngle', 'thickness', 'ticks', 'marks'],
   needle: ['startAngle', 'endAngle', 'face', 'ticks', 'resets'],
@@ -140,7 +141,7 @@ function validate (dir) {
     }
   }
 
-  keys(skin, '', ['name', 'version', 'author', 'description', 'license', 'window', 'terminal', 'menu', 'fonts', 'stylesheet', 'panels', 'widgets', 'sounds'])
+  keys(skin, '', ['name', 'version', 'author', 'description', 'license', 'window', 'terminal', 'menu', 'fonts', 'stylesheet', 'panels', 'widgets', 'sounds', 'splits'])
   if (!isStr(skin.name) || !ID.test(skin.name)) err('name', 'must be lowercase letters, digits and dashes')
   for (const k of ['version', 'author', 'description', 'license']) if (k in skin && typeof skin[k] !== 'string') err(k, 'must be a string')
 
@@ -177,6 +178,41 @@ function validate (dir) {
       const cols = Math.floor((win.minWidth - (r.left || 0) - (r.right || 0)) / (fs_ * 0.6))
       const rows = Math.floor((win.minHeight - STRIP - (r.top || 0) - (r.bottom || 0)) / (fs_ * 1.2))
       if (cols < 40 || rows < 10) err('terminal.rect', `leaves about ${cols} x ${rows} cells at the minimum window, needs 40 x 10`)
+    }
+  }
+
+  // Draggable boundaries (decision 0035): at most one on each edge of
+  // the terminal, whose offset on that edge lies from min to max.
+  const splitIds = new Map()
+  if ('splits' in skin) {
+    if (!Array.isArray(skin.splits)) err('splits', 'must be an array')
+    else {
+      const edges = new Set()
+      skin.splits.forEach((s, i) => {
+        const fld = `splits[${i}]`
+        if (!s || typeof s !== 'object' || Array.isArray(s)) return err(fld, 'must be an object')
+        keys(s, fld, ['id', 'edge', 'min', 'max'])
+        let ok = true
+        if (!isStr(s.id) || !ID.test(s.id)) { ok = false; err(`${fld}.id`, 'must be lowercase letters, digits and dashes') } else if (splitIds.has(s.id)) { ok = false; err(`${fld}.id`, `duplicate id "${s.id}"`) }
+        if (!splitsLib.EDGES.includes(s.edge)) { ok = false; err(`${fld}.edge`, 'must be left, right, top or bottom') } else if (edges.has(s.edge)) { ok = false; err(`${fld}.edge`, `a second split on the terminal's ${s.edge} edge`) } else edges.add(s.edge)
+        for (const k of ['min', 'max']) if (!isNum(s[k]) || s[k] < 0) { ok = false; err(`${fld}.${k}`, 'must be a number of pixels, at least 0') }
+        const def = t && t.rect && t.rect[s.edge]
+        if (ok && isNum(def) && !(s.min <= def && def <= s.max)) err(fld, `the terminal's ${s.edge} of ${def} must lie from min to max`)
+        if (ok) splitIds.set(s.id, s)
+      })
+    }
+  }
+
+  // An element's follow: rect keys, each moved by a split's change, its
+  // own edge or the size of a rect anchored there (decision 0035).
+  const follow = (o, r, fld) => {
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return err(`${fld}.follow`, 'must be an object of rect keys and split ids')
+    for (const [key, id] of Object.entries(o)) {
+      const f = `${fld}.follow.${key}`
+      const s = splitIds.get(id)
+      if (!['left', 'right', 'width', 'top', 'bottom', 'height'].includes(key)) err(f, 'not a rect key')
+      else if (!s) err(f, `unknown split "${id}"`)
+      else if (r && typeof r === 'object' && !splitsLib.movable(s.edge, key, r)) err(f, `the ${s.edge} split "${id}" moves ${s.edge}, or ${splitsLib.SIZE[s.edge]} on a rect with ${s.edge}`)
     }
   }
 
@@ -244,9 +280,10 @@ function validate (dir) {
       skin.panels.forEach((p, i) => {
         const fld = `panels[${i}]`
         if (!p || typeof p !== 'object') return err(fld, 'must be an object')
-        keys(p, fld, ['class', 'rect'])
+        keys(p, fld, ['class', 'rect', 'follow'])
         if (!isStr(p.class) || !CLASS.test(p.class)) err(`${fld}.class`, 'must be lowercase class names')
         rect(p.rect, `${fld}.rect`, false)
+        if ('follow' in p) follow(p.follow, p.rect, fld)
       })
     }
   }
@@ -258,8 +295,9 @@ function validate (dir) {
     const g = w.toggle
     const tf = `${fld}.toggle`
     if (!g || typeof g !== 'object' || Array.isArray(g)) return err(tf, 'must be an object of rect, labels and class')
-    keys(g, tf, ['rect', 'labels', 'class'])
+    keys(g, tf, ['rect', 'labels', 'class', 'follow'])
     rect(g.rect, `${tf}.rect`, false)
+    if ('follow' in g) follow(g.follow, g.rect, tf)
     if ('labels' in g && (!Array.isArray(g.labels) || g.labels.length !== 2 || !g.labels.every(isStr))) err(`${tf}.labels`, 'must be two strings, the list\'s and what it replaces')
     if ('class' in g && (!isStr(g.class) || !CLASS.test(g.class))) err(`${tf}.class`, 'must be lowercase class names')
     if (!sized(win) || !placed(g.rect, false) || !placed(w.rect, false)) return
@@ -310,6 +348,7 @@ function validate (dir) {
           }
         }
         rect(w.rect, `${fld}.rect`, false)
+        if ('follow' in w) follow(w.follow, w.rect, fld)
         if ('class' in w && (!isStr(w.class) || !CLASS.test(w.class))) err(`${fld}.class`, 'must be lowercase class names')
         if ('label' in w && typeof w.label !== 'string') err(`${fld}.label`, 'must be a string')
         for (const k of ['min', 'max', 'startAngle', 'endAngle', 'thickness', 'ticks', 'segments', 'gap', 'on', 'pulseMs', 'blink', 'fps', 'damping', 'rows']) {
@@ -377,6 +416,36 @@ function validate (dir) {
         } else if ('interval' in s) {
           err(`${fld}.interval`, 'only a random sound has an interval')
         }
+      })
+    }
+  }
+
+  // The splits at their min at the minimum window and at their max at
+  // the initial window (decision 0035): the terminal keeps 40 x 10, an
+  // element that follows keeps a size, and no two boxes apart with the
+  // splits at their default meet, the terminal's among them.
+  if (!errors.length && splitIds.size) {
+    const els = [{ fld: 'menu', rect: m.rect }]
+    for (const [i, p] of (skin.panels || []).entries()) els.push({ fld: `panels[${i}]`, rect: p.rect, follow: p.follow })
+    for (const [i, w] of (skin.widgets || []).entries()) {
+      els.push({ fld: `widgets[${i}]`, rect: w.rect, follow: w.follow })
+      if (w.toggle) els.push({ fld: `widgets[${i}].toggle`, rect: w.toggle.rect, follow: w.toggle.follow })
+    }
+    const over = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
+    const fs_ = t.fontSize || 14
+    for (const [W, H, at, end] of [[win.minWidth, win.minHeight - STRIP, 'minimum', 'min'], [win.width, win.height - STRIP, 'initial', 'max']]) {
+      const where = `with the splits at their ${end} at the ${at} window`
+      const now = splitsLib.sizes(skin, Object.fromEntries([...splitIds.values()].map(s => [s.id, s[end]])), W, H)
+      const tr = splitsLib.terminal(skin, now)
+      const cols = Math.floor((W - tr.left - tr.right) / (fs_ * 0.6))
+      const rows = Math.floor((H - tr.top - tr.bottom) / (fs_ * 1.2))
+      if (cols < 40 || rows < 10) err('terminal.rect', `leaves about ${cols} x ${rows} cells ${where}, needs 40 x 10`)
+      const term = { a: box(t.rect, W, H), b: box(tr, W, H) }
+      const boxes = els.map(e => ({ e, a: box(e.rect, W, H), b: box(splitsLib.rect(e.rect, e.follow, skin, now), W, H) }))
+      boxes.forEach((x, i) => {
+        if (x.e.follow && (x.b.x1 <= x.b.x0 || x.b.y1 <= x.b.y0)) err(`${x.e.fld}.rect`, `has no size ${where}`)
+        if (!over(x.a, term.a) && over(x.b, term.b)) err(`${x.e.fld}.rect`, `overlaps the terminal ${where}`)
+        for (const y of boxes.slice(i + 1)) if (!over(x.a, y.a) && over(x.b, y.b)) err(`${x.e.fld}.rect`, `meets ${y.e.fld} ${where}`)
       })
     }
   }

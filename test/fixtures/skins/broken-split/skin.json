@@ -1,0 +1,25 @@
+{
+ "name": "broken-split",
+ "window": { "width": 1000, "height": 700, "minWidth": 800, "minHeight": 500 },
+ "menu": { "rect": { "left": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+ "terminal": {
+  "rect": { "left": 10, "top": 60, "right": 200, "bottom": 10 },
+  "theme": { "foreground": "#e0e0e0", "background": "#000000" }
+ },
+ "splits": [
+  { "id": "rt", "edge": "right", "min": 150, "max": 250 },
+  { "id": "rt", "edge": "left", "min": 0, "max": 40 },
+  { "id": "mid", "edge": "middle", "min": 0, "max": 10 },
+  { "id": "two", "edge": "right", "min": 0, "max": 300 },
+  { "id": "low", "edge": "bottom", "min": -5, "max": 20, "grip": 4 },
+  { "id": "out", "edge": "top", "min": 0, "max": 50 }
+ ],
+ "panels": [
+  { "class": "p", "follow": "rt", "rect": { "right": 10, "top": 60, "width": 180, "bottom": 10 } }
+ ],
+ "widgets": [
+  { "id": "a", "type": "readout", "bind": "tools.total", "follow": { "left": "rt" }, "rect": { "left": 820, "top": 70, "width": 100, "height": 20 } },
+  { "id": "b", "type": "readout", "bind": "tools.total", "follow": { "width": "rt" }, "rect": { "left": 820, "top": 100, "width": 100, "height": 20 } },
+  { "id": "c", "type": "readout", "bind": "tools.total", "follow": { "width": "nope", "colour": "rt" }, "rect": { "right": 20, "top": 130, "width": 100, "height": 20 } }
+ ]
+}

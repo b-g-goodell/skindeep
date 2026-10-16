@@ -70,6 +70,25 @@ const BROKEN = {
     'skin.json: sounds[3].volume: must be a number from 0 to 1',
     'skin.json: sounds[3].interval: only a random sound has an interval'
   ],
+  'broken-split': [
+    'skin.json: splits[1].id: duplicate id "rt"',
+    'skin.json: splits[2].edge: must be left, right, top or bottom',
+    'skin.json: splits[3].edge: a second split on the terminal\'s right edge',
+    'skin.json: splits[4].grip: unknown field',
+    'skin.json: splits[4].min: must be a number of pixels, at least 0',
+    'skin.json: splits[5]: the terminal\'s top of 60 must lie from min to max',
+    'skin.json: panels[0].follow: must be an object of rect keys and split ids',
+    'skin.json: widgets[0].follow.left: the right split "rt" moves right, or width on a rect with right',
+    'skin.json: widgets[1].follow.width: the right split "rt" moves right',
+    'skin.json: widgets[2].follow.width: unknown split "nope"',
+    'skin.json: widgets[2].follow.colour: not a rect key'
+  ],
+  'broken-split-room': [
+    'skin.json: widgets[0].rect: overlaps the terminal with the splits at their min at the minimum window',
+    'skin.json: widgets[2].rect: has no size with the splits at their min at the minimum window',
+    'skin.json: terminal.rect: leaves about 27 x 36 cells with the splits at their max at the initial window, needs 40 x 10',
+    'skin.json: widgets[1].rect: meets widgets[3] with the splits at their max at the initial window'
+  ],
   'broken-menu-rect': [
     'skin.json: menu.image: "nope.svg": file not found',
     'skin.json: menu.rect: is 20 x 12 px at the minimum window',

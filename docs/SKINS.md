@@ -92,7 +92,8 @@ Top-level fields:
 | `menu` | yes | the menu button, see below |
 | `fonts` | no | `[{ "family", "file", "weight"?, "style"? }]`, registered by the app so CSS and the terminal can use the family |
 | `stylesheet` | no | one CSS file, relative to the skin |
-| `panels` | no | `[{ "class", "rect" }]`: empty boxes your CSS paints (frames, bezels, backgrounds) |
+| `panels` | no | `[{ "class", "rect", "follow"? }]`: empty boxes your CSS paints (frames, bezels, backgrounds) |
+| `splits` | no | the boundaries the user drags, see splits |
 | `widgets` | no | the widgets, see below |
 | `sounds` | no | sounds the skin plays, see Sounds |
 
@@ -141,6 +142,58 @@ Two rules keep the CLI readable: foreground and background must have a
 contrast ratio of at least 4.5, and the terminal must keep at least 40
 columns by 10 rows at the minimum window size.
 
+### splits
+
+The user resizes a panel by dragging the boundary between it and the
+terminal. Declare each boundary as a split of the terminal's edge:
+
+    "splits": [ { "id": "playlist", "edge": "right", "min": 236, "max": 600 } ]
+
+| Field | Meaning |
+| --- | --- |
+| `id` | lowercase letters, digits, dashes, unique |
+| `edge` | `left`, `right`, `top` or `bottom`: the terminal's edge it moves, one split an edge at most |
+| `min`, `max` | the range of the terminal's offset on that edge, in pixels. The terminal rect's own value is the default and lies in it |
+
+Then give each panel, widget and list toggle that must move with the
+boundary a `follow`: for a rect key, the split whose change that key
+takes.
+
+    { "class": "well", "follow": { "right": "playlist" }, "rect": { "left": 8, "top": 168, "right": 286, "bottom": 8 } }
+    { "id": "pl-0", "follow": { "width": "playlist" }, "rect": { "right": 22, "top": 186, "width": 244, "height": 21 }, ... }
+
+The key is the split's own edge, or `width` or `height` on a rect
+anchored at that edge:
+
+- the edge, on an element anchored there, moves it with the boundary,
+  as deck's list toggle does. On a frame around the terminal, such as
+  deck's well, it moves the frame's edge with the terminal's.
+- `width` or `height` grows the element toward the terminal while the
+  panel grows, and shrinks it while the panel shrinks, as deck's
+  counters do.
+
+An element may follow two splits by two keys, such as deck's counters,
+which stretch with the playlist and move down with the meter plates.
+A panel's box changes size and your CSS paints it as at any window
+size. Bars, limits, lists, readouts and leds stretch with their box.
+Gauges, needles and knobs keep their shape and stay centred in it, and
+a sprite keeps its frame's size, so move those with an edge key, or
+let them stay.
+
+The app draws a handle, an 8 px strip just outside the terminal's edge
+with a grip at its middle, lit under the pointer. A drag moves the
+split within its range. Below the skin's initial window size a split
+grows past its default only by as much as the window is no smaller,
+so a smaller window draws a grown panel smaller, down to its default,
+and the handle hides while it cannot move. The skin keeps the sizes in
+the user's settings, by your skin's name, and Reset panel sizes in the
+menu returns them to yours. Design `max` at the initial window and
+`min` at the minimum: the validator checks the splits at their `max`
+at the initial window and at their `min` at the minimum window, where
+the terminal must keep 40 x 10 cells, an element that follows must
+keep a size, and no two boxes apart at the defaults, the terminal's
+among them, may meet.
+
 ## Widgets
 
 Every widget has:
@@ -151,6 +204,7 @@ Every widget has:
 | `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout`, `sprite`, `list` or `limits` |
 | `bind` | the metric it shows, see Metrics |
 | `rect` | where it sits |
+| `follow` | optional, rect keys that move with a split, see splits |
 | `class` | optional extra CSS classes (lowercase, space separated) |
 | `label` | optional caption |
 | `min`, `max` | the value range, default 0 and 100 |
@@ -182,7 +236,7 @@ Type options:
 | `readout` | a number or text. `prefix`, `suffix`, `resets` and `fallback` as for `bar` |
 | `sprite` | a sprite sheet, as in Winamp's sliders. `sheet` (a PNG), `frames`, `frameWidth`, `frameHeight`, `layout` (`row` or `column`). `mode`: `value` (default) picks the frame from the value between min and max, `run` cycles the frames at `fps` (12) while the value is above 0. The PNG must be exactly frames x frame size |
 | `limits` | every usage limit the provider sends: bound to `limits.items`, one meter per limit, see Usage limits |
-| `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }`. `toggle` (optional): `{ "rect", "labels", "class" }`, a button of two options, the list and what it replaces, `labels` two words (default `tasks` and `readouts`). It shows while the list has an item, at its own rect, clear of the list and the terminal. A click on the second option hides the list and shows what it replaces, the stage carrying `checklist-off` in place of `checklist`, and a click on the first shows the list again. The choice is the tab's and holds while the list changes or comes back. The first list in a tab shows itself |
+| `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }`. `toggle` (optional): `{ "rect", "labels", "class", "follow"? }`, a button of two options, the list and what it replaces, `labels` two words (default `tasks` and `readouts`). It shows while the list has an item, at its own rect, clear of the list and the terminal. A click on the second option hides the list and shows what it replaces, the stage carrying `checklist-off` in place of `checklist`, and a click on the first shows the list again. The choice is the tab's and holds while the list changes or comes back. The first list in a tab shows itself |
 
 ### Usage limits
 
@@ -386,6 +440,7 @@ file, the field and the fault:
     skins/myskin/skin.json: sounds[1].interval: required for a random sound: [min, max] in seconds
     skins/myskin/skin.json: terminal.theme.foreground: contrast with background is 1.26, needs at least 4.5
     skins/myskin/skin.json: terminal.rect: leaves about 22 x 10 cells at the minimum window, needs 40 x 10
+    skins/myskin/skin.json: widgets[4].rect: overlaps the terminal with the splits at their min at the minimum window
     skins/myskin/skin.css: line 2: @import is not allowed
     skins/myskin/tool.js: (file): file type not allowed in a skin
 

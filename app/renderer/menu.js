@@ -202,6 +202,9 @@ window.AppMenu = (function () {
     rule()
     item('Settings', null, 'heading')
     for (const s of prefs) flyout(s.label, s.choices.map(c => ({ id: c.value, label: c.label, current: c.current })), v => api.setSetting(s.id, v))
+    // The skin's splits back to its own sizes (decision 0035).
+    const split = window.SkinView.splits().length > 0
+    item('Reset panel sizes', split ? () => act(api.resetPanels()) : null, split ? '' : 'disabled')
     rule()
     item('Housekeeping', null, 'heading')
     for (const p of house.problems) item(p.title, () => say(p.detail, 'error'), 'problem')

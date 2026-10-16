@@ -60,7 +60,8 @@ quiet sounds of its place.
         |     identity strip | tab strip from the second tab, each
         |     tab's visualization a small Canvas2D trace (tabviz.js) |
         |     contained skin wrapper > shadow root (panels, widgets) |
-        |     one xterm.js pane per tab at the manifest insets |
+        |     one xterm.js pane per tab at the manifest insets, its
+        |     edges moved by the skin's splits, a handle on each |
         |     the skin's menu button > DOM drop-down (tabs, open skin,
         |     skins, viz toggle and modes, mute, housekeeping) |
         |     New tab... dialog |
@@ -124,5 +125,6 @@ own keys, pastes and mouse reports.
 | [0032](decisions/0032-rename.md) | A session's name in its tab, by /rename or a right click |
 | [0033](decisions/0033-dials.md) | Readouts open dials on the sessions dashboard |
 | [0034](decisions/0034-checklist.md) | The agent's task list in a list widget |
+| [0035](decisions/0035-resizable-panels.md) | Resizable panels: a dragged boundary between the terminal and a panel |
 
 Channel facts: `docs/research/side-channels.md`.
