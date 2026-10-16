@@ -238,3 +238,55 @@ test('carbon: a jump\'s source is the product of the two orbitals the line moves
   assert.ok(Math.abs(mean - 2 / 3) < 0.02, `mean |cos theta| ${mean}`)
   assert.strictEqual(wrong, 0)
 })
+
+test('carbon: the Clebsch-Gordan weights leave an unaligned atom isotropic and an aligned one not', () => {
+  // Summed over M_L, every radiating level's photon is isotropic: the
+  // field's incoherent collisions make no beat. M_L = 0 of 2p4p 3P2,
+  // the pulse's level, favours the directions across its axis.
+  D.levels.forEach((l, i) => {
+    if (!D.lines.some(x => x.u === i)) return
+    const L = 'SPDF'.indexOf(l.term[1])
+    const s = [0, 0, 0]
+    for (let M = -L; M <= L; M++) C.emission(i, M).forEach((v, k) => { s[k] += v })
+    assert.ok(Math.abs(s[1]) < 1e-9 * s[0] && Math.abs(s[2]) < 1e-9 * s[0], `${l.id}: ${s}`)
+  })
+  const p = C.emission(D.levels.findIndex(l => l.id === '2p4p_3P_2'), 0)
+  assert.ok(p[1] > 0.3, `aligned 3P2: ${p}`)
+  assert.strictEqual(C.cg(1, 0, 1, 0, 2, 0) ** 2, 2 / 3)
+  for (const ln of D.lines) {
+    for (const M of [-1, 0, 1]) {
+      const w = C.Ensemble.weights(ln, M).reduce((s, e) => s + e[1], 0)
+      assert.ok(Math.abs(w - 1) < 1e-12, 'weights sum to 1')
+    }
+  }
+})
+
+test('carbon: an axis turns about B at g_J mu_B B / h on the event clock, and stands along B', () => {
+  const i = D.levels.findIndex(l => l.id === '2p2_3P_2')
+  const b = { T: 1e-3, u: [1, 0, 0] }
+  // 1.5010469 x 13.996 GHz/T x 1 mT / 1e6: 21.01 turns a second.
+  const f = C.Larmor.rate(D.levels[i], b)
+  assert.ok(Math.abs(f - 1.5010469 * 1.39962449171e10 * 1e-3 / 1e6) < 1e-9, `${f}`)
+  const a = { lv: i, n: [0, 0, 1], t0: 0 }
+  const t = 0.01
+  const n = C.Larmor.axis(a, t, b)
+  const ang = 2 * Math.PI * f * t
+  // Right-handed about x: z goes toward -y.
+  assert.ok(Math.abs(n[2] - Math.cos(ang)) < 1e-12 && Math.abs(n[1] + Math.sin(ang)) < 1e-12, `${n}`)
+  assert.deepStrictEqual(C.Larmor.axis(a, 5, { T: 1e-3, u: [0, 0, 1] }).map(v => Math.round(v * 1e12) / 1e12), [0, 0, 1])
+  assert.strictEqual(C.Larmor.rate(D.levels.find(l => l.J === 0), b), 0)
+  // The drawn atom's frame: a rotation whose z column is the axis, for a
+  // tilted B and a tilted axis.
+  const tilt = { T: 0.7e-3, u: [Math.sin(1), 0, Math.cos(1)] }
+  const n0 = C.turnAbout([0, 1, 0], 0.4, [0, 0, 1])
+  const at = { lv: i, n: n0, t0: 0.2, O: C.rotation([0, 1, 0], 0.4) }
+  const O = C.Larmor.frame(at, 1.37, tilt)
+  const ax = C.Larmor.axis(at, 1.37, tilt)
+  for (let r = 0; r < 3; r++) {
+    assert.ok(Math.abs(O[3 * r + 2] - ax[r]) < 1e-12, `z column ${r}`)
+    for (let c = 0; c < 3; c++) {
+      const d = O[r] * O[c] + O[3 + r] * O[3 + c] + O[6 + r] * O[6 + c]
+      assert.ok(Math.abs(d - (r === c ? 1 : 0)) < 1e-12, 'orthonormal')
+    }
+  }
+})
