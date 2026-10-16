@@ -25,6 +25,9 @@ const fs = require('fs')
 const path = require('path')
 
 const out = path.resolve(process.argv[2])
+// The event clock's slowing from 1e6 (issue #166): the field fills the
+// ensemble that many times slower.
+const SLOW = require('../../app/viz/carbon').EVENT / 1e6
 const fake = path.join(__dirname, '..', 'fake', 'claude')
 fs.mkdirSync(out, { recursive: true })
 const errors = []
@@ -151,7 +154,7 @@ function check (ok, msg, seen) {
     }
   })
   let busy = null
-  for (let i = 0; i < 100 && !busy; i++) {
+  for (let i = 0; i < 100 * SLOW && !busy; i++) {
     await sleep(100)
     const p = (await state()).panes[0].probe
     if (p.fronts >= 60) busy = p
