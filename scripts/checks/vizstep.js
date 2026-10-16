@@ -78,11 +78,14 @@ async function until (get, ok, ms, step = 100) {
       const want = MODES[(at + k) % MODES.length]
       if (k > 0) await viz.keyboard.press('Space')
       const p = await until(pane, p => p.mode === want.id && !p.lost, 5000)
-      // A butterchurn preset compiles and blends in for about 1.5 s.
+      // A butterchurn preset compiles and blends in for about 1.5 s, in
+      // software GL longer under load: the frame is read until it draws,
+      // bounded, so a mode that never draws still fails.
       await sleep(want.kind === 'milk' ? 2500 : 900)
       const q = await pane()
       const c = await caption()
-      const l = await look(q)
+      const drawn = l => l.white < 0.5 && l.lit > 0.002
+      const l = await until(() => look(q), drawn, 15000, 500)
       fs.writeFileSync(path.join(out, `step-${name}-${String(k).padStart(2, '0')}-${want.id}.png`), Buffer.from(l.png, 'base64'))
       const row = { k, want: want.id, mode: q.mode, milk: q.milk, lost: q.lost, caption: c, white: Math.round(l.white * 1000) / 1000, lit: Math.round(l.lit * 1000) / 1000 }
       console.log(name, JSON.stringify(row))
@@ -90,7 +93,7 @@ async function until (get, ok, ms, step = 100) {
       check(p.mode === want.id && q.mode === want.id, `${name}: step ${k} want ${want.id}`, row)
       check(c.includes(want.label), `${name}: step ${k} caption does not name ${want.label}`, row)
       check(!q.lost, `${name}: step ${k} draws on a lost WebGL context`, row)
-      check(l.white < 0.5 && l.lit > 0.002, `${name}: step ${k} ${want.id} is blank`, row)
+      check(drawn(l), `${name}: step ${k} ${want.id} is blank`, row)
     }
     console.log(name, 'seen', seen.join(' '))
     const ids = seen.slice(0, MODES.length)
