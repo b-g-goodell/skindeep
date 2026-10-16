@@ -28,7 +28,7 @@ const page = win => win.evaluate(() => {
   const t = p.panes.find(x => x.shown) || p.panes[0]
   const term = document.getElementById('term').getBoundingClientRect()
   const menu = document.getElementById('menu-button').getBoundingClientRect()
-  return { scale: p.scale, cols: t.cols, rows: t.rows, term: [term.left, term.right], menu: [menu.left, menu.right, menu.width, menu.height], width: innerWidth }
+  return { scale: p.scale, area: p.area, laid: p.laid, cols: t.cols, rows: t.rows, term: [term.left, term.right], menu: [menu.left, menu.right, menu.width, menu.height], width: innerWidth }
 })
 
 async function one (skin) {
@@ -37,9 +37,16 @@ async function one (skin) {
   const seen = {}
   for (const [tag, w] of [['960', 960], ['floor', 0]]) {
     await resize(app, w, 1016)
-    await sleep(800)
-    const s = await size(app)
-    const p = await page(win)
+    // The renderer takes the new size, and the skin is laid out at it,
+    // bounded: under load a fixed wait read the layout of the old size.
+    let s, p
+    for (const t0 = Date.now(); Date.now() - t0 < 15000; await sleep(200)) {
+      s = await size(app)
+      p = await page(win)
+      if (p.width === s.content[0] && p.laid && p.laid.join() === p.area.join()) break
+    }
+    await sleep(300)
+    p = await page(win)
     seen[tag] = { ...s, ...p }
     await shot(win, path.join(out, `${skin}-${tag}.png`))
   }

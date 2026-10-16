@@ -1,6 +1,7 @@
 # 0019 Tests and dev tools
 
-Status: accepted 2026-10-11.
+Status: accepted 2026-10-11. Revised 2026-10-15: the live check suite
+and its pass record.
 
 ## Context
 
@@ -43,6 +44,15 @@ Tests only where they pay.
   exposes one probe to it, `global.skinnedProbe()`, returning `{
   childPid, following, snapshot }`: the child's pid, the agent's report
   (decision 0021) and the bus. `probe(app)` reads it.
+- `npm run checks -- OUT` (`scripts/checks/suite.js`) runs every live
+  check that runs on the fakes, each mode of it, under
+  `scripts/clean-env xvfb-run` with `scripts/fake` first on PATH, a
+  few at once, and names each failure with its error line. The checks
+  that need a real agent or only measure are listed in it as excluded,
+  with the reason. A full pass on a clean tree records the tree's hash
+  under the checkout's git directory (`scripts/checks/passrecord.js`),
+  and publishing refuses a branch whose tree has none, since `npm
+  test` alone never runs a live check.
 - `scripts/fake/claude`: a replay fake named `claude`, so the app injects
   its settings. It plays a synthetic scenario (coloured output bursts,
   tool calls of several types, a subagent, turns) through the real

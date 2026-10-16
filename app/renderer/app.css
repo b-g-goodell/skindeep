@@ -93,6 +93,11 @@ body.tabbed #stage { top: 46px; }
   background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a;
   font: 13px/1.6 "DejaVu Sans", sans-serif; user-select: none;
 }
+/* The bar of the four menus, at the drop-down's top, the shown one lit. */
+#menu .bar { display: flex; margin: -4px 0 4px; background: #24272c; border-bottom: 1px solid #3a3f47; }
+#menu .bar .title { padding: 1px 14px; white-space: nowrap; cursor: default; }
+#menu .bar .title:hover { background: #2c3138; }
+#menu .bar .title.current { background: #2f5d8a; color: #fff; font-weight: normal; }
 #menu .item { padding: 0 14px; white-space: pre; cursor: default; }
 #menu .item:hover { background: #2f5d8a; }
 #menu .heading { color: #8a929c; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }

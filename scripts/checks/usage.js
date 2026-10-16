@@ -24,7 +24,7 @@ const SKINS = ['deck', 'phosphor', 'coffee', 'library']
     console.log('limits', JSON.stringify(limits))
     fs.writeFileSync(path.join(out, 'limits.json'), JSON.stringify(limits, null, 1) + '\n')
     for (const s of SKINS) {
-      await openMenu(win)
+      await openMenu(win, 'Skins')
       await win.locator('#menu .item').filter({ hasText: new RegExp(`^[* ]\\s*${s}$`) }).first().click({ timeout: 5000 })
       await sleep(2500)
       await shot(win, path.join(out, `${s}.png`))

@@ -99,7 +99,7 @@ async function main () {
   await win.keyboard.press('Enter')
   await sleep(3000)
 
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   let list = await rows(win)
   console.log('rows', JSON.stringify(list.map(r => [r.label, r.folder, r.state, r.where])))
   const own = list.find(r => r.where === 'tab')
@@ -108,12 +108,20 @@ async function main () {
   check(r1 && r1.label === 'claude [lab]' && r1.state === 'working' && r1.where === '', `want the session elsewhere listed with its profile and state, saw ${JSON.stringify(r1)}`)
   await shot(win, path.join(out, 'sessions.png'))
 
+  // While the menu is open a session that starts appears, and one that
+  // ends stays in its row, marked ended, until the menu closes.
   const f2 = elsewhere('two')
   const appeared = await until(async () => rowOf(await rows(win), f2), 6000)
+  const at = appeared && (await rows(win)).findIndex(r => r.key === appeared.key)
   stop(f2)
-  const left = await until(async () => !rowOf(await rows(win), f2), 6000)
-  console.log('while open', JSON.stringify({ appeared: !!appeared, left }))
-  check(appeared && left, 'want a session that starts to appear and one that ends to leave while the menu is open')
+  const ended = await until(async () => { const l = await rows(win); const r = rowOf(l, f2); return r && r.state === 'ended' && { row: r, at: l.indexOf(r) } }, 6000)
+  await win.keyboard.press('Escape')
+  await sleep(300)
+  await openMenu(win, 'Agents')
+  const left = await until(async () => !rowOf(await rows(win), f2), 4000)
+  console.log('while open', JSON.stringify({ appeared: !!appeared, at, ended, left }))
+  check(appeared && ended && ended.row.key === appeared.key && ended.at === at, 'want a session that starts to appear, and one that ends to stay in its row marked ended while the menu is open')
+  check(left, 'want the ended session gone once the menu opens again')
 
   await win.locator(`#menu .session[data-key="${r1.key}"]`).click()
   await sleep(4000)
@@ -129,7 +137,7 @@ async function main () {
   check(tchan && tchan.state === 'live' && tchan.target === fs.realpathSync(f1.file) && m.snapshot['tokens.out'] > 0 && m.snapshot['proc.mem_mb'] > 0, 'want its meters from its transcript and its pid')
   check(notice.includes('read-only monitor') && pane && pane.lines[0].startsWith('Read-only monitor of claude [lab]'), 'want the strip and the pane to say it is read only')
 
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   list = await rows(win)
   check(rowOf(list, f1).where === 'monitor', 'want the watched session marked in the list')
   await win.keyboard.press('Escape')
@@ -139,7 +147,7 @@ async function main () {
   pr = await probe(app)
   check(!pr.tabs.some(t => t.monitor) && alive(f1.pid), 'closing the monitor tab must leave the session running')
 
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   await win.locator(`#menu .session[data-key="${r1.key}"]`).click()
   await sleep(2500)
   check((await probe(app)).tabs.some(t => t.monitor === f1.pid), 'want the monitor tab again')
@@ -154,7 +162,7 @@ async function main () {
   const claudeTab = pr.tabs.find(t => t.label === 'claude' && t.childPid)
   await win.evaluate(id => window.skinned.closeTab(id), claudeTab.id)
   await sleep(2000)
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   const r3 = rowOf(await rows(win), f3)
   await win.locator(`#menu .session[data-key="${r3.key}"]`).click()
   await sleep(2500)

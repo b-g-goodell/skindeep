@@ -79,8 +79,8 @@ async function until (fn, ms, step = 500) {
   return fn()
 }
 
-async function menu (win, re) {
-  await openMenu(win)
+async function menu (win, re, name) {
+  await openMenu(win, name)
   await win.locator('#menu .item').filter({ hasText: re }).click()
 }
 
@@ -98,13 +98,13 @@ async function main () {
   await sleep(3000)
   const claudeTab = (await probe(app)).tabs.find(t => t.label === 'claude')
 
-  await menu(win, /^Sessions dashboard$/)
+  await menu(win, /^Sessions dashboard$/, 'Agents')
   await sleep(1500)
   let t = await dashTab(app)
   check(t && t.active && t.childPid === null && t.label === 'sessions', 'want an active sessions tab with no child of the app\'s')
   await win.keyboard.press('Control+Tab')
   await sleep(500)
-  await menu(win, /^Sessions dashboard$/)
+  await menu(win, /^Sessions dashboard$/, 'Agents')
   await sleep(800)
   let pr = await probe(app)
   check(pr.tabs.filter(x => x.dashboard).length === 1 && pr.tabs.find(x => x.dashboard).active, 'want the one dashboard made active again, not a second')
@@ -153,7 +153,7 @@ async function main () {
   check(!pr.tabs.some(x => x.dashboard) && last.watching.length === 0 && last.made.every(w => w.closed && !w.tailing), 'closing the dashboard must close every watcher')
   check(alive(f2.pid) && alive(claudeTab.childPid), 'closing the dashboard must leave every session running')
 
-  await menu(win, /^Sessions dashboard$/)
+  await menu(win, /^Sessions dashboard$/, 'Agents')
   await sleep(1500)
   await win.evaluate(id => window.skinned.closeTab(id), mon.id)
   await win.evaluate(id => window.skinned.closeTab(id), claudeTab.id)

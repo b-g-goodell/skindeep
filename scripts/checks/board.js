@@ -113,7 +113,7 @@ async function until (fn, ms, step = 500) {
 }
 
 async function menu (win, re) {
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   await win.locator('#menu .item').filter({ hasText: re }).click()
 }
 
@@ -123,6 +123,9 @@ const dash = async win => {
 }
 const rowOf = (d, s) => d && d.rows.find(r => r.key.startsWith(`${s.pid}:`))
 const ghCalls = () => { try { return fs.readFileSync(path.join(bytesDir, 'gh-calls.jsonl'), 'utf8').split('\n').filter(Boolean).map(JSON.parse) } catch (e) { return [] } }
+// The gh calls for repo b's remote. The user's real sessions in a
+// checkout whose origin is on github.com make calls of their own.
+const ghMine = () => ghCalls().filter(c => c.includes('gho/ghr'))
 
 async function main () {
   const sa = gitea('a')
@@ -183,7 +186,7 @@ async function main () {
   console.log('gitea a saw', JSON.stringify(seen.a.map(r => [r.path, r.auth, r.host])), 'gitea c saw', seen.c.length, 'gh calls', JSON.stringify(ghCalls()))
   check(seen.a.length === 2 && seen.a.every(r => r.auth === `token ${TOKEN}` && r.host === `127.0.0.1:${pa}`), 'want two pages from repo a\'s host, each with the token')
   check(seen.c.length === 0, 'want no request to a host with no login')
-  check(ghCalls().length === 1 && ghCalls()[0].includes('gho/ghr'), 'want one gh call for the github.com remote')
+  check(ghMine().length === 1, 'want one gh call for the github.com remote')
 
   // Nowhere else: not the page, not the log, not the runtime dir.
   const page = await win.evaluate(() => JSON.stringify(window.skinnedPage()) + document.documentElement.outerHTML)
@@ -202,8 +205,8 @@ async function main () {
   await sleep(11000)
   x = await dash(win)
   const pr = await probe(app)
-  console.log('after 25 s and a reopen', JSON.stringify({ gitea: seen.a.length, gh: ghCalls().length, boards: pr.boards, a: rowOf(x, fa).boardText }))
-  check(seen.a.length === 2 && ghCalls().length === 1 && pr.boards.every(r => r.fetches === 1), 'want no second read within 5 minutes')
+  console.log('after 25 s and a reopen', JSON.stringify({ gitea: seen.a.length, gh: ghCalls(), boards: pr.boards, a: rowOf(x, fa).boardText }))
+  check(seen.a.length === 2 && ghMine().length === 1 && pr.boards.every(r => r.fetches === 1), 'want no second read within 5 minutes')
   check(rowOf(x, fa).boardText === wantA, 'want the reopened dashboard to show the kept board')
   check([fa, fs2, fb, fc, fd].every(s => alive(s.pid)), 'want every session left running')
 

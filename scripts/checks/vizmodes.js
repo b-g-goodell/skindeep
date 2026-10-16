@@ -78,11 +78,15 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
     check((await win.evaluate(m => window.skinned.selectViz(m), id)).ok, `the menu refused ${id}`)
     await until(async () => (await state()).panes.find(p => p.tab === tab).mode === id, `tab ${tab} not in ${id}`)
   }
+  // n panes, a tab each. Each new tab's pane is waited for, bounded: a
+  // fixed wait under load opened a tab too many, whose pane kept a
+  // butterchurn mode no frame of this check can read.
   async function panes (n) {
-    while ((await state()).panes.length < n) {
+    for (let have = (await state()).panes.length; have < n; have++) {
       await win.evaluate(() => window.skinned.newTab())
-      await sleep(900)
+      await until(async () => (await state()).panes.length > have, `no pane for tab ${have + 1}`, 150)
     }
+    check((await state()).panes.length === n, `want ${n} panes`)
   }
   await sleep(2000)
 
@@ -137,7 +141,11 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
     shots[phase] = await viz.evaluate(grab)
     for (let j = 0; j < NEW.length; j++) fs.writeFileSync(path.join(out, `${NEW[j]}-${phase}.png`), Buffer.from(shots[phase][j].png.split(',')[1], 'base64'))
   }
+  // A resized canvas is clear until its mode draws again, which under
+  // load can take longer than the wait: the work frame waits, bounded,
+  // until every pane has drawn.
   await sleep(4000)
+  await until(async () => (await viz.evaluate(grab)).every(x => peak(x.grid) > 40), 'a pane drew nothing after the resize', 150)
   await take('work')
   fs.writeFileSync(pause, '')
   // The longest fake turn, then the idle level's rise.
@@ -158,8 +166,13 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
   check((await win.evaluate(() => window.skinned.selectVizInput('sound'))).ok, 'the menu refused the sound output')
   await sleep(4000)
   await take('sound')
-  // The fake recorder swells every 2 s.
-  await sleep(2500)
+  // The fake recorder swells every 2 s, and each swell's rise is an
+  // event every mode answers (decision 0015), Go by a stone. A fixed
+  // 2.5 s could pass with no rise under load: the next frame waits,
+  // bounded, for a rise in every pane and a second for its answer.
+  const rises = (await state()).panes.map(p => p.rises)
+  await until(async () => (await state()).panes.every((p, j) => p.rises > rises[j]), 'no rise of the sound output reached every pane', 100)
+  await sleep(1000)
   const sound2 = await viz.evaluate(grab)
   check((await state()).sound.st === 1, 'want live sound output samples')
 
@@ -168,7 +181,7 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
     const r = { idle: changed(g('work'), g('idle')), prompt: changed(g('idle'), g('prompt')), sound: changed(g('sound'), sound2[j].grid) }
     const peaks = PHASES.map(ph => peak(g(ph)))
     console.log(NEW[j], 'diff', JSON.stringify(r, (k, v) => typeof v === 'number' ? Math.round(v * 1000) / 1000 : v), 'peaks', peaks.join(' '))
-    check(peaks.every(v => v > 40), `${NEW[j]}: a blank frame`)
+    check(peaks.every(v => v > 40), `${NEW[j]}: a blank frame, ${PHASES.filter((ph, k) => peaks[k] <= 40).join(' ')}`)
     check(r.idle > 0.005, `${NEW[j]}: the idle frame is the work frame`)
     check(r.prompt > 0.005, `${NEW[j]}: the prompt frame is the idle frame`)
     check(r.sound > 0.002, `${NEW[j]}: still on the sound output`)

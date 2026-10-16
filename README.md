@@ -52,9 +52,15 @@ exits with the CLI's own status. `SKINNED_SKIN=phosphor claude-skins`
 picks a skin, and a profile set by `CLAUDE_CONFIG_DIR` or `CODEX_HOME`
 works as usual, with its name in the window title.
 
-The three bars at the top left open the menu, where **Agent sessions**
-and **Sessions dashboard** watch every Claude Code and Codex session on
-your machine. Ctrl+Shift+T opens a tab, Ctrl+Shift+W closes one and
+The three bars at the top left open four menus in a bar: **File** for
+the tabs, Settings and Housekeeping, **Agents** for Agent sessions and
+Sessions dashboard, which watch every Claude Code and Codex session on
+your machine, **Skins** for Open skin... and the skins, and
+**Visualization** for its window, mode and input and Mute skin sounds.
+A click on a title, or Left and Right, moves between them, and Escape
+closes them.
+
+Ctrl+Shift+T opens a tab, Ctrl+Shift+W closes one and
 Ctrl+Tab moves between them, and you can drag a tab out to give it its
 own window, or right click it to rename it. Ctrl+Shift+C copies,
 Ctrl+Shift+V pastes and Ctrl+click opens a link, while a bare Ctrl+V
@@ -87,12 +93,13 @@ thumps, tool calls ring and the picture calms when the agent idles.
 With two tabs or more, each tab draws its own small trace of it in the
 tab strip: a moving band while its agent works, a flat green line once
 it is done.
-**Visualization input** in the menu switches it to what your speakers
-play, and it never records a microphone. Each pane has a drop-down at
-its top left to pick its mode, and space steps through them all, six
-of which [docs/viz-modes.png](docs/viz-modes.png) shows. A click goes
-to the mode: a drag in Quantum raises a barrier, and a click in Go
-plays a stone.
+**Visualization input** in the Visualization menu switches it to what
+your speakers play, and it never records a microphone. Each pane has a
+drop-down at its top left to pick its mode, and space steps through
+them all, six of which [docs/viz-modes.png](docs/viz-modes.png) shows.
+A click goes to the mode: a drag in Quantum raises a barrier, a click
+in Go plays a stone, and a click on Carbon's level diagram excites the
+atom to that level.
 
 ## Skins
 
@@ -104,13 +111,14 @@ plays a stone.
 
 Drag the edge between the terminal and a panel beside it to give the
 panel more room or less. The skin keeps the size, and **Reset panel
-sizes** in the menu's Settings brings back its own.
+sizes** in the File menu's Settings brings back its own.
 
 A plain `claude-skins` opens the skin you used last, and you can mute
-its sounds from the menu or start muted with `skinned --mute` or
-`SKINNED_MUTE=1`. To make your own, read [docs/SKINS.md](docs/SKINS.md),
-put it under `skins/` or pass its path, and try it on the fake agent in
-the checkout, which moves every meter without spending tokens:
+its sounds from the Visualization menu or start muted with
+`skinned --mute` or `SKINNED_MUTE=1`. To make your own, read
+[docs/SKINS.md](docs/SKINS.md), put it under `skins/` or pass its path,
+and try it on the fake agent in the checkout, which moves every meter
+without spending tokens:
 
     skinned --skin ~/my-skin -- scripts/fake/claude
 
@@ -127,7 +135,8 @@ the checkout, which moves every meter without spending tokens:
 ## Development
 
 `npm test` runs the tests, `scripts/checks/` holds live checks that run
-under Xvfb, `scripts/fuzz/` a fuzz harness, and `scripts/shots.js`
+under Xvfb, and `npm run checks -- OUT` runs every one of them that
+needs no real agent, `scripts/fuzz/` holds a fuzz harness, and `scripts/shots.js`
 retakes this page's screenshots with two real prompts. The design is in
 [docs/DESIGN.md](docs/DESIGN.md), how it was built, chapter by chapter,
 in the [dev diary](docs/diary/README.md), and [decision 0019](docs/decisions/0019-tests.md)

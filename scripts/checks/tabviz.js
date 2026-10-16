@@ -222,8 +222,15 @@ async function lookAt (skin) {
       await win.evaluate(() => window.skinned.newTab())
       await sleep(900)
     }
-    const tabs = (await probe(app)).tabs
-    check(tabs.length === 4, `${skin}: want four tabs, have ${tabs.length}`)
+    // A tab's child starts once its terminal has a size, so its pid can
+    // still be null here under load, and a held tab's pause file would
+    // name no process: the pids are waited for, bounded.
+    let tabs = []
+    for (const t0 = Date.now(); Date.now() - t0 < 15000; await sleep(250)) {
+      tabs = (await probe(app)).tabs
+      if (tabs.length === 4 && tabs.every(t => t.childPid)) break
+    }
+    check(tabs.length === 4 && tabs.every(t => t.childPid), `${skin}: want four tabs, each with its child, have ${JSON.stringify(tabs.map(t => t.childPid))}`)
     for (const t of [tabs[1], tabs[3]]) {
       const f = `${pause}.${t.childPid}`
       fs.writeFileSync(f, '')
@@ -234,11 +241,15 @@ async function lookAt (skin) {
     // A held tab is done once its last turn ends and its terminal has
     // been quiet DONE_S, its band gone once it has scrolled out. A
     // working tab is caught inside a turn.
+    // Bounded by time, not by a count of reads, whose span moves with
+    // the host's load.
     const since = new Map()
     let ready = false
-    for (let i = 0; i < 160 && !ready; i++) {
+    let st = null
+    const t0 = Date.now()
+    while (Date.now() - t0 < 90000 && !ready) {
       await sleep(250)
-      const st = await state()
+      st = await state()
       for (const x of st) {
         if (!isHeld(x.id)) continue
         if (x.done < 0.95) since.delete(x.id)
@@ -246,7 +257,8 @@ async function lookAt (skin) {
       }
       ready = st.every(x => isHeld(x.id) ? since.has(x.id) && Date.now() - since.get(x.id) > 6500 : x.busy > 0.9 && x.done < 0.05)
     }
-    check(ready, `${skin}: the held tabs never read done while the others worked`)
+    console.log(skin, 'held tabs done, others working', ready, 'after', Date.now() - t0, 'ms')
+    check(ready, `${skin}: the held tabs never read done while the others worked, last ${JSON.stringify(st && st.map(x => ({ id: x.id, held: isHeld(x.id), busy: x.busy, done: x.done })))}`)
     const shots = async tag => {
       await shot(win, path.join(out, `${skin}-${tag}.png`))
       await strip(win, path.join(out, `${skin}-${tag}-strip.png`))

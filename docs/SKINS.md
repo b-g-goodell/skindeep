@@ -17,9 +17,9 @@ real session, run the replay fake, which drives every metric:
 
     bin/skinned --skin path/to/myskin -- scripts/fake/claude
 
-The skin's menu button opens the app's menu: Open skin... loads a skin
-folder at runtime, and choosing the current skin again reloads it from
-disk while you edit it. A skin with an error refuses to load and says
+The skin's menu button opens the app's menus, and in Skins, Open skin...
+loads a skin folder at runtime, and choosing the current skin again
+reloads it from disk while you edit it. A skin with an error refuses to load and says
 why (see Errors).
 
 ## Layout of a skin directory
@@ -114,7 +114,8 @@ from the skin area's edges:
 
 ### menu
 
-Every skin places the button that opens the app's menu:
+Every skin places the button that opens the app's menus, File, Agents,
+Skins and Visualization, which the app draws the same in every skin:
 
     "menu": { "rect": { "left": 4, "top": 0, "width": 34, "height": 20 },
               "image": "images/menu.png", "pressed": "images/menu-down.png" }
