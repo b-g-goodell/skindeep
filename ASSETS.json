@@ -127,35 +127,42 @@
   },
   {
     "path": "docs/screenshot.png",
-    "source": "screen capture of the app under Xvfb, composed with ImageMagick",
+    "source": "screen capture of the app under Xvfb by scripts/shots.js, the window and the visualization window set side by side",
     "author": "claude-skins",
     "license": "project-original",
     "notes": "shows the deck skin, whose fonts and textures are listed above, and the terminal output of Claude Code, which belongs to its makers"
   },
   {
+    "path": "docs/viz-modes.png",
+    "source": "screen capture of the visualization window under Xvfb by scripts/checks/vizmodes.js, which scripts/shots.js runs",
+    "author": "claude-skins",
+    "license": "project-original",
+    "notes": "a row per procedural visualization mode, a column per phase of the replay fake's session"
+  },
+  {
     "path": "docs/skins/deck.png",
-    "source": "screen capture of the app under Xvfb",
+    "source": "screen capture of the app under Xvfb by scripts/shots.js",
     "author": "claude-skins",
     "license": "project-original",
     "notes": "shows the deck skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
   },
   {
     "path": "docs/skins/phosphor.png",
-    "source": "screen capture of the app under Xvfb",
+    "source": "screen capture of the app under Xvfb by scripts/shots.js",
     "author": "claude-skins",
     "license": "project-original",
     "notes": "shows the phosphor skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
   },
   {
     "path": "docs/skins/library.png",
-    "source": "screen capture of the app under Xvfb",
+    "source": "screen capture of the app under Xvfb by scripts/shots.js",
     "author": "claude-skins",
     "license": "project-original",
     "notes": "shows the library skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"
   },
   {
     "path": "docs/skins/coffee.png",
-    "source": "screen capture of the app under Xvfb",
+    "source": "screen capture of the app under Xvfb by scripts/shots.js",
     "author": "claude-skins",
     "license": "project-original",
     "notes": "shows the coffee skin, whose fonts, images and sounds are listed in this file, and the terminal output of Claude Code, which belongs to its makers"

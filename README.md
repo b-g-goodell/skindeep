@@ -15,7 +15,7 @@ needles and lamps that move with what the agent is doing, and a second
 window draws a visualizer from it. Its commands are `claude-skins`,
 `codex-skins` and `skinned`.
 
-![skindeep running Claude Code in the deck skin, two tabs open, with the visualization window](docs/screenshot.png)
+![skindeep running Claude Code in the deck skin: an answer in the first of two tabs, its task list beside it, the usage limits at the top right, a trace of each tab in the tab strip, and the visualization window with a pane per tab](docs/screenshot.png)
 
 The gauges show how full the context is, how near auto-compact is, the
 session's cost, your usage limits, and the tools and helpers the agent
@@ -89,7 +89,7 @@ tab strip: a moving band while its agent works, a flat green line once
 it is done.
 **Visualization input** in the menu switches it to what your speakers
 play, and it never records a microphone. Each pane has a drop-down at
-its top left to pick its mode, and space steps through them all, five
+its top left to pick its mode, and space steps through them all, six
 of which [docs/viz-modes.png](docs/viz-modes.png) shows. A click goes
 to the mode: a drag in Quantum raises a barrier, and a click in Go
 plays a stone.
@@ -98,9 +98,9 @@ plays a stone.
 
 | deck | phosphor |
 | --- | --- |
-| ![deck](docs/skins/deck.png) | ![phosphor](docs/skins/phosphor.png) |
+| ![deck, with the task list in its playlist area](docs/skins/deck.png) | ![phosphor](docs/skins/phosphor.png) |
 | **library** | **coffee** |
-| ![library](docs/skins/library.png) | ![coffee](docs/skins/coffee.png) |
+| ![library](docs/skins/library.png) | ![coffee, with the task list on its slate and a jar per usage limit](docs/skins/coffee.png) |
 
 A plain `claude-skins` opens the skin you used last, and you can mute
 its sounds from the menu or start muted with `skinned --mute` or
@@ -123,7 +123,8 @@ the checkout, which moves every meter without spending tokens:
 ## Development
 
 `npm test` runs the tests, `scripts/checks/` holds live checks that run
-under Xvfb, and `scripts/fuzz/` a fuzz harness. The design is in
+under Xvfb, `scripts/fuzz/` a fuzz harness, and `scripts/shots.js`
+retakes this page's screenshots with two real prompts. The design is in
 [docs/DESIGN.md](docs/DESIGN.md), how it was built, chapter by chapter,
 in the [dev diary](docs/diary/README.md), and [decision 0019](docs/decisions/0019-tests.md)
 says what the tests cover.
