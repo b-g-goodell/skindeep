@@ -312,7 +312,9 @@ distant background of stars".
   orbit in the equator out and pulls a retrograde one in, and turns an
   inclined orbit's node in the spin's sense at
   $\dot{\Omega} = 2GJ/(c^2 r^3)$.
-- Capture: a body whose centre crosses $r_+$ is swallowed, its mass,
+- Capture: a body whose centre crosses $r_+$ is swallowed, a crossing
+  within a substep caught by the least distance of the pair's relative
+  motion taken as straight over it, its mass,
   momentum and angular momentum about the hole the hole's, whose spin
   follows, capped at $\chi = 0.95$. A grain of dust weighs 0.004. Two
   holes merge when their horizons touch.

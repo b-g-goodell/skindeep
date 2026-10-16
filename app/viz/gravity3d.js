@@ -187,9 +187,24 @@
     h.r = horizon(h)
   }
 
+  // The least distance between a and b over the last substep hs, their
+  // relative motion taken as straight: a fall that crossed a horizon
+  // within one substep is caught.
+  function least (a, b, hs) {
+    const rx = a.x - b.x
+    const ry = a.y - b.y
+    const rz = a.z - b.z
+    const vx = a.vx - b.vx
+    const vy = a.vy - b.vy
+    const vz = a.vz - b.vz
+    const v2 = vx * vx + vy * vy + vz * vz
+    const s = v2 > 0 ? Math.max(0, Math.min(hs, (rx * vx + ry * vy + rz * vz) / v2)) : 0
+    return len(rx - vx * s, ry - vy * s, rz - vz * s)
+  }
+
   // Swallowings, then mergers of bodies that touch, as in the Gravity
   // mode. Each is pushed to its list.
-  function collide (bodies, merged, swallowed) {
+  function collide (bodies, merged, swallowed, hs = 0) {
     for (let i = 0; i < bodies.length; i++) {
       for (let j = i + 1; j < bodies.length; j++) {
         let a = bodies[i]
@@ -197,7 +212,7 @@
         const d = len(a.x - b.x, a.y - b.y, a.z - b.z)
         if (a.hole || b.hole) {
           if (b.hole && (!a.hole || b.m > a.m)) [a, b] = [b, a]
-          if (d > horizon(a) + (b.hole ? horizon(b) : 0)) continue
+          if (least(a, b, hs) > horizon(a) + (b.hole ? horizon(b) : 0)) continue
           absorb(a, b)
           bodies[i] = a
           swallowed.push({ x: a.x, y: a.y, z: a.z, m: b.m, hole: a })
@@ -229,7 +244,7 @@
     while (t < h) {
       const hs = Math.min(h - t, Math.max(h / 256, limit(bodies)))
       leap(bodies, hs)
-      collide(bodies, merged, swallowed)
+      collide(bodies, merged, swallowed, hs)
       t += hs
     }
     return { merged, swallowed }
