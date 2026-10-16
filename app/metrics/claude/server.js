@@ -5,12 +5,19 @@
 // it once its CLI has a pid. Every request is answered 204 with an empty
 // body before anything else, so a hook never has an effect on the
 // session.
+//
+// A socket's path holds at most SUN_PATH bytes, and Node binds a longer
+// one cut short without an error. The socket is bound through a
+// descriptor of its directory, /proc/self/fd/<fd>/hooks.sock, so the
+// runtime dir may be of any length (decision 0016).
 
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
 
 const MAX_BODY = 64 * 1024
+// sun_path is 108 bytes on Linux, its last the terminating NUL.
+const SUN_PATH = 107
 
 // The directory of the links, ROOT/pids, mode 0700.
 function pidsDir (root) {
@@ -21,7 +28,8 @@ function pidsDir (root) {
 
 // dir: the tab's directory. Resolves { server, socket, link(pid),
 // close() }: link(pid) points ROOT/pids/<pid> at the socket, close()
-// removes the link and the socket and stops the server.
+// removes the link and the socket and stops the server. Rejects with
+// the socket's path when it cannot bind.
 function start (dir, root, onHook, onStatusline) {
   const socket = path.join(dir, 'hooks.sock')
   const server = http.createServer((req, res) => {
@@ -62,14 +70,36 @@ function start (dir, root, onHook, onStatusline) {
         try { if (fs.readlinkSync(linked) === socket) fs.unlinkSync(linked) } catch (e) {}
         linked = null
       }
+      // libuv unlinks the bound name on close: the descriptor it names
+      // stays open until then.
       server.close()
+      release()
       try { fs.unlinkSync(socket) } catch (e) {}
     }
   }
+  let fd = null
+  const release = () => {
+    if (fd !== null) try { fs.closeSync(fd) } catch (e) {}
+    fd = null
+  }
   return new Promise((resolve, reject) => {
-    server.on('error', reject)
-    try { fs.unlinkSync(socket) } catch (e) {}
-    server.listen(socket, () => resolve(r))
+    let listening = false
+    // An error once listening leaves the descriptor to close().
+    const fail = e => {
+      if (listening) return
+      release()
+      reject(new Error(`hooks socket ${socket}: cannot bind: ${e.message}`))
+    }
+    server.on('error', fail)
+    try {
+      fd = fs.openSync(dir, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY)
+      const bound = `/proc/self/fd/${fd}/hooks.sock`
+      if (Buffer.byteLength(bound) > SUN_PATH) throw new Error(`${bound} is longer than a Unix socket path's ${SUN_PATH} bytes`)
+      try { fs.unlinkSync(socket) } catch (e) {}
+      server.listen(bound, () => { listening = true; resolve(r) })
+    } catch (e) {
+      fail(e)
+    }
   })
 }
 

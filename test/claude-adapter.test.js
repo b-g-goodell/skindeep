@@ -9,6 +9,7 @@ const path = require('path')
 const { Bus } = require('../app/metrics/bus')
 const { ClaudeAdapter } = require('../app/metrics/claude')
 const relay = require('./helpers/relay')
+const server = require('../app/metrics/claude/server')
 
 const fx = p => path.join(__dirname, 'fixtures', 'claude', p)
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -26,13 +27,13 @@ async function until (fn, ms = 5000) {
 // store, and a prepared adapter linked to this test's pid, so a relay
 // the test runs finds it as it finds its tab. The relay commands come
 // from the generated settings file.
-async function setup (t, { userLine = null } = {}) {
+async function setup (t, { userLine = null, deep = '' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-skins-adapter-'))
   t.after(() => fs.rmSync(root, { recursive: true, force: true }))
   const dirs = {}
   for (const d of ['cfg', 'cwd', 'run', 'root']) {
-    dirs[d] = path.join(root, d)
-    fs.mkdirSync(dirs[d])
+    dirs[d] = path.join(root, d === 'run' || d === 'root' ? deep : '', d)
+    fs.mkdirSync(dirs[d], { recursive: true })
   }
   fs.mkdirSync(path.join(dirs.cwd, '.git'))
   if (userLine) fs.writeFileSync(path.join(dirs.cfg, 'settings.json'), JSON.stringify({ statusLine: { type: 'command', command: userLine } }))
@@ -66,8 +67,10 @@ async function setup (t, { userLine = null } = {}) {
   }
 }
 
-test('S1 the relays fill the bus from hooks and statusline, the transcript follows, close releases all three', async t => {
-  const s = await setup(t)
+// deep: the runtime dirs nested under it. A Unix socket path holds 107
+// bytes, and the tab's socket and the relays' link are found under them.
+async function relays (t, deep) {
+  const s = await setup(t, { deep })
   const transcript = path.join(s.root, 'session.jsonl')
   fs.writeFileSync(transcript, '')
   const ids = { session_id: 'sess-1', transcript_path: transcript }
@@ -92,13 +95,24 @@ test('S1 the relays fill the bus from hooks and statusline, the transcript follo
 
   s.adapter.close()
   assert.ok(!fs.existsSync(s.target), 'the link is removed after close')
-  assert.ok(await relay.refused(s.adapter.server.socket), 'the socket refuses connections after close')
+  assert.ok(!fs.existsSync(s.adapter.server.socket), 'the socket is removed after close')
+  if (!deep) assert.ok(await relay.refused(s.adapter.server.socket), 'the socket refuses connections after close')
   const before = JSON.stringify(snap())
   const late = { type: 'assistant', message: { id: 'msg_after_stop', model: 'claude-late', usage: { input_tokens: 1, output_tokens: 777, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } }
   fs.appendFileSync(transcript, JSON.stringify(late) + '\n')
   await sleep(700)
   s.adapter.poll(Date.now())
   assert.strictEqual(JSON.stringify(snap()), before, 'a line appended after close writes nothing')
+  return s
+}
+
+test('S1 the relays fill the bus from hooks and statusline, the transcript follows, close releases all three', async t => {
+  await relays(t, '')
+})
+
+test('S1b the same through runtime dirs whose socket and link paths exceed a Unix socket path', async t => {
+  const s = await relays(t, path.join('d'.repeat(60), 'e'.repeat(60)))
+  assert.ok(Buffer.byteLength(s.adapter.server.socket) > 107 && Buffer.byteLength(s.target) > 107, 'both paths are longer than sun_path holds')
 })
 
 // A session sent to the background keeps --settings FILE and outlives
@@ -131,4 +145,11 @@ test('S4 a POST to an unknown route writes nothing', async t => {
   const m = s.bus.snapshot()
   assert.strictEqual(m['event.tool'], undefined)
   assert.strictEqual(m['tools.Read'], undefined)
+})
+
+test('S5 a socket that cannot bind rejects with its path, never listens unseen', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-skins-adapter-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  const dir = path.join(root, 'gone')
+  await assert.rejects(server.start(dir, root, () => {}, () => {}), e => e.message.startsWith(`hooks socket ${path.join(dir, 'hooks.sock')}: cannot bind: `))
 })

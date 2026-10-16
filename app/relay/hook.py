@@ -25,23 +25,26 @@ def parent(pid):
         return 0
 
 
+# The pid whose link names the window's socket, else None.
 def window(root):
     pid = os.getppid()
     for _ in range(MAX_DEPTH):
         if pid <= 1:
             return None
-        p = os.path.join(root, 'pids', str(pid))
-        if os.path.exists(p):
-            return p
+        if os.path.exists(os.path.join(root, 'pids', str(pid))):
+            return pid
         pid = parent(pid)
     return None
 
 
-def post(path, body):
+# A socket's path holds 107 bytes and ROOT may be longer: the link is
+# reached through a descriptor of ROOT/pids (decision 0016).
+def post(root, pid, body):
+    d = os.open(os.path.join(root, 'pids'), os.O_RDONLY | os.O_DIRECTORY)
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(TIMEOUT_S)
     try:
-        s.connect(path)
+        s.connect('/proc/self/fd/%d/%d' % (d, pid))
         head = ('POST /hook HTTP/1.1\r\nHost: skins\r\n'
                 'Content-Type: application/json\r\n'
                 'Content-Length: %d\r\nConnection: close\r\n\r\n' % len(body))
@@ -49,15 +52,16 @@ def post(path, body):
         s.recv(64)
     finally:
         s.close()
+        os.close(d)
 
 
 def main():
     body = sys.stdin.buffer.read()
     if len(sys.argv) < 2 or not body or len(body) > MAX_BODY:
         return
-    target = window(sys.argv[1])
-    if target:
-        post(target, body)
+    pid = window(sys.argv[1])
+    if pid:
+        post(sys.argv[1], pid, body)
 
 
 try:
