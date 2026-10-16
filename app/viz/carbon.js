@@ -504,14 +504,15 @@
       const fill = vis ? ln.rgb : '#aab3c5'
       const T = t / FLIGHT
       if (T >= 1) {
+        let st = 'flying'
         if (!ph.hit) {
           const r = fr.edge
           const v = fr.turn(ph.dir[0], ph.dir[1], ph.dir[2])
           ph.hit = { x: fr.cx + v.x * r, y: fr.cy - v.y * r, z: v.z }
-          return 'detected'
+          st = 'detected'
         }
         const a = 1 - (t - FLIGHT) / 1.4
-        if (a <= 0) return 'done'
+        if (a <= 0) return st === 'detected' ? st : 'done'
         const h = ph.hit
         const s = 1 + 0.6 * h.z
         g.save()
@@ -532,7 +533,7 @@
         g.textBaseline = 'middle'
         g.fillText('detected ' + wlText(wl(ln)), h.x + 8, h.y - 10)
         g.restore()
-        return 'flying'
+        return st
       }
       // The source region, while the jump is fresh.
       if (ph.src && t < SOURCE_T) {
