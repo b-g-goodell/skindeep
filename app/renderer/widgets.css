@@ -52,7 +52,7 @@
 .w-list { align-items: stretch; justify-content: flex-start; overflow: hidden; }
 .w-list.nodata { display: none; }
 .w-list .items { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
-.w-list .item { display: flex; gap: 6px; align-items: baseline; white-space: nowrap; overflow: hidden; }
+.w-list .item { display: flex; flex: none; gap: 6px; align-items: baseline; white-space: nowrap; overflow: hidden; }
 .w-list .item .mark { flex: none; }
 .w-list .item .text { overflow: hidden; text-overflow: ellipsis; }
 .w-list .item.doing { color: var(--fill); }
