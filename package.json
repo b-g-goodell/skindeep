@@ -7,7 +7,8 @@
   "main": "app/main.js",
   "scripts": {
     "start": "electron --no-sandbox .",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "checks": "node scripts/checks/suite.js"
   },
   "devDependencies": {
     "electron": "^44.7.0",
