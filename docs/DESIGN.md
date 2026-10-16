@@ -62,8 +62,9 @@ quiet sounds of its place.
         |     contained skin wrapper > shadow root (panels, widgets) |
         |     one xterm.js pane per tab at the manifest insets, its
         |     edges moved by the skin's splits, a handle on each |
-        |     the skin's menu button > DOM drop-down (tabs, open skin,
-        |     skins, viz toggle and modes, mute, housekeeping) |
+        |     the skin's menu button > DOM drop-down, a bar of four
+        |     menus: File (tabs, settings, housekeeping), Agents,
+        |     Skins, Visualization (viz toggle, modes, input, mute) |
         |     New tab... dialog |
         |     the skin's declared sounds (sounds.js)
         |
@@ -112,7 +113,7 @@ own keys, pastes and mouse reports.
 | [0019](decisions/0019-tests.md) | Tests and dev tools |
 | [0020](decisions/0020-statusline-default.md) | Statusline injection default |
 | [0021](decisions/0021-agent-adapter-seam.md) | Agent adapter seam |
-| [0022](decisions/0022-file-menu.md) | The File menu and the last skin used |
+| [0022](decisions/0022-file-menu.md) | The menus and the last skin used |
 | [0023](decisions/0023-tabs.md) | Tabs in one window |
 | [0024](decisions/0024-skin-sounds.md) | Skin sounds |
 | [0025](decisions/0025-new-tab-chooser.md) | New tab... with another agent, profile or folder |

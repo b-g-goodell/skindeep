@@ -1,8 +1,9 @@
 'use strict'
-// The File menu (decisions 0008, 0022 to 0028): the skin's button opens an
-// app-owned drop-down, above the skin and below the identity strip.
-// While it is open it takes the keyboard: Escape closes it, and focus
-// returns to the terminal.
+// The menus (decisions 0008, 0022 to 0028): the skin's button opens an
+// app-owned drop-down, above the skin and below the identity strip, with
+// a bar of four menus, File, Agents, Skins and Visualization, on File.
+// While it is open it takes the keyboard: Left and Right step through
+// the menus, Escape closes it, and focus returns to the terminal.
 
 window.AppMenu = (function () {
   const api = window.skinned
@@ -11,8 +12,12 @@ window.AppMenu = (function () {
   const dot = button.querySelector('.dot')
   let onClose = () => {}
   let refresh = null
+  // The menu the drop-down shows, and the count of asks to show one.
+  let shown = 'File'
+  let asked = 0
 
   function close () {
+    asked++
     if (menu.hidden) return
     clearInterval(refresh)
     menu.hidden = true
@@ -164,62 +169,124 @@ window.AppMenu = (function () {
     row.addEventListener('mouseleave', () => row.classList.remove('open'))
   }
 
-  async function open () {
-    const [skins, viz, house, muted, tm, live, prefs] = await Promise.all([api.listSkins(), api.vizState(), api.housekeeping(), api.soundMuted(), api.tabsMenu(), api.sessions(), api.settingsMenu()])
-    menu.textContent = ''
-    const then = fn => () => { fn(); close() }
-    item('New tab', then(() => api.newTab()), '', 'Ctrl+Shift+T')
-    item('New tab...', then(() => window.Chooser.open()))
-    item('Close tab', then(() => api.closeTab(null)), '', 'Ctrl+Shift+W')
-    // Reopen and Duplicate resume or fork the session, else start a new one.
-    const fresh = e => e && e.fresh ? ' (new session)' : ''
-    item('Reopen closed tab' + fresh(tm.reopen), tm.reopen ? then(() => api.reopenTab()) : null, tm.reopen ? '' : 'disabled')
-    item('Duplicate tab' + fresh(tm.duplicate), tm.duplicate ? then(() => api.duplicateTab()) : null, tm.duplicate ? '' : 'disabled')
-    item('Next tab', then(() => api.stepTab(1)), '', 'Ctrl+Tab')
-    item('Previous tab', then(() => api.stepTab(-1)), '', 'Ctrl+Shift+Tab')
-    rule()
-    item('Agent sessions', null, 'heading')
-    const box = document.createElement('div')
-    box.className = 'sessions'
-    menu.appendChild(box)
-    fillSessions(box, live)
-    item('Sessions dashboard', then(() => api.openDashboard()))
-    rule()
-    item('Open skin...', () => act(api.openSkin()))
-    rule()
-    item('Skins', null, 'heading')
-    // A skin opened by path shows its folder: it may replace a shipped
-    // skin of the same name for the run.
-    for (const s of skins) {
-      const el = item((s.current ? '* ' : '  ') + s.label, () => act(api.selectSkin(s.id)), (s.current ? 'current' : '') + (s.location ? ' located' : ''))
-      if (s.location) el.appendChild(pathSpan('location', s.location))
+  // The four menus (decision 0022), in the order of the bar. Each fills
+  // the drop-down below the bar from what it asks the main process.
+  const MENUS = [
+    ['File', fileMenu],
+    ['Agents', agentsMenu],
+    ['Skins', skinsMenu],
+    ['Visualization', vizMenu]
+  ]
+  const then = fn => () => { fn(); close() }
+
+  // The bar: one title per menu, the shown one marked. A press on a
+  // title shows its menu.
+  function bar () {
+    const row = document.createElement('div')
+    row.className = 'bar'
+    for (const [name] of MENUS) {
+      const el = document.createElement('div')
+      el.className = 'title' + (name === shown ? ' current' : '')
+      el.textContent = name
+      el.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); if (name !== shown) show(name) })
+      row.appendChild(el)
     }
-    rule()
-    item(viz.open ? 'Hide visualization' : 'Show visualization', () => { api.toggleViz(); close() })
-    flyout('Visualization mode', viz.modes, api.selectViz)
-    flyout('Visualization input', viz.inputs, api.selectVizInput)
-    item(muted ? 'Unmute skin sounds' : 'Mute skin sounds', () => { api.toggleSound(); close() })
-    rule()
-    item('Settings', null, 'heading')
-    for (const s of prefs) flyout(s.label, s.choices.map(c => ({ id: c.value, label: c.label, current: c.current })), v => api.setSetting(s.id, v))
-    // The skin's splits back to its own sizes (decision 0035).
-    const split = window.SkinView.splits().length > 0
-    item('Reset panel sizes', split ? () => act(api.resetPanels()) : null, split ? '' : 'disabled')
-    rule()
-    item('Housekeeping', null, 'heading')
-    for (const p of house.problems) item(p.title, () => say(p.detail, 'error'), 'problem')
-    item('Forget remembered skin', () => act(api.forgetSkin()))
-    item('Open log folder', () => { api.openLogs(); close() })
-    item('Clear logs', () => act(api.clearLogs()))
+    menu.appendChild(row)
+  }
+
+  // File: the tab entries of decision 0023, Settings and Housekeeping.
+  async function fileMenu () {
+    const [tm, prefs, house] = await Promise.all([api.tabsMenu(), api.settingsMenu(), api.housekeeping()])
+    return () => {
+      item('New tab', then(() => api.newTab()), '', 'Ctrl+Shift+T')
+      item('New tab...', then(() => window.Chooser.open()))
+      item('Close tab', then(() => api.closeTab(null)), '', 'Ctrl+Shift+W')
+      // Reopen and Duplicate resume or fork the session, else start a new one.
+      const fresh = e => e && e.fresh ? ' (new session)' : ''
+      item('Reopen closed tab' + fresh(tm.reopen), tm.reopen ? then(() => api.reopenTab()) : null, tm.reopen ? '' : 'disabled')
+      item('Duplicate tab' + fresh(tm.duplicate), tm.duplicate ? then(() => api.duplicateTab()) : null, tm.duplicate ? '' : 'disabled')
+      item('Next tab', then(() => api.stepTab(1)), '', 'Ctrl+Tab')
+      item('Previous tab', then(() => api.stepTab(-1)), '', 'Ctrl+Shift+Tab')
+      rule()
+      item('Settings', null, 'heading')
+      for (const s of prefs) flyout(s.label, s.choices.map(c => ({ id: c.value, label: c.label, current: c.current })), v => api.setSetting(s.id, v))
+      // The skin's splits back to its own sizes (decision 0035).
+      const split = window.SkinView.splits().length > 0
+      item('Reset panel sizes', split ? () => act(api.resetPanels()) : null, split ? '' : 'disabled')
+      rule()
+      item('Housekeeping', null, 'heading')
+      for (const p of house.problems) item(p.title, () => say(p.detail, 'error'), 'problem')
+      item('Forget remembered skin', () => act(api.forgetSkin()))
+      item('Open log folder', () => { api.openLogs(); close() })
+      item('Clear logs', () => act(api.clearLogs()))
+      dot.hidden = true
+      api.problemsSeen()
+    }
+  }
+
+  // Agents: the agent sessions of decision 0027, refreshed while the
+  // menu shows, and the dashboard of decision 0028.
+  async function agentsMenu () {
+    const live = await api.sessions()
+    return () => {
+      item('Agent sessions', null, 'heading')
+      const box = document.createElement('div')
+      box.className = 'sessions'
+      menu.appendChild(box)
+      fillSessions(box, live)
+      item('Sessions dashboard', then(() => api.openDashboard()))
+      return box
+    }
+  }
+
+  // Skins: Open skin... and the skins, the current one marked. A skin
+  // opened by path shows its folder: it may replace a shipped skin of
+  // the same name for the run.
+  async function skinsMenu () {
+    const skins = await api.listSkins()
+    return () => {
+      item('Open skin...', () => act(api.openSkin()))
+      rule()
+      item('Skins', null, 'heading')
+      for (const s of skins) {
+        const el = item((s.current ? '* ' : '  ') + s.label, () => act(api.selectSkin(s.id)), (s.current ? 'current' : '') + (s.location ? ' located' : ''))
+        if (s.location) el.appendChild(pathSpan('location', s.location))
+      }
+    }
+  }
+
+  // Visualization: the window, its modes and inputs (decision 0015), and
+  // the skin's sounds (decision 0024).
+  async function vizMenu () {
+    const [viz, muted] = await Promise.all([api.vizState(), api.soundMuted()])
+    return () => {
+      item(viz.open ? 'Hide visualization' : 'Show visualization', () => { api.toggleViz(); close() })
+      flyout('Visualization mode', viz.modes, api.selectViz)
+      flyout('Visualization input', viz.inputs, api.selectVizInput)
+      item(muted ? 'Unmute skin sounds' : 'Mute skin sounds', () => { api.toggleSound(); close() })
+    }
+  }
+
+  // Shows one menu under the bar, opening the drop-down if it is closed.
+  // A later ask wins over one still waiting on the main process.
+  async function show (name) {
+    const n = ++asked
+    const fill = await MENUS.find(m => m[0] === name)[1]()
+    if (n !== asked) return
+    clearInterval(refresh)
+    shown = name
+    menu.textContent = ''
+    bar()
+    const box = fill()
     menu.hidden = false
-    fitSessions(box, button.getBoundingClientRect().bottom + 2)
-    refresh = setInterval(async () => {
-      const list = await api.sessions()
-      if (!menu.hidden) fillSessions(box, list)
-    }, 2000)
     button.classList.add('open')
-    dot.hidden = true
-    api.problemsSeen()
+    if (box) {
+      fitSessions(box, button.getBoundingClientRect().bottom + 2)
+      refresh = setInterval(async () => {
+        const list = await api.sessions()
+        if (!menu.hidden && box.isConnected) fillSessions(box, list)
+      }, 2000)
+    }
     // Below the button, inside the window, above it when there is no room.
     const b = button.getBoundingClientRect()
     const r = menu.getBoundingClientRect()
@@ -227,6 +294,17 @@ window.AppMenu = (function () {
     const below = b.bottom + 2
     const top = document.getElementById('stage').getBoundingClientRect().top
     menu.style.top = (below + r.height <= window.innerHeight - 4 ? below : Math.max(top, b.top - r.height - 2)) + 'px'
+  }
+
+  // The drop-down opens on File.
+  function open () {
+    return show('File')
+  }
+
+  // Left and Right step through the menus, wrapping.
+  function step (d) {
+    const i = MENUS.findIndex(m => m[0] === shown)
+    show(MENUS[(i + d + MENUS.length) % MENUS.length][0])
   }
 
   // mousedown, not click: one press opens, and the terminal keeps focus.
@@ -247,6 +325,7 @@ window.AppMenu = (function () {
     e.preventDefault()
     e.stopPropagation()
     if (e.key === 'Escape') close()
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') step(e.key === 'ArrowLeft' ? -1 : 1)
   }, true)
 
   // An unseen problem of this launch marks the button.
