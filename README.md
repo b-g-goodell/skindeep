@@ -134,7 +134,8 @@ without spending tokens:
 ## Development
 
 `npm test` runs the tests, `scripts/checks/` holds live checks that run
-under Xvfb, `scripts/fuzz/` a fuzz harness, and `scripts/shots.js`
+under Xvfb, and `npm run checks -- OUT` runs every one of them that
+needs no real agent, `scripts/fuzz/` holds a fuzz harness, and `scripts/shots.js`
 retakes this page's screenshots with two real prompts. The design is in
 [docs/DESIGN.md](docs/DESIGN.md), how it was built, chapter by chapter,
 in the [dev diary](docs/diary/README.md), and [decision 0019](docs/decisions/0019-tests.md)
