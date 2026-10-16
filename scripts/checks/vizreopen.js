@@ -43,7 +43,7 @@ async function vizWindow (app, errors) {
 }
 
 async function menuPick (win, text) {
-  await openMenu(win)
+  await openMenu(win, 'Visualization')
   await win.locator('#menu .item').filter({ hasText: new RegExp(`^${text}$`) }).click()
   await sleep(1500)
 }
@@ -79,7 +79,7 @@ async function rounds () {
     await sleep(400)
     const spaced = await modes(viz)
     check(spaced[1] !== clicked[1], `round ${r}: space must step the active pane at once`)
-    await openMenu(win)
+    await openMenu(win, 'Visualization')
     await win.locator('#menu .submenu', { hasText: 'Visualization mode' }).hover()
     await sleep(200)
     const target = await win.evaluate(r => [...document.querySelectorAll('#menu .submenu')].find(e => e.firstChild.textContent === 'Visualization mode').querySelectorAll('.sub .item:not(.current)')[r].textContent.trim(), r)

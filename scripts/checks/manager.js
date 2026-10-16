@@ -99,7 +99,7 @@ async function main () {
   await win.keyboard.press('Enter')
   await sleep(3000)
 
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   let list = await rows(win)
   console.log('rows', JSON.stringify(list.map(r => [r.label, r.folder, r.state, r.where])))
   const own = list.find(r => r.where === 'tab')
@@ -129,7 +129,7 @@ async function main () {
   check(tchan && tchan.state === 'live' && tchan.target === fs.realpathSync(f1.file) && m.snapshot['tokens.out'] > 0 && m.snapshot['proc.mem_mb'] > 0, 'want its meters from its transcript and its pid')
   check(notice.includes('read-only monitor') && pane && pane.lines[0].startsWith('Read-only monitor of claude [lab]'), 'want the strip and the pane to say it is read only')
 
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   list = await rows(win)
   check(rowOf(list, f1).where === 'monitor', 'want the watched session marked in the list')
   await win.keyboard.press('Escape')
@@ -139,7 +139,7 @@ async function main () {
   pr = await probe(app)
   check(!pr.tabs.some(t => t.monitor) && alive(f1.pid), 'closing the monitor tab must leave the session running')
 
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   await win.locator(`#menu .session[data-key="${r1.key}"]`).click()
   await sleep(2500)
   check((await probe(app)).tabs.some(t => t.monitor === f1.pid), 'want the monitor tab again')
@@ -154,7 +154,7 @@ async function main () {
   const claudeTab = pr.tabs.find(t => t.label === 'claude' && t.childPid)
   await win.evaluate(id => window.skinned.closeTab(id), claudeTab.id)
   await sleep(2000)
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   const r3 = rowOf(await rows(win), f3)
   await win.locator(`#menu .session[data-key="${r3.key}"]`).click()
   await sleep(2500)

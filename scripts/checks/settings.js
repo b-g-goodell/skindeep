@@ -55,7 +55,7 @@ async function end (app) {
   check(before.length === 2 && before.every(t => t.fontSize === manifest('deck')), 'want both tabs at deck\'s own size first')
   check(after.length === 2 && after.every((t, i) => t.fontSize === 20 && t.cols < before[i].cols), 'want both tabs at 20 px with fewer columns')
 
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'phosphor' }).click()
   await sleep(1500)
   const switched = await terms(win)

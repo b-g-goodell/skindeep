@@ -74,7 +74,7 @@ async function main () {
   await sleep(1500)
   const { app, win } = launched = await launch([claudeFake], { appArgs: ['--skin', 'deck', '--no-viz'], env })
   await sleep(2500)
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   const list = await rows(win)
   const row = list.find(r => r.folder === foreign.cwd)
   console.log('row', JSON.stringify(row), 'recorded profiles', JSON.stringify(fs.readdirSync(path.join(state, 'claude-skins')).filter(n => n === 'profiles')))

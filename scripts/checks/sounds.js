@@ -41,8 +41,8 @@ async function silent (app) {
   check(s.switch, 'the driver must pass --mute-audio')
 }
 
-async function menuItem (win, text) {
-  await openMenu(win)
+async function menuItem (win, text, name = 'Visualization') {
+  await openMenu(win, name)
   await win.locator('#menu .item', { hasText: text }).click()
   await sleep(800)
 }
@@ -68,14 +68,14 @@ async function play () {
 async function mute () {
   const { app, win } = await start(['--skin', fixture])
   const items = await (async () => {
-    await openMenu(win)
+    await openMenu(win, 'Visualization')
     const t = await win.evaluate(() => [...document.querySelectorAll('#menu .item')].map(e => e.textContent))
     await win.keyboard.press('Escape')
     return t
   })()
   await menuItem(win, 'Mute skin sounds')
   const off = await sounds(win)
-  await openMenu(win)
+  await openMenu(win, 'Visualization')
   const again = await win.evaluate(() => [...document.querySelectorAll('#menu .item')].map(e => e.textContent))
   await win.locator('#menu .item', { hasText: 'Unmute skin sounds' }).click()
   await sleep(1500)
@@ -106,9 +106,9 @@ async function skins () {
   const { app, win } = await start(['--skin', fixture])
   const before = await sounds(win)
   const firstSrc = before.sounds.map(x => x.src)
-  await menuItem(win, 'deck')
+  await menuItem(win, 'deck', 'Skins')
   const deck = await sounds(win)
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'sounds' }).first().click()
   await sleep(1500)
   const back = await sounds(win)

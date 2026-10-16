@@ -113,7 +113,7 @@ async function until (fn, ms, step = 500) {
 }
 
 async function menu (win, re) {
-  await openMenu(win)
+  await openMenu(win, 'Agents')
   await win.locator('#menu .item').filter({ hasText: re }).click()
 }
 

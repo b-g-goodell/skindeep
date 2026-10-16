@@ -42,10 +42,14 @@ async function childPid (app) {
   return (await probe(app)).childPid
 }
 
-// Open the File menu by its button (decision 0022).
-async function openMenu (win) {
+// Open a menu, File, Agents, Skins or Visualization, by the skin's
+// button and the bar's title (decision 0022). The drop-down opens on File.
+async function openMenu (win, name = 'File') {
   await win.locator('#menu-button').click()
   await sleep(400)
+  if (name === 'File') return
+  await win.locator('#menu .bar .title', { hasText: name }).click()
+  await sleep(300)
 }
 
 async function shot (win, file) {

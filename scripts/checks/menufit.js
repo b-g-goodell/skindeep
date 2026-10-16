@@ -2,9 +2,9 @@
 // The menu with many live agent sessions. Run under xvfb-run:
 //   node scripts/checks/menufit.js OUT
 // Thirty idle processes named claude stand for live sessions. In a
-// window at the skin's minimum size every entry is in reach, and while
-// the menu is open, sessions that start and end move no entry below the
-// list. The processes are killed by their recorded pids.
+// window at the skin's minimum size every entry of Agents and File is in
+// reach, and while Agents is open, sessions that start and end move no
+// entry below the list. The processes are killed by their recorded pids.
 const { launch, openMenu, shot, sleep } = require('../drive.js')
 const { spawn } = require('child_process')
 const fs = require('fs')
@@ -43,7 +43,7 @@ const boxes = win => win.evaluate(() => {
     await sleep(3000)
     await app.evaluate(({ BrowserWindow }) => { const w = BrowserWindow.getAllWindows()[0]; w.setContentSize(1200, 640) })
     await sleep(800)
-    await openMenu(win)
+    await openMenu(win, 'Agents')
     const fit = await win.evaluate(() => {
       const m = document.getElementById('menu').getBoundingClientRect()
       const list = document.querySelector('#menu .sessions')
@@ -65,7 +65,12 @@ const boxes = win => win.evaluate(() => {
     check(JSON.stringify(before) === JSON.stringify(after), 'an entry below the sessions list moved')
     check(ended.every(x => x === true), 'want the two ended sessions marked ended in their places')
 
-    // The last entries: Housekeeping's last, and the font size flyout's last.
+    // File's last entries: Housekeeping's, and the font size flyout's last.
+    await win.keyboard.press('Escape')
+    await openMenu(win)
+    const file = await win.evaluate(() => Math.round(document.getElementById('menu').getBoundingClientRect().bottom))
+    console.log('file menu bottom', file, 'of', fit.height)
+    check(file <= fit.height, 'want the File menu inside the window')
     await win.locator('#menu .item').filter({ hasText: /^Forget remembered skin$/ }).click({ timeout: 5000 })
     await sleep(500)
     const note = await win.evaluate(() => { const n = document.querySelector('#menu .note'); return n && n.textContent })

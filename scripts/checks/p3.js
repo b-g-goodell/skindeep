@@ -43,12 +43,12 @@ async function menu () {
   const env = { SKINNED_SKINS_DIR: fixtures, SKINNED_GL: 'swiftshader' }
   const { app, win } = await launch([fake], { appArgs: ['--skin', 'all-widgets'], env })
   await sleep(3000)
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await shot(win, path.join(out, 'menu-open.png'))
   await win.locator('#menu .item', { hasText: 'hostile' }).click()
   await sleep(1500)
   await shot(win, path.join(out, 'menu-switched.png'))
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'broken-metric' }).click()
   await sleep(800)
   await shot(win, path.join(out, 'menu-broken.png'))
@@ -64,11 +64,11 @@ async function switching () {
   const { app, win } = await launch([fake], { appArgs: ['--skin', 'deck'], env: { SKINNED_GL: 'swiftshader' } })
   await sleep(3000)
   await shot(win, path.join(out, 'switch-0-deck.png'))
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'phosphor' }).click()
   await sleep(2000)
   await shot(win, path.join(out, 'switch-1-phosphor.png'))
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'deck' }).click()
   await sleep(2000)
   await shot(win, path.join(out, 'switch-2-deck.png'))
@@ -100,7 +100,7 @@ async function reload () {
   const before = await pixel(app, win, 1235, 400)
   console.log('before edit: body pixel', before)
   fs.writeFileSync(css, fs.readFileSync(css, 'utf8').replace('#a000a0', '#00a000'))
-  await openMenu(win)
+  await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'reload' }).click()
   await sleep(2000)
   const after = await pixel(app, win, 1235, 400)
@@ -125,7 +125,7 @@ async function collision () {
   await sleep(3000)
   const termBg = () => win.evaluate(() => document.getElementById('term').style.background)
   const items = async () => {
-    await openMenu(win)
+    await openMenu(win, 'Skins')
     return win.evaluate(() => [...document.querySelectorAll('#menu .item')].map(e => ({ text: e.firstChild ? e.firstChild.textContent : '', location: (e.querySelector('.location') || {}).title || null })))
   }
   const pick = async text => {
@@ -149,7 +149,7 @@ async function collision () {
 
 // Decision 0022: in each shipped skin and the hostile fixture the menu
 // button is the topmost element at its centre, and one click opens the
-// drop-down.
+// drop-down on File.
 async function button () {
   const results = []
   for (const skin of ['deck', 'phosphor', 'library', 'coffee', path.join(fixtures, 'hostile')]) {
@@ -170,7 +170,7 @@ async function button () {
     await end(app)
   }
   console.log(JSON.stringify(results))
-  for (const r of results) if (!r.visible || !r.top || !r.opened || !r.opened.includes('Open skin...')) throw new Error(`button: ${JSON.stringify(r)}`)
+  for (const r of results) if (!r.visible || !r.top || !r.opened || !r.opened.includes('New tab...')) throw new Error(`button: ${JSON.stringify(r)}`)
 }
 
 const current = win => win.evaluate(async () => (await window.skinned.listSkins()).filter(s => s.current).map(s => s.id))
@@ -182,7 +182,7 @@ async function openskin () {
   await sleep(3000)
   const choose = async dir => {
     await app.evaluate(({ dialog }, d) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [d] }) }, dir)
-    await openMenu(win)
+    await openMenu(win, 'Skins')
     await win.locator('#menu .item', { hasText: 'Open skin...' }).click()
     await sleep(1500)
   }
@@ -198,8 +198,9 @@ async function openskin () {
   if (bad.current[0] !== 'all-widgets' || !/widgets\[0\]\.bind: unknown metric "foo.bar"/.test(bad.error || '')) throw new Error('a broken skin was not refused with its error')
 }
 
-// Keys: the open menu swallows them and Escape closes it, then Alt+F and
-// Alt+B reach the CLI as ESC f and ESC b, and nothing else did.
+// Keys: the open menu swallows them, Right steps to Agents and Escape
+// closes it, then Alt+F and Alt+B reach the CLI as ESC f and ESC b, and
+// nothing else did.
 async function keys () {
   const file = path.join(out, 'keys.bin')
   fs.rmSync(file, { force: true })
@@ -207,6 +208,9 @@ async function keys () {
   await sleep(2500)
   await openMenu(win)
   await win.keyboard.press('x')
+  await win.keyboard.press('ArrowRight')
+  await sleep(300)
+  const stepped = await win.evaluate(() => (document.querySelector('#menu .bar .title.current') || {}).textContent || null)
   await win.keyboard.press('Escape')
   await sleep(300)
   const closed = await win.evaluate(() => document.getElementById('menu').hidden)
@@ -215,8 +219,8 @@ async function keys () {
   await sleep(1000)
   const bytes = fs.existsSync(file) ? [...fs.readFileSync(file)].map(b => b.toString(16).padStart(2, '0')).join(' ') : null
   await end(app)
-  console.log(JSON.stringify({ closed, bytes }))
-  if (!closed || bytes !== '1b 66 1b 62') throw new Error(`want the menu closed and 1b 66 1b 62, saw ${closed} and ${bytes}`)
+  console.log(JSON.stringify({ stepped, closed, bytes }))
+  if (stepped !== 'Agents' || !closed || bytes !== '1b 66 1b 62') throw new Error(`want Agents after Right, the menu closed and 1b 66 1b 62, saw ${stepped}, ${closed} and ${bytes}`)
 }
 
 // The last skin used (decision 0022), under a scratch XDG_STATE_HOME.
@@ -235,7 +239,7 @@ async function remember () {
     seen[key].records = last.read(recs).map(r => r.spec)
   }
   await run('bare', {}, async (app, win) => {
-    await openMenu(win)
+    await openMenu(win, 'Skins')
     await win.locator('#menu .item', { hasText: 'phosphor' }).click()
     await sleep(1500)
     return { after: (await current(win))[0] }

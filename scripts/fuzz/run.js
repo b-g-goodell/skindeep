@@ -68,13 +68,14 @@ function predictionsMd (o, steps) {
 const isMain = w => !w.isClosed() && w.url().includes('/renderer/')
 const isViz = w => !w.isClosed() && w.url().includes('/viz/')
 
-async function menuItem (win, re) {
-  await openMenu(win)
+// name: the menu that holds the entry (decision 0022).
+async function menuItem (win, re, name = 'File') {
+  await openMenu(win, name)
   await win.locator('#menu .item').filter({ hasText: re }).first().click({ timeout: 5000 })
 }
 
-async function flyout (win, title, re) {
-  await openMenu(win)
+async function flyout (win, title, re, name = 'File') {
+  await openMenu(win, name)
   await win.locator('#menu .submenu', { hasText: title }).hover({ timeout: 5000 })
   await sleep(200)
   await win.locator('#menu .submenu .sub .item').filter({ hasText: re }).first().click({ timeout: 5000 })
@@ -119,9 +120,9 @@ async function act (app, win, s) {
       await win.mouse.move(to.x + 4, to.y + to.height / 2, { steps: 8 })
       return win.mouse.up()
     }
-    case 'skin': return menuItem(win, exact(a.skin))
-    case 'vizToggle': return menuItem(win, /^(Hide|Show) visualization$/)
-    case 'vizMode': return flyout(win, 'Visualization mode', exact(MODES.find(m => m.id === a.mode).label))
+    case 'skin': return menuItem(win, exact(a.skin), 'Skins')
+    case 'vizToggle': return menuItem(win, /^(Hide|Show) visualization$/, 'Visualization')
+    case 'vizMode': return flyout(win, 'Visualization mode', exact(MODES.find(m => m.id === a.mode).label), 'Visualization')
     case 'vizClick': {
       if (!viz) return
       const st = await viz.evaluate(() => window.vizState())
@@ -129,7 +130,7 @@ async function act (app, win, s) {
       return viz.mouse.click(p.x + p.w / 2, p.y + p.h / 2)
     }
     case 'vizSpace': return viz && viz.keyboard.press('Space')
-    case 'mute': return menuItem(win, /^(Mute|Unmute) skin sounds$/)
+    case 'mute': return menuItem(win, /^(Mute|Unmute) skin sounds$/, 'Visualization')
     case 'font': return flyout(win, 'Terminal font size', a.size === null ? /^[* ]\s*Skin default/ : exact(`${a.size} px`))
     case 'type': return win.keyboard.type(a.text)
     case 'resize': return app.evaluate(({ BrowserWindow }, w) => BrowserWindow.getAllWindows().find(x => !x.getTitle().startsWith('visualization')).setContentSize(w, 900), a.width)
