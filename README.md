@@ -102,6 +102,10 @@ plays a stone.
 | **library** | **coffee** |
 | ![library](docs/skins/library.png) | ![coffee, with the task list on its slate and a jar per usage limit](docs/skins/coffee.png) |
 
+Drag the edge between the terminal and a panel beside it to give the
+panel more room or less. The skin keeps the size, and **Reset panel
+sizes** in the menu's Settings brings back its own.
+
 A plain `claude-skins` opens the skin you used last, and you can mute
 its sounds from the menu or start muted with `skinned --mute` or
 `SKINNED_MUTE=1`. To make your own, read [docs/SKINS.md](docs/SKINS.md),
