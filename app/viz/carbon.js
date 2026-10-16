@@ -941,6 +941,17 @@
 
     // ---- Drawing ----
 
+    // Every text the pane draws, as its ink box in the pane's pixels:
+    // the diagram's and the spectrum's, drawn once a resize, in still,
+    // and the frame's in said.
+    let still = []
+    let said = []
+    function say (g, t, x, y, ox = 0, oy = 0, list = said) {
+      const m = g.measureText(t)
+      g.fillText(t, x, y)
+      list.push({ t, x: ox + x - m.actualBoundingBoxLeft, y: oy + y - m.actualBoundingBoxAscent, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent })
+    }
+
     function yOf (E) {
       const d = R.dd
       return d.bot - (d.bot - d.top) * E / D.limit
@@ -952,6 +963,7 @@
       const { diag } = R
       diagC = cpu(diag.w, diag.h)
       const g = diagC.g
+      const put = (t, x, y) => say(g, t, x, y, diag.x, diag.y, still)
       const small = diag.w < 260 || diag.h < 200
       const left = small ? 30 : 46
       const dd = { top: 16, bot: diag.h - (small ? 14 : 26), x0: left, cw: (diag.w - left - 6) / 5 }
@@ -968,7 +980,7 @@
       g.setLineDash([])
       g.fillStyle = '#7d89a1'
       g.textAlign = 'right'
-      g.fillText((small ? 'limit ' : 'ionization limit ') + D.limitEV.toFixed(2) + ' eV', diag.w - 6, dd.top - 8)
+      put((small ? 'limit ' : 'ionization limit ') + D.limitEV.toFixed(2) + ' eV', diag.w - 6, dd.top - 8)
       // The energy axis in eV.
       g.strokeStyle = '#1f2838'
       g.beginPath()
@@ -976,9 +988,9 @@
       g.lineTo(dd.x0 - 6, dd.bot)
       g.stroke()
       const perEV = D.limit / D.limitEV
-      for (let e = 0; e <= 10; e += small ? 5 : 2) g.fillText(e + (small ? '' : ' eV'), dd.x0 - 9, yOf(e * perEV))
+      for (let e = 0; e <= 10; e += small ? 5 : 2) put(e + (small ? '' : ' eV'), dd.x0 - 9, yOf(e * perEV))
       g.textAlign = 'center'
-      if (!small) COL_NAME.forEach((n, c) => g.fillText(n, colX(c) + dd.cw / 2, dd.bot + 13))
+      if (!small) COL_NAME.forEach((n, c) => put(n, colX(c) + dd.cw / 2, dd.bot + 13))
       // The Rydberg ladders, faint, toward the limit.
       g.strokeStyle = '#2b3446'
       for (const r of D.rydberg) {
@@ -1023,7 +1035,7 @@
         g.textAlign = 'left'
         g.fillStyle = '#7d89a1'
         const mag = inner / ((dd.bot - dd.top) * span / D.limit)
-        g.fillText(SUP[3] + 'P ' + TIMES + Math.round(mag), ix + 4, iy + 9)
+        put(SUP[3] + 'P ' + TIMES + Math.round(mag), ix + 4, iy + 9)
         for (const lv of gl) {
           const y = Math.round(R.inset.y0(lv.E)) + 0.5
           g.strokeStyle = '#4d5b77'
@@ -1034,7 +1046,7 @@
           g.stroke()
           g.lineWidth = 1
           g.fillStyle = '#8c97ad'
-          g.fillText('J=' + lv.J + (iw > 90 ? '  ' + lv.E.toFixed(1) + ' cm' + U(0x207b, 0xb9) : ''), ix + iw * 0.45 + 4, y)
+          put('J=' + lv.J + (iw > 90 ? '  ' + lv.E.toFixed(1) + ' cm' + U(0x207b, 0xb9) : ''), ix + iw * 0.45 + 4, y)
         }
       }
     }
@@ -1054,6 +1066,7 @@
       const s = R.spec
       specC = cpu(s.w, s.h)
       const g = specC.g
+      const put = (t, x, y) => say(g, t, x, y, s.x, s.y, still)
       const base = s.h - 14
       R.base = base
       g.fillStyle = '#060a12'
@@ -1073,14 +1086,14 @@
       const marks = s.w < 330 ? [[200, '200 nm'], [1000, '1 ' + MU + 'm']] : [[120, '120 nm'], [200, '200'], [380, '380'], [780, '780'], [2000, '2 ' + MU + 'm'], [5000, '5'], [10000, '10']]
       for (const [nm, t] of marks) {
         g.fillRect(specX(nm), base, 1, 3)
-        g.fillText(t, specX(nm), base + 3)
+        put(t, specX(nm), base + 3)
       }
-      g.fillText('far IR', specX(370000), base + 3)
+      put('far IR', specX(370000), base + 3)
       g.strokeStyle = '#33405a'
       g.strokeRect(Math.round(specX(370000)) - 16.5, 2.5, 33, base - 3)
       if (s.w >= 330) {
         g.textAlign = 'left'
-        g.fillText('visible', specX(380) + 2, 3)
+        put('visible', specX(380) + 2, 3)
       }
       lines.forEach(ln => {
         g.fillStyle = visible(ln) ? ln.rgb : '#3d4860'
@@ -1110,6 +1123,7 @@
     function resize (w, h) {
       layer = cpu(w, h)
       R = regions(w, h)
+      still = []
       drawDiagram()
       drawSpectrum()
       drawGrain()
@@ -1251,13 +1265,13 @@
       g.fillStyle = '#7d89a1'
       g.textAlign = 'left'
       g.textBaseline = 'alphabetic'
-      g.fillText('z, chosen', tx + 4, Math.max(a.y + 10, ty))
+      say(g, 'z, chosen', tx + 4, Math.max(a.y + 10, ty))
       // A scale bar.
       const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
       const bx = a.x + 10
       const by = a.y + a.h - 6
       g.fillRect(bx, by, step * F.k, 1)
-      g.fillText(step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', bx, by - 4)
+      say(g, step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', bx, by - 4)
       const o = shells(lv).find(e => e.outer)
       const rows = [['#e8eefc', levelName(lv) + '  M_L=' + ax.M + (cl.round ? ', round' : '')]]
       const tau = tauScreen(lv)
@@ -1289,7 +1303,7 @@
           x += 11
         }
         g.fillStyle = col
-        g.fillText(clip(g, t, fit - (x - a.x - 8)), x, y)
+        say(g, clip(g, t, fit - (x - a.x - 8)), x, y)
       })
     }
 
@@ -1365,7 +1379,7 @@
         g.textAlign = 'left'
         g.textBaseline = 'middle'
         const t = wlText(wl(ln))
-        g.fillText(t, Math.min(d.x + d.w - g.measureText(t).width - 2, (x1 + x2) / 2 + 6), (y1 + y2) / 2)
+        say(g, t, Math.min(d.x + d.w - g.measureText(t).width - 2, (x1 + x2) / 2 + 6), (y1 + y2) / 2)
         g.restore()
       }
       // The drawn atom's level, lit, and in the inset its J.
@@ -1393,7 +1407,7 @@
       const label = levelName(lv)
       const right = x + cw + g.measureText(label).width + 4 < d.x + d.w
       g.textAlign = right ? 'left' : 'right'
-      g.fillText(label, right ? x + cw : x - 2, y - 7)
+      say(g, label, right ? x + cw : x - 2, y - 7)
     }
 
     function drawSpectrumNow (g, dt) {
@@ -1429,7 +1443,7 @@
       g.textAlign = 'left'
       g.textBaseline = 'middle'
       g.fillStyle = '#c9d3e6'
-      g.fillText(clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)
+      say(g, clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)
     }
 
     redraw(null)
@@ -1460,6 +1474,7 @@
           return false
         })
         const g = layer.g
+        said = []
         g.globalCompositeOperation = 'source-over'
         g.globalAlpha = 1
         g.fillStyle = '#03050a'
@@ -1522,12 +1537,14 @@
       // For the live checks: the clicks, the camera's turns, the
       // collisions, photons emitted and detected, the drawn atom's level
       // and M_L, the lines lit, the fronts in flight by kind, whether a
-      // source flashes, the field and the photons of the last second.
+      // source flashes, the field, the photons of the last second, and the
+      // ink box of every text drawn, for the check of overlapping text.
       probe () {
+        const r1 = v => Math.round(v * 10) / 10
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
         const by = b => fronts.filter(f => f.ln.band === b).length
-        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length }, tally)
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally)
       }
     }
   }
