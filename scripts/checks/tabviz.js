@@ -8,10 +8,10 @@
 // the main renderer's frame rate, its median and 95th percentile frame
 // time and the 95th percentile lag of a 20 ms timer, the visualization
 // window's frame rate, and the CPU of the main renderer, the viz
-// renderer, the GPU process and the main process. Each ROOT, an app
-// tree such as a checkout of an earlier commit, is launched in turn,
-// three rounds, so each sees the same host load. It asserts nothing,
-// since the host's load moves it.
+// renderer, the GPU process and the main process, read from /proc.
+// Each ROOT, an app tree such as a checkout of an earlier commit, is
+// launched in turn, three rounds, so each sees the same host load. It
+// asserts nothing, since the host's load moves it.
 // look: in each of two skins, four tabs of the fake claude, the second
 // and fourth held idle (the fake starts no turn while OUT/pause.<its
 // pid> exists), the others at work. Each held tab's visualization must
@@ -82,18 +82,29 @@ function vizFrames (ms) {
   })
 }
 
-// CPU of the main renderer, the viz renderer, the GPU process and the
-// main process, in percent of one core, since the last call.
-const cpu = app => app.evaluate(({ app, BrowserWindow }) => {
-  const by = new Map(app.getAppMetrics().map(m => [m.pid, m]))
-  const pct = pid => by.has(pid) ? by.get(pid).cpu.percentCPUUsage : 0
+// The pids of the main renderer, the viz renderer, the GPU process and
+// the main process.
+const pidsOf = app => app.evaluate(({ app, BrowserWindow }) => {
+  const all = app.getAppMetrics()
   const wins = BrowserWindow.getAllWindows()
   const v = wins.find(w => w.webContents.getURL().includes('/viz/'))
   const m = wins.find(w => w !== v)
-  const gpu = [...by.values()].find(x => x.type === 'GPU')
-  const main = [...by.values()].find(x => x.type === 'Browser')
-  return { main: pct(m.webContents.getOSProcessId()), viz: v ? pct(v.webContents.getOSProcessId()) : 0, gpu: gpu ? gpu.cpu.percentCPUUsage : 0, browser: main ? main.cpu.percentCPUUsage : 0 }
+  const of = type => (all.find(x => x.type === type) || {}).pid || 0
+  return { main: m.webContents.getOSProcessId(), viz: v ? v.webContents.getOSProcessId() : 0, gpu: of('GPU'), browser: of('Browser') }
 })
+
+// Each pid's user and system time so far, in clock ticks of 10 ms.
+function ticks (pids) {
+  const out = {}
+  for (const [k, pid] of Object.entries(pids)) {
+    try {
+      const f = fs.readFileSync(`/proc/${pid}/stat`, 'utf8')
+      const v = f.slice(f.lastIndexOf(')') + 2).split(' ')
+      out[k] = Number(v[11]) + Number(v[12])
+    } catch (e) { out[k] = 0 }
+  }
+  return out
+}
 
 // open: the visualization window open, in the modes a fresh launch gives
 // six panes, else --no-viz.
@@ -109,9 +120,13 @@ async function costOf (root, open) {
   await sleep(5000)
   const runs = []
   for (let k = 0; k < 3; k++) {
-    await cpu(app)
+    const pids = await pidsOf(app)
+    const t0 = ticks(pids)
+    const w0 = Date.now()
     const [m, v] = await Promise.all([win.evaluate(mainFrames, 4000), viz ? viz.evaluate(vizFrames, 4000) : 0])
-    const c = await cpu(app)
+    const t1 = ticks(pids)
+    const c = {}
+    for (const k of Object.keys(pids)) c[k] = (t1[k] - t0[k]) * 10 * 100 / (Date.now() - w0)
     const g = m.gaps.slice(1).sort((a, b) => a - b)
     const l = m.lags.slice().sort((a, b) => a - b)
     runs.push({ fps: g.length * 1000 / g.reduce((s, x) => s + x, 0), med: g[Math.floor(g.length / 2)], p95: g[Math.floor(g.length * 0.95)], lag: l[Math.floor(l.length * 0.95)], viz: v, cpuMain: c.main, cpuViz: c.viz, cpuGpu: c.gpu, cpuBrowser: c.browser })
@@ -125,7 +140,7 @@ async function costOf (root, open) {
   return r
 }
 
-const line = r => `main ${r.fps} fps, frame median ${r.med} ms, p95 ${r.p95} ms, timer lag p95 ${r.lag} ms, viz ${r.viz} fps, cpu % main renderer ${r.cpuMain}, viz renderer ${r.cpuViz}, gpu ${r.cpuGpu}, main process ${r.cpuBrowser}`
+const line = r => `main ${r.fps} fps, frame median ${r.med} ms, p95 ${r.p95} ms, timer lag p95 ${r.lag} ms, viz ${r.viz} fps, cpu % of a core: main renderer ${r.cpuMain}, viz renderer ${r.cpuViz}, gpu ${r.cpuGpu}, main process ${r.cpuBrowser}`
 
 async function cost (roots) {
   const all = new Map()
