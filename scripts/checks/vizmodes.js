@@ -4,7 +4,13 @@
 // under xvfb-run:
 //   node scripts/checks/vizmodes.js OUT
 // The fakes of scripts/fake come first on PATH. The menu lists every
-// mode, and the space bar steps a pane through all of them.
+// mode, and the space bar steps a pane through all of them. Then Gravity
+// and Gravity 3D each fill the one pane of a 1200 by 760 window: once
+// their probe reports the seed's tight pair and it has turned three
+// times, the sign of its wave at a point near it has changed four times
+// a turn, twice its orbital frequency, and three frames 0.5 s apart go
+// to OUT/<mode>-waves-full-<k>.png, a front leaving the pair from one
+// to the next (decision 0015, issue #163).
 // It reports the frame rate of three panes in butterchurn modes and in
 // the procedural modes, measured in turn, and asserts nothing of it,
 // since the host's load moves it. Then one pane
@@ -14,6 +20,9 @@
 // something, its idle frame differs from its work frame and its prompt
 // frame from its idle frame. The frames
 // go to OUT/<mode>-<phase>.png and a contact sheet to OUT/viz-modes.png.
+// Before the phases, Gravity's and Gravity 3D's small panes report their
+// tight pair and three frames 0.5 s apart go to
+// OUT/<mode>-waves-small-<k>.png.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -105,6 +114,34 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
   console.log('space', seen.join(' '))
   check(seen.join() === want.join(), 'space does not step through every mode')
 
+  // Gravity and Gravity 3D alone in a full pane: the seed's tight pair,
+  // its waves at twice its orbital frequency, three frames.
+  const vizWin = fn => app.evaluate(({ BrowserWindow }, f) => {
+    const w = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().includes('/viz/'))
+    return f ? w.setContentSize(f[0], f[1]) : w.getContentSize()
+  }, fn)
+  const size0 = await vizWin(null)
+  await vizWin([1200, 760])
+  const one = (await tabs())[0].id
+  for (const id of ['gravity', 'gravity3d']) {
+    await assign(one, id)
+    let pair = null
+    await until(async () => {
+      pair = (await state()).panes[0].probe.pair
+      return pair && pair.turns >= 3
+    }, `${id}: no tight pair turned three times`, 900)
+    console.log(id, 'full pane pair', JSON.stringify(pair))
+    check(Math.abs(pair.flips / pair.turns - 4) < 1, `${id}: ${pair.flips} sign changes of its wave in ${pair.turns} turns, not four a turn`)
+    for (let k = 0; k < 3; k++) {
+      if (k) await sleep(500)
+      const [x] = await viz.evaluate(grab)
+      check(peak(x.grid) > 40, `${id}: a blank full pane`)
+      fs.writeFileSync(path.join(out, `${id}-waves-full-${k}.png`), Buffer.from(x.png.split(',')[1], 'base64'))
+    }
+  }
+  await vizWin(size0)
+  await sleep(1000)
+
   // Three panes in butterchurn modes, as vizsplit.js measures them, and
   // in the procedural modes, five rounds in turn so each set sees the
   // same host load. Each set's median.
@@ -136,6 +173,20 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
   })
   const ids = (await tabs()).map(t => t.id)
   for (let j = 0; j < NEW.length; j++) await assign(ids[j], NEW[j])
+  // The gravity modes' small panes: each its tight pair, three frames.
+  await sleep(2000)
+  const small = ['gravity', 'gravity3d'].map(id => NEW.indexOf(id))
+  await until(async () => {
+    const st = await state()
+    return small.every(j => st.panes[j].probe && st.panes[j].probe.pair)
+  }, 'a small gravity pane has no tight pair', 150)
+  for (let k = 0; k < 3; k++) {
+    if (k) await sleep(500)
+    const xs = await viz.evaluate(grab)
+    for (const j of small) fs.writeFileSync(path.join(out, `${NEW[j]}-waves-small-${k}.png`), Buffer.from(xs[j].png.split(',')[1], 'base64'))
+  }
+  const st = await state()
+  console.log('small panes', JSON.stringify(small.map(j => [NEW[j], st.panes[j].w, st.panes[j].h, st.panes[j].probe.pair])))
   const shots = {}
   const take = async phase => {
     shots[phase] = await viz.evaluate(grab)

@@ -19,7 +19,8 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 2026-10-15 for each tab's visualization in the tab strip (maintainer:
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
-(issue #158).
+(issue #158) and for the gravitational waves of the Gravity modes
+(issue #163).
 
 ## Context
 
@@ -85,9 +86,14 @@ butterchurn-presets is MIT for its conversion only.
     full. Zoom out: six scenes, each the detail of the next, the sixth
     the first's detail, so the camera loops. Gravity: Newtonian bodies
     by leapfrog, merging on contact, events adding bodies or mass, the
-    rates setting the clock. Gravity 3D: Gravity's bodies in three
-    dimensions with black holes, spinning ones among them, before
-    distant stars they lens (see 2026-10-15: Gravity 3D). Quantum: the
+    rates setting the clock, and the gravitational waves they radiate
+    at quadrupole order, exaggerated, drawn in the plane: a pair of
+    stars in close orbit spins a two-armed spiral of $h_+$ (see
+    2026-10-16: gravitational waves). Gravity 3D: Gravity's bodies in
+    three dimensions with black holes, spinning ones among them, before
+    distant stars they lens (see 2026-10-15: Gravity 3D), and their
+    waves, both polarizations, which carry energy away, so a tight pair
+    inspirals and chirps until it merges (see 2026-10-16). Quantum: the
     Schroedinger equation by split-step Fourier on a 128 by 64 grid,
     packets through slits onto a screen that records detections, a stop
     measuring and collapsing the state. Carbon: the neutral carbon atom
@@ -328,8 +334,9 @@ distant background of stars".
   Lense-Thirring rate, the other way for the opposite spin and not at
   all at rest.
 - The seed: a hole of 900 spinning at $\chi = 0.7$, 420 grains in its
-  equator between 3.3 and 8 $r_s$, a companion star of 80 at 175 and
-  three planets. Within 10 $r_s$ of a hole and outside $3 r_s$, the
+  equator between 3.3 and 8 $r_s$, a companion of 80 at 175, a star of
+  50 and a hole of 30 in a tight pair 16 apart (see 2026-10-16:
+  gravitational waves), and two planets, at 215 and 245. Within 10 $r_s$ of a hole and outside $3 r_s$, the
   disc's viscosity relaxes a grain's velocity, at a rate of 0.01 per
   unit of time, toward 99.5% of the circular velocity in the plane of
   its orbit: grains settle on circles, spiral to the last stable orbit
@@ -889,3 +896,169 @@ Rejected:
 - A static Zeeman split on the level diagram: 1 T spreads a $g = 1.5$,
   $J = 1$ level over 1.4 $\mathrm{cm^{-1}}$, under a pixel (research
   5.2).
+
+## 2026-10-16: gravitational waves
+
+Owner, 2026-10-16: "both gravity visualizations should have some
+representation of gravity waves (obviously exagerrated)", filed as
+issue #163: gravitational waves, the strain that accelerating masses
+radiate at $c$, not the waves of a fluid. The issue left the drawing,
+the 2D wave speed and radiation reaction to the builder, settled here.
+
+- The formula, in `app/viz/waves.js`, which both modes load: quadrupole
+  order, $G = 1$,
+  $h_{ij}^{TT}(t, \mathbf{x}) = \frac{2}{c^4 r} \Lambda_{ij,kl}(\hat{n}) \ddot{I}_{kl}(t_r)$,
+  with $\ddot{I}_{ij} = \sum_k m_k (2 v_{k,i} v_{k,j} + x_{k,i} a_{k,j} + a_{k,i} x_{k,j})$
+  about the centre of mass, from the places, velocities and
+  accelerations the modes hold: exact for any configuration, with no
+  finite difference. Each is taken relative to the centre's, so a lone
+  body moving uniformly radiates nothing.
+- Sources: the formula holds far from its source, and a tight pair need
+  not sit at the centre of mass. A pair whose members pull hardest on
+  each other and are bound is a source of its own, about its own centre
+  of mass, and every other body with each such pair's centre of mass
+  is one more, about the centre of mass of all. By the parallel axis
+  theorem their $\ddot{I}$ sum to the system's, so the far field is the
+  system's, and near the pair its fronts leave the pair.
+- Retarded field: each source keeps its $\ddot{I}$, its place and its
+  near zone's radius in a ring buffer of 512 samples, one a step of
+  0.25, 128 units of time, a front's travel of 1472 at $c = 11.5$. A
+  point reads its source at $t_r = t - |\mathbf{x} - \mathbf{X}(t_r)|/c$,
+  found by three steps of that map from $t_r = t$, which close on it as
+  $(v/c)^3$: a moving pair's fronts are centred where they were sent.
+  Before a source's first sample its field is nothing, so a seed's
+  first front leaves its pair at $c$, and when a pair ends its last
+  front leaves it.
+- Polarizations, about a source's axis $\hat{L}$, its angular momentum:
+  with $\hat{e}_\phi = \hat{L} \times \hat{n}$ and
+  $\hat{e}_\theta = \hat{e}_\phi \times \hat{n}$ normalized,
+  $h_+ = (\ddot{I}_{\theta\theta} - \ddot{I}_{\phi\phi})/(c^4 r)$ and
+  $h_\times = 2 \ddot{I}_{\theta\phi}/(c^4 r)$. A circular pair gives
+  both $4 m_1 m_2/(c^4 a r)$ along its axis, $h_+$ times
+  $(1 + \cos^2 \iota)/2$ and $h_\times$ times $\cos \iota$ at
+  inclination $\iota$, and in its plane $h_+$ halved and no $h_\times$.
+- Near zone: within its reduced wavelength $c/(2\Omega)$, $\Omega$ the
+  source's orbital frequency, $\Omega^2 = \sum m |x| |a| / \sum m |x|^2$
+  about its centre, or twice its rms size if that is larger, a source's
+  field is the Newtonian tide, not yet a wave. It fades there by
+  $(r^2/(r^2 + r_0^2))^2$ instead of growing as $1/r$. A wide slow
+  orbit, a star and a far companion, is near zone across the whole view
+  and barely drawn, and a tight pair's spiral starts a reduced
+  wavelength out.
+- Bounded at a horizon: the Paczynski-Wiita pull grows without bound at
+  $r_+$, a fall in general relativity does not. The part of a body's
+  acceleration that the pull adds within $r_+$ of a horizon, beyond its
+  value at a gap of $r_+$, is left out of the waves' $\ddot{I}$, and
+  each body's term is held to $4 m c^2$ in norm, so a plunge's burst
+  stays near $\mu c^2$. The dynamics keep the whole pull.
+- The gain: the strain is drawn as $\tanh(5000\,h)$, one gain for both
+  modes. Where a strong source's strain would turn from + to - within
+  one drawn cell, so that the grid blurred up to the pane would show the
+  turn as steps, the argument is divided by the local steepness, the
+  largest step of $5000\,h$ to a neighbouring cell over 0.8: an
+  antialiasing of the turn, not a second gain, and 1 wherever the field
+  changes by less than that from cell to cell, the seeds' pairs among
+  them. Their pairs radiate alike at the same $c$: the faded strain
+  peaks at $0.325 A/r_0$, at $r = \sqrt{3} r_0$, $A = 4 m_1 m_2/(c^4 a)$
+  along the axis and half in the plane, and 5000 brings that to about
+  0.6: 0.63 for Gravity's pair in its plane, 0.87 on the axis of
+  Gravity 3D's and 0.44 in its plane. The pane says so at its top
+  right, "gravitational waves, exaggerated x5000", clear of the
+  drop-down's button, else "waves exaggerated x5000", else that under
+  the button, at the visualization text size.
+- Gravity's wave speed: $c = 11.5$, the value of Gravity 3D's, so the
+  one gain serves both. A front crosses the view of 480 in 42 units of
+  time, 1 to 4 s at the clock's usual rates. It drives the waves alone,
+  not the dynamics, which stay Newtonian.
+- Gravity's seed: the star of 900, a planet at 60, the belt of dust,
+  and two stars of 64 on a circular orbit 22 apart, their centre of
+  mass 170 from the star, a third of their Hill radius, bound for 5000
+  units of time in runs headless that started them at three phases.
+  They turn every 58 units, and their waves, of wavelength
+  $\pi c/\Omega = 334$, spin a two-armed spiral of $h_+$ in the plane,
+  the only polarization there. A subagent adds a star while there are
+  fewer than 5, not 3, so the pair does not end that event.
+- Gravity 3D's seed: the companion of 80 at 175 is a star of 50 and a
+  hole of 30, 16 apart, on a circular orbit in the plane of their orbit
+  about the hole and in its sense, a third of their Hill radius. The
+  star feeds the disc as the companion star did, and its own hole too.
+  They turn every 44 units, wavelength 251.
+- Radiation reaction, in Gravity 3D, where $c$ is the dynamics' own:
+  every pair feels the 2.5PN relative acceleration in the Burke-Thorne
+  gauge (Iyer and Will 1995),
+  $\mathbf{a} = \frac{8}{5} \eta \frac{M^2}{c^5 r^3} [(3 v^2 + \frac{17}{3} \frac{M}{r}) \dot{r} \hat{n} - (v^2 + 3 \frac{M}{r}) \mathbf{v}]$,
+  split by mass so momentum holds, and at most a tenth of the
+  Newtonian pull. On a circular orbit it takes Peters' energy, so a
+  pair shrinks at $\dot{a} = -\frac{64}{5} \frac{m_1 m_2 M}{c^5 a^3}$.
+  The seed's pair, 2145 units of time from merging alone by Peters,
+  lasted 330 to 2000 in five runs headless with the hole's tides and
+  the planets: a minute or so at work, its waves chirping, their
+  amplitude and frequency rising, until the hole swallows the star, a
+  burst. In Gravity it is left out: its dynamics have no $c$, and at
+  $c = 11.5$ it would merge the seed's pair in a few units of time. A
+  chirp there comes only from orbits the dynamics tighten: a
+  compaction, a comet's pass, a merger.
+- Drawing, one look a mode, on a grid of cells 32 across the pane's
+  shorter side and at least 8 pixels, blurred up to the pane, the
+  frame's opaque ground under everything else. Gravity: the sum over
+  sources of $h_+$ in the plane, + in a cool blue, - in a warm amber.
+  Gravity 3D: each source's field on the plane through it that faces
+  the camera, in the camera's basis, the line of sight and the
+  direction across it in that plane, which is the source's own basis
+  where its axis lies in that plane or along the line of sight, never
+  singular across the view: $h_+$ in blue and amber, $h_\times$ in teal
+  and rose, each as $\tanh$ squared, its sign kept, which leaves the
+  faint far field darker than the pair's lobes. A cell reads
+  $\ddot{I}$ as its mean over a cell and a half's light time on either
+  side, nothing outside a source's samples, so a front or a burst
+  thinner than a cell is drawn ramped, not aliased into beads. The
+  lensing, the sky and the dust are as before.
+- Probe: both modes report their sources and, for the pair of shortest
+  period, its separation, period, turns and the sign changes of its
+  $h_+$ 80 from it, along its axis in Gravity 3D and in its plane in
+  Gravity: four a turn at twice its orbital frequency.
+- Checked by `test/viz-gravity.test.js`, `test/viz-gravity3d.test.js`
+  and `test/viz-waves.test.js`. A circular binary's $\ddot{I}$, in the
+  plane and inclined, equals $-2\mu a^2 \Omega^2$ times the cosine and
+  sine of $2\Omega t$ to $10^{-9}$, and a lone body moving uniformly
+  gives none. Gravity's pair stepped by the mode for 600 units of time
+  changes its wave's sign four times a turn, to 0.6. In its plane
+  $h_\times$ is nothing and $h_+$ is $2 m_1 m_2/(c^4 a r)$ to 2%. Along
+  the axis both are $4 m_1 m_2/(c^4 a r)$, and at 1 rad they are
+  $(1 + \cos^2 \iota)/2$ and $\cos \iota$ of it, to 1%. A change at a
+  source is nothing at $r$ until $r/c$ after, then all of it. A moving
+  source's front is centred where it was sent. The sources' $\ddot{I}$
+  sum to the system's, and the filter takes the mean. In Gravity 3D two
+  stars of 500 at 100 shrink at Peters' rate to 3% over 540 units of
+  time, momentum kept. `scripts/checks/vizmodes.js` fills a 1200 by
+  760 window with each mode, waits for the probe's pair to turn three
+  times, checks four sign changes a turn to within one, and keeps
+  three frames 0.5 s apart, then three more of each mode's small pane
+  among the seven.
+- Frame rate, under swiftshader on a loaded host, the tree of main and
+  this one measured in turn, twice each, by one script that draws each
+  mode alone at full activity, 240 frames after 300 of warm-up, then
+  runs three panes of a 720 by 460 window all in one mode for five
+  rounds. A draw's median cost went from 0.7 to 2.1 ms in Gravity and
+  from 3.6 and 3.7 to 5.2 in Gravity 3D at 400 by 380, from 2.7 and 2.9
+  to 8.2 and from 7.7 and 7.9 to 11.2 and 12.7 at 1200 by 760, and from
+  0.4 and 0.5 to 2.1 and from 3.3 to 4.7 and 5.2 at 360 by 230: the
+  field's reads, about 1 ms, and the blur of the grid up to the pane,
+  about 2.4 ms at 1200 by 760. Three panes of 240 by 460 ran at a median
+  of 16 and 15.5 frames per second in Gravity on main and 15 and 26.5
+  here, 14.5 and 13 in Gravity 3D on main and 17 and 22 here: the split
+  window holds, the host's load moving the rounds from 10 to 32.5.
+
+Rejected:
+
+- One source at the centre of mass: a tight pair off the centre would
+  have its fronts leave the centre.
+- The dust displaced by the strain: the strain is transverse, so a
+  separation along the line from the source is never strained, and a
+  disc about its source does not move.
+- The distant stars jittered by the strain: the strain at the camera
+  moves the whole sky at once, and shows no front.
+- Drawing $r h$, the waveform, to even the far arms: it hides the
+  falloff.
+- A ring buffer read at one point per sample: a burst one sample long
+  drew as beads, one bright cell in two.
