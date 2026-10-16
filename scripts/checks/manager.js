@@ -108,12 +108,20 @@ async function main () {
   check(r1 && r1.label === 'claude [lab]' && r1.state === 'working' && r1.where === '', `want the session elsewhere listed with its profile and state, saw ${JSON.stringify(r1)}`)
   await shot(win, path.join(out, 'sessions.png'))
 
+  // While the menu is open a session that starts appears, and one that
+  // ends stays in its row, marked ended, until the menu closes.
   const f2 = elsewhere('two')
   const appeared = await until(async () => rowOf(await rows(win), f2), 6000)
+  const at = appeared && (await rows(win)).findIndex(r => r.key === appeared.key)
   stop(f2)
-  const left = await until(async () => !rowOf(await rows(win), f2), 6000)
-  console.log('while open', JSON.stringify({ appeared: !!appeared, left }))
-  check(appeared && left, 'want a session that starts to appear and one that ends to leave while the menu is open')
+  const ended = await until(async () => { const l = await rows(win); const r = rowOf(l, f2); return r && r.state === 'ended' && { row: r, at: l.indexOf(r) } }, 6000)
+  await win.keyboard.press('Escape')
+  await sleep(300)
+  await openMenu(win, 'Agents')
+  const left = await until(async () => !rowOf(await rows(win), f2), 4000)
+  console.log('while open', JSON.stringify({ appeared: !!appeared, at, ended, left }))
+  check(appeared && ended && ended.row.key === appeared.key && ended.at === at, 'want a session that starts to appear, and one that ends to stay in its row marked ended while the menu is open')
+  check(left, 'want the ended session gone once the menu opens again')
 
   await win.locator(`#menu .session[data-key="${r1.key}"]`).click()
   await sleep(4000)
