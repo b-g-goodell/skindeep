@@ -82,16 +82,67 @@ test('carbon: every cascade reaches the ground term by listed decays', () => {
     let i = D.levels.length - 1 - (run % 30)
     for (let n = 0; n < 40 && !C.ground(D.levels[i]); n++) i = D.lines[C.decay(i, Math.random())].l
     assert.ok(C.ground(D.levels[i]), 'a walk stopped short of the ground term')
-    assert.strictEqual(C.waitMean(D.levels[i]), Infinity, 'the ground term rests')
+    assert.strictEqual(C.tauScreen(D.levels[i]), Infinity, 'the ground term rests')
   }
 })
 
-test('carbon: the clock, allowed waits slowed by one factor, slow ones real up to the cap', () => {
+test('carbon: the two clocks, NIST\'s rates by one factor and light by another', () => {
   const at = id => D.levels.find(l => l.id === id)
-  assert.ok(Math.abs(C.waitMean(at('2p4p_1P_1')) - at('2p4p_1P_1').tau * 2e7) < 1e-12)
-  assert.strictEqual(C.waitMean(at('2s2p3_5So_2')), at('2s2p3_5So_2').tau)
-  assert.strictEqual(C.waitMean(at('2p2_1S_0')), at('2p2_1S_0').tau)
-  assert.strictEqual(C.waitMean(at('2p2_1D_2')), 8)
+  for (const id of ['2p4p_1P_1', '2p3s_1Po_1', '2s2p3_5So_2', '2p2_1D_2']) {
+    assert.ok(Math.abs(C.tauScreen(at(id)) / (at(id).tau * C.EVENT) - 1) < 1e-12, id)
+  }
+  // Ratios kept: a 2p4p level waits 25 to 90 times as long as a 2p3s one.
+  const r = C.tauScreen(at('2p4p_3D_3')) / C.tauScreen(at('2p3s_3Po_2'))
+  assert.ok(r > 80 && r < 90, `ratio ${r}`)
+  // c / 1e17 is 2.998 nm/s: 56.65 bohr a second.
+  assert.ok(Math.abs(C.Clock.light - 299792458 / 1e17 / 0.0529177210544e-9) < 1e-9)
+  assert.ok(Math.abs(C.Clock.light - 56.65) < 0.01)
+})
+
+test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', () => {
+  const atoms = C.Ensemble.make(200, () => D.levels.findIndex(l => l.id === '2p3s_1Po_1'))
+  let jumps = 0
+  const lines = []
+  C.Ensemble.step(atoms, 1, 0, () => assert.fail('no field, no collision'), (i, k) => {
+    const a = atoms[i]
+    const q = C.Ensemble.q(a, D.lines[k])
+    a.M -= q
+    a.lv = D.lines[k].l
+    const L = 'SPDF'.indexOf(D.levels[a.lv].term[1])
+    assert.ok(Math.abs(a.M) <= L, `M_L ${a.M} in L ${L}`)
+    jumps++
+    lines.push(k)
+  })
+  // tau on the event clock is 2.7 ms, so in 1 s every atom has left,
+  // 92 % of them by 193.1 nm to 1D2, the rest to 1S0 and 3P, and rests.
+  assert.ok(atoms.every(a => !D.levels[a.lv].conf.includes('3s')))
+  const to1D = lines.filter(k => D.levels[D.lines[k].l].id === '2p2_1D_2').length / lines.length
+  assert.ok(Math.abs(to1D - 0.923) < 0.05, `share to 1D2 ${to1D}`)
+  assert.strictEqual(jumps, 200)
+})
+
+test('carbon: a cloud of M_L != 0 turns about the axis, one of M_L = 0 stands', () => {
+  const at = id => D.levels.find(l => l.id === id)
+  const turned = M => {
+    const c = C.Cloud.make(at('2p3s_1Po_1'), M)
+    const before = Float32Array.from(c.pts)
+    C.Cloud.step(Object.assign(c, { debt: -1e9 }), 0.5)
+    let moved = 0
+    let sense = 0
+    for (let k = 0; k < c.m.length; k++) {
+      const x0 = before[3 * k]
+      const y0 = before[3 * k + 1]
+      const cross = x0 * c.pts[3 * k + 1] - y0 * c.pts[3 * k]
+      if (Math.abs(cross) > 1e-9) moved++
+      sense += cross
+    }
+    return { moved, sense }
+  }
+  assert.strictEqual(turned(0).moved, 0)
+  const plus = turned(1)
+  const minus = turned(-1)
+  assert.ok(plus.moved > 0 && plus.sense > 0, 'M_L = +1 turns counterclockwise about z')
+  assert.ok(minus.sense < 0, 'and M_L = -1 the other way')
 })
 
 test('carbon: the radial samplers give each orbital\'s mean radius', () => {

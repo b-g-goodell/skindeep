@@ -1,54 +1,76 @@
 'use strict'
 // Carbon mode (decision 0015, issue #144): the neutral carbon atom, C I,
-// on NIST's levels and lines, from docs/research/carbon-atom.md and the
-// slim copy of its data in carbon-data.js. On the left a side-on view of
-// the atom in three dimensions: points sampled from its electron
-// density, the core from the Roothaan-Hartree-Fock orbitals of Bunge,
-// Barrientos and Bunge (1993), an excited electron from the research's
-// quantum-defect model, which the pane labels a model. The density is
-// the orientation-summed one, round. On the right the level diagram,
-// every level at its energy, in columns by spin and parity, the present
-// level lit, the last jump an arrow in its light's colour, and the
-// ground term's fine structure magnified in an inset. Along the bottom
-// the spectrum, each line lighting when a photon of it is detected.
-// The photon follows docs/research/carbon-photon.md, section 4: the
-// jump's transition density as its source, a shell about the atom
-// painted by the radiation pattern of one M component about a chosen
-// axis, and a detection in one direction drawn from that pattern when
-// the shell reaches the pane's edge (see Photon).
-// The session's events excite the atom, by collision or by a photon
-// absorbed from the present level (see react), and it decays by NIST's
-// branching ratios, each wait random about its level's lifetime on a
-// stated clock. The clock of the events, the cloud and the photon each
-// sit behind a small interface, Clock, Cloud and Photon, so each can be
-// replaced alone. The pointer: see pointer.
+// on NIST's levels and lines, from docs/research/carbon-atom.md, the
+// photon from docs/research/carbon-photon.md, and the owner's answers of
+// 2026-10-15 on #144. One site holds an ensemble of N_ATOMS atoms, one
+// standing for many. An energy field, driven by the session's activity,
+// excites them, and each jumps by Monte Carlo at NIST's rates on the
+// event clock: instantaneous jumps at random times, a quantum trajectory
+// per atom. Every jump sends a front out from the site on the light
+// clock, painted by one M component's radiation pattern, its amplitude
+// from h nu and 1/r, collapsing to one detected direction at the pane's
+// edge, which lights the spectrum. Visible fronts are drawn in their
+// hue, ultraviolet ones sharpen the picture and infrared ones refract it
+// as heat haze, by one pass over the atom's pixels (see Warp). One atom
+// of the ensemble is drawn: its cloud, Monte Carlo stippling of |psi|^2
+// for its M_L about the chosen axis z, flowing about the axis as
+// Madelung's probability current says for m != 0, the core from the
+// Bunge 1993 orbitals, the outer electron from the research's
+// quantum-defect model, labelled a model; its jumps snap the cloud and
+// flash the jump's transition density as the source. Beside it the level
+// diagram, every level at its energy, the ensemble's populations, the
+// drawn atom's level lit and its last jump an arrow, the ground term's
+// fine structure in an inset. Along the bottom the spectrum. The two
+// clocks, the ensemble, the cloud and the fronts sit behind small
+// interfaces: Clock, Ensemble, Cloud, Front and Warp. Signals: see
+// react. The pointer: see pointer.
 
 ;(function (root) {
   const D = typeof module === 'object' && module.exports ? require('./carbon-data') : root.CarbonData
 
-  // The clock: an allowed decay's lifetime times SLOW, a slower one at
-  // its real lifetime up to CAP seconds. The ground term 3P is where a
-  // cascade rests: its months-long M1 decays are not run.
-  const SLOW = 2e7
-  const CAP = 8
-  const ALLOWED = 1e-6
+  // The event clock: every NIST rate divided by EVENT, one factor, so
+  // the ratios between levels stay true. The light clock: light at
+  // c / LIGHT. The ground term 3P is where a cascade rests.
+  const EVENT = 1e6
+  const LIGHT = 1e17
+  // The speed of light (exact, SI) and the atomic unit of time (CODATA
+  // 2022), seconds.
+  const C_LIGHT = 299792458
+  const AU_TIME = 2.4188843265864e-17
+  // The ensemble, and its field: a hot discharge's electron collisions
+  // into any radiating level above the present one, by statistical
+  // weight, at up to FIELD_MAX a second per atom at full activity, a few
+  // times below the slowest allowed decay on the event clock (2p4p 3D,
+  // 4.1 a second), so the visible lines still leave.
+  const N_ATOMS = 160
+  const FIELD_MAX = 1.2
   // Boltzmann's constant over hc, cm^-1 per K (CODATA 2022), and the
   // gas's temperature for the ground term's thermal populations.
   const K_CM = 0.6950348004
   const T_GAS = 300
   // Points per electron, core and outer, and the share drawn afresh
-  // each frame.
+  // each 60th of a second.
   const PTS_CORE = 230
   const PTS_OUTER = 1300
-  const TWINKLE = 0.012
-  // The photon: seconds from the atom to the pane's edge, points on its
-  // front's face, the wavefronts drawn with the front, and the
-  // points of its source region and how long that shows.
-  const FLIGHT = 1.5
-  const FRONT_PTS = 700
-  const WAVES = 5
-  const SOURCE_PTS = 900
-  const SOURCE_T = 1.1
+  const SEETHE = 0.012
+  // A Madelung angular velocity above this, radians a second on screen,
+  // is clipped: m / rho^2 grows without bound near the axis, where the
+  // density of m != 0 vanishes.
+  const SPIN_MAX = 3
+  // The fronts: at most FRONTS in flight, the drawn amplitude 1 at R0
+  // bohr for a 538 nm front in its pattern's brightest direction, the
+  // trailing crests drawn behind a visible front, and the points and
+  // seconds of the source's flash.
+  const FRONTS = 500
+  const R0 = 8
+  const NU_REF = 1 / 538.18
+  const CRESTS = 3
+  const SOURCE_PTS = 700
+  const SOURCE_T = 0.4
+  // The view's radius, bohr: fixed, so every front keeps the light
+  // clock's pace, about 1.6 times a 2p4p cloud's mean radius: a front
+  // crosses that cloud's diameter in about half a second.
+  const VIEW = 24
   const MONO = '"DejaVu Sans Mono", monospace'
 
   // Text outside ASCII, by code point.
@@ -304,16 +326,6 @@
     }
     return v
   }
-
-  // ---- The clock and the cascade ---------------------------------------
-
-  // The mean wait on screen in level lv, in seconds: Infinity in the
-  // ground term.
-  function waitMean (lv) {
-    if (ground(lv) || !lv.tau) return Infinity
-    return lv.tau < ALLOWED ? lv.tau * SLOW : Math.min(lv.tau, CAP)
-  }
-
   // Each level's lines down, and its E1 lines up.
   let downs = null
   let ups = null
@@ -404,60 +416,169 @@
 
   const visible = ln => ln.band === 'visible' && !!ln.rgb
 
-  // ---- The clock -------------------------------------------------------
+  // ---- The clocks ------------------------------------------------------
 
-  // The clock of the events: the mean wait on screen in a level, and a
-  // wait drawn from the exponential about it for u uniform on [0, 1).
+  // A level's mean wait on the event clock, seconds: its lifetime times
+  // EVENT, Infinity in the ground term.
+  const tauScreen = lv => ground(lv) || !lv.tau ? Infinity : lv.tau * EVENT
   const Clock = {
-    mean: waitMean,
-    wait (lv, u) {
-      const m = waitMean(lv)
-      return m === Infinity ? Infinity : -m * Math.log(1 - u)
+    EVENT,
+    LIGHT,
+    tau: tauScreen,
+    // Light on the light clock, bohr a second on screen.
+    light: C_LIGHT / LIGHT / (D.bohrNm * 1e-9),
+    // One atomic unit of time on the light clock, seconds on screen.
+    au: AU_TIME * LIGHT
+  }
+
+  // ---- M_L and the ensemble ----------------------------------------------
+
+  const L_OF = { S: 0, P: 1, D: 2, F: 3 }
+  const Lof = lv => L_OF[lv.term[1]]
+
+  // The subshell occupations n_m of level lv's component M_L = M, from
+  // the research's Clebsch-Gordan table: { p: the 2p subshell's for m =
+  // -1, 0, 1, o: the outer subshell's for m = -l to l }, or null where
+  // the table has none (2s.2p3), which is then drawn round.
+  function occupations (lv, M) {
+    let key = null
+    if (lv.conf === '2s2.2p2') key = '2p2 ' + lv.term
+    else if (lv.conf !== '2s.2p3') key = 'l' + shells(lv)[3].l + ' L' + Lof(lv)
+    const e = key && D.angular[key]
+    const s = e && e.M[Math.abs(M)]
+    if (!s) return null
+    const flip = a => M < 0 ? a.slice().reverse() : a
+    return { p: flip(s.p), o: s.o ? flip(s.o) : null }
+  }
+
+  // The radiating levels, those with an allowed decay, by energy: where
+  // the field's collisions send an atom.
+  let radiating = null
+  function targets (i) {
+    if (!radiating) radiating = D.levels.map((l, k) => k).filter(k => D.levels[k].tau && D.levels[k].tau < 1e-6)
+    return radiating.filter(k => D.levels[k].E > D.levels[i].E)
+  }
+
+  // N atoms at one site, each { lv, M }: its level and its M_L about z.
+  // Ensemble.step runs each for dt seconds of the event clock by
+  // Gillespie's method, its decay at 1 / tau on screen competing with the
+  // field's collisions at rate, calling excite(i) or jump(i, line).
+  // Ensemble.q draws a jump's component q = M_upper - M_lower, uniform
+  // among those the multipole's rank and the lower level's L allow.
+  const Ensemble = {
+    make (n, lv) {
+      return Array.from({ length: n }, () => ({ lv: typeof lv === 'function' ? lv() : lv, M: 0 }))
+    },
+
+    q (a, ln) {
+      const rank = ln.type === 'E2' ? 2 : 1
+      const L = Lof(D.levels[ln.l])
+      const ok = []
+      for (let q = -rank; q <= rank; q++) if (Math.abs(a.M - q) <= L) ok.push(q)
+      return ok.length ? ok[Math.floor(Math.random() * ok.length)] : 0
+    },
+
+    step (atoms, dt, rate, excite, jump) {
+      for (let i = 0; i < atoms.length; i++) {
+        let left = dt
+        for (let n = 0; n < 64; n++) {
+          const a = atoms[i]
+          const tau = tauScreen(D.levels[a.lv])
+          const down = tau === Infinity ? 0 : 1 / tau
+          const up = rate > 0 && targets(a.lv).length ? rate : 0
+          const total = down + up
+          if (total <= 0) break
+          const w = -Math.log(1 - Math.random()) / total
+          if (w > left) break
+          left -= w
+          if (Math.random() * total < down) jump(i, decay(a.lv, Math.random()))
+          else excite(i)
+        }
+      }
     }
   }
 
   // ---- The cloud ---------------------------------------------------------
 
-  // The electron density of a level as points drawn from it, in bohr:
-  // each electron's radius from its orbital's table, its direction
-  // uniform, the orientation-summed density. Cloud.make(lv) makes one,
-  // Cloud.step(c, dt) draws a share afresh, TWINKLE of them each 60th of
-  // a second, samples of where an electron would be found, none moving,
-  // and Cloud.draw(c, fr, area, dim, rect) projects them in the atom's
-  // frame, far points dimmer and smaller, the outer electron's in amber.
+  // The largest of P_l^m(cos theta)^2, for rejection.
+  const tops = new Map()
+  function legTop (l, m) {
+    const key = l * 8 + m
+    let t = tops.get(key)
+    if (t === undefined) {
+      t = 0
+      for (let i = 0; i <= 400; i++) t = Math.max(t, legendre(l, m, -1 + i / 200) ** 2)
+      tops.set(key, t)
+    }
+    return t
+  }
+
+  // The electron density of a level's M_L component as points, in bohr:
+  // Monte Carlo stippling of |psi|^2. Each electron's radius from its
+  // orbital's table. A subshell with occupations draws each point's m by
+  // n_m and its direction from |Y_lm|^2, else uniformly. Cloud.make(lv,
+  // M) makes one, Cloud.step(c, dt) draws SEETHE of the points afresh
+  // each 60th of a second, so it seethes and keeps its shape, and turns
+  // each point of m != 0 about z at Madelung's m / rho^2 (atomic units)
+  // on the light clock, and Cloud.draw(c, fr, area, dim, rect) projects
+  // them, far points dimmer and smaller, the outer electron's in amber.
   const Cloud = {
-    make (lv) {
-      const sh = shells(lv)
+    make (lv, M) {
+      const occ = occupations(lv, M)
+      const sh = shells(lv).map(e => Object.assign({}, e, {
+        l: e.outer ? e.l : e.key === '2p' ? 1 : 0,
+        occ: occ ? (e.outer ? occ.o : e.key === '2p' ? occ.p : null) : null
+      }))
       const n = sh.reduce((s, e) => s + e.count * (e.outer ? PTS_OUTER : PTS_CORE), 0)
-      const c = { pts: new Float32Array(3 * n), kinds: [], outerFrom: n, debt: 0 }
+      const c = { pts: new Float32Array(3 * n), m: new Int8Array(n), kinds: [], outerFrom: n, debt: 0, round: !occ }
       let k = 0
       for (const e of sh) {
         const m = e.count * (e.outer ? PTS_OUTER : PTS_CORE)
         if (e.outer) c.outerFrom = k
         for (let j = 0; j < m; j++, k++) {
           c.kinds.push(e)
-          Cloud.place(c, k, e)
+          Cloud.place(c, k)
         }
       }
       return c
     },
 
-    place (c, k, e) {
+    place (c, k) {
+      const e = c.kinds[k]
       const r = drawR(table(e.key), Math.random())
-      const z = 2 * Math.random() - 1
+      let z = 2 * Math.random() - 1
+      let m = 0
+      if (e.occ) {
+        m = pick(e.occ.map((_, i) => i), i => e.occ[i], Math.random()) - e.l
+        const top = legTop(e.l, Math.abs(m))
+        for (let i = 0; i < 200; i++) {
+          z = 2 * Math.random() - 1
+          if (Math.random() * top <= legendre(e.l, Math.abs(m), z) ** 2) break
+        }
+      }
       const ph = 2 * Math.PI * Math.random()
       const s = Math.sqrt(1 - z * z)
       c.pts[3 * k] = r * s * Math.cos(ph)
       c.pts[3 * k + 1] = r * s * Math.sin(ph)
       c.pts[3 * k + 2] = r * z
+      c.m[k] = m
     },
 
     step (c, dt) {
-      const m = c.kinds.length
-      c.debt += m * TWINKLE * dt * 60
-      for (; c.debt >= 1; c.debt--) {
-        const k = Math.floor(Math.random() * m)
-        Cloud.place(c, k, c.kinds[k])
+      const n = c.kinds.length
+      c.debt += n * SEETHE * dt * 60
+      for (; c.debt >= 1; c.debt--) Cloud.place(c, Math.floor(Math.random() * n))
+      const p = c.pts
+      for (let k = 0; k < n; k++) {
+        const m = c.m[k]
+        if (!m) continue
+        const x = p[3 * k]
+        const y = p[3 * k + 1]
+        const w = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, m / Math.max(1e-6, x * x + y * y) / Clock.au)) * dt
+        const cs = Math.cos(w)
+        const sn = Math.sin(w)
+        p[3 * k] = x * cs - y * sn
+        p[3 * k + 1] = x * sn + y * cs
       }
     },
 
@@ -473,122 +594,163 @@
     }
   }
 
-  // ---- The photon --------------------------------------------------------
+  // ---- The fronts --------------------------------------------------------
 
-  // One emitted photon, as carbon-photon.md section 4 draws it, in the
-  // atom's frame: its M component q, drawn at random, each of a
-  // multipole's components carrying an equal share; its source region,
-  // the jump's transition density, or none for a two-electron jump; and
-  // the direction its detection will find, drawn from the pattern.
-  // Photon.make(up, low, ln) makes it, Photon.draw(g, ph, fr, t) draws it
-  // t seconds after the jump in the atom's frame fr: { cx, cy, k (pixels
-  // per bohr), edge (pixels from the centre to the pane's nearest edge),
-  // upZ (the z part of the camera's up), project(x, y, z) into { x, y,
-  // s }, turn(x, y, z) into { x, y, z } seen from the camera }, its
-  // points batched by rect(fill, alpha, x, y, side), and returns
-  // 'flying', 'detected' (once) or 'done'.
-  const FRONT = sphere(FRONT_PTS)
-  const Photon = {
-    make (up, low, ln) {
-      const rank = ln.type === 'E2' ? 2 : 1
-      const q = Math.floor(Math.random() * (2 * rank + 1)) - rank
-      const mv = mover(up, low)
-      // Wavefront spacing on screen grows as lambda^0.35, a symbol.
-      const gap = 4.5 * Math.pow(wl(ln) / 119, 0.35)
-      return { up, low, ln, q, mv, src: mv ? source(mv, q, SOURCE_PTS) : null, dir: detectDir(ln.type, q), gap, hit: null }
+  // A front's pattern as one of five kinds: E1 and M1 with |q| 0 or 1,
+  // E2 with |q| 0, 1 or 2.
+  const kindOf = (type, q) => type === 'E2' ? 2 + Math.abs(q) : Math.abs(q)
+  const KINDS = [['E1', 0], ['E1', 1], ['E2', 0], ['E2', 1], ['E2', 2]]
+  // The drawn amplitude's share in the direction with cos(Theta) = c:
+  // the square root of the pattern over its largest value.
+  const shapeOf = (k, c) => Math.sqrt(Math.max(0, pattern(KINDS[k][0], KINDS[k][1], c) / patternMax(KINDS[k][0], KINDS[k][1])))
+  // As a table of 257 steps of c from -1 to 1, for the pixel pass.
+  const SHAPES = KINDS.map((_, k) => Float32Array.from({ length: 257 }, (_, i) => shapeOf(k, -1 + i / 128)))
+  const shape = (k, c) => SHAPES[k][Math.round((c + 1) * 128)]
+
+  // One photon's front, from the site, on the light clock: line k,
+  // component q, born at t. Its amplitude follows the physics: intensity
+  // h nu times the pattern over r^2, drawn as its square root, so
+  // sqrt(nu / nu_538) sqrt(pattern) R0 / r, 1 at most. Its crests'
+  // spacing on screen grows as lambda^0.35, a symbol.
+  const Front = {
+    make (k, ln, q, t) {
+      return { k, ln, q, t, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, gap: 4.5 * Math.pow(wl(ln) / 119, 0.35) }
     },
 
-    draw (g, ph, fr, t, rect) {
-      const ln = ph.ln
-      const vis = visible(ln)
-      const fill = vis ? ln.rgb : '#aab3c5'
-      const T = t / FLIGHT
-      if (T >= 1) {
-        let st = 'flying'
-        if (!ph.hit) {
-          const r = fr.edge
-          const v = fr.turn(ph.dir[0], ph.dir[1], ph.dir[2])
-          ph.hit = { x: fr.cx + v.x * r, y: fr.cy - v.y * r, z: v.z }
-          st = 'detected'
-        }
-        const a = 1 - (t - FLIGHT) / 1.4
-        if (a <= 0) return st === 'detected' ? st : 'done'
-        const h = ph.hit
-        const s = 1 + 0.6 * h.z
-        g.save()
-        g.globalAlpha = a
-        g.fillStyle = fill
-        g.beginPath()
-        g.arc(h.x, h.y, 3.5 * s, 0, Math.PI * 2)
-        g.fill()
-        g.strokeStyle = fill
-        g.lineWidth = 1.5
-        g.globalAlpha = a * 0.7
-        g.beginPath()
-        g.arc(h.x, h.y, 4 + 14 * (1 - a), 0, Math.PI * 2)
-        g.stroke()
-        g.globalAlpha = a
-        g.font = '10px ' + MONO
-        g.textAlign = 'left'
-        g.textBaseline = 'middle'
-        g.fillText('detected ' + wlText(wl(ln)), h.x + 8, h.y - 10)
-        g.restore()
-        return st
-      }
-      // The source region, while the jump is fresh.
-      if (ph.src && t < SOURCE_T) {
-        const a = 1 - t / SOURCE_T
-        const p = ph.src
-        for (let i = 0; i < p.length; i += 4) {
-          const v = fr.project(p[i], p[i + 1], p[i + 2])
-          rect(p[i + 3] > 0 ? '#7dffd0' : '#ff8ad8', (0.45 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * a, v.x, v.y, 1.8)
-        }
-      }
-      // The shell. A thin shell seen side on is brightest at its limb,
-      // so the limb of its front and of each wavefront behind it is
-      // drawn as arcs, each arc's brightness the pattern in its
-      // direction, fainter behind the front, and the front's face as
-      // faint points, nearer ones larger. Outside the visible, grey and
-      // dashed.
-      const R = fr.edge * T
-      const top = patternMax(ln.type, ph.q)
-      const fade0 = 1 - 0.35 * T
-      for (let i = 0; i < FRONT.length; i += 3) {
-        if (!vis && (Math.floor((Math.atan2(FRONT[i + 1], FRONT[i]) + Math.PI) * 6 / Math.PI) & 1)) continue
-        const b = pattern(ln.type, ph.q, FRONT[i + 2]) / top
-        if (b < 0.05) continue
-        const v = fr.turn(FRONT[i], FRONT[i + 1], FRONT[i + 2])
-        const near = 0.5 + 0.5 * v.z
-        rect(fill, 0.3 * b * fade0 * (0.4 + 0.6 * near), fr.cx + v.x * R, fr.cy - v.y * R, 1 + near)
-      }
-      const N = 72
-      const bins = []
-      for (let w = 0; w < WAVES; w++) {
-        const r = R - w * ph.gap
-        if (r <= 2) break
-        const fade = Math.exp(-w / 1.6) * fade0
-        for (let j = 0; j < N; j++) {
-          const p0 = 2 * Math.PI * j / N
-          const p1 = 2 * Math.PI * (j + 1) / N
-          const b = pattern(ln.type, ph.q, Math.sin((p0 + p1) / 2) * fr.upZ) / top
-          const k = Math.round(10 * b * fade * (vis ? 1 : 0.8))
-          if (k <= 0) continue
-          const path = bins[k] || (bins[k] = new Path2D())
-          path.moveTo(fr.cx + r * Math.cos(p0), fr.cy - r * Math.sin(p0))
-          path.arc(fr.cx, fr.cy, r, -p0, -p1, true)
+    // Its radius, bohr, at time now.
+    radius: (f, now) => Clock.light * (now - f.t),
+
+    // The visible fronts, in their hue: each the limb of its sphere and
+    // of CRESTS - 1 crests behind it, as arcs whose brightness is the
+    // drawn amplitude in the arc's direction, cos(Theta) = sin(phi) upZ
+    // on the limb. Arcs batched by colour and brightness.
+    draw (g, fronts, fr, now) {
+      const N = 36
+      const bins = new Map()
+      for (const f of fronts) {
+        if (!f.vis) continue
+        const Rb = Front.radius(f, now)
+        const R = Rb * fr.k
+        const a0 = Math.min(1, f.amp * R0 / Math.max(Rb, 0.1))
+        let list = bins.get(f.ln.rgb)
+        if (!list) bins.set(f.ln.rgb, list = [])
+        for (let w = 0; w < CRESTS; w++) {
+          const r = R - w * f.gap
+          if (r <= 1) break
+          const fade = a0 * Math.exp(-w / 1.2)
+          for (let j = 0; j < N; j++) {
+            const p0 = 2 * Math.PI * j / N
+            const p1 = 2 * Math.PI * (j + 1) / N
+            const b = Math.round(10 * fade * shape(f.kind, Math.sin((p0 + p1) / 2) * fr.upZ))
+            if (b <= 0) continue
+            const path = list[b] || (list[b] = new Path2D())
+            path.moveTo(fr.cx + r * Math.cos(p0), fr.cy - r * Math.sin(p0))
+            path.arc(fr.cx, fr.cy, r, -p0, -p1, true)
+          }
         }
       }
       g.save()
-      g.strokeStyle = fill
-      g.lineWidth = vis ? 1.7 : 1.3
-      if (!vis) g.setLineDash([5, 4])
-      bins.forEach((path, k) => {
-        if (!path) return
-        g.globalAlpha = k / 10
-        g.stroke(path)
-      })
+      g.lineWidth = 1.6
+      for (const [rgb, list] of bins) {
+        g.strokeStyle = rgb
+        list.forEach((path, b) => {
+          if (!path) return
+          g.globalAlpha = b / 10
+          g.stroke(path)
+        })
+      }
       g.restore()
-      return 'flying'
+    }
+  }
+
+  // The invisible fronts as image transforms over the atom's pixels, in
+  // one pass, since every front shares one centre: each front adds to a
+  // table by integer radius, per pattern kind, and a pixel takes the
+  // tables at its radius times each kind's shape in its direction.
+  // Ultraviolet fronts sharpen the picture and lift its contrast across a
+  // band as wide as the front's crest spacing. Infrared fronts refract
+  // it, shifting pixels along the radius by a ripple of that spacing, as
+  // heat haze does. Radii with no front are skipped.
+  const Warp = {
+    tables: null,
+    apply (g, fronts, fr, box, now) {
+      const some = fronts.filter(f => !f.vis)
+      if (!some.length || box.w < 4 || box.h < 4) return 0
+      const rmax = Math.ceil(Math.hypot(box.w, box.h)) + 4
+      if (!Warp.tables || Warp.tables.n < rmax) Warp.tables = { n: rmax, S: KINDS.map(() => new Float32Array(rmax)), Dp: KINDS.map(() => new Float32Array(rmax)), on: new Uint8Array(rmax) }
+      const T = Warp.tables
+      for (let k = 0; k < KINDS.length; k++) {
+        T.S[k].fill(0)
+        T.Dp[k].fill(0)
+      }
+      T.on.fill(0)
+      let used = 0
+      for (const f of some) {
+        const Rb = Front.radius(f, now)
+        const R = Rb * fr.k
+        const a = Math.min(1.5, f.amp * R0 / Math.max(Rb, 0.1))
+        const w = f.uv ? 0.8 * f.gap : 1.5 * f.gap
+        const lo = Math.max(0, Math.floor(R - 2.5 * w))
+        const hi = Math.min(rmax - 1, Math.ceil(R + w))
+        if (hi < lo) continue
+        used++
+        for (let r = lo; r <= hi; r++) {
+          const x = (r - R) / w
+          const env = Math.exp(-x * x)
+          if (f.uv) T.S[f.kind][r] += a * env
+          else T.Dp[f.kind][r] += 4 * a * env * Math.sin(2 * Math.PI * (r - R) / f.gap)
+          T.on[r] = 1
+        }
+      }
+      if (!used) return 0
+      const img = g.getImageData(box.x, box.y, box.w, box.h)
+      const d = img.data
+      if (!Warp.src || Warp.src.length < d.length) Warp.src = new Uint8ClampedArray(d.length)
+      const src = Warp.src
+      src.set(d)
+      const W = box.w
+      const H = box.h
+      const ox = fr.cx - box.x
+      const oy = fr.cy - box.y
+      for (let y = 1; y < H - 1; y++) {
+        const dy = y - oy
+        for (let x = 1; x < W - 1; x++) {
+          const dx = x - ox
+          const rr = Math.sqrt(dx * dx + dy * dy)
+          const ri = rr | 0
+          if (ri >= rmax || !T.on[ri]) continue
+          const ci = Math.round(((rr > 0 ? -dy / rr * fr.upZ : 0) + 1) * 128)
+          let s = 0
+          let disp = 0
+          for (let k = 0; k < KINDS.length; k++) {
+            const a = T.S[k][ri]
+            const b = T.Dp[k][ri]
+            if (!a && !b) continue
+            const f = SHAPES[k][ci]
+            s += a * f
+            disp += b * f
+          }
+          const i = (y * W + x) * 4
+          if (disp) {
+            const sx = Math.max(0, Math.min(W - 1, Math.round(x + dx / (rr || 1) * disp)))
+            const sy = Math.max(0, Math.min(H - 1, Math.round(y + dy / (rr || 1) * disp)))
+            const j = (sy * W + sx) * 4
+            d[i] = src[j]
+            d[i + 1] = src[j + 1]
+            d[i + 2] = src[j + 2]
+          }
+          if (s) {
+            s = Math.min(1, s)
+            for (let ch = 0; ch < 3; ch++) {
+              const p = src[i + ch]
+              const lap = 4 * p - src[i + ch - 4] - src[i + ch + 4] - src[i + ch - 4 * W] - src[i + ch + 4 * W]
+              d[i + ch] = d[i + ch] + s * (0.5 * lap + 0.35 * p)
+            }
+          }
+        }
+      }
+      g.putImageData(img, box.x, box.y)
+      return used
     }
   }
 
@@ -638,6 +800,7 @@
     let layer = null
     let diagC = null
     let specC = null
+    let grain = null
     let R = null
     let ow = 0
     let oh = 0
@@ -647,50 +810,102 @@
     graph()
     const counts = new Float64Array(lines.length)
     const flash = new Float64Array(lines.length)
-    let level = levels.findIndex(l => l.id === '2p2_3P_2')
-    let due = Infinity
-    let shown = 0
     let now = 0
+    // The ensemble at rest in the ground term, J by its thermal
+    // populations, and the one atom drawn, atoms[0].
+    const atoms = Ensemble.make(N_ATOMS, () => thermal(Math.random()))
+    let entered = 0
     let last = null
     let cause = { text: 'at rest in the ground term', t: -10 }
-    let photons = []
+    let fronts = []
+    let dots = []
+    let src = null
     let cl = null
-    let view = 6
+    const view = VIEW
+    let field = 0
+    const born = []
     // The camera's turn about the vertical and its height, the time the
     // pointer last turned it, and the press while the pointer is down.
     const cam = { yaw: 0.4, pitch: 0.32, held: -1e9 }
     let press = null
     const tally = { clicks: 0, turns: 0, excitations: 0, photons: 0, detected: 0 }
 
-    // ---- The atom's state ----
+    // ---- The ensemble's state ----
 
-    function enter (i, why) {
-      level = i
-      shown = Clock.wait(levels[i], Math.random())
-      due = now + shown
+    // The drawn atom changed: its cloud snaps to the new level's.
+    function redraw (why) {
+      const a = atoms[0]
+      cl = Cloud.make(levels[a.lv], a.M)
+      entered = now
       if (why) cause = { text: why, t: now }
-      cl = Cloud.make(levels[i])
     }
 
-    function excite (i, why) {
-      if (i < 0 || i === level) return
+    // Atom i to level k by a collision, its M_L drawn anew.
+    function lift (i, k, why) {
+      const a = atoms[i]
+      if (k < 0 || k === a.lv) return
+      const L = Lof(levels[k])
+      a.lv = k
+      a.M = Math.floor(Math.random() * (2 * L + 1)) - L
       tally.excitations++
-      enter(i, why)
+      if (i === 0) redraw(why)
     }
 
-    // Collision onto a level among those of confs, by statistical weight.
-    function collide (confs, why) {
-      const set = levels.map((l, i) => i).filter(i => confs.includes(levels[i].conf))
-      excite(pick(set, i => levels[i].g, Math.random()), why)
+    // The field's collision: any radiating level above, by weight g.
+    function excite (i) {
+      const t = targets(atoms[i].lv)
+      if (t.length) lift(i, pick(t, k => levels[k].g, Math.random()), 'the field: electron collision')
+    }
+
+    // Atom i jumps down by line k, and its front leaves.
+    function jump (i, k) {
+      const a = atoms[i]
+      const ln = lines[k]
+      const q = Ensemble.q(a, ln)
+      a.M -= q
+      a.lv = ln.l
+      tally.photons++
+      born.push(now)
+      fronts.push(Front.make(k, ln, q, now))
+      if (fronts.length > FRONTS) detect(fronts.shift(), null)
+      if (i === 0) {
+        const mv = mover(levels[ln.u], levels[ln.l])
+        src = { pts: mv ? source(mv, q, SOURCE_PTS) : null, t: now, k, q }
+        last = { k, q, waited: now - entered, t: now }
+        redraw(null)
+      }
+    }
+
+    // A front reaches the pane's edge: it is found in one direction,
+    // drawn from its pattern, and its line lights.
+    function detect (f, F) {
+      counts[f.k]++
+      flash[f.k] = 1
+      tally.detected++
+      if (!F) return
+      const dir = detectDir(f.ln.type, f.q)
+      const v = F.turn(dir[0], dir[1], dir[2])
+      dots.push({ x: F.cx + v.x * F.edge, y: F.cy - v.y * F.edge, z: v.z, fill: f.vis ? f.ln.rgb : '#aab3c5', t: now })
+      if (dots.length > 240) dots.shift()
+    }
+
+    // A share of the ensemble, always the drawn atom among it.
+    function some (share, fn) {
+      for (let i = 0; i < atoms.length; i++) if (i === 0 || Math.random() < share) fn(i)
+    }
+
+    function collide (confs, share, why) {
+      const set = levels.map((l, k) => k).filter(k => confs.includes(levels[k].conf))
+      some(share, i => lift(i, pick(set, k => levels[k].g, Math.random()), why))
     }
 
     // A photon absorbed from the present level, from a lamp of flat
     // spectral energy density: among the absorptions in fifth band of
     // five by the upper level's energy, or among all for band -1.
-    function absorb (band, why) {
-      const all = absorptions(level)
+    function absorb (i, band, why) {
+      const all = absorptions(atoms[i].lv)
       if (!all.length) {
-        cause = { text: why + ': no E1 line up from ' + levelName(levels[level]), t: now }
+        if (i === 0) cause = { text: why + ': no E1 line up from ' + levelName(levels[atoms[0].lv]), t: now }
         return
       }
       let set = all
@@ -700,34 +915,29 @@
         if (b > a) set = all.slice(a, b)
       }
       const k = pick(set, k => lines[k].f * wl(lines[k]), Math.random())
-      excite(lines[k].u, why + ': absorbed ' + wlText(wl(lines[k])))
+      lift(i, lines[k].u, why + ': absorbed ' + wlText(wl(lines[k])))
     }
 
-    function emit () {
-      const k = decay(level, Math.random())
-      const ln = lines[k]
-      tally.photons++
-      photons.push({ k, t: now, ph: Photon.make(levels[ln.u], levels[ln.l], ln) })
-      if (photons.length > 6) photons.shift()
-      last = { k, waited: shown, t: now, ph: photons[photons.length - 1].ph }
-      enter(ln.l, null)
-    }
-
-    // The session's events: see decision 0015's table.
+    // The session's events, each a pulse on a share of the ensemble,
+    // over the field: see decision 0015's table.
     function react (e) {
-      if (e.kind === 3) collide(['2s2.2p.4d', '2s2.2p.5s'], 'prompt: electron collision')
-      else if (e.kind === 4) collide(['2s2.2p.4p'], 'stop: electron collision')
-      else if (e.kind === 2) absorb(e.cls >= 0 && e.cls < 5 ? e.cls : -1, 'tool call')
-      else if (e.kind === 5) excite(levels.findIndex(l => l.id === '2s2p3_5So_2'), 'subagent: spin-exchange collision')
-      else if (e.kind === 6) excite(thermal(Math.random()), 'compaction: quenched by a collision, no light')
-      else if (e.kind === 1 && ground(levels[level])) {
-        const i = thermal(Math.random())
-        if (i !== level) {
-          tally.excitations++
-          enter(i, 'output: a thermal collision, J=' + levels[i].J)
-        }
+      if (e.kind === 3) collide(['2s2.2p.4d', '2s2.2p.5s'], 0.25, 'prompt: electron collision')
+      else if (e.kind === 4) collide(['2s2.2p.4p'], 0.25, 'stop: electron collision')
+      else if (e.kind === 2) some(0.15, i => absorb(i, e.cls >= 0 && e.cls < 5 ? e.cls : -1, 'tool call'))
+      else if (e.kind === 5) some(0.1, i => lift(i, levels.findIndex(l => l.id === '2s2p3_5So_2'), 'subagent: spin-exchange collision'))
+      else if (e.kind === 6) some(1, i => lift(i, thermal(Math.random()), 'compaction: quenched by a collision, no light'))
+      else if (e.kind === 1) {
+        some(0.3, i => {
+          if (ground(levels[atoms[i].lv])) lift(i, thermal(Math.random()), 'output: a thermal collision')
+        })
       }
     }
+
+    // The field's strength from the session's activity: busy, the output
+    // and the token rate, nothing while idle.
+    const strength = L => Math.max(0, Math.min(1, 0.45 * L.busy + 0.35 * Math.min(1, L.bass) + 0.2 * Math.min(1, L.treble))) * (1 - L.idle)
+
+    // ---- Drawing ----
 
     // ---- Drawing ----
 
@@ -880,11 +1090,29 @@
       g.globalAlpha = 1
     }
 
+    // A faint fixed grain under the atom: the picture the invisible
+    // fronts sharpen and refract, which on black would show nothing.
+    function drawGrain () {
+      const a = R.atom
+      grain = cpu(a.w, a.h)
+      const img = grain.g.createImageData(a.w, a.h)
+      const d = img.data
+      for (let i = 0; i < d.length; i += 4) {
+        const v = Math.random() < 0.25 ? 8 + 16 * Math.random() : 4 * Math.random()
+        d[i] = v * 0.8
+        d[i + 1] = v * 0.9
+        d[i + 2] = v * 1.2
+        d[i + 3] = 255
+      }
+      grain.g.putImageData(img, 0, 0)
+    }
+
     function resize (w, h) {
       layer = cpu(w, h)
       R = regions(w, h)
       drawDiagram()
       drawSpectrum()
+      drawGrain()
     }
 
     // Squares batched by fill and alpha, one path a batch: on a canvas
@@ -916,10 +1144,9 @@
       if (batch.size > 64) batch.clear()
       g.globalAlpha = 1
     }
-
-    // The atom's frame on screen this frame. Its z axis is the axis the
-    // photons' M components are taken about.
-    const F = { cx: 0, cy: 0, k: 1, edge: 1, project: null, turn: null }
+    // The atom's frame on screen this frame. Its z axis is the axis M_L
+    // and the fronts' components are taken about.
+    const F = { cx: 0, cy: 0, k: 1, edge: 1, upZ: 1, project: null, turn: null }
     const P = { x: 0, y: 0, s: 1 }
     const Q = { x: 0, y: 0, z: 0 }
     let B = [1, 0, 0, 0, 1, 0, 0, 0]
@@ -939,7 +1166,7 @@
       return P
     }
 
-    function drawAtom (g, dim, w, h) {
+    function frame (w, h) {
       const a = R.atom
       F.cx = a.x + a.w / 2
       F.cy = a.y + a.h / 2
@@ -951,11 +1178,16 @@
       const sp = Math.sin(cam.pitch)
       B = [-sy, cy, -sp * cy, -sp * sy, cp, cp * cy, cp * sy, sp]
       F.upZ = cp
-      // A faint equator and meridian, for depth, and the photons' axis.
+    }
+
+    function drawAtom (g, dim) {
+      const a = R.atom
       g.save()
       g.beginPath()
       g.rect(a.x, a.y, a.w, a.h)
       g.clip()
+      g.drawImage(grain.c, a.x, a.y)
+      // A faint equator and meridian, for depth.
       g.strokeStyle = '#1d2638'
       g.setLineDash([3, 5])
       for (const ring of [0, 1]) {
@@ -969,80 +1201,86 @@
         }
         g.stroke()
       }
-      g.restore()
-      g.save()
+      g.setLineDash([])
       g.globalCompositeOperation = 'lighter'
-      // The cloud, far points dimmer and smaller, dimmed further while a
-      // jump's source shows over it.
-      if (photons.some(p => p.ph.src && now - p.t < SOURCE_T)) dim *= 0.45
-      Cloud.draw(cl, F, a, dim, rect)
+      // The drawn atom's cloud, dimmed while its jump's source flashes
+      // over it, mint where psi_f* psi_i is positive, pink where negative.
+      const flashing = src && src.pts && now - src.t < SOURCE_T
+      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect)
+      if (flashing) {
+        const s = 1 - (now - src.t) / SOURCE_T
+        const p = src.pts
+        for (let i = 0; i < p.length; i += 4) {
+          const v = F.project(p[i], p[i + 1], p[i + 2])
+          rect(p[i + 3] > 0 ? '#7dffd0' : '#ff8ad8', (0.5 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * s, v.x, v.y, 1.8)
+        }
+      }
       const c = F.project(0, 0, 0)
       rect('#ffffff', 1, c.x, c.y, 2)
       flush(g)
-      // The photons, over the whole pane: a shell reaches its nearest
-      // edge, and its detection lights the spectrum.
-      photons = photons.filter(p => {
-        const st = Photon.draw(g, p.ph, F, now - p.t, rect)
-        if (st === 'detected') {
-          counts[p.k]++
-          flash[p.k] = 1
-          tally.detected++
-        }
-        return st !== 'done'
-      })
+      g.restore()
+      // The fronts in their hue over the pane, the detections, then the
+      // invisible fronts' pass over the atom's pixels.
+      g.save()
+      g.globalCompositeOperation = 'lighter'
+      Front.draw(g, fronts, F, now)
+      dots = dots.filter(d => now - d.t < 0.6)
+      for (const d of dots) rect(d.fill, 1 - (now - d.t) / 0.6, d.x, d.y, 2.5 + 1.5 * (0.5 + 0.5 * d.z))
       flush(g)
       g.restore()
-      // The axis, dashed through the atom, while a photon flies, and the
-      // newest one named.
-      const flying = photons.slice().reverse().find(p => now - p.t < FLIGHT)
+      Warp.apply(g, fronts, F, a, now)
+    }
+
+    function labels (g) {
+      const a = R.atom
+      const ax = atoms[0]
+      const lv = levels[ax.lv]
+      // The axis, dashed through the atom.
+      const top = F.project(0, 0, 1.15 * view)
+      const tx = top.x
+      const ty = top.y
+      const bot = F.project(0, 0, -1.15 * view)
+      g.strokeStyle = '#5d6780'
+      g.setLineDash([2, 4])
+      g.beginPath()
+      g.moveTo(tx, ty)
+      g.lineTo(bot.x, bot.y)
+      g.stroke()
+      g.setLineDash([])
       g.font = '10px ' + MONO
-      if (flying) {
-        const top = F.project(0, 0, 1.15 * view)
-        const tx = top.x
-        const ty = top.y
-        const bot = F.project(0, 0, -1.15 * view)
-        g.strokeStyle = '#8a94a8'
-        g.setLineDash([2, 4])
-        g.beginPath()
-        g.moveTo(tx, ty)
-        g.lineTo(bot.x, bot.y)
-        g.stroke()
-        g.setLineDash([])
-        g.fillStyle = '#8a94a8'
-        g.textAlign = 'left'
-        g.textBaseline = 'alphabetic'
-        g.fillText('z, chosen', tx + 4, Math.max(a.y + 10, ty))
-      }
-      // A scale bar and the labels.
-      g.textBaseline = 'alphabetic'
+      g.fillStyle = '#7d89a1'
       g.textAlign = 'left'
+      g.textBaseline = 'alphabetic'
+      g.fillText('z, chosen', tx + 4, Math.max(a.y + 10, ty))
+      // A scale bar.
       const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
       const bx = a.x + 10
       const by = a.y + a.h - 6
-      g.fillStyle = '#7d89a1'
       g.fillRect(bx, by, step * F.k, 1)
       g.fillText(step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', bx, by - 4)
-      const lv = levels[level]
       const o = shells(lv).find(e => e.outer)
-      const rows = [['#e8eefc', levelName(lv)]]
-      if (ground(lv)) rows.push(['#8c97ad', 'ground term, at rest'])
-      else {
-        rows.push(['#8c97ad', TAU + ' ' + timeText(lv.tau) + (lv.tau < ALLOWED ? ', ' + TIMES + sci(SLOW) + ' on screen' : lv.tau > CAP ? ', capped at ' + CAP + ' s' : ', real time')])
-        rows.push(['#8c97ad', 'next jump in ' + Math.max(0, due - now).toFixed(1) + ' s'])
-      }
+      const rows = [['#e8eefc', levelName(lv) + '  M_L=' + ax.M + (cl.round ? ', round' : '')]]
+      const tau = tauScreen(lv)
+      rows.push(['#8c97ad', ground(lv) ? 'ground term, at rest' : TAU + ' ' + timeText(lv.tau) + ', ' + timeText(tau) + ' on the event clock'])
       if (o) rows.push(['#ffcf7a', o.nl + ' cloud: a model, <r> ' + D.outer[o.key].meanR.toFixed(1) + ' ' + A0])
-      if (now - cause.t < 6) rows.push(['#9fb7e0', cause.text])
-      if (flying) {
-        const p = flying.ph
-        const ln = p.ln
-        rows.push(['#c9d3e6', 'photon ' + DELTA + 'M=' + (p.q > 0 ? '+' : '') + p.q + ' ' + ln.type + ', ' + patternName(ln.type, p.q), visible(ln) ? ln.rgb : '#aab3c5'])
-        rows.push(['#8c97ad', p.mv ? 'source: ' + PSI + 'f*' + PSI + 'i of the jump, + mint, - pink' : 'source: a two-electron jump, not drawn'])
-        rows.push(['#8c97ad', wlText(wl(ln)) + ' = ' + Math.round(wl(ln) / (size(p.up) * D.bohrNm)) + TIMES + ' this atom: fronts, shell, speed are symbols'])
+      if (now - cause.t < 4) rows.push(['#9fb7e0', cause.text])
+      if (last && now - last.t < 3) {
+        const ln = lines[last.k]
+        rows.push(['#c9d3e6', 'its photon ' + DELTA + 'M=' + (last.q > 0 ? '+' : '') + last.q + ' ' + ln.type + ', ' + patternName(ln.type, last.q), visible(ln) ? ln.rgb : '#aab3c5'])
+        rows.push(['#8c97ad', src && src.pts ? 'source: ' + PSI + 'f*' + PSI + 'i, + mint, - pink' : 'source: a two-electron jump, not drawn'])
+        rows.push(['#8c97ad', wlText(wl(ln)) + ' = ' + Math.round(wl(ln) / (size(levels[ln.u]) * D.bohrNm)) + TIMES + ' this atom: crest spacing a symbol'])
       }
+      const rate = born.length
+      const rest = [
+        ['#7d89a1', 'one site, ' + N_ATOMS + ' atoms: cloud of 1, fronts of all'],
+        ['#7d89a1', 'events: NIST rates / ' + sci(EVENT) + ', light: c / ' + sci(LIGHT) + ' = ' + Clock.light.toFixed(1) + ' ' + A0 + '/s'],
+        ['#7d89a1', 'field ' + Math.round(100 * field) + '%, ' + rate + ' photons/s, ' + fronts.length + ' fronts']
+      ]
       const fit = a.w - 14
-      // A small pane keeps the level, its clock and the photon.
-      if (a.w < 320) rows.splice(2, rows.length, ...rows.filter(r => r[2]))
-      rows.forEach(([col, t, swatch], j) => {
+      // A small pane keeps the level, its clock, its photon and the rate,
+      // a smaller one the level and the rate.
+      const keep = a.w < 200 ? [rows[0], rest[2]] : a.w < 320 ? [rows[0], rows[1], ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
+      keep.forEach(([col, t, swatch], j) => {
         const y = a.y + 11 + 12 * j
         let x = a.x + 8
         if (swatch) {
@@ -1064,15 +1302,42 @@
     function drawDiagramNow (g) {
       const d = R.diag
       g.drawImage(diagC.c, d.x, d.y)
-      const lv = levels[level]
       const cw = R.dd.cw
-      // The last jump: an arrow from the upper level to the lower, in its
-      // light's colour, or grey and dashed outside the visible.
-      if (last && now - last.t < 8) {
+      // The ensemble's populations: each level's bar as bright as its
+      // share of the atoms.
+      const pop = new Float32Array(levels.length)
+      for (const a of atoms) pop[a.lv]++
+      g.save()
+      g.strokeStyle = '#9fb7e0'
+      g.lineWidth = 2
+      for (let k = 0; k < levels.length; k++) {
+        if (!pop[k]) continue
+        const lv = levels[k]
+        g.globalAlpha = Math.min(1, 0.25 + 3 * pop[k] / atoms.length)
+        const y = Math.round(d.y + yOf(lv.E)) + 0.5
+        const x = d.x + colX(colOf(lv))
+        g.beginPath()
+        g.moveTo(x + 3, y)
+        g.lineTo(x + 3 + (cw - 8) * Math.min(1, 0.2 + pop[k] / atoms.length * 2), y)
+        g.stroke()
+        if (R.inset && ground(lv)) {
+          const yy = Math.round(d.y + R.inset.y0(lv.E)) + 0.5
+          g.beginPath()
+          g.moveTo(d.x + R.inset.x + 6, yy)
+          g.lineTo(d.x + R.inset.x + 6 + (R.inset.w * 0.45 - 6) * pop[k] / atoms.length, yy)
+          g.stroke()
+        }
+      }
+      g.restore()
+      const lv = levels[atoms[0].lv]
+      // The drawn atom's last jump: an arrow from the upper level to the
+      // lower, in its light's colour, or grey and dashed outside the
+      // visible.
+      if (last && now - last.t < 3) {
         const ln = lines[last.k]
         const up = levels[ln.u]
         const low = levels[ln.l]
-        const a = Math.max(0.3, 1 - (now - last.t) / 8)
+        const a = Math.max(0.3, 1 - (now - last.t) / 3)
         const same = colOf(up) === colOf(low)
         const x1 = d.x + colX(colOf(up)) + cw * (same ? 0.35 : 0.5)
         const y1 = d.y + yOf(up.E)
@@ -1103,7 +1368,7 @@
         g.fillText(t, Math.min(d.x + d.w - g.measureText(t).width - 2, (x1 + x2) / 2 + 6), (y1 + y2) / 2)
         g.restore()
       }
-      // The present level, lit, and in the inset its J.
+      // The drawn atom's level, lit, and in the inset its J.
       const y = Math.round(d.y + yOf(lv.E)) + 0.5
       const x = d.x + colX(colOf(lv))
       g.strokeStyle = '#ffffff'
@@ -1150,10 +1415,8 @@
         if (flash[k] > 0.02) {
           g.globalAlpha = flash[k]
           g.fillRect(x - 1, s.y + 3, vis ? 3 : 2, R.base - 3)
-          g.globalAlpha = 0.3 * flash[k]
-          g.fillRect(x - 5, s.y + 3, 11, R.base - 3)
         }
-        flash[k] *= Math.exp(-dt / 0.6)
+        flash[k] *= Math.exp(-dt / 0.4)
       }
       g.restore()
     }
@@ -1169,7 +1432,7 @@
       g.fillText(clip(g, t, w - R.cap.x - 8), R.cap.x, R.cap.y)
     }
 
-    enter(level, null)
+    redraw(null)
 
     return {
       draw (synth, dt) {
@@ -1184,16 +1447,18 @@
         const L = synth.level
         now += dt
         for (const e of synth.since(mark)) react(e)
-        let n = 0
-        while (now >= due && n++ < 8) emit()
-        // The zoom eases toward the present level's size, or a fresh
-        // jump's upper level's while its source shows.
-        let big = size(levels[level])
-        for (const p of photons) if (p.ph.src && now - p.t < SOURCE_T) big = Math.max(big, size(p.ph.up))
-        const want = Math.max(5, Math.min(60, 2.5 * big))
-        view += (want - view) * (1 - Math.exp(-dt / 0.35))
+        field = strength(L)
+        Ensemble.step(atoms, dt, FIELD_MAX * field, excite, jump)
+        while (born.length && now - born[0] > 1) born.shift()
         Cloud.step(cl, dt)
         if (now - cam.held > 4) cam.yaw += dt * 0.25 * (1 - 0.7 * L.idle)
+        frame(w, h)
+        // Fronts that reached the pane's edge are detected.
+        fronts = fronts.filter(f => {
+          if (Front.radius(f, now) * F.k < F.edge) return true
+          detect(f, F)
+          return false
+        })
         const g = layer.g
         g.globalCompositeOperation = 'source-over'
         g.globalAlpha = 1
@@ -1201,15 +1466,16 @@
         g.fillRect(0, 0, w, h)
         drawSpectrumNow(g, dt)
         drawDiagramNow(g)
-        drawAtom(g, 1 - 0.3 * L.idle, w, h)
+        drawAtom(g, 1 - 0.3 * L.idle)
+        labels(g)
         caption(g, w)
         out.drawImage(layer.c, 0, 0)
       },
 
       // A drag across the atom turns the camera. A click on the atom
-      // shines a lamp on it: a photon absorbed from the present level. A
-      // click on the level diagram excites the level nearest it in that
-      // column by a collision.
+      // shines a lamp on the drawn atom: a photon absorbed from its
+      // present level. A click on the level diagram lifts the drawn atom
+      // to the level nearest it in that column by a collision.
       pointer (kind, x, y, down) {
         if (!R) return
         if (kind === 'down') {
@@ -1249,23 +1515,24 @@
               best = i
             }
           })
-          if (best >= 0 && gap < 30) excite(best, 'click: electron collision')
-        } else if (inside(R.atom, x, y)) absorb(-1, 'click: a lamp')
+          if (best >= 0 && gap < 30) lift(0, best, 'click: electron collision')
+        } else if (inside(R.atom, x, y)) absorb(0, -1, 'click: a lamp')
       },
 
       // For the live checks: the clicks, the camera's turns, the
-      // excitations, photons emitted and detected, the present level, the
-      // lines lit so far, and each photon in flight.
+      // collisions, photons emitted and detected, the drawn atom's level
+      // and M_L, the lines lit, the fronts in flight by kind, whether a
+      // source flashes, the field and the photons of the last second.
       probe () {
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
-        const flying = photons.map(p => ({ nm: wl(p.ph.ln), band: p.ph.ln.band, type: p.ph.ln.type, q: p.ph.q, source: !!p.ph.src, age: Math.round((now - p.t) * 100) / 100, detected: !!p.ph.hit }))
-        return Object.assign({ level: levels[level].id, lit, flying }, tally)
+        const by = b => fronts.filter(f => f.ln.band === b).length
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length }, tally)
       }
     }
   }
 
-  const api = { Clock, Cloud, Photon, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, waitMean, decay, thermal, absorptions, pick, levelName, wlText, ground, SLOW, CAP }
+  const api = { Clock, Ensemble, Cloud, Front, Warp, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
