@@ -159,6 +159,7 @@ window.skinnedPage = () => ({
   stage: SkinView.stageClasses(),
   splits: SkinView.splits(),
   panels: SkinView.panels(),
+  texts: SkinView.texts(),
   term: (b => ({ x: b.x, y: b.y, width: b.width, height: b.height }))(host.getBoundingClientRect()),
   panes: [...panes.values()].map(p => {
     if (p.dash) return { id: p.id, shown: getComputedStyle(p.el).visibility === 'visible', lines: [], dashboard: p.dash.state() }

@@ -4,6 +4,7 @@
 const fs = require('fs')
 const path = require('path')
 const { validate } = require('./validate')
+const textscale = require('./textscale')
 
 const MIME = {
   '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
@@ -131,6 +132,8 @@ function createRegistry ({ shippedDir, defaultName = 'deck' }) {
   // rejects: a malformed escape is a 404. no-store, so a reselected skin
   // is read from disk again instead of the page's cache. A byte range is
   // served as asked, so a skin's sound can loop and seek (decision 0024).
+  // A stylesheet is served with its text sizes scaled by the user's skin
+  // text size (decision 0036).
   async function handle (request) {
     try {
       const u = new URL(request.url)
@@ -140,7 +143,8 @@ function createRegistry ({ shippedDir, defaultName = 'deck' }) {
       const type = MIME[path.extname(full).toLowerCase()]
       const real = fs.realpathSync(full)
       if (!type || !real.startsWith(dir + path.sep)) return new Response('', { status: 404 })
-      const data = fs.readFileSync(real)
+      let data = fs.readFileSync(real)
+      if (type.startsWith('text/css')) data = Buffer.from(textscale.rewrite(data.toString('utf8')))
       const headers = { 'content-type': type, 'cache-control': 'no-store', 'access-control-allow-origin': '*', 'accept-ranges': 'bytes' }
       const asked = request.headers && request.headers.get ? request.headers.get('range') : null
       const m = /^bytes=(\d*)-(\d*)$/.exec(asked || '')
