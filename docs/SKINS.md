@@ -148,7 +148,7 @@ Every widget has:
 | Field | Meaning |
 | --- | --- |
 | `id` | unique, lowercase letters, digits, dashes |
-| `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout`, `sprite` or `list` |
+| `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout`, `sprite`, `list` or `limits` |
 | `bind` | the metric it shows, see Metrics |
 | `rect` | where it sits |
 | `class` | optional extra CSS classes (lowercase, space separated) |
@@ -175,13 +175,61 @@ Type options:
 | Type | Options |
 | --- | --- |
 | `gauge` | an arc that fills. `startAngle` (-135), `endAngle` (135), degrees clockwise from 12 o'clock. `thickness` (10, of a 100 unit box). `ticks` (0). `marks`: `[{ "bind": metric } or { "value": n }, "class"?]`, a line across the arc at that value, for example the auto-compact threshold |
-| `needle` | an analog dial, the needle pivots at the bottom centre. `startAngle` (-60), `endAngle` (60), `ticks` (0), `face` (an image behind the needle). Default damping 0.55 for a little overshoot |
+| `needle` | an analog dial, the needle pivots at the bottom centre. `startAngle` (-60), `endAngle` (60), `ticks` (0), `face` (an image behind the needle), `resets` as for `bar`. Default damping 0.55 for a little overshoot |
 | `knob` | a rotating knob. `image` (rotated about its centre, else a drawn knob), `startAngle` (-135), `endAngle` (135) |
 | `bar` | a linear meter. `orientation` (`horizontal` or `vertical`), `segments` (0 = continuous, n = n LED-style segments), `gap` (2 px between segments), `resets` (a metric of Unix seconds, such as `limits.five_hour_resets_at`, shown as `.resets`, holding `.word` "resets " and `.left` the time left), `fallback` (`{ bind, label, resets }`: shown in the widget's place, its label too, while the widget's own metric is absent and the fallback's present, with the class `fallback`) |
 | `led` | a lamp. Either `on`: lit while the value is at least this, or `pulse: true`: lit for `pulseMs` (250) each time an event counter rises. `blink` (ms): flashes while lit |
 | `readout` | a number or text. `prefix`, `suffix`, `resets` and `fallback` as for `bar` |
 | `sprite` | a sprite sheet, as in Winamp's sliders. `sheet` (a PNG), `frames`, `frameWidth`, `frameHeight`, `layout` (`row` or `column`). `mode`: `value` (default) picks the frame from the value between min and max, `run` cycles the frames at `fps` (12) while the value is above 0. The PNG must be exactly frames x frame size |
+| `limits` | every usage limit the provider sends: bound to `limits.items`, one meter per limit, see Usage limits |
 | `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }`. `toggle` (optional): `{ "rect", "labels", "class" }`, a button of two options, the list and what it replaces, `labels` two words (default `tasks` and `readouts`). It shows while the list has an item, at its own rect, clear of the list and the terminal. A click on the second option hides the list and shows what it replaces, the stage carrying `checklist-off` in place of `checklist`, and a click on the first shows the list again. The choice is the tab's and holds while the list changes or comes back. The first list in a tab shows itself |
+
+### Usage limits
+
+A `limits` widget draws every usage limit the session's provider sends
+now: the five-hour and weekly limits, a gateway's spend limit, and each
+model's own limits, such as Codex's GPT-5.3-Codex-Spark. One widget
+holds them all, so bind it once:
+
+    { "id": "limits", "type": "limits", "bind": "limits.items",
+      "meter": "bar", "direction": "column", "segments": 20, "gap": 2,
+      "suffix": " limit", "itemClass": "meter",
+      "rect": { "left": 36, "top": 456, "width": 256, "height": 82 } }
+
+| Option | Meaning |
+| --- | --- |
+| `meter` | `bar` (default) or `needle`: how each limit is drawn. The widget takes that type's options (`orientation`, `segments`, `gap` for a bar, `startAngle`, `endAngle`, `ticks`, `face` for a needle) and gives them to every meter |
+| `direction` | `column` (default): the meters stack top to bottom. `row`: side by side |
+| `suffix` | text after each limit's label: `" limit"` makes `5h limit`. It is a `.suffix` span, so a crowded layout can hide it |
+| `itemClass` | classes given to every meter, so your rules for a lone bar style them |
+
+Each meter is a `.w` of its type inside the widget, `.w-limits`. It
+carries `.limit-item`, `.account` or `.model`, and the window's class:
+`.span-5h`, `.span-7d`, `.span-30d`, or `.spend` for a spend limit. Its
+label is the provider's: `5h`, `7d`, `spend`, or a model and a window
+such as `Spark 5h`, then your suffix, and below it `.resets` with the
+time left, as for a `bar`. The meters share the widget's rect in equal
+parts. A limit the provider does not send has no meter, so the others
+take its room and nothing marks the gap. Before the first reading, and
+on an API key, the widget is hidden. It carries `.n-1`, `.n-2` and so
+on, the number of meters, so a skin can lay out four meters in a grid
+and two in a column:
+
+    .lims.n-3, .lims.n-4 { display: grid; grid-template-columns: 1fr 1fr; }
+    .lims.n-3 > :last-child { grid-column: span 2; }
+
+How many meters to plan for: Claude Code sends two (a gateway session
+one), Codex on a paid plan one to four. A meter whose limit has reset
+is dropped until the provider sends the new window's reading.
+
+How the shipped skins draw them:
+
+| Skin | Meters |
+| --- | --- |
+| `deck` | segmented bars under the sliders, green to yellow to red, the reset at the right of each label. Three or more go in two columns |
+| `phosphor` | segmented bars under the cache meter, two columns for three or more |
+| `coffee` | a jar of cold brew a limit on the table, its label and reset on tape. Four jars stand smaller |
+| `library` | a marker bar a limit on the whiteboard: red for five hours, green for a week or a spend limit, orange and purple for a model's. Two columns for three or more |
 
 ## Styling with CSS
 
@@ -195,6 +243,9 @@ Class names you can style:
 - Every widget: `.w`, `.w-<type>` (for example `.w-gauge`), your
   classes, `.nodata` while it has no data, `.click` on a readout that
   takes a click and `.open` while its dial is open.
+- A `limits` widget's meters: `.limit-item` with `.account` or
+  `.model` and `.span-5h`, `.span-7d`, `.span-30d` or `.spend`, and
+  `.n-<count>` on the widget (see Usage limits).
 - Parts: `.label`, `.value`, `.track`, `.fill` (gauge arc, bar fill),
   `.tick`, `.mark`, `.needle`, `.pivot`, `.face`, `.knob-face`,
   `.knob-pointer`, `.knob-image`, `.seg` and `.seg.on` (bar segments),
@@ -256,6 +307,7 @@ any command fills the `pty.*`, `proc.*` and `session.clock_s` meters.
 | `limits.seven_day_pct` | percent of the seven-day usage limit used |
 | `limits.seven_day_resets_at` | when the seven-day limit resets, Unix seconds |
 | `limits.spend_pct`, `limits.spend_usd`, `limits.spend_limit_usd`, `limits.spend_resets_at` | a gateway session's spend limit: percent used, dollars spent, the limit, its reset |
+| `limits.items` | every usage limit the provider sends now, a list of `{ key, label, window, model, pct, resets_at }`: Claude Code's statusline limits, and each Codex limit, a model's among them. For a `limits` widget alone |
 | `tools.total` | tool calls this session |
 | `tools.rate` | tool calls in the last 60 s |
 | `agents.active` | subagents running now |

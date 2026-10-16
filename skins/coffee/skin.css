@@ -1,8 +1,8 @@
 /* coffee: a bohemian basement cafe. Old brick, string lights, a chalkboard
    with doodles, handbills on a corkboard, a lava lamp, a thrift-store
    cabinet holding a turntable, a tube amp and LPs, and a table under a
-   block-print cloth with a French press, jars of cold brew, a candle in a
-   straw bottle, a pothos, a typewriter and mismatched mugs. */
+   block-print cloth with a French press, jars of cold brew, a pothos, a
+   typewriter and mismatched mugs. */
 .room { background: #2a1610 url(images/wall.jpg) 0 0 / 640px 320px; }
 .room::after { content: ""; position: absolute; inset: 0;
   background: radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 176, 90, 0.16), rgba(0, 0, 0, 0) 70%),
@@ -139,10 +139,6 @@
 .cloth::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px;
   background: repeating-linear-gradient(90deg, #d89a3e 0 2px, rgba(0, 0, 0, 0) 2px 5px); }
 .press, .jar { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5)); }
-.bottle { background: url(images/bottle.png) 0 0 / 44px 112px no-repeat; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.5)); }
-.bottle::after { content: ""; position: absolute; left: -19px; top: -26px; width: 82px; height: 64px;
-  background: radial-gradient(circle at 50% 45%, rgba(255, 196, 100, 0.42), rgba(255, 196, 100, 0) 60%); animation: flicker 2.6s ease-in-out infinite; }
-@keyframes flicker { 0%, 100% { opacity: 0.85; } 30% { opacity: 1; } 55% { opacity: 0.7; } 75% { opacity: 0.95; } }
 .plant { background: url(images/plant.png) 0 0 / 86px 120px no-repeat; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45)); }
 .typewriter { background: url(images/typewriter.png) 0 0 / 168px 96px no-repeat; }
 
@@ -171,6 +167,15 @@
   background: rgba(236, 224, 190, 0.94); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); opacity: 1;
   font: bold 13px/13px "Amatic SC", cursive; letter-spacing: 1px; color: #3a2a1c; }
 .jar .resets .word { display: none; }
+/* Every usage limit (decision 0011): a jar a limit, each standing in the
+   middle of its share of the table. Four jars stand smaller. */
+.jars { gap: 0; }
+.jars .jar::after { background-position: 50% 100%; }
+.jars .jar .track { left: calc(50% - 20px); top: auto; bottom: 6px; }
+.jars .jar .label { top: calc(100% - 40px); max-width: none; overflow: visible; }
+.jars.n-4 .jar .label, .jars.n-5 .jar .label, .jars.n-6 .jar .label { font-size: 14px; letter-spacing: 0; }
+.jars .jar .resets { top: calc(100% - 14px); }
+.jars.n-4 .jar, .jars.n-5 .jar, .jars.n-6 .jar { transform: scale(0.75); transform-origin: 50% 100%; }
 
 /* Mismatched mugs on a plank, one for each subagent. */
 .mugs { justify-content: flex-start; }

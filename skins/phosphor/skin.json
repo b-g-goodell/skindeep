@@ -155,7 +155,7 @@
     "left": 36,
     "top": 70,
     "width": 252,
-    "height": 262
+    "height": 214
    }
   },
   {
@@ -166,7 +166,7 @@
    "label": "in context",
    "rect": {
     "left": 36,
-    "top": 344,
+    "top": 292,
     "width": 124,
     "height": 48
    },
@@ -180,7 +180,7 @@
    "label": "compact at",
    "rect": {
     "left": 168,
-    "top": 344,
+    "top": 292,
     "width": 124,
     "height": 48
    },
@@ -196,43 +196,29 @@
    "gap": 2,
    "rect": {
     "left": 36,
-    "top": 408,
+    "top": 352,
     "width": 256,
     "height": 34
    },
    "class": "meter"
   },
   {
-   "id": "lim5",
-   "type": "bar",
-   "bind": "limits.five_hour_pct", "resets": "limits.five_hour_resets_at",
-   "label": "5h limit",
+   "id": "lims",
+   "type": "limits",
+   "bind": "limits.items",
+   "meter": "bar",
+   "suffix": " limit",
+   "itemClass": "meter",
    "max": 100,
    "segments": 20,
    "gap": 2,
    "rect": {
     "left": 36,
-    "top": 456,
+    "top": 398,
     "width": 256,
-    "height": 34
+    "height": 84
    },
-   "class": "meter"
-  },
-  {
-   "id": "lim7",
-   "type": "bar",
-   "bind": "limits.seven_day_pct", "resets": "limits.seven_day_resets_at", "fallback": { "bind": "limits.spend_pct", "label": "spend limit", "resets": "limits.spend_resets_at" },
-   "label": "7d limit",
-   "max": 100,
-   "segments": 20,
-   "gap": 2,
-   "rect": {
-    "left": 36,
-    "top": 504,
-    "width": 256,
-    "height": 34
-   },
-   "class": "meter"
+   "class": "lims"
   },
   {
    "id": "radar",

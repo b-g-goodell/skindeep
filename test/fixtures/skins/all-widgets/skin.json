@@ -34,6 +34,8 @@
     { "id": "model", "type": "readout", "bind": "model.name", "label": "MODEL", "format": "text", "rect": { "right": 16, "top": 340, "width": 200, "height": 44 } },
     { "id": "agents", "type": "led", "bind": "agents.active", "label": "AGENT", "on": 1, "blink": 500, "rect": { "right": 150, "top": 400, "width": 66, "height": 30 } },
     { "id": "todo", "type": "list", "bind": "checklist.items", "label": "TASKS", "rows": 6, "rect": { "right": 16, "top": 450, "width": 200, "height": 130 },
-      "toggle": { "rect": { "right": 16, "top": 432, "width": 120, "height": 16 }, "labels": ["tasks", "readouts"], "class": "tabs" } }
+      "toggle": { "rect": { "right": 16, "top": 432, "width": 120, "height": 16 }, "labels": ["tasks", "readouts"], "class": "tabs" } },
+    { "id": "limits", "type": "limits", "bind": "limits.items", "meter": "bar", "direction": "column", "suffix": " limit", "itemClass": "meter", "segments": 12, "rect": { "right": 16, "top": 590, "width": 200, "height": 90 } },
+    { "id": "dials", "type": "limits", "bind": "limits.items", "meter": "needle", "direction": "row", "ticks": 4, "rect": { "right": 230, "top": 590, "width": 300, "height": 90 } }
   ]
 }

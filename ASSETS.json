@@ -350,13 +350,6 @@
     "notes": "drawn by the project with Pillow: a mason jar"
   },
   {
-    "path": "skins/coffee/images/bottle.png",
-    "source": "scripts/art/coffee.py",
-    "author": "claude-skins",
-    "license": "project-original",
-    "notes": "drawn by the project with Pillow and numpy: a candle in a straw-covered wine bottle"
-  },
-  {
     "path": "skins/coffee/images/plant.png",
     "source": "scripts/art/coffee.py",
     "author": "claude-skins",

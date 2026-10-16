@@ -6,7 +6,15 @@
   "minWidth": 800,
   "minHeight": 500
  },
- "menu": { "rect": { "right": 8, "top": 8, "width": 24, "height": 24 }, "image": "menu.svg" },
+ "menu": {
+  "rect": {
+   "right": 8,
+   "top": 8,
+   "width": 24,
+   "height": 24
+  },
+  "image": "menu.svg"
+ },
  "terminal": {
   "rect": {
    "left": 10,
@@ -47,6 +55,19 @@
    "bind": "checklist.items",
    "rect": {
     "left": 70,
+    "top": 5,
+    "width": 50,
+    "height": 50
+   }
+  },
+  {
+   "id": "lim",
+   "type": "limits",
+   "bind": "checklist.items",
+   "meter": "dial",
+   "direction": "up",
+   "rect": {
+    "left": 130,
     "top": 5,
     "width": 50,
     "height": 50

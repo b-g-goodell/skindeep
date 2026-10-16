@@ -1,6 +1,6 @@
 'use strict'
-// The seven display widgets (decision 0007) and the list (decision
-// 0034). Each returns
+// The seven display widgets (decision 0007), the list (decision 0034)
+// and the usage limits (decision 0011). Each returns
 // { el, update(snapshot, now), frame(now, dt) }. Values move toward their
 // targets with a damped spring. Parts carry stable class names that skin
 // CSS styles, colours come from CSS custom properties.
@@ -184,6 +184,7 @@ function needle (spec) {
   svg('circle', { cx: 50, cy: 70, r: 4, class: 'pivot' }, s)
   labelled(el, spec)
   const val = div('value', el)
+  const resets = resetsOf(el, spec)
   const sp = new Spring(spec.damping !== undefined ? spec.damping : 0.55, 2.5)
   let raw = null
   return {
@@ -192,6 +193,7 @@ function needle (spec) {
       raw = valueOf(snap, spec.bind)
       sp.set(typeof raw === 'number' ? raw : null)
       el.classList.toggle('nodata', raw === null)
+      resets(snap, spec.resets)
     },
     frame (now, dt) {
       const v = sp.step(dt)
@@ -264,7 +266,7 @@ function fallbackOf (el, spec) {
     const f = spec.fallback
     const use = f && valueOf(snap, spec.bind) === null && valueOf(snap, f.bind) !== null
     el.classList.toggle('fallback', !!use)
-    if (label) label.textContent = use && f.label ? f.label : spec.label
+    if (label && f) label.textContent = use && f.label ? f.label : spec.label
     return use ? Object.assign({}, spec, f) : spec
   }
 }
@@ -469,4 +471,67 @@ function list (spec) {
   }
 }
 
-window.Widgets = { gauge, needle, knob, bar, led, readout, sprite, list, format, Spring }
+// Every usage limit the provider sends (decision 0011): one meter per
+// item of limits.items, a bar or a needle with that type's options,
+// labelled with the item's label and suffix (a span of its own, which a
+// crowded layout can hide) and its time to reset. A
+// limit not in the list has no meter, and the meters there share the
+// rect, so an absent limit leaves no gap. An item whose reset has
+// passed is left out: its window has started over and no reading of
+// the new one has come. The widget carries n-<count>, so a skin can lay
+// out three meters unlike two, and is hidden while there is none.
+function limits (spec) {
+  const { el } = base(spec, 'limits')
+  el.classList.add(spec.direction === 'row' ? 'across' : 'down')
+  const make = spec.meter === 'needle' ? needle : bar
+  let meters = []
+  let drawn = null
+  let count = 0
+  const span = i => i.window ? 'span-' + String(i.window).toLowerCase().replace(/[^a-z0-9]/g, '') : 'spend'
+  return {
+    el,
+    // For the live checks: each meter's layout box in the widget's
+    // own pixels, before any scaling, and the widget's size.
+    rows: () => meters.map(m => {
+      const e = m.w.el
+      const left = e.querySelector('.resets .left')
+      return { key: m.key, label: m.label, resets: left ? left.textContent : '', classes: [...e.classList], box: { x: e.offsetLeft, y: e.offsetTop, width: e.offsetWidth, height: e.offsetHeight }, within: { width: el.clientWidth, height: el.clientHeight } }
+    }),
+    update (snap, now) {
+      const v = valueOf(snap, spec.bind)
+      const t = Date.now() / 1000
+      const items = (Array.isArray(v) ? v : []).filter(i => i && typeof i.pct === 'number' && !(typeof i.resets_at === 'number' && i.resets_at <= t))
+      const key = JSON.stringify(items.map(i => [i.key, i.label, i.window, i.model]))
+      if (key !== drawn) {
+        drawn = key
+        el.textContent = ''
+        meters = items.map(i => {
+          const cls = ['limit-item', i.model ? 'model' : 'account', span(i), spec.itemClass].filter(Boolean).join(' ')
+          const sub = Object.assign({}, spec, { id: `${spec.id}-${i.key}`, type: spec.meter === 'needle' ? 'needle' : 'bar', bind: 'pct', resets: 'resets', label: i.label + (spec.suffix || ''), class: cls })
+          delete sub.fallback
+          const w = make(sub)
+          const label = w.el.querySelector('.label')
+          if (label && spec.suffix) {
+            label.textContent = i.label
+            const tail = document.createElement('span')
+            tail.className = 'suffix'
+            tail.textContent = spec.suffix
+            label.appendChild(tail)
+          }
+          el.appendChild(w.el)
+          return { key: i.key, label: sub.label, w }
+        })
+        el.classList.remove('n-' + count)
+        count = meters.length
+        el.classList.add('n-' + count)
+      }
+      items.forEach((i, n) => meters[n].w.update({ pct: i.pct, resets: i.resets_at }, now))
+      el.classList.toggle('nodata', !items.length)
+    },
+    frame (now, dt) {
+      for (const m of meters) m.w.frame(now, dt)
+    }
+  }
+}
+
+window.Widgets = { gauge, needle, knob, bar, led, readout, sprite, list, limits, format, Spring }

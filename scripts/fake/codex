@@ -3,7 +3,8 @@
 // Replay fake of the Codex TUI for the live checks (decision 0019). Named
 // `codex` so the app dispatches the Codex adapter. It writes a rollout
 // where Codex 0.162 does, $CODEX_HOME/sessions/YYYY/MM/DD/, replaying
-// test/fixtures/codex/rollout.jsonl, and spends no tokens. `resume <id>`
+// test/fixtures/codex/rollout.jsonl and a model's limit from
+// limits.jsonl, and spends no tokens. `resume <id>`
 // appends to that thread's rollout, `fork <id>` starts a new thread whose
 // first line references that rollout's history and copies none of it, as
 // Codex 0.162.1 does. Unlike Codex, it writes the rollout at start, not
@@ -17,7 +18,11 @@ const crypto = require('crypto')
 const argv = process.argv.slice(2)
 const home = process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
 const sessions = path.join(home, 'sessions')
-const fixture = fs.readFileSync(path.join(__dirname, '..', '..', 'test', 'fixtures', 'codex', 'rollout.jsonl'), 'utf8').split('\n').filter(Boolean)
+const fixtures = path.join(__dirname, '..', '..', 'test', 'fixtures', 'codex')
+const read = f => fs.readFileSync(path.join(fixtures, f), 'utf8').split('\n').filter(Boolean)
+// The rollout, then a model's own limit (GPT-5.3-Codex-Spark, 5 h and
+// 7 d) as recorded beside the account's, unless FAKE_CODEX_MODELS=0.
+const fixture = read('rollout.jsonl').concat(process.env.FAKE_CODEX_MODELS === '0' ? [] : read('limits.jsonl').filter(l => l.includes('"limit_id":"codex_bengalfox"')))
 const w = s => process.stdout.write(s)
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const pad = n => String(n).padStart(2, '0')
@@ -91,6 +96,10 @@ process.stdin.on('data', d => { if (d.includes(3) || d.includes(4)) cleanup() })
     const o = JSON.parse(line)
     if (o.type === 'session_meta') continue
     o.timestamp = new Date().toISOString()
+    // Recorded limits reset in the past: each window resets halfway
+    // through it from now, as a live one might.
+    const rl = o.payload && o.payload.rate_limits
+    for (const w of rl ? [rl.primary, rl.secondary] : []) if (w && w.window_minutes) w.resets_at = Math.floor(Date.now() / 1000) + w.window_minutes * 30
     fs.appendFileSync(file, JSON.stringify(o) + '\n')
     if (o.type === 'response_item') w(`\x1b[32m  ${o.payload.name}\x1b[0m(...)\r\n`)
     await sleep(120)

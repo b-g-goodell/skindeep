@@ -22,14 +22,18 @@ const THEME_KEYS = ['foreground', 'background', 'cursor', 'cursorAccent', 'selec
 const COMMON = ['id', 'type', 'bind', 'rect', 'class', 'label', 'min', 'max', 'format', 'damping']
 const TYPES = {
   gauge: ['startAngle', 'endAngle', 'thickness', 'ticks', 'marks'],
-  needle: ['startAngle', 'endAngle', 'face', 'ticks'],
+  needle: ['startAngle', 'endAngle', 'face', 'ticks', 'resets'],
   knob: ['image', 'startAngle', 'endAngle'],
   bar: ['orientation', 'segments', 'gap', 'resets', 'fallback'],
   led: ['on', 'pulse', 'pulseMs', 'blink'],
   readout: ['prefix', 'suffix', 'resets', 'fallback'],
   sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps'],
-  list: ['rows', 'toggle']
+  list: ['rows', 'toggle'],
+  limits: ['meter', 'direction', 'suffix', 'itemClass', 'orientation', 'segments', 'gap', 'startAngle', 'endAngle', 'ticks', 'face']
 }
+// The list-valued metric each list-showing type binds (decisions 0034,
+// 0011).
+const LIST_OF = { list: 'checklist.items', limits: 'limits.items' }
 const FORMAT = /^(int|fixed:[0-4]|pct|usd|tokens|duration|until|bytes|text)$/
 const CLASS = /^[a-z0-9-]+( [a-z0-9-]+)*$/
 const ID = /^[a-z0-9-]+$/
@@ -287,8 +291,13 @@ function validate (dir) {
         else ids.add(w.id)
         if (!isStr(w.bind)) err(`${fld}.bind`, 'missing metric name')
         else if (!names.known(w.bind)) err(`${fld}.bind`, `unknown metric "${w.bind}"`)
-        else if (w.type === 'list' && !names.isList(w.bind)) err(`${fld}.bind`, `"${w.bind}": a list shows a list-valued metric, one of ${[...names.LISTS].join(', ')}`)
-        else if (w.type !== 'list' && names.isList(w.bind)) err(`${fld}.bind`, `"${w.bind}": a list-valued metric needs a list widget`)
+        else if (LIST_OF[w.type] && w.bind !== LIST_OF[w.type]) err(`${fld}.bind`, `"${w.bind}": a ${w.type} widget shows ${LIST_OF[w.type]}`)
+        else if (!LIST_OF[w.type] && names.isList(w.bind)) err(`${fld}.bind`, `"${w.bind}": a list-valued metric needs a ${Object.keys(LIST_OF).find(k => LIST_OF[k] === w.bind)} widget`)
+        if (w.type === 'limits') {
+          if ('meter' in w && !['bar', 'needle'].includes(w.meter)) err(`${fld}.meter`, 'must be bar or needle')
+          if ('direction' in w && !['row', 'column'].includes(w.direction)) err(`${fld}.direction`, 'must be row or column')
+          if ('itemClass' in w && (!isStr(w.itemClass) || !CLASS.test(w.itemClass))) err(`${fld}.itemClass`, 'must be lowercase class names')
+        }
         if ('resets' in w && (!isStr(w.resets) || !names.known(w.resets))) err(`${fld}.resets`, `unknown metric "${w.resets}"`)
         if ('fallback' in w) {
           const f = w.fallback

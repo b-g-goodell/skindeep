@@ -117,6 +117,14 @@ function statusline () {
   const now = Math.floor(Date.now() / 1000)
   j.rate_limits.five_hour.resets_at = now + 3 * 3600 + 12 * 60
   j.rate_limits.seven_day.resets_at = now + 4 * 86400 + 2 * 3600
+  // Two models' weekly limits, in the shape the parser takes for a
+  // window Claude Code 2.1.301 does not yet send
+  // (docs/research/usage-limits.md). FAKE_CLAUDE_MODELS=0 leaves them
+  // out, as a live session sends.
+  if (process.env.FAKE_CLAUDE_MODELS !== '0') {
+    j.rate_limits.seven_day_opus = { used_percentage: 64, resets_at: now + 4 * 86400 + 2 * 3600 }
+    j.rate_limits.seven_day_sonnet = { used_percentage: 23, resets_at: now + 4 * 86400 + 2 * 3600 }
+  }
   // FAKE_CLAUDE_GATEWAY=1: a gateway session, a spend limit and no
   // subscription limits, as Claude Code 2.1.299 builds them.
   if (process.env.FAKE_CLAUDE_GATEWAY === '1') j.rate_limits = { spend_limit: { used_percentage: 42.5, resets_at: now + 9 * 86400, used_usd: 85, limit_usd: 200, period: 'month' } }

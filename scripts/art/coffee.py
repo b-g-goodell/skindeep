@@ -2,8 +2,8 @@
 # Draw the coffee skin's own images, a bohemian basement cafe: chalk
 # doodles, string lights, a corkboard of handbills, a lava lamp, a
 # turntable and its record and tonearm, a tube amp with its VU meter and
-# knob, a cubby of LPs, a French press, a mason jar, a candle in a straw
-# bottle, a potted pothos, a typewriter and a plank of mismatched mugs.
+# knob, a cubby of LPs, a French press, a mason jar, a potted pothos, a
+# typewriter and a plank of mismatched mugs.
 # Needs python3 with numpy and Pillow, DejaVu Sans Bold (found by
 # fc-match), and the skin's own fonts. Wood grain comes from images/counter.jpg (ambientCG Wood049,
 # CC0). Run from the repository root: python3 scripts/art/coffee.py
@@ -637,57 +637,6 @@ def jar():
     save(img, 'jar.png', W, H)
 
 
-def bottle():
-    # A candle in a straw-covered wine bottle, 44 x 112, years of wax run
-    # down its neck onto the straw.
-    W, H = 44, 112
-    img = new(W, H)
-    green = lambda w, h: grad(w, h, [(0, (16, 44, 26)), (0.3, (96, 156, 104)), (0.5, (40, 92, 56)), (1, (12, 32, 20))])
-    shape(img, [(18, 22), (26, 22), (27, 50), (30, 60), (14, 60), (17, 50)], green)
-    body = ellipse_pts(22, 86, 20.5, 25)
-    straw = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    sd = ImageDraw.Draw(straw)
-    for k in range(64):
-        y = 58 + k * 0.85
-        sd.line(sc([(0, y), (W, y)]), fill=lerp((232, 196, 116), (156, 112, 50), (k % 3) / 3) + (255,), width=int(0.9 * Z))
-    for k in range(-30, 30):
-        x = 22 + k * 1.6
-        sd.line(sc([(x, 58), (x + 6 * math.copysign(1, k + 0.5), 112)]), fill=(120, 84, 36, 40), width=int(0.5 * Z))
-    m = Image.new('L', img.size, 0)
-    ImageDraw.Draw(m).polygon(sc(body), fill=255)
-    y, x = np.mgrid[0:H * Z, 0:W * Z] / Z
-    lit = np.clip(1 - np.hypot((x - 16) / 24, (y - 78) / 30), 0, 1)
-    a = np.array(straw, np.float32)
-    a[..., :3] *= (0.45 + 0.7 * lit)[..., None]
-    straw = Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), 'RGBA')
-    layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
-    layer.paste(straw, (0, 0), m)
-    img.alpha_composite(layer)
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle(box(12, 57, 32, 64), radius=2 * Z, fill=(206, 166, 86, 255))
-    for k in range(10):
-        d.line(sc([(13 + 2 * k, 63), (12.5 + 2 * k, 68)]), fill=(176, 134, 62, 255), width=int(0.7 * Z))
-    # Wax: a collar at the lip, and drips of four colours, each ending in a bead.
-    drips = [((198, 44, 40), 17.5, 30), ((240, 234, 214), 20, 44), ((232, 190, 56), 23, 24), ((60, 120, 70), 25.5, 38),
-             ((198, 44, 40), 22, 54), ((240, 234, 214), 26.5, 20), ((232, 190, 56), 18.5, 46), ((150, 60, 120), 24.5, 32)]
-    for col, x0, ln in drips:
-        wdt = 2.2 if ln > 40 else 1.8
-        pts = [(x0 + 0.5 * math.sin(t / 4 + x0), 22 + t) for t in np.linspace(0, ln, 24)]
-        if pts[-1][1] > 58:
-            pts = [(px + max(0.0, py - 58) * (-0.35 if x0 < 22 else 0.3), py) for px, py in pts]
-        d.line(sc(pts), fill=col + (255,), width=int(wdt * Z), joint='curve')
-        ex, ey = pts[-1]
-        d.ellipse(box(ex - wdt * 0.7, ey - wdt * 0.5, ex + wdt * 0.7, ey + wdt * 0.8), fill=col + (255,))
-    shape(img, ellipse_pts(22, 22, 7, 3), (226, 210, 180, 255))
-    for col, dx in (((198, 44, 40), -4), ((232, 190, 56), 3), ((240, 234, 214), 0)):
-        d.ellipse(box(22 + dx - 3, 20, 22 + dx + 3, 25), fill=col + (255,))
-    d.rounded_rectangle(box(18.5, 9, 25.5, 22), radius=1.5 * Z, fill=(244, 234, 212, 255))
-    d.line(sc([(22, 9), (22, 6.5)]), fill=(30, 20, 14, 255), width=int(0.6 * Z))
-    shape(img, [(22, 0), (24.6, 4.5), (22, 7.5), (19.4, 4.5)], (255, 196, 84, 255))
-    shape(img, [(22, 2.5), (23.2, 5), (22, 6.8), (20.8, 5)], (255, 250, 220, 255))
-    save(img, 'bottle.png', W, H)
-
-
 def plant():
     # A pothos in a terracotta pot, 86 x 120, vines over the rim.
     W, H = 86, 120
@@ -830,7 +779,6 @@ if __name__ == '__main__':
     lps()
     press()
     jar()
-    bottle()
     plant()
     typewriter()
     mugs()
