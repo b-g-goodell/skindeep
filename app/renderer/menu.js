@@ -156,15 +156,16 @@ window.AppMenu = (function () {
     }
     row.appendChild(sub)
     // To the right of the drop-down, to its left when the window has no
-    // room, and moved up as far as it would run off the bottom.
+    // room, and moved up as far as it would run off the bottom. Placed
+    // in the window, so a drop-down that scrolls does not clip it.
     row.addEventListener('mouseenter', () => {
       row.classList.add('open')
-      sub.classList.remove('left')
-      sub.style.top = ''
-      let r = sub.getBoundingClientRect()
-      if (r.right > window.innerWidth - 4) sub.classList.add('left')
-      r = sub.getBoundingClientRect()
-      if (r.bottom > window.innerHeight - 4) sub.style.top = (sub.offsetTop - (r.bottom - window.innerHeight + 4)) + 'px'
+      const b = row.getBoundingClientRect()
+      const m = menu.getBoundingClientRect()
+      const r = sub.getBoundingClientRect()
+      const left = m.right - 1 + r.width > window.innerWidth - 4 ? m.left + 1 - r.width : m.right - 1
+      sub.style.left = Math.max(0, left) + 'px'
+      sub.style.top = Math.max(0, Math.min(b.top - 5, window.innerHeight - 4 - r.height)) + 'px'
     })
     row.addEventListener('mouseleave', () => row.classList.remove('open'))
   }
@@ -276,6 +277,7 @@ window.AppMenu = (function () {
     clearInterval(refresh)
     shown = name
     menu.textContent = ''
+    menu.style.maxHeight = ''
     bar()
     const box = fill()
     menu.hidden = false
@@ -293,7 +295,12 @@ window.AppMenu = (function () {
     menu.style.left = Math.max(4, Math.min(b.left, window.innerWidth - r.width - 4)) + 'px'
     const below = b.bottom + 2
     const top = document.getElementById('stage').getBoundingClientRect().top
-    menu.style.top = (below + r.height <= window.innerHeight - 4 ? below : Math.max(top, b.top - r.height - 2)) + 'px'
+    const at = below + r.height <= window.innerHeight - 4 ? below : Math.max(top, b.top - r.height - 2)
+    menu.style.top = at + 'px'
+    // Taller than the window leaves it, at a large window text size
+    // (decision 0036): it scrolls, its bar stays at its top.
+    const frame = r.height - parseFloat(getComputedStyle(menu).height)
+    if (at + r.height > window.innerHeight - 4) menu.style.maxHeight = (window.innerHeight - 4 - at - frame) + 'px'
   }
 
   // The drop-down opens on File.

@@ -1,4 +1,7 @@
-/* App-owned layout. Skin CSS never reaches this document (decision 0005). */
+/* App-owned layout. Skin CSS never reaches this document (decision 0005).
+   Every text size here, and every width that holds a text, is a size
+   at the user's window text size, --window-text, set on the root by
+   renderer.js (decision 0036). The strips keep their heights. */
 html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 
 #strip {
@@ -6,7 +9,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
   display: flex; gap: 14px; align-items: center; padding: 0 8px;
   box-sizing: border-box; overflow: hidden; white-space: nowrap;
   background: #101010; color: #c8c8c8; border-bottom: 1px solid #333;
-  font: 12px/22px "DejaVu Sans Mono", monospace;
+  font: calc(12px * var(--window-text, 1))/22px "DejaVu Sans Mono", monospace;
 }
 #strip-label { color: #fff; font-weight: bold; flex: none; }
 #strip-cmd { color: #9fb3c8; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
@@ -19,12 +22,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
   position: absolute; top: 22px; left: 0; right: 0; height: 24px; z-index: 30;
   display: flex; align-items: stretch; box-sizing: border-box; overflow: hidden;
   background: #0b0b0b; color: #9a9a9a; border-bottom: 1px solid #333;
-  font: 12px/23px "DejaVu Sans Mono", monospace; user-select: none;
+  font: calc(12px * var(--window-text, 1))/23px "DejaVu Sans Mono", monospace; user-select: none;
 }
 #tabs[hidden] { display: none; }
 #tabs .tab {
   display: flex; align-items: center; gap: 6px; padding: 0 4px 0 8px;
-  min-width: 60px; max-width: 240px; flex: 0 1 auto; overflow: hidden; white-space: nowrap;
+  min-width: 60px; max-width: calc(240px * var(--window-text, 1)); flex: 0 1 auto; overflow: hidden; white-space: nowrap;
   border-right: 1px solid #262626; cursor: default;
 }
 #tabs .tab.active { background: #1e1e1e; color: #fff; }
@@ -37,18 +40,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 /* Each tab's visualization (decision 0015), W x H of tabviz.js, which
    gives up to half its width to the name when the tabs crowd. */
 #tabs .viz { flex: 0 1 44px; min-width: 22px; height: 16px; background: #000; border-radius: 2px; }
-#tabs .close { flex: none; width: 16px; text-align: center; color: #777; border-radius: 3px; }
+#tabs .close { flex: none; width: calc(16px * var(--window-text, 1)); text-align: center; color: #777; border-radius: 3px; }
 #tabs .close:hover { background: #3a3a3a; color: #fff; }
-#tabs .new { flex: none; width: 26px; text-align: center; }
+#tabs .new { flex: none; width: calc(26px * var(--window-text, 1)); text-align: center; }
 #tabs .rename {
-  flex: 1 1 auto; min-width: 40px; height: 18px; padding: 0 3px; box-sizing: border-box;
-  font: inherit; line-height: 16px; color: #fff; background: #000; border: 1px solid #6fa8dc; border-radius: 2px; outline: none;
+  flex: 1 1 auto; min-width: 40px; height: min(calc(18px * var(--window-text, 1)), 22px); padding: 0 3px; box-sizing: border-box;
+  font: inherit; line-height: min(calc(16px * var(--window-text, 1)), 20px); color: #fff; background: #000; border: 1px solid #6fa8dc; border-radius: 2px; outline: none;
 }
 /* The tab's drop-down (decision 0032), styled as the File menu is. */
 #tab-menu {
-  position: absolute; z-index: 40; min-width: 110px; padding: 4px 0;
+  position: absolute; z-index: 40; min-width: calc(110px * var(--window-text, 1)); padding: 4px 0;
   background: #1b1f26; color: #e6e9ee; border: 1px solid #3a3f47; border-radius: 4px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); font: 13px/24px "DejaVu Sans", sans-serif; user-select: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); font: calc(13px * var(--window-text, 1))/calc(24px * var(--window-text, 1)) "DejaVu Sans", sans-serif; user-select: none;
 }
 #tab-menu .item { padding: 0 14px; cursor: default; }
 #tab-menu .item:hover { background: #2f5d8a; }
@@ -89,25 +92,25 @@ body.tabbed #stage { top: 46px; }
   background: #ff3b30; box-shadow: 0 0 0 1px #000; }
 
 #menu {
-  position: absolute; z-index: 20; min-width: 180px; max-width: 520px; padding: 4px 0;
+  position: absolute; z-index: 20; min-width: calc(180px * var(--window-text, 1)); max-width: calc(520px * var(--window-text, 1)); padding: 4px 0; overflow-y: auto;
   background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a;
-  font: 13px/1.6 "DejaVu Sans", sans-serif; user-select: none;
+  font: calc(13px * var(--window-text, 1))/1.6 "DejaVu Sans", sans-serif; user-select: none;
 }
 /* The bar of the four menus, at the drop-down's top, the shown one lit. */
-#menu .bar { display: flex; margin: -4px 0 4px; background: #24272c; border-bottom: 1px solid #3a3f47; }
+#menu .bar { display: flex; position: sticky; top: -4px; z-index: 1; margin: -4px 0 4px; background: #24272c; border-bottom: 1px solid #3a3f47; }
 #menu .bar .title { padding: 1px 14px; white-space: nowrap; cursor: default; }
 #menu .bar .title:hover { background: #2c3138; }
 #menu .bar .title.current { background: #2f5d8a; color: #fff; font-weight: normal; }
 #menu .item { padding: 0 14px; white-space: pre; cursor: default; }
 #menu .item:hover { background: #2f5d8a; }
-#menu .heading { color: #8a929c; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+#menu .heading { color: #8a929c; font-size: calc(11px * var(--window-text, 1)); text-transform: uppercase; letter-spacing: 1px; }
 #menu .heading:hover { background: none; }
 #menu .current { color: #fff; font-weight: bold; }
 #menu hr { border: 0; border-top: 1px solid #3a3f47; margin: 4px 0; }
 #menu .error { margin: 4px 10px; padding: 6px; max-height: 240px; overflow: auto; white-space: pre-wrap;
-  background: #3a1616; color: #ffb4b4; font: 11px/1.4 "DejaVu Sans Mono", monospace; }
+  background: #3a1616; color: #ffb4b4; font: calc(11px * var(--window-text, 1))/1.4 "DejaVu Sans Mono", monospace; }
 #menu .note { margin: 4px 10px; padding: 6px; white-space: pre-wrap; background: #16283a; color: #c8dcf0;
-  font: 11px/1.4 "DejaVu Sans Mono", monospace; }
+  font: calc(11px * var(--window-text, 1))/1.4 "DejaVu Sans Mono", monospace; }
 #menu .problem { color: #ffb4b4; }
 #menu .disabled { color: #5c636c; }
 #menu .disabled:hover { background: none; }
@@ -117,9 +120,8 @@ body.tabbed #stage { top: 46px; }
 #menu .submenu { position: relative; }
 #menu .submenu::after { content: '\25B8'; float: right; margin-left: 28px; color: #8a929c; }
 #menu .submenu.open { background: #2f5d8a; }
-#menu .sub { display: none; position: absolute; left: 100%; top: -5px; min-width: 160px; padding: 4px 0;
+#menu .sub { display: none; position: fixed; min-width: calc(160px * var(--window-text, 1)); padding: 4px 0;
   background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a; font-weight: normal; }
-#menu .sub.left { left: auto; right: 100%; }
 #menu .submenu.open > .sub { display: block; }
 /* A long path shows its end: the line runs right to left, so it
    overflows and ellipsizes at its left, and the bdi keeps the path's own
@@ -134,33 +136,33 @@ body.tabbed #stage { top: 46px; }
 #chooser {
   position: absolute; top: 22px; left: 0; right: 0; bottom: 0; z-index: 35;
   display: flex; align-items: flex-start; justify-content: center; padding-top: 48px;
-  background: #000a; font: 13px/1.6 "DejaVu Sans", sans-serif;
+  background: #000a; font: calc(13px * var(--window-text, 1))/1.6 "DejaVu Sans", sans-serif;
 }
 #chooser[hidden] { display: none; }
 #chooser .dialog {
-  width: min(640px, calc(100% - 32px)); box-sizing: border-box; padding: 10px 14px 12px;
+  width: min(calc(640px * var(--window-text, 1)), calc(100% - 32px)); box-sizing: border-box; padding: 10px 14px 12px;
   background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a;
 }
 #chooser .title { font-weight: bold; color: #fff; margin-bottom: 6px; }
 #chooser .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-#chooser .name { flex: none; width: 72px; color: #8a929c; }
+#chooser .name { flex: none; width: calc(72px * var(--window-text, 1)); color: #8a929c; }
 #chooser .agents { display: flex; gap: 18px; }
 #chooser select, #chooser input:not([type]), #chooser input[type="text"] {
   flex: 1 1 auto; min-width: 0; background: #0f1114; color: #e6e9ed; border: 1px solid #4a505a;
-  font: 12px/1.6 "DejaVu Sans Mono", monospace; padding: 1px 4px;
+  font: calc(12px * var(--window-text, 1))/1.6 "DejaVu Sans Mono", monospace; padding: 1px 4px;
 }
 #chooser button {
   flex: none; background: #2a2e35; color: #d8dde3; border: 1px solid #4a505a; padding: 1px 10px;
-  font: 12px/1.6 "DejaVu Sans", sans-serif;
+  font: calc(12px * var(--window-text, 1))/1.6 "DejaVu Sans", sans-serif;
 }
 #chooser button:hover:not(:disabled) { background: #2f5d8a; }
 #chooser button:disabled { color: #666; }
-#chooser .hint { margin-left: 80px; color: #8a929c; font-size: 11px; }
+#chooser .hint { margin-left: calc(calc(72px * var(--window-text, 1)) + 8px); color: #8a929c; font-size: calc(11px * var(--window-text, 1)); }
 #chooser .hint[hidden], #chooser .error[hidden] { display: none; }
 #chooser .env, #chooser .dropped { font-family: "DejaVu Sans Mono", monospace; overflow-wrap: anywhere; }
 #chooser .dropped { color: #e0b050; }
-#chooser .error { margin: 6px 0 0 80px; padding: 6px; white-space: pre-wrap; background: #3a1616; color: #ffb4b4;
-  font: 11px/1.4 "DejaVu Sans Mono", monospace; }
+#chooser .error { margin: 6px 0 0 calc(calc(72px * var(--window-text, 1)) + 8px); padding: 6px; white-space: pre-wrap; background: #3a1616; color: #ffb4b4;
+  font: calc(11px * var(--window-text, 1))/1.4 "DejaVu Sans Mono", monospace; }
 #chooser .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 #chooser .open { background: #2f5d8a; }
 /* Agent sessions in the menu (decision 0027). */
@@ -168,44 +170,46 @@ body.tabbed #stage { top: 46px; }
 #menu .session { display: flex; gap: 10px; white-space: nowrap; }
 #menu .session.ended { opacity: 0.55; }
 #menu .session span { flex: none; }
-#menu .session .s-label { width: 120px; overflow: hidden; text-overflow: ellipsis; }
+#menu .session .s-label { width: calc(120px * var(--window-text, 1)); overflow: hidden; text-overflow: ellipsis; }
 #menu .session .s-folder { flex: 1 1 auto; min-width: 60px; overflow: hidden; text-overflow: ellipsis; color: #a7b0ba; }
-#menu .session .s-state { width: 58px; }
+#menu .session .s-state { width: calc(58px * var(--window-text, 1)); }
 #menu .session .working { color: #e0b050; }
 #menu .session .waiting { color: #8fd18f; }
 #menu .session .idle, #menu .session .unknown, #menu .session .ended { color: #8a929c; }
-#menu .session .s-age { width: 38px; text-align: right; color: #8a929c; }
-#menu .session .s-where { width: 52px; color: #6fa8dc; }
+#menu .session .s-age { width: calc(38px * var(--window-text, 1)); text-align: right; color: #8a929c; }
+#menu .session .s-where { width: calc(52px * var(--window-text, 1)); color: #6fa8dc; }
 #menu .none { color: #8a929c; }
 #menu .none:hover { background: none; }
 
 /* The sessions dashboard's pane (decision 0028): app DOM at the
    terminal's rect, in the terminal theme's foreground. */
 #term .pane.dashboard { overflow: auto; outline: none; padding: 6px 8px; box-sizing: border-box;
-  font: 12px/1.5 "DejaVu Sans Mono", monospace; }
+  font: calc(12px * var(--window-text, 1))/1.5 "DejaVu Sans Mono", monospace; }
 .dashboard .d-head { font-weight: bold; margin-bottom: 6px; }
 .dashboard .d-across { display: flex; gap: 10px; margin-bottom: 10px; }
-.dashboard .d-chart { flex: 1 1 0; min-width: 0; position: relative; border: 1px solid #ffffff22; padding: 3px 6px; }
-.dashboard .d-title { opacity: 0.7; font-size: 11px; }
-.dashboard .d-value { position: absolute; top: 3px; right: 6px; font-weight: bold; }
-.dashboard .d-chart canvas { display: block; width: 100%; height: 56px; }
+/* A chart's title and value share its first line, the title cut with
+   an ellipsis where the chart is narrow, so they never meet. */
+.dashboard .d-chart { flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; border: 1px solid #ffffff22; padding: 3px 6px; }
+.dashboard .d-title { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.7; font-size: calc(11px * var(--window-text, 1)); }
+.dashboard .d-value { flex: none; margin-left: 6px; font-weight: bold; }
+.dashboard .d-chart canvas { display: block; flex: 0 0 100%; width: 100%; height: 56px; }
 .dashboard .d-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; border-bottom: 1px solid #ffffff14; cursor: default; user-select: none; }
 .dashboard .d-row:not(.d-header):not(.ended) { cursor: pointer; }
 .dashboard .d-row:not(.d-header):not(.ended):hover { background: #ffffff10; }
-.dashboard .d-header { opacity: 0.6; font-size: 11px; }
+.dashboard .d-header { opacity: 0.6; font-size: calc(11px * var(--window-text, 1)); }
 .dashboard .d-row.ended { opacity: 0.4; }
-.dashboard .d-label { flex: none; width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dashboard .d-folder { flex: 1 1 120px; min-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.75; }
-.dashboard .d-state { flex: none; width: 58px; }
+.dashboard .d-label { flex: none; width: calc(110px * var(--window-text, 1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard .d-folder { flex: 1 1 calc(120px * var(--window-text, 1)); min-width: calc(60px * var(--window-text, 1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.75; }
+.dashboard .d-state { flex: none; width: calc(58px * var(--window-text, 1)); }
 .dashboard .d-state.working { color: #e0b050; }
 .dashboard .d-state.waiting { color: #8fd18f; }
-.dashboard .d-spark { flex: none; width: 96px; display: flex; align-items: center; gap: 4px; }
+.dashboard .d-spark { flex: none; width: max(calc(96px * var(--window-text, 1)), calc(58px + 38px * var(--window-text, 1))); display: flex; align-items: center; gap: 4px; }
 .dashboard .d-spark canvas { width: 54px; height: 20px; flex: none; }
-.dashboard .d-dial { width: 118px; }
+.dashboard .d-dial { width: calc(118px * var(--window-text, 1)); }
 .dashboard .d-header .d-dial { text-overflow: ellipsis; }
-.dashboard .d-board { flex: none; width: 104px; display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; }
+.dashboard .d-board { flex: none; width: max(calc(104px * var(--window-text, 1)), calc(50px + 54px * var(--window-text, 1))); display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; }
 .dashboard .d-board canvas { width: 46px; height: 20px; flex: none; }
-.dashboard .d-header .d-board { font-size: 11px; }
-.dashboard .d-num { font-size: 11px; opacity: 0.85; white-space: nowrap; overflow: hidden; }
-.dashboard .d-header .d-spark { font-size: 11px; overflow: hidden; white-space: nowrap; }
+.dashboard .d-header .d-board { font-size: calc(11px * var(--window-text, 1)); }
+.dashboard .d-num { font-size: calc(11px * var(--window-text, 1)); opacity: 0.85; white-space: nowrap; overflow: hidden; }
+.dashboard .d-header .d-spark { font-size: calc(11px * var(--window-text, 1)); overflow: hidden; white-space: nowrap; }
 .dashboard .d-none { opacity: 0.7; padding: 6px 0; }

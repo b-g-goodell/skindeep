@@ -132,8 +132,13 @@ api.onSkin(skin => {
     focusActive()
   })
 })
-api.settings().then(s => SkinView.setSettings(s, terms))
-api.onSettings(s => SkinView.setSettings(s, terms))
+// The window's own text at the user's window text size (decision 0036).
+function settings (s) {
+  document.documentElement.style.setProperty('--window-text', String(((s && s['text.window']) || 100) / 100))
+  SkinView.setSettings(s, terms)
+}
+api.settings().then(settings)
+api.onSettings(settings)
 api.onMetrics(snap => {
   metrics = snap
   SkinView.update(snap)
