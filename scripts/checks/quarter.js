@@ -42,9 +42,19 @@ async function one (skin) {
   const { app, win } = await launch([claudeFake], { appArgs: ['--skin', skin, '--no-viz'], env: { SKINNED_GL: 'swiftshader' } })
   await sleep(2500)
   const seen = {}
+  const want = s => Math.min(1, s.stage[0] / sw.minWidth, s.stage[1] / (sw.minHeight - 22))
+  // The page rescales after the window and its stage take their new
+  // size, later under load: wait up to 10 s for the size asked and the
+  // scale its stage asks, so a fixed wait never reads the size before.
   const look = async tag => {
-    await sleep(800)
-    seen[tag] = { ...(await size(app)), ...(await page(win)) }
+    for (let i = 0; i < 100; i++) {
+      await sleep(100)
+      seen[tag] = { ...(await size(app)), ...(await page(win)) }
+      const v = seen[tag]
+      const to = tag === 'floor' ? v.min : TILE
+      v.waited = (i + 1) * 100
+      if (v.content[0] === to[0] && v.content[1] === to[1] && v.height === v.content[1] && (tag === 'quarter' || v.tabs) && Math.abs(v.scale - want(v)) < 1e-6) break
+    }
     await shot(win, path.join(out, `${skin}-${tag}.png`))
   }
   await resize(app, ...TILE)
@@ -66,7 +76,7 @@ async function one (skin) {
     } else {
       check(s.content[0] === s.min[0] && s.content[1] === s.min[1], `${at}: the window is not at its minimum, ${s.content} for ${s.min}`)
     }
-    const k = Math.min(1, s.stage[0] / sw.minWidth, s.stage[1] / (sw.minHeight - 22))
+    const k = want(s)
     check(Math.abs(s.scale - k) < 1e-6, `${at}: scale ${s.scale}, want ${k}`)
     check(s.term <= s.height && s.menu <= s.height, `${at}: the terminal or menu runs past the window's bottom`)
     check(s.cols >= 40 && s.rows >= 10, `${at}: ${s.cols} x ${s.rows} cells, want 40 x 10`)
