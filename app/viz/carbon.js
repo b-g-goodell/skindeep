@@ -22,8 +22,11 @@
 // drawn atom's level lit and its last jump an arrow, the ground term's
 // fine structure in an inset. Along the bottom the spectrum. The two
 // clocks, the ensemble, the cloud and the fronts sit behind small
-// interfaces: Clock, Ensemble, Cloud, Front and Warp. Signals: see
-// react. The pointer: see pointer.
+// interfaces: Clock, Ensemble, Cloud, Front and Warp. A magnetic field B
+// (issue #158), set on a dial, turns every atom's axis about B at its
+// Larmor rate g_J mu_B B / h on the event clock, and a polarized pulse
+// aligns the ensemble so that the rate at a detector beats: see Larmor.
+// Signals: see react. The pointer: see pointer.
 
 ;(function (root) {
   const D = typeof module === 'object' && module.exports ? require('./carbon-data') : root.CarbonData
@@ -74,6 +77,20 @@
   // crosses that cloud's diameter in about half a second.
   const VIEW = 24
   const MONO = '"DejaVu Sans Mono", monospace'
+  // The field: the Bohr magneton over h, Hz a tesla (CODATA 2022), the
+  // dial's largest field and the field at start, tesla, and its angle to
+  // z at start, degrees. The pulse's level, the detector's share of the
+  // sphere, and its trace: a sample every TRACE_DT of the event clock,
+  // TRACE_T of them shown. The detector counts one line of the pulsed
+  // level through a filter, its strongest visible line.
+  const MU_B_H = 1.39962449171e10
+  const B_MAX = 2e-3
+  const B_START = 0.3e-3
+  const DEG_START = 60
+  const PULSE_LEVEL = '2p4p_3P_2'
+  const DETECT = 0.05
+  const TRACE_DT = 0.002
+  const TRACE_T = 1
 
   // Text outside ASCII, by code point.
   const U = (...c) => String.fromCharCode(...c)
@@ -89,6 +106,7 @@
   const DELTA = U(0x394)
   const THETA = U(0x398)
   const DOTS = U(0x2026)
+  const DEG = U(0xb0)
 
   // A level is in the ground term.
   const ground = l => l.conf === '2s2.2p2' && l.term === '3P'
@@ -96,6 +114,63 @@
   // ---- Orbitals --------------------------------------------------------
 
   const fact = n => n <= 1 ? 1 : n * fact(n - 1)
+
+  // The Clebsch-Gordan coefficient <j1 m1; j2 m2 | J M> for integer
+  // momenta, by Racah's formula.
+  function cg (j1, m1, j2, m2, J, M) {
+    if (m1 + m2 !== M || Math.abs(m1) > j1 || Math.abs(m2) > j2 || Math.abs(M) > J || J < Math.abs(j1 - j2) || J > j1 + j2) return 0
+    let s = 0
+    for (let k = 0; k <= j1 + j2 - J; k++) {
+      const d = [k, j1 + j2 - J - k, j1 - m1 - k, j2 + m2 - k, J - j2 + m1 + k, J - j1 - m2 + k]
+      if (d.some(x => x < 0)) continue
+      s += (k % 2 ? -1 : 1) / d.reduce((p, x) => p * fact(x), 1)
+    }
+    return s * Math.sqrt((2 * J + 1) * fact(J + j1 - j2) * fact(J - j1 + j2) * fact(j1 + j2 - J) / fact(j1 + j2 + J + 1) *
+      fact(J + M) * fact(J - M) * fact(j1 - m1) * fact(j1 + m1) * fact(j2 - m2) * fact(j2 + m2))
+  }
+
+  // ---- Rotations --------------------------------------------------------
+
+  // v turned by ang about the unit vector u, right-handed (Rodrigues).
+  function turnAbout (u, ang, v) {
+    const c = Math.cos(ang)
+    const s = Math.sin(ang)
+    const d = (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) * (1 - c)
+    return [
+      v[0] * c + (u[1] * v[2] - u[2] * v[1]) * s + u[0] * d,
+      v[1] * c + (u[2] * v[0] - u[0] * v[2]) * s + u[1] * d,
+      v[2] * c + (u[0] * v[1] - u[1] * v[0]) * s + u[2] * d
+    ]
+  }
+  // The same turn as a 3 by 3 matrix, rows first, and the product A B.
+  function rotation (u, ang) {
+    const m = new Array(9)
+    for (let c = 0; c < 3; c++) {
+      const e = turnAbout(u, ang, [c === 0 ? 1 : 0, c === 1 ? 1 : 0, c === 2 ? 1 : 0])
+      for (let r = 0; r < 3; r++) m[3 * r + c] = e[r]
+    }
+    return m
+  }
+  function times (A, B) {
+    const C = new Array(9)
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) C[3 * i + j] = A[3 * i] * B[j] + A[3 * i + 1] * B[3 + j] + A[3 * i + 2] * B[6 + j]
+    return C
+  }
+  const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+  const Z = [0, 0, 1]
+  const unit = v => {
+    const n = Math.hypot(v[0], v[1], v[2]) || 1
+    return [v[0] / n, v[1] / n, v[2] / n]
+  }
+  // A vector given about z, carried to the frame whose z is the unit
+  // vector n: any such frame, since every pattern is round about its
+  // axis.
+  function carry (n, v) {
+    const h = Math.abs(n[2]) < 0.9 ? Z : [1, 0, 0]
+    const a = unit([h[1] * n[2] - h[2] * n[1], h[2] * n[0] - h[0] * n[2], h[0] * n[1] - h[1] * n[0]])
+    const b = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]]
+    return [v[0] * a[0] + v[1] * b[0] + v[2] * n[0], v[0] * a[1] + v[1] * b[1] + v[2] * n[1], v[0] * a[2] + v[1] * b[2] + v[2] * n[2]]
+  }
 
   // R_nl(r) of the RHF basis: sum_j c_j N_j r^(n_j - 1) exp(-zeta_j r),
   // N_j = (2 zeta_j)^(n_j + 1/2) / sqrt((2 n_j)!). col: the coefficient's
@@ -461,23 +536,43 @@
     return radiating.filter(k => D.levels[k].E > D.levels[i].E)
   }
 
-  // N atoms at one site, each { lv, M }: its level and its M_L about z.
-  // Ensemble.step runs each for dt seconds of the event clock by
-  // Gillespie's method, its decay at 1 / tau on screen competing with the
-  // field's collisions at rate, calling excite(i) or jump(i, line).
-  // Ensemble.q draws a jump's component q = M_upper - M_lower, uniform
-  // among those the multipole's rank and the lower level's L allow.
+  // N atoms at one site, each { lv, M, n, t0 }: its level, its M_L about
+  // its own axis, the unit vector n at time t0 (see Larmor). Ensemble.step
+  // runs each for dt seconds of the event clock by Gillespie's method,
+  // its decay at 1 / tau on screen competing with the field's collisions
+  // at rate, calling excite(i, at) or jump(i, line, at), at the seconds
+  // into the step it happened. Ensemble.weights gives a jump's components
+  // q = M_upper - M_lower with their weights, the squared orbital
+  // Clebsch-Gordan coefficient <L_l M-q; k q | L_u M> of the multipole's
+  // rank k. A line whose L break the triangle, which LS coupling forbids
+  // and only mixing allows, takes every q of the rank alike: it
+  // radiates isotropically from any M, and the jump keeps M within the
+  // lower L. Ensemble.q draws one.
   const Ensemble = {
     make (n, lv) {
-      return Array.from({ length: n }, () => ({ lv: typeof lv === 'function' ? lv() : lv, M: 0 }))
+      return Array.from({ length: n }, () => ({ lv: typeof lv === 'function' ? lv() : lv, M: 0, n: Z, t0: 0 }))
+    },
+
+    weights (ln, M) {
+      const k = ln.type === 'E2' ? 2 : 1
+      const Lu = Lof(D.levels[ln.u])
+      const Ll = Lof(D.levels[ln.l])
+      const out = []
+      let sum = 0
+      for (let q = -k; q <= k; q++) {
+        const c = cg(Ll, M - q, k, q, Lu, M)
+        if (c * c > 1e-12) out.push([q, c * c])
+        sum += c * c
+      }
+      if (sum > 1e-12) return out.map(e => [e[0], e[1] / sum])
+      const all = []
+      for (let q = -k; q <= k; q++) all.push([q, 1 / (2 * k + 1)])
+      return all
     },
 
     q (a, ln) {
-      const rank = ln.type === 'E2' ? 2 : 1
-      const L = Lof(D.levels[ln.l])
-      const ok = []
-      for (let q = -rank; q <= rank; q++) if (Math.abs(a.M - q) <= L) ok.push(q)
-      return ok.length ? ok[Math.floor(Math.random() * ok.length)] : 0
+      const w = Ensemble.weights(ln, a.M)
+      return w.length ? pick(w, e => e[1], Math.random())[0] : 0
     },
 
     step (atoms, dt, rate, excite, jump) {
@@ -493,11 +588,94 @@
           const w = -Math.log(1 - Math.random()) / total
           if (w > left) break
           left -= w
-          if (Math.random() * total < down) jump(i, decay(a.lv, Math.random()))
-          else excite(i)
+          if (Math.random() * total < down) jump(i, decay(a.lv, Math.random()), dt - left)
+          else excite(i, dt - left)
         }
       }
     }
+  }
+
+  // ---- The field ---------------------------------------------------------
+
+  // An atom in a field B (issue #158, research carbon-beyond.md 5.2): a
+  // state of M about an axis not along B precesses about B at the Larmor
+  // rate g_J mu_B B / h, right-handed (dJ/dt = Omega x J, Omega = g_J
+  // mu_B B / hbar), on the event clock divided by EVENT; one of M about B
+  // stands. The level's g_J moves the whole M_L-resolved state, a model
+  // of LS coupling. b is { T, u }: tesla and the unit direction.
+  // Larmor.rate(lv, b): turns a second on screen, 0 for J = 0.
+  // Larmor.axis(a, t, b): atom a's axis at time t. Larmor.frame(a, t, b):
+  // the drawn atom's frame, its matrix O at t0 turned about B, and back
+  // about its own axis by the share of the turn along that axis, so that
+  // the frame swings and does not spin: a state round about its axis
+  // shows no turn that is not a precession.
+  const Larmor = {
+    rate: (lv, b) => lv.gJ && b.T ? lv.gJ * MU_B_H * b.T / EVENT : 0,
+    axis (a, t, b) {
+      const f = Larmor.rate(D.levels[a.lv], b)
+      return f ? unit(turnAbout(b.u, 2 * Math.PI * f * (t - a.t0), a.n)) : a.n
+    },
+    frame (a, t, b) {
+      const f = Larmor.rate(D.levels[a.lv], b)
+      if (!f) return a.O
+      const th = 2 * Math.PI * f * (t - a.t0)
+      const cosB = b.u[0] * a.n[0] + b.u[1] * a.n[1] + b.u[2] * a.n[2]
+      return times(times(rotation(b.u, th), a.O), rotation(Z, -th * cosB))
+    }
+  }
+
+  // The mean over the sphere of each pattern, for the angular density.
+  const patternMean = (type, q) => type === 'E2' ? [2 / 15, 0.8, 0.8][Math.abs(q)] : 2 / 3
+  // The angular density of line k's photon from M_L = M about the
+  // atom's axis, over the isotropic one: sum over q of the weight times
+  // the pattern over its mean, a polynomial in x = cos^2 Theta, [p0, p1,
+  // p2], exact since every pattern is of degree 2 or less in x.
+  const linePolys = new Map()
+  function linePoly (k, M) {
+    const key = k * 32 + M + 16
+    let p = linePolys.get(key)
+    if (p) return p
+    const ln = D.lines[k]
+    const at = x => {
+      let s = 0
+      for (const [q, w] of Ensemble.weights(ln, M)) s += w * pattern(ln.type, q, Math.sqrt(x)) / patternMean(ln.type, q)
+      return s
+    }
+    const f0 = at(0)
+    const fh = at(0.5)
+    const f1 = at(1)
+    const p2 = 2 * (f1 - 2 * fh + f0)
+    p = [f0, f1 - f0 - p2, p2]
+    linePolys.set(key, p)
+    return p
+  }
+  // The angular density of level i's next photon from M_L = M, about its
+  // axis, over the isotropic density: sum over its lines of the branch
+  // times sum over q of the weight times the pattern over its mean, a
+  // polynomial in x = cos^2 Theta, [p0, p1, p2]. Summed over M it is
+  // flat: an atom excited without regard to M radiates isotropically.
+  const polys = new Map()
+  function emission (i, M) {
+    const key = i * 32 + M + 16
+    let p = polys.get(key)
+    if (p) return p
+    graph()
+    const at = x => {
+      let s = 0
+      const c = Math.sqrt(x)
+      for (const k of downs[i]) {
+        const ln = D.lines[k]
+        for (const [q, w] of Ensemble.weights(ln, M)) s += ln.branch * w * pattern(ln.type, q, c) / patternMean(ln.type, q)
+      }
+      return s
+    }
+    const f0 = at(0)
+    const fh = at(0.5)
+    const f1 = at(1)
+    const p2 = 2 * (f1 - 2 * fh + f0)
+    p = [f0, f1 - f0 - p2, p2]
+    polys.set(key, p)
+    return p
   }
 
   // ---- The cloud ---------------------------------------------------------
@@ -522,8 +700,9 @@
   // M) makes one, Cloud.step(c, dt) draws SEETHE of the points afresh
   // each 60th of a second, so it seethes and keeps its shape, and turns
   // each point of m != 0 about z at Madelung's m / rho^2 (atomic units)
-  // on the light clock, and Cloud.draw(c, fr, area, dim, rect) projects
-  // them, far points dimmer and smaller, the outer electron's in amber.
+  // on the light clock, and Cloud.draw(c, fr, area, dim, rect, O) turns
+  // them by the atom's frame O and projects them, far points dimmer and
+  // smaller, the outer electron's in amber.
   const Cloud = {
     make (lv, M) {
       const occ = occupations(lv, M)
@@ -584,10 +763,13 @@
       }
     },
 
-    draw (c, fr, a, dim, rect) {
+    draw (c, fr, a, dim, rect, O = IDENTITY) {
       const p = c.pts
       for (let i = 0; i < c.kinds.length; i++) {
-        const v = fr.project(p[3 * i], p[3 * i + 1], p[3 * i + 2])
+        const x = p[3 * i]
+        const y = p[3 * i + 1]
+        const z = p[3 * i + 2]
+        const v = fr.project(O[0] * x + O[1] * y + O[2] * z, O[3] * x + O[4] * y + O[5] * z, O[6] * x + O[7] * y + O[8] * z)
         if (v.x < a.x || v.x >= a.x + a.w || v.y < a.y || v.y >= a.y + a.h) continue
         const near = Math.max(0, Math.min(1, (v.s - 0.8) / 0.45))
         const outer = i >= c.outerFrom
@@ -610,13 +792,14 @@
   const shape = (k, c) => SHAPES[k][Math.round((c + 1) * 128)]
 
   // One photon's front, from the site, on the light clock: line k,
-  // component q, born at t. Its amplitude follows the physics: intensity
+  // component q about the unit axis n its atom had, born at t: it keeps
+  // that pattern as the atom turns on. Its amplitude follows the physics: intensity
   // h nu times the pattern over r^2, drawn as its square root, so
   // sqrt(nu / nu_538) sqrt(pattern) R0 / r, 1 at most. Its crests'
   // spacing on screen grows as lambda^0.35, a symbol.
   const Front = {
-    make (k, ln, q, t) {
-      return { k, ln, q, t, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, gap: 4.5 * Math.pow(wl(ln) / 119, 0.35) }
+    make (k, ln, q, t, n = Z) {
+      return { k, ln, q, t, n, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, gap: 4.5 * Math.pow(wl(ln) / 119, 0.35) }
     },
 
     // Its radius, bohr, at time now.
@@ -624,8 +807,9 @@
 
     // The visible fronts, in their hue: each the limb of its sphere and
     // of CRESTS - 1 crests behind it, as arcs whose brightness is the
-    // drawn amplitude in the arc's direction, cos(Theta) = sin(phi) upZ
-    // on the limb. Arcs batched by colour and brightness.
+    // drawn amplitude in the arc's direction, cos(Theta) = cos(phi) ax +
+    // sin(phi) ay on the limb, [ax, ay] its axis on the screen. Arcs
+    // batched by colour and brightness.
     draw (g, fronts, fr, now) {
       const N = 36
       const bins = new Map()
@@ -634,6 +818,9 @@
         const Rb = Front.radius(f, now)
         const R = Rb * fr.k
         const a0 = Math.min(1, f.amp * R0 / Math.max(Rb, 0.1))
+        const v = fr.turn(f.n[0], f.n[1], f.n[2])
+        const ax = v.x
+        const ay = v.y
         let list = bins.get(f.ln.rgb)
         if (!list) bins.set(f.ln.rgb, list = [])
         for (let w = 0; w < CRESTS; w++) {
@@ -643,7 +830,7 @@
           for (let j = 0; j < N; j++) {
             const p0 = 2 * Math.PI * j / N
             const p1 = 2 * Math.PI * (j + 1) / N
-            const b = Math.round(10 * fade * shape(f.kind, Math.sin((p0 + p1) / 2) * fr.upZ))
+            const b = Math.round(10 * fade * shape(f.kind, Math.cos((p0 + p1) / 2) * ax + Math.sin((p0 + p1) / 2) * ay))
             if (b <= 0) continue
             const path = list[b] || (list[b] = new Path2D())
             path.moveTo(fr.cx + r * Math.cos(p0), fr.cy - r * Math.sin(p0))
@@ -665,10 +852,29 @@
     }
   }
 
+  // Each kind's shape about an axis whose length on the screen is l, as
+  // harmonics of the screen angle psi from that axis: shape(k, l cos psi)
+  // = h_0 + sum h_n cos(2 n psi), n 1 to HARM, by l in 32 steps. Every
+  // shape is even in cos, so only even harmonics occur.
+  const HARM = 4
+  const HARMS = KINDS.map((_, k) => Array.from({ length: 33 }, (_, j) => {
+    const h = new Float32Array(HARM + 1)
+    const N = 256
+    for (let i = 0; i < N; i++) {
+      const psi = 2 * Math.PI * (i + 0.5) / N
+      const g = shapeOf(k, j / 32 * Math.cos(psi))
+      for (let n = 0; n <= HARM; n++) h[n] += g * Math.cos(2 * n * psi) * (n ? 2 : 1) / N
+    }
+    return h
+  }))
+
   // The invisible fronts as image transforms over the atom's pixels, in
-  // one pass, since every front shares one centre: each front adds to a
-  // table by integer radius, per pattern kind, and a pixel takes the
-  // tables at its radius times each kind's shape in its direction.
+  // one pass, since every front shares one centre. Each front keeps the
+  // axis of its moment of emission, so its shape is taken about that
+  // axis on the screen, as harmonics: every front adds its shape's
+  // harmonics, turned to its axis, to tables by integer radius, and a
+  // pixel sums the tables at its radius against the harmonics of its own
+  // angle. The cost does not grow with the number of axes.
   // Ultraviolet fronts sharpen the picture and lift its contrast across a
   // band as wide as the front's crest spacing. Infrared fronts refract
   // it, shifting pixels along the radius by a ripple of that spacing, as
@@ -679,13 +885,15 @@
       const some = fronts.filter(f => !f.vis)
       if (!some.length || box.w < 4 || box.h < 4) return 0
       const rmax = Math.ceil(Math.hypot(box.w, box.h)) + 4
-      if (!Warp.tables || Warp.tables.n < rmax) Warp.tables = { n: rmax, S: KINDS.map(() => new Float32Array(rmax)), Dp: KINDS.map(() => new Float32Array(rmax)), on: new Uint8Array(rmax) }
+      const H2 = 2 * HARM + 1
+      if (!Warp.tables || Warp.tables.n < rmax) Warp.tables = { n: rmax, S: Array.from({ length: H2 }, () => new Float32Array(rmax)), Dp: Array.from({ length: H2 }, () => new Float32Array(rmax)), on: new Uint8Array(rmax) }
       const T = Warp.tables
-      for (let k = 0; k < KINDS.length; k++) {
+      for (let k = 0; k < H2; k++) {
         T.S[k].fill(0)
         T.Dp[k].fill(0)
       }
       T.on.fill(0)
+      const c = new Float32Array(H2)
       let used = 0
       for (const f of some) {
         const Rb = Front.radius(f, now)
@@ -696,11 +904,22 @@
         const hi = Math.min(rmax - 1, Math.ceil(R + w))
         if (hi < lo) continue
         used++
+        // The front's harmonics about its axis on the screen.
+        const v = fr.turn(f.n[0], f.n[1], f.n[2])
+        const l = Math.min(1, Math.hypot(v.x, v.y))
+        const al = Math.atan2(v.y, v.x)
+        const h = HARMS[f.kind][Math.round(l * 32)]
+        c[0] = h[0]
+        for (let n = 1; n <= HARM; n++) {
+          c[2 * n - 1] = h[n] * Math.cos(2 * n * al)
+          c[2 * n] = h[n] * Math.sin(2 * n * al)
+        }
+        const tab = f.uv ? T.S : T.Dp
         for (let r = lo; r <= hi; r++) {
           const x = (r - R) / w
           const env = Math.exp(-x * x)
-          if (f.uv) T.S[f.kind][r] += a * env
-          else T.Dp[f.kind][r] += 4 * a * env * Math.sin(2 * Math.PI * (r - R) / f.gap)
+          const e = f.uv ? a * env : 4 * a * env * Math.sin(2 * Math.PI * (r - R) / f.gap)
+          for (let k = 0; k < H2; k++) tab[k][r] += e * c[k]
           T.on[r] = 1
         }
       }
@@ -714,6 +933,8 @@
       const H = box.h
       const ox = fr.cx - box.x
       const oy = fr.cy - box.y
+      const S = T.S
+      const Dp = T.Dp
       for (let y = 1; y < H - 1; y++) {
         const dy = y - oy
         for (let x = 1; x < W - 1; x++) {
@@ -721,16 +942,22 @@
           const rr = Math.sqrt(dx * dx + dy * dy)
           const ri = rr | 0
           if (ri >= rmax || !T.on[ri]) continue
-          const ci = Math.round(((rr > 0 ? -dy / rr * fr.upZ : 0) + 1) * 128)
-          let s = 0
-          let disp = 0
-          for (let k = 0; k < KINDS.length; k++) {
-            const a = T.S[k][ri]
-            const b = T.Dp[k][ri]
-            if (!a && !b) continue
-            const f = SHAPES[k][ci]
-            s += a * f
-            disp += b * f
+          // cos and sin of 2 n psi, psi the pixel's angle on the screen,
+          // y up.
+          const ux = rr > 0 ? dx / rr : 0
+          const uy = rr > 0 ? -dy / rr : 0
+          const c1 = ux * ux - uy * uy
+          const s1 = 2 * ux * uy
+          let cn = 1
+          let sn = 0
+          let s = S[0][ri]
+          let disp = Dp[0][ri]
+          for (let n = 1; n <= HARM; n++) {
+            const t = cn * c1 - sn * s1
+            sn = sn * c1 + cn * s1
+            cn = t
+            s += S[2 * n - 1][ri] * cn + S[2 * n][ri] * sn
+            disp += Dp[2 * n - 1][ri] * cn + Dp[2 * n][ri] * sn
           }
           const i = (y * W + x) * 4
           if (disp) {
@@ -741,7 +968,7 @@
             d[i + 1] = src[j + 1]
             d[i + 2] = src[j + 2]
           }
-          if (s) {
+          if (s > 0) {
             s = Math.min(1, s)
             for (let ch = 0; ch < 3; ch++) {
               const p = src[i + ch]
@@ -829,6 +1056,7 @@
     // The ensemble at rest in the ground term, J by its thermal
     // populations, and the one atom drawn, atoms[0].
     const atoms = Ensemble.make(N_ATOMS, () => thermal(Math.random()))
+    atoms[0].O = IDENTITY
     let entered = 0
     let last = null
     let cause = { text: 'at rest in the ground term', t: -10 }
@@ -843,51 +1071,171 @@
     // pointer last turned it, and the press while the pointer is down.
     const cam = { yaw: 0.4, pitch: 0.32, held: -1e9 }
     let press = null
-    const tally = { clicks: 0, turns: 0, excitations: 0, photons: 0, detected: 0 }
+    const tally = { clicks: 0, turns: 0, excitations: 0, photons: 0, detected: 0, fields: 0, pulses: 0 }
+    // The magnetic field: tesla, degrees from z toward x, and its unit
+    // direction, in the x-z plane: every excitation here is round about
+    // z, so B's azimuth about z changes nothing. The detector looks along
+    // y, perpendicular to z and to B, where an aligned atom's beat is
+    // deepest.
+    const mag = { T: B_START, deg: DEG_START, u: null }
+    const toward = deg => [Math.sin(deg * Math.PI / 180), 0, Math.cos(deg * Math.PI / 180)]
+    mag.u = toward(mag.deg)
+    const DETECTOR = [0, 1, 0]
+    const pulseLevel = levels.findIndex(l => l.id === PULSE_LEVEL)
+    const filter = downs[pulseLevel].filter(k => visible(lines[k])).sort((a, b) => lines[b].branch - lines[a].branch)[0]
+    // The rate at the detector, sampled: emission times t and rates r,
+    // the last sample's time, and the last pulse, { t, n }.
+    const trace = { t: [], r: [], last: 0 }
+    let pulsed = null
+    // When the drawn atom was last lifted, its axis set anew.
+    let lifted = 0
 
     // ---- The ensemble's state ----
 
-    // The drawn atom changed: its cloud snaps to the new level's.
-    function redraw (why) {
+    // The drawn atom changed at time t: its cloud snaps to the new
+    // level's.
+    function redraw (why, t = now) {
       const a = atoms[0]
       cl = Cloud.make(levels[a.lv], a.M)
-      entered = now
-      if (why) cause = { text: why, t: now }
+      entered = t
+      if (why) cause = { text: why, t }
     }
 
-    // Atom i to level k by a collision, its M_L drawn anew.
-    function lift (i, k, why) {
+    // Atom i's axis, and the drawn atom's frame, carried to time t at
+    // its present level's rate: before its level or the field changes.
+    function settle (i, t) {
+      const a = atoms[i]
+      if (i === 0) a.O = Larmor.frame(a, t, mag)
+      a.n = Larmor.axis(a, t, mag)
+      a.t0 = t
+    }
+
+    // Atom i to level k by a collision at time t, its M_L drawn anew about
+    // z, its axis z turned about B by a random phase: collisions come
+    // incoherently, so atoms lifted at one instant do not precess in
+    // step.
+    function lift (i, k, why, t = now) {
       const a = atoms[i]
       if (k < 0 || k === a.lv) return
       const L = Lof(levels[k])
       a.lv = k
       a.M = Math.floor(Math.random() * (2 * L + 1)) - L
+      const ph = 2 * Math.PI * Math.random()
+      a.n = mag.T ? unit(turnAbout(mag.u, ph, Z)) : Z
+      a.t0 = t
+      if (i === 0) {
+        a.O = mag.T ? rotation(mag.u, ph) : IDENTITY
+        lifted = t
+      }
       tally.excitations++
-      if (i === 0) redraw(why)
+      if (i === 0) redraw(why, t)
     }
 
-    // The field's collision: any radiating level above, by weight g.
-    function excite (i) {
-      const t = targets(atoms[i].lv)
-      if (t.length) lift(i, pick(t, k => levels[k].g, Math.random()), 'the field: electron collision')
+    // The field's collision at time t: any radiating level above, by
+    // weight g.
+    function excite (i, t = now) {
+      const up = targets(atoms[i].lv)
+      if (up.length) lift(i, pick(up, k => levels[k].g, Math.random()), 'the field: electron collision', t)
     }
 
-    // Atom i jumps down by line k, and its front leaves.
-    function jump (i, k) {
+    // Atom i jumps down by line k at time t, and its front leaves with
+    // the pattern of its component about the atom's axis then.
+    function jump (i, k, t = now) {
       const a = atoms[i]
       const ln = lines[k]
+      settle(i, t)
       const q = Ensemble.q(a, ln)
-      a.M -= q
+      const L = Lof(levels[ln.l])
+      a.M = Math.max(-L, Math.min(L, a.M - q))
       a.lv = ln.l
       tally.photons++
-      born.push(now)
-      fronts.push(Front.make(k, ln, q, now))
+      born.push(t)
+      fronts.push(Front.make(k, ln, q, t, a.n))
       if (fronts.length > FRONTS) detect(fronts.shift(), null)
       if (i === 0) {
         const mv = mover(levels[ln.u], levels[ln.l])
-        src = { pts: mv ? source(mv, q, SOURCE_PTS) : null, t: now, k, q }
-        last = { k, q, waited: now - entered, t: now }
-        redraw(null)
+        src = { pts: mv ? source(mv, q, SOURCE_PTS) : null, t, k, q, O: a.O }
+        last = { k, q, waited: t - entered, t }
+        redraw(null, t)
+      }
+    }
+
+    // A pulse of light linearly polarized along z, two photons: every
+    // atom in the ground term 3P to 2p4p 3P2 at once, each left in M_L =
+    // 0 about z, aligned, its axis z. A model of the alignment such a
+    // pulse makes, at its largest. All precess in step, so the light at
+    // the detector beats at twice the Larmor rate.
+    function pulse () {
+      let n = 0
+      for (let i = 0; i < atoms.length; i++) {
+        const a = atoms[i]
+        if (!ground(levels[a.lv])) continue
+        a.lv = pulseLevel
+        a.M = 0
+        a.n = Z
+        a.t0 = now
+        if (i === 0) {
+          a.O = IDENTITY
+          lifted = now
+          redraw(null)
+        }
+        n++
+      }
+      tally.excitations += n
+      tally.pulses++
+      pulsed = { t: now, n }
+      cause = { text: 'pulse: ' + n + ' atoms to ' + levelName(levels[pulseLevel]) + ', aligned along z', t: now }
+    }
+
+    // The field set on the dial: every atom settled under the old one.
+    function setField (tesla, deg) {
+      if (tesla === mag.T && deg === mag.deg) return
+      for (let i = 0; i < atoms.length; i++) settle(i, now)
+      mag.T = tesla
+      mag.deg = deg
+      mag.u = toward(deg)
+      tally.fields++
+    }
+
+    // The rate at the detector from the ensemble's state, sampled every
+    // TRACE_DT up to time t1: each atom in the filter line's upper level,
+    // the line's A on the event clock times its photon's angular density
+    // toward y over the isotropic one, times the detector's share DETECT
+    // of the sphere: the rate a detector there counts, its expectation.
+    // A pulse sends such a detector under one photon of the line, whose
+    // count would show the beat only folded over many pulses; this is
+    // what that count converges to.
+    function sample (t1) {
+      if (t1 - trace.last > 2) trace.last = t1 - 2
+      const live = []
+      const ln = lines[filter]
+      for (const a of atoms) {
+        if (a.lv !== ln.u) continue
+        const lv = levels[a.lv]
+        const w = 2 * Math.PI * Larmor.rate(lv, mag)
+        // n's y component at time t: n_y cos + (u x n)_y sin + u_y (u.n)
+        // (1 - cos) of w (t - t0).
+        const n = a.n
+        const u = mag.u
+        live.push({ k: ln.A / EVENT, p: linePoly(filter, a.M), w, t0: a.t0, c: n[1], s: u[2] * n[0] - u[0] * n[2], d: u[1] * (u[0] * n[0] + u[1] * n[1] + u[2] * n[2]) })
+      }
+      for (let t = trace.last + TRACE_DT; t <= t1; t += TRACE_DT) {
+        let r = 0
+        for (const e of live) {
+          const th = e.w * (t - e.t0)
+          const cs = Math.cos(th)
+          const y = e.c * cs + e.s * Math.sin(th) + e.d * (1 - cs)
+          const x = y * y
+          r += e.k * (e.p[0] + e.p[1] * x + e.p[2] * x * x)
+        }
+        trace.t.push(t)
+        trace.r.push(r * DETECT)
+        trace.last = t
+      }
+      const keep = Math.ceil(3 / TRACE_DT)
+      if (trace.t.length > keep + 200) {
+        trace.t.splice(0, trace.t.length - keep)
+        trace.r.splice(0, trace.r.length - keep)
       }
     }
 
@@ -898,7 +1246,7 @@
       flash[f.k] = 1
       tally.detected++
       if (!F) return
-      const dir = detectDir(f.ln.type, f.q)
+      const dir = carry(f.n, detectDir(f.ln.type, f.q))
       const v = F.turn(dir[0], dir[1], dir[2])
       dots.push({ x: F.cx + v.x * F.edge, y: F.cy - v.y * F.edge, z: v.z, fill: f.vis ? f.ln.rgb : '#aab3c5', t: now })
       if (dots.length > 240) dots.shift()
@@ -1278,12 +1626,13 @@
       // The drawn atom's cloud, dimmed while its jump's source flashes
       // over it, mint where psi_f* psi_i is positive, pink where negative.
       const flashing = src && src.pts && now - src.t < SOURCE_T
-      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect)
+      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect, Larmor.frame(atoms[0], now, mag))
       if (flashing) {
         const s = 1 - (now - src.t) / SOURCE_T
         const p = src.pts
+        const O = src.O
         for (let i = 0; i < p.length; i += 4) {
-          const v = F.project(p[i], p[i + 1], p[i + 2])
+          const v = F.project(O[0] * p[i] + O[1] * p[i + 1] + O[2] * p[i + 2], O[3] * p[i] + O[4] * p[i + 1] + O[5] * p[i + 2], O[6] * p[i] + O[7] * p[i + 1] + O[8] * p[i + 2])
           rect(p[i + 3] > 0 ? '#7dffd0' : '#ff8ad8', (0.5 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * s, v.x, v.y, 1.8)
         }
       }
@@ -1319,6 +1668,51 @@
       g.lineTo(bot.x, bot.y)
       g.stroke()
       g.setLineDash([])
+      // B, solid violet through the atom, its arrow at +B.
+      let tip = null
+      if (mag.T) {
+        const u = mag.u
+        const e = 1.15 * view
+        const p0 = F.project(-u[0] * e, -u[1] * e, -u[2] * e)
+        const x0 = p0.x
+        const y0 = p0.y
+        const p1 = F.project(u[0] * e, u[1] * e, u[2] * e)
+        tip = { x: p1.x, y: p1.y }
+        g.strokeStyle = '#b48cff'
+        g.fillStyle = '#b48cff'
+        g.lineWidth = 1.5
+        g.beginPath()
+        g.moveTo(x0, y0)
+        g.lineTo(tip.x, tip.y)
+        g.stroke()
+        const an = Math.atan2(tip.y - y0, tip.x - x0)
+        g.beginPath()
+        g.moveTo(tip.x, tip.y)
+        g.lineTo(tip.x - 8 * Math.cos(an - 0.4), tip.y - 8 * Math.sin(an - 0.4))
+        g.lineTo(tip.x - 8 * Math.cos(an + 0.4), tip.y - 8 * Math.sin(an + 0.4))
+        g.fill()
+        g.lineWidth = 1
+      }
+      // The drawn atom's axis, cyan: the axis of its M_L and of its next
+      // photon's pattern, turning about B.
+      const n = Larmor.axis(ax, now, mag)
+      const e = 0.7 * view
+      const q0 = F.project(-n[0] * e, -n[1] * e, -n[2] * e)
+      const nx = q0.x
+      const ny = q0.y
+      const q1 = F.project(n[0] * e, n[1] * e, n[2] * e)
+      g.strokeStyle = 'rgba(111, 227, 255, 0.8)'
+      g.lineWidth = 1.5
+      g.beginPath()
+      g.moveTo(nx, ny)
+      g.lineTo(q1.x, q1.y)
+      g.stroke()
+      g.lineWidth = 1
+      // The detector, along y on the circle where fronts are detected.
+      const dv = F.turn(DETECTOR[0], DETECTOR[1], DETECTOR[2])
+      const det = { x: F.cx + dv.x * F.edge * 0.96, y: F.cy - dv.y * F.edge * 0.96 }
+      g.strokeStyle = '#e8eefc'
+      g.strokeRect(Math.round(det.x) - 3.5, Math.round(det.y) - 3.5, 7, 7)
       g.font = font(10)
       g.textAlign = 'left'
       g.textBaseline = 'alphabetic'
@@ -1327,6 +1721,9 @@
       const rows = [['#e8eefc', levelName(lv) + '  M_L=' + ax.M + (cl.round ? ', round' : '')]]
       const tau = tauScreen(lv)
       rows.push(['#8c97ad', ground(lv) ? 'ground term, at rest' : TAU + ' ' + timeText(lv.tau) + ', ' + timeText(tau) + ' on the event clock'])
+      const fieldRows = [['#b48cff', fieldText()], ['#b48cff', turnText(lv)]]
+      if (lv.gJ) fieldRows.push(['#9a86c4', 'g_J ' + (lv.gJsrc === 'measured' ? lv.gJ + ', measured' : lv.gJ.toFixed(4) + ', LS: a model') + ', cyan its axis'])
+      rows.push(...fieldRows)
       if (o) rows.push(['#ffcf7a', o.nl + ' cloud: a model, <r> ' + D.outer[o.key].meanR.toFixed(1) + ' ' + A0])
       if (now - cause.t < 4) rows.push(['#9fb7e0', cause.text])
       if (last && now - last.t < 3) {
@@ -1345,12 +1742,14 @@
       // A narrower atom keeps the level, its clock, its photon and the
       // rate. Each row, then the axis's name, then the scale bar, is
       // written where it overlaps no text before it, or left out.
-      const keep = a.w < 320 * T ? [rows[0], rows[1], ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
+      const keep = a.w < 320 * T ? [rows[0], rows[1], ...fieldRows.slice(0, 2), ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
       let j = 0
       for (const [col, t, swatch] of keep) {
         const y = a.y + (11 + 12 * j) * T
         const x = a.x + 8 + (swatch ? 11 * T : 0)
-        const b = box(g, clip(g, t, fit - (x - a.x - 8)), x, y)
+        const room = fit - (x - a.x - 8)
+        const ts = Array.isArray(t) ? t : [t]
+        const b = box(g, clip(g, ts.find(v => g.measureText(v).width <= room) || ts[ts.length - 1], room), x, y)
         if (!fits(b)) continue
         if (swatch) {
           g.fillStyle = swatch
@@ -1362,11 +1761,160 @@
       }
       g.fillStyle = '#7d89a1'
       place(g, 'z, chosen', [[tx + 4, Math.max(a.y + 10 * T, ty)]])
+      if (tip) {
+        g.fillStyle = '#b48cff'
+        place(g, 'B', [[tip.x + 5, tip.y + 4 * T], [tip.x - 12 * T, tip.y + 4 * T]])
+      }
+      g.fillStyle = '#c9d3e6'
+      place(g, 'detector, y', [[det.x + 7, det.y + 4 * T], [det.x - 7 - 66 * T, det.y + 4 * T], [det.x - 30 * T, det.y - 7 * T]])
       // A scale bar, drawn only with its label.
       const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
       const bx = a.x + 10
       const by = a.y + a.h - 6
       if (place(g, step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', [[bx, by - 4]])) g.fillRect(bx, by, step * F.k, 1)
+    }
+
+    // The field's statements: the field, and the drawn atom's precession.
+    const mT = t => (t * 1e3).toFixed(2) + ' mT'
+    const alongZ = () => mag.deg % 180 === 0
+    function hz (f) {
+      if (f >= 1e6) return (f / 1e6).toPrecision(3) + ' MHz'
+      if (f >= 1e3) return (f / 1e3).toPrecision(3) + ' kHz'
+      return f.toPrecision(3) + ' Hz'
+    }
+    // Each a list, longest first, for the atom's width.
+    function fieldText () {
+      if (!mag.T) return ['B 0: no field']
+      if (alongZ()) return ['B ' + mT(mag.T) + ' along z']
+      const t = 'B ' + mT(mag.T) + ' at ' + Math.abs(mag.deg) + DEG + ' to z'
+      return [t + ', in the x-z plane', t]
+    }
+    function turnText (lv) {
+      if (!lv.gJ) return ['J = 0: no magnetic moment, no precession', 'J = 0: no precession']
+      if (!mag.T) return ['no field: nothing precesses']
+      if (alongZ()) {
+        const n = Larmor.axis(atoms[0], now, mag)
+        return Math.abs(n[2]) > 1 - 1e-9 ? ['an M state about B is stationary: nothing turns', 'M about B is stationary: no turn'] : ['tilted before B was set, it turns until a collision', 'tilted before, turns till a collision']
+      }
+      const f = Larmor.rate(lv, mag)
+      return ['turns about B at ' + hz(f) + ' on screen, ' + hz(f * EVENT) + ' real', 'turns ' + hz(f) + ' on screen, ' + hz(f * EVENT) + ' real', hz(f) + ' on screen, ' + hz(f * EVENT) + ' real']
+    }
+
+    // The dial, the pulse button and the detector's trace, along the
+    // atom's lower right, drawn last: R.dial { x, y, r }, R.pulse and
+    // R.trace boxes, or null. A small pane keeps the dial alone, with no
+    // text over its atom.
+    function controls (g) {
+      const a = R.atom
+      const r = Math.round((R.small ? 11 : 18) * T)
+      const d = { x: a.x + a.w - r - 8, y: a.y + a.h - r - 8, r }
+      R.dial = d
+      R.pulse = null
+      R.trace = null
+      g.save()
+      g.fillStyle = 'rgba(3, 5, 10, 0.75)'
+      g.beginPath()
+      g.arc(d.x, d.y, r + 2, 0, 2 * Math.PI)
+      g.fill()
+      g.strokeStyle = '#4b3d6e'
+      g.beginPath()
+      g.arc(d.x, d.y, r, 0, 2 * Math.PI)
+      g.stroke()
+      g.strokeStyle = '#2e3a50'
+      g.beginPath()
+      g.moveTo(d.x, d.y + r)
+      g.lineTo(d.x, d.y - r)
+      g.stroke()
+      // B on the dial: its angle from z, up, its length the square root
+      // of its share of B_MAX.
+      const len = r * Math.sqrt(mag.T / B_MAX)
+      const th = mag.deg * Math.PI / 180
+      g.strokeStyle = '#b48cff'
+      g.fillStyle = '#b48cff'
+      g.lineWidth = 2
+      g.beginPath()
+      g.moveTo(d.x, d.y)
+      g.lineTo(d.x + len * Math.sin(th), d.y - len * Math.cos(th))
+      g.stroke()
+      g.fillRect(d.x + len * Math.sin(th) - 2, d.y - len * Math.cos(th) - 2, 4, 4)
+      g.restore()
+      if (R.small) return
+      g.font = font(10)
+      g.textBaseline = 'middle'
+      g.textAlign = 'center'
+      const ph = Math.round(15 * T)
+      const pw = Math.round(44 * T)
+      const pb = { x: d.x - r - 8 - pw, y: Math.round(d.y - ph / 2), w: pw, h: ph }
+      const label = box(g, 'pulse', pb.x + pw / 2, pb.y + ph / 2)
+      if (fits(label)) {
+        g.fillStyle = '#1a1430'
+        g.fillRect(pb.x, pb.y, pb.w, pb.h)
+        g.strokeStyle = '#b48cff'
+        g.strokeRect(pb.x + 0.5, pb.y + 0.5, pb.w - 1, pb.h - 1)
+        g.fillStyle = '#e8eefc'
+        write(g, label)
+        R.pulse = pb
+      }
+      const tw = Math.round(Math.min(150 * T, a.w * 0.4))
+      const tht = Math.round(36 * T)
+      if (a.w < 260 * T || a.h < 200 * T) return
+      const tb = { x: pb.x - 8 - tw, y: a.y + a.h - 8 - tht, w: tw, h: tht }
+      R.trace = tb
+      drawTrace(g, tb)
+    }
+
+    // The rate at the detector over the last TRACE_T of detection time,
+    // a sample detected R / c after its emission, R the circle's radius:
+    // each pixel column its samples' least and largest rate, scaled to
+    // the window's largest. A pulse in the window is ticked in violet.
+    function drawTrace (g, tb) {
+      const delay = F.edge / F.k / Clock.light
+      const t1 = now - delay
+      const t0 = t1 - TRACE_T
+      g.save()
+      g.fillStyle = 'rgba(3, 5, 10, 0.75)'
+      g.fillRect(tb.x, tb.y, tb.w, tb.h)
+      g.strokeStyle = '#2e3a50'
+      g.strokeRect(tb.x + 0.5, tb.y + 0.5, tb.w - 1, tb.h - 1)
+      const ts = trace.t
+      const rs = trace.r
+      let i = ts.length
+      while (i > 0 && ts[i - 1] >= t0) i--
+      let top = 0
+      for (let k = i; k < ts.length && ts[k] <= t1; k++) top = Math.max(top, rs[k])
+      if (top > 0) {
+        const lo = new Float32Array(tb.w).fill(Infinity)
+        const hi = new Float32Array(tb.w).fill(-Infinity)
+        for (let k = i; k < ts.length && ts[k] <= t1; k++) {
+          const c = Math.min(tb.w - 1, Math.floor((ts[k] - t0) / TRACE_T * tb.w))
+          lo[c] = Math.min(lo[c], rs[k])
+          hi[c] = Math.max(hi[c], rs[k])
+        }
+        g.strokeStyle = '#c9d3e6'
+        g.beginPath()
+        const yOfR = v => tb.y + tb.h - 2 - (tb.h - 4) * v / top
+        for (let c = 0; c < tb.w; c++) {
+          if (lo[c] === Infinity) continue
+          g.moveTo(tb.x + c + 0.5, yOfR(hi[c]) - 0.5)
+          g.lineTo(tb.x + c + 0.5, yOfR(lo[c]) + 0.5)
+        }
+        g.stroke()
+      }
+      const shown = pulsed && pulsed.t >= t0 && pulsed.t <= t1
+      if (shown) {
+        g.fillStyle = '#b48cff'
+        g.fillRect(Math.round(tb.x + (pulsed.t - t0) / TRACE_T * tb.w), tb.y + 1, 1, tb.h - 2)
+      }
+      g.restore()
+      g.font = font(10)
+      g.textAlign = 'left'
+      g.textBaseline = 'middle'
+      g.fillStyle = '#8c97ad'
+      place(g, 'detector y, ' + wlText(wl(lines[filter])) + ', last ' + TRACE_T + ' s', [[tb.x, tb.y - 7 * T]])
+      const f2 = 2 * Larmor.rate(levels[pulseLevel], mag)
+      g.fillStyle = shown ? '#b48cff' : '#7d89a1'
+      const status = !shown ? 'no pulse: M incoherent, no beat' : f2 && !alongZ() ? 'pulse: beat at 2f = ' + hz(f2) : 'pulse: B along z or 0, no beat'
+      place(g, status, [[tb.x, tb.y - 19 * T]])
     }
 
     function clip (g, t, w) {
@@ -1525,7 +2073,14 @@
       if (R.ens) {
         g.font = font(10)
         const room = w - R.ens.x - 8
-        const t = ENSEMBLE.find(t => g.measureText(t).width <= room) || ENSEMBLE[ENSEMBLE.length - 1]
+        // A small pane writes nothing over its atom: the field goes with
+        // the ensemble's caption, where it fits.
+        const f = Larmor.rate(levels[atoms[0].lv], mag)
+        const bt = 'B ' + mT(mag.T)
+        const bs = !mag.T ? ['B 0'] : alongZ() ? [bt + ' along z: ' + (Math.abs(Larmor.axis(atoms[0], now, mag)[2]) > 1 - 1e-9 ? 'nothing turns' : 'tilted, turns'), bt + ' along z'] : !f ? [bt + ' ' + Math.abs(mag.deg) + DEG + ': J = 0, no turn', bt] : [bt + ' ' + Math.abs(mag.deg) + DEG + ': ' + hz(f) + ', ' + hz(f * EVENT) + ' real', bt + ': ' + hz(f) + ' (' + hz(f * EVENT) + ')', bt]
+        const all = []
+        for (const b of bs) for (const e of ENSEMBLE) all.push(e + '  ' + b)
+        const t = all.concat(ENSEMBLE).find(t => g.measureText(t).width <= room) || ENSEMBLE[ENSEMBLE.length - 1]
         out.push([g.font, '#7d89a1', box(g, clip(g, t, room), R.ens.x, R.ens.y)])
       }
       for (const c of out) said.push(c[2])
@@ -1540,6 +2095,19 @@
         g.fillStyle = fill
         g.fillText(b.t, b.gx, b.gy)
       }
+    }
+
+    // A pointer at x, y on the dial sets the field.
+    function dial (x, y) {
+      const d = R.dial
+      const dx = x - d.x
+      const dy = d.y - y
+      const s = Math.min(1, Math.hypot(dx, dy) / d.r)
+      let deg = Math.round(Math.atan2(dx, dy) * 180 / Math.PI)
+      if (Math.abs(deg) <= 2) deg = 0
+      if (Math.abs(deg) >= 178) deg = 180
+      const tesla = Math.round(B_MAX * s * s * 1e5) / 1e5
+      setField(tesla, tesla ? deg : mag.deg)
     }
 
     redraw(null)
@@ -1557,10 +2125,12 @@
           resize(w, h)
         }
         const L = synth.level
-        now += dt
         for (const e of synth.since(mark)) react(e)
+        const from = now
+        now += dt
         field = strength(L)
-        Ensemble.step(atoms, dt, FIELD_MAX * field, excite, jump)
+        Ensemble.step(atoms, dt, FIELD_MAX * field, (i, at) => excite(i, from + at), (i, k, at) => jump(i, k, from + at))
+        sample(now)
         while (born.length && now - born[0] > 1) born.shift()
         Cloud.step(cl, dt)
         if (now - cam.held > 4) cam.yaw += dt * 0.25 * (1 - 0.7 * L.idle)
@@ -1582,21 +2152,33 @@
         drawDiagramNow(g)
         drawAtom(g, 1 - 0.3 * L.idle)
         labels(g)
+        controls(g)
         caption(g, caps)
         out.drawImage(layer.c, 0, 0)
       },
 
-      // A drag across the atom turns the camera. A click on the atom
+      // A press or drag on the dial sets the field B: its angle from up is
+      // B's angle from z, toward x, in whole degrees, within 2 of z taken
+      // as z, and its distance from the centre over the radius, squared,
+      // B's share of B_MAX, in steps of 0.01 mT. A click on the pulse
+      // button fires a pulse. A drag across the atom turns the camera. A click on the atom
       // shines a lamp on the drawn atom: a photon absorbed from its
       // present level. A click on the level diagram lifts the drawn atom
       // to the level nearest it in that column by a collision.
       pointer (kind, x, y, down) {
         if (!R) return
         if (kind === 'down') {
-          press = { x0: x, y0: y, yaw: cam.yaw, pitch: cam.pitch, moved: false }
+          const d = R.dial
+          press = { x0: x, y0: y, yaw: cam.yaw, pitch: cam.pitch, moved: false, dial: !!d && Math.hypot(x - d.x, y - d.y) <= d.r + 4 }
+          if (press.dial) dial(x, y)
           return
         }
         if (!press) return
+        if (press.dial) {
+          if (kind === 'move' && down) dial(x, y)
+          else if (kind === 'up') press = null
+          return
+        }
         const dx = x - press.x0
         const dy = y - press.y0
         if (kind === 'move' && down) {
@@ -1616,7 +2198,8 @@
         press = null
         if (p.moved || Math.hypot(dx, dy) >= 5) return
         tally.clicks++
-        if (inside(R.diag, x, y)) {
+        if (inside(R.pulse, x, y)) pulse()
+        else if (inside(R.diag, x, y)) {
           const d = R.diag
           const c = Math.max(0, Math.min(4, Math.floor((x - d.x - R.dd.x0) / R.dd.cw)))
           let best = -1
@@ -1638,17 +2221,45 @@
       // and M_L, the lines lit, the fronts in flight by kind, whether a
       // source flashes, the field, the photons of the last second, and the
       // ink box of every text drawn, for the check of overlapping text.
+      // The magnetic field B, the event clock's time, the drawn atom's
+      // axis then and the time its axis was last set, its g_J and Larmor
+      // rate, the dial's, pulse button's and trace's places, and after a
+      // pulse the rate at the detector a second before and after it, as
+      // [seconds from the pulse, rate] by emission time, with 2 f_L of the
+      // pulsed level.
       probe () {
+        const lv = levels[atoms[0].lv]
+        const r4 = v => Math.round(v * 1e4) / 1e4
+        const span = (a, z) => {
+          const out = []
+          for (let k = 0; k < trace.t.length; k++) if (trace.t[k] >= pulsed.t + a && trace.t[k] < pulsed.t + z) out.push([r4(trace.t[k] - pulsed.t), Number(trace.r[k].toPrecision(5))])
+          return out
+        }
+        const zee = {
+          B: { mT: mag.T * 1e3, deg: mag.deg },
+          now,
+          axis: Larmor.axis(atoms[0], now, mag),
+          t0: atoms[0].t0,
+          lifted,
+          gJ: lv.gJ,
+          gJsrc: lv.gJsrc,
+          larmor: Larmor.rate(lv, mag),
+          dots: dots.filter(d => Number.isFinite(d.x) && Number.isFinite(d.y)).length,
+          dial: R && R.dial ? { x: R.dial.x, y: R.dial.y, r: R.dial.r } : null,
+          pulseButton: R ? R.pulse || null : null,
+          trace: R ? R.trace || null : null,
+          beat: pulsed ? { t: pulsed.t, n: pulsed.n, level: PULSE_LEVEL, f2: 2 * Larmor.rate(levels[pulseLevel], mag), before: span(-1, 0), after: span(0, 1) } : null
+        }
         const r1 = v => Math.round(v * 10) / 10
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
         const by = b => fronts.filter(f => f.ln.band === b).length
-        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally)
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
       }
     }
   }
 
-  const api = { Clock, Ensemble, Cloud, Front, Warp, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
+  const api = { Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
