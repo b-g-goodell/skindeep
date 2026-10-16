@@ -74,9 +74,7 @@ const toward = (s, n, k) => (s.edge === 'left' || s.edge === 'top' ? 1 : -1) * n
 let launched = null
 async function start (skin, dir) {
   const env = { SKINNED_GL: 'swiftshader', PATH: `${fakes}:${process.env.PATH}` }
-  // A short runtime dir, as in the other checks: the tab's hooks socket
-  // inside it must fit a Unix socket path.
-  for (const [k, d] of [['XDG_RUNTIME_DIR', path.join(out, 'run')], ['XDG_STATE_HOME', path.join(dir, 'state')], ['HOME', path.join(dir, 'home')], ['CLAUDE_CONFIG_DIR', path.join(dir, 'config')]]) {
+  for (const [k, d] of [['XDG_RUNTIME_DIR', path.join(dir, 'run')], ['XDG_STATE_HOME', path.join(dir, 'state')], ['HOME', path.join(dir, 'home')], ['CLAUDE_CONFIG_DIR', path.join(dir, 'config')]]) {
     env[k] = d
     fs.mkdirSync(d, { recursive: true, mode: 0o700 })
   }

@@ -49,12 +49,8 @@ const EXCLUDED = {
   'tabviz cost': 'a measurement under the host\'s load: asserts nothing'
 }
 
-// sun_path holds 107 bytes. claude-bus puts the runtime dir in its
-// OUT, where a tab's socket is <job OUT>/run/claude-skins/<pid>/tab-<n>/hooks.sock.
-const SOCKET_TAIL = '/run/claude-skins/4194304/tab-99/hooks.sock'.length
-
 // A job's folder and log name: the check and its mode, a flag cut to
-// four letters (claude-bus-cont), so a socket path under OUT has room.
+// four letters (claude-bus-cont).
 const name = job => [job[0], ...job.slice(1).map(a => a.startsWith('--') ? a.slice(2, 6) : a)].join('-')
 
 function args (argv) {
@@ -133,8 +129,6 @@ async function main () {
   if (missing.length) throw new Error(`neither a job nor excluded in suite.js: ${missing.join(', ')}`)
   const jobs = o.only ? JOBS.filter(j => o.only.includes(name(j))) : JOBS
   if (o.only && jobs.length !== o.only.length) throw new Error(`no such job among ${o.only.join(', ')}`)
-  const longest = Math.max(...jobs.map(j => name(j).length))
-  if (o.out.length + 1 + longest + SOCKET_TAIL > 107) throw new Error(`OUT ${o.out} is too long for a socket path under it: keep it to ${107 - 1 - longest - SOCKET_TAIL} bytes or fewer`)
 
   const tree = passrecord.tree(root)
   const changes = passrecord.dirty(root)

@@ -75,9 +75,7 @@ async function one (skin, readout, cycle) {
   const dir = path.join(out, skin)
   const pause = path.join(dir, 'pause')
   const env = { SKINNED_GL: 'swiftshader', FAKE_CLAUDE_PAUSE: pause, PATH: `${fakes}:${process.env.PATH}` }
-  // One runtime dir for both skins, at OUT/run as in the other checks:
-  // the tab's hooks socket inside it must fit a Unix socket path.
-  for (const [k, d] of [['XDG_RUNTIME_DIR', path.join(out, 'run')], ['XDG_STATE_HOME', path.join(dir, 'state')], ['HOME', path.join(dir, 'home')], ['CLAUDE_CONFIG_DIR', path.join(dir, 'config')]]) {
+  for (const [k, d] of [['XDG_RUNTIME_DIR', path.join(dir, 'run')], ['XDG_STATE_HOME', path.join(dir, 'state')], ['HOME', path.join(dir, 'home')], ['CLAUDE_CONFIG_DIR', path.join(dir, 'config')]]) {
     env[k] = d
     fs.mkdirSync(d, { recursive: true, mode: 0o700 })
   }

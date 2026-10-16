@@ -2,8 +2,8 @@
 
 Status: accepted 2026-10-11, revised 2026-10-12 for the Session, again
 2026-10-12 for tabs (decision 0023), and for the hook links, the kept
-settings and the last screen (decision 0030), and 2026-10-13 for the launch's
-pages.
+settings and the last screen (decision 0030), 2026-10-13 for the launch's
+pages, and 2026-10-16 for the hook socket's path.
 
 ## Context
 
@@ -29,6 +29,12 @@ Closing the window must end the session the way closing a terminal does.
 - The runtime root's `pids/`, mode 0700: one link per tab's CLI, named
   for its pid, to that tab's socket (decision 0030). The tab's end
   removes it, and at start a link whose socket is gone is removed.
+- The runtime dir may be of any length. A Unix socket's path holds 107
+  bytes, so the tab binds its socket as
+  `/proc/self/fd/<fd>/hooks.sock`, the fd its own dir's, and the relays
+  connect to `/proc/self/fd/<fd>/<pid>`, the fd `pids/`'s. A socket that
+  still cannot bind fails the tab's adapter: the log names the socket's
+  path and the error, and the strip says the meters are limited.
 - The generated Claude settings live in
   `${XDG_STATE_HOME:-~/.local/state}/claude-skins/settings/`, kept: a
   session sent to the background outlives the window and starts again
@@ -65,8 +71,16 @@ exited at once left the app running without a window, and the launcher
 blocked, until a child that ignored SIGHUP ended. Per-instance runtime dirs keep
 instances apart and leave nothing behind.
 
+Node binds a socket path longer than 107 bytes at its first 107 bytes,
+without an error (measured 2026-10-16, Node 22). With a 72-byte runtime
+dir the tab's socket path passed the limit, the link named a path where
+no socket was, and every hook was lost unseen. The link's own path, which
+the relays connected to, grows with the runtime dir as well.
+
 ## Rejected
 
+- An abstract socket, which has no path: any process of any user may
+  connect to it or take its name first.
 - `/tmp`: shared by every user of the machine, where the runtime dir is
   private to the user and emptied at logout. `$TMPDIR` or `/tmp` is the
   fallback only without `XDG_RUNTIME_DIR`.

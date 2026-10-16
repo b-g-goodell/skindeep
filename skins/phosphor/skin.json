@@ -342,7 +342,7 @@
    "rect": {
     "left": 700,
     "bottom": 82,
-    "width": 164,
+    "width": 142,
     "height": 48
    },
    "class": "stat"
@@ -355,9 +355,9 @@
    "label": "uptime",
    "format": "duration",
    "rect": {
-    "left": 876,
+    "left": 854,
     "bottom": 82,
-    "width": 164,
+    "width": 142,
     "height": 48
    },
    "class": "stat"
@@ -370,9 +370,9 @@
    "label": "tool calls",
    "format": "int",
    "rect": {
-    "left": 1052,
+    "left": 1008,
     "bottom": 82,
-    "width": 164,
+    "width": 142,
     "height": 48
    },
    "class": "stat"
@@ -386,7 +386,7 @@
    "rect": {
     "left": 700,
     "bottom": 26,
-    "width": 164,
+    "width": 142,
     "height": 48
    },
    "class": "stat"
@@ -398,9 +398,9 @@
    "label": "tokens in",
    "format": "tokens",
    "rect": {
-    "left": 876,
+    "left": 854,
     "bottom": 26,
-    "width": 164,
+    "width": 142,
     "height": 48
    },
    "class": "stat"
@@ -412,9 +412,9 @@
    "label": "model",
    "format": "text",
    "rect": {
-    "left": 1052,
+    "left": 1008,
     "bottom": 26,
-    "width": 164,
+    "width": 142,
     "height": 48
    },
    "class": "stat"
