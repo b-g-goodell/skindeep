@@ -28,7 +28,7 @@ const TYPES = {
   led: ['on', 'pulse', 'pulseMs', 'blink'],
   readout: ['prefix', 'suffix', 'resets', 'fallback'],
   sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps'],
-  list: ['rows']
+  list: ['rows', 'toggle']
 }
 const FORMAT = /^(int|fixed:[0-4]|pct|usd|tokens|duration|until|bytes|text)$/
 const CLASS = /^[a-z0-9-]+( [a-z0-9-]+)*$/
@@ -247,6 +247,32 @@ function validate (dir) {
     }
   }
 
+  // A list's toggle (decision 0034): a button of two options, the list
+  // and what it replaces, clear of the list and the terminal at the
+  // minimum and the initial window, so it hides no row of the list.
+  const toggle = (w, fld) => {
+    const g = w.toggle
+    const tf = `${fld}.toggle`
+    if (!g || typeof g !== 'object' || Array.isArray(g)) return err(tf, 'must be an object of rect, labels and class')
+    keys(g, tf, ['rect', 'labels', 'class'])
+    rect(g.rect, `${tf}.rect`, false)
+    if ('labels' in g && (!Array.isArray(g.labels) || g.labels.length !== 2 || !g.labels.every(isStr))) err(`${tf}.labels`, 'must be two strings, the list\'s and what it replaces')
+    if ('class' in g && (!isStr(g.class) || !CLASS.test(g.class))) err(`${tf}.class`, 'must be lowercase class names')
+    if (!sized(win) || !placed(g.rect, false) || !placed(w.rect, false)) return
+    const said = new Set()
+    for (const [W, H, at] of [[win.minWidth, win.minHeight, 'minimum'], [win.width, win.height, 'initial']]) {
+      const b = box(g.rect, W, H - STRIP)
+      const over = o => b.x0 < o.x1 && o.x0 < b.x1 && b.y0 < o.y1 && o.y0 < b.y1
+      const fault = [
+        ['list', over(box(w.rect, W, H - STRIP)), `overlaps the list at the ${at} window`],
+        ['terminal', t && placed(t.rect, true) && over(box(t.rect, W, H - STRIP)), `overlaps the terminal at the ${at} window`]
+      ]
+      for (const [kind, bad, msg] of fault) {
+        if (bad && !said.has(kind)) { said.add(kind); err(`${tf}.rect`, msg) }
+      }
+    }
+  }
+
   if ('widgets' in skin) {
     if (!Array.isArray(skin.widgets)) err('widgets', 'must be an array')
     else {
@@ -302,6 +328,7 @@ function validate (dir) {
             })
           }
         }
+        if (w.type === 'list' && 'toggle' in w) toggle(w, fld)
         if (w.type === 'sprite') {
           for (const k of ['frames', 'frameWidth', 'frameHeight']) if (!isNum(w[k]) || w[k] < 1) err(`${fld}.${k}`, 'required, a positive number')
           if ('layout' in w && !['row', 'column'].includes(w.layout)) err(`${fld}.layout`, 'must be row or column')

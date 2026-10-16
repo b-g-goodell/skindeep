@@ -181,7 +181,7 @@ Type options:
 | `led` | a lamp. Either `on`: lit while the value is at least this, or `pulse: true`: lit for `pulseMs` (250) each time an event counter rises. `blink` (ms): flashes while lit |
 | `readout` | a number or text. `prefix`, `suffix`, `resets` and `fallback` as for `bar` |
 | `sprite` | a sprite sheet, as in Winamp's sliders. `sheet` (a PNG), `frames`, `frameWidth`, `frameHeight`, `layout` (`row` or `column`). `mode`: `value` (default) picks the frame from the value between min and max, `run` cycles the frames at `fps` (12) while the value is above 0. The PNG must be exactly frames x frame size |
-| `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }` |
+| `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }`. `toggle` (optional): `{ "rect", "labels", "class" }`, a button of two options, the list and what it replaces, `labels` two words (default `tasks` and `readouts`). It shows while the list has an item, at its own rect, clear of the list and the terminal. A click on the second option hides the list and shows what it replaces, the stage carrying `checklist-off` in place of `checklist`, and a click on the first shows the list again. The choice is the tab's and holds while the list changes or comes back. The first list in a tab shows itself |
 
 ## Styling with CSS
 
@@ -200,8 +200,11 @@ Class names you can style:
   `.knob-pointer`, `.knob-image`, `.seg` and `.seg.on` (bar segments),
   `.lamp` and `.lamp.on` (led), `.sheet` (sprite), `.item` with
   `.todo`, `.doing` or `.done`, holding `.mark` and `.text` (list).
+- A list's toggle: `.w`, `.w-toggle`, its `class`, holding two
+  `.option`s, `.list` and `.other`, the one shown with `.on`.
 - The stage, `.skin`, carries `.checklist` while the agent's task list
-  has an item.
+  has an item and shows, and `.checklist-off` while it has an item and
+  the tab shows what it replaces.
 
 Colours come from custom properties you can set on `.w` or any widget:
 `--fill`, `--track`, `--needle`, `--glow`, `--on`, `--off`, `--text`.

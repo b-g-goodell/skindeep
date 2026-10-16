@@ -33,6 +33,7 @@
     { "id": "tout", "type": "readout", "bind": "tokens.out", "label": "TOKENS OUT", "format": "tokens", "rect": { "right": 16, "top": 280, "width": 200, "height": 44 } },
     { "id": "model", "type": "readout", "bind": "model.name", "label": "MODEL", "format": "text", "rect": { "right": 16, "top": 340, "width": 200, "height": 44 } },
     { "id": "agents", "type": "led", "bind": "agents.active", "label": "AGENT", "on": 1, "blink": 500, "rect": { "right": 150, "top": 400, "width": 66, "height": 30 } },
-    { "id": "todo", "type": "list", "bind": "checklist.items", "label": "TASKS", "rows": 6, "rect": { "right": 16, "top": 450, "width": 200, "height": 130 } }
+    { "id": "todo", "type": "list", "bind": "checklist.items", "label": "TASKS", "rows": 6, "rect": { "right": 16, "top": 450, "width": 200, "height": 130 },
+      "toggle": { "rect": { "right": 16, "top": 432, "width": 120, "height": 16 }, "labels": ["tasks", "readouts"], "class": "tabs" } }
   ]
 }

@@ -58,3 +58,12 @@
 .w-list .item.doing { color: var(--fill); }
 .w-list .item.done { opacity: 0.55; }
 .w-list .item.done .text { text-decoration: line-through; }
+
+/* The list's toggle (decision 0034): shown while the list has an item,
+   the list hidden while the tab shows what it replaces. */
+.skin.checklist-off .w-list { display: none; }
+.w-toggle { flex-direction: row; gap: 4px; display: none; }
+.skin.checklist .w-toggle, .skin.checklist-off .w-toggle { display: flex; }
+.w-toggle .option { cursor: pointer; white-space: nowrap; opacity: 0.6; }
+.w-toggle .option:hover { opacity: 1; }
+.w-toggle .option.on { cursor: default; opacity: 1; }

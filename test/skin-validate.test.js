@@ -37,6 +37,9 @@ const BROKEN = {
   'broken-list': [
     'skin.json: widgets[0].bind: "tools.total": a list shows a list-valued metric, one of checklist.items',
     'skin.json: widgets[0].rows: must be a number',
+    'skin.json: widgets[0].toggle.labels: must be two strings',
+    'skin.json: widgets[0].toggle.rect: overlaps the list at the minimum window',
+    'skin.json: widgets[0].toggle.rect: overlaps the terminal at the minimum window',
     'skin.json: widgets[1].bind: "checklist.items": a list-valued metric needs a list widget'
   ],
   'broken-fallback': [
