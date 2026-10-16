@@ -67,3 +67,11 @@
 .w-toggle .option { cursor: pointer; white-space: nowrap; opacity: 0.6; }
 .w-toggle .option:hover { opacity: 1; }
 .w-toggle .option.on { cursor: default; opacity: 1; }
+
+/* The usage limits (decision 0011): one meter per limit, sharing the
+   rect, so an absent limit leaves no gap. */
+.w-limits { align-items: stretch; justify-content: stretch; gap: 4px; }
+.w-limits.across { flex-direction: row; }
+.w-limits.nodata { display: none; }
+.w-limits > .w { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
+.w-limits > .w .label { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

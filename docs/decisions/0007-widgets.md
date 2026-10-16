@@ -1,8 +1,9 @@
 # 0007 Widget set and animation
 
 Status: accepted 2026-10-11. A numeric readout takes a click since
-decision 0033, and an eighth type, `list`, shows the agent's
-task list since decision 0034.
+decision 0033, an eighth type, `list`, shows the agent's task list
+since decision 0034, and a ninth, `limits`, every usage limit since
+2026-10-15.
 
 ## Context
 
@@ -27,6 +28,15 @@ Seven display-only widget types, each bound to one metric:
   value` picks the frame from the value (Winamp's volume slider),
   `mode: run` cycles frames at `fps` while the bound metric is non-zero.
 
+`limits` (2026-10-15, owner's ruling on issue #142: every limit the
+provider lists, each needle optional) is bound to `limits.items`
+(decision 0011) and draws one `bar` or `needle` per item, with that
+type's options, the item's label and its time to reset. The meters
+share the widget's rect, in a row or a column, so a limit the provider
+does not send takes no room and leaves no gap: no placeholder, no empty
+meter, never a zero. The widget carries `n-<count>` for a skin that lays
+out three meters unlike two, and hides while the list is empty.
+
 Values move toward their targets with a critically damped spring at the
 display's frame rate. Needles get a slight overshoot setting
 (`damping` below 1) for the analog feel. The metrics bus updates
@@ -45,3 +55,6 @@ gives smooth motion without a faster bus.
   the CLI.
 - Canvas widgets: CSS could not style them.
 - More types (graphs, sparklines): not asked for.
+- A fixed widget per limit, hidden while its limit is absent: its rect
+  stays, so an absent limit leaves a hole, and a skin can place only
+  the limits it knows of.
