@@ -234,7 +234,7 @@
       hue = (hue + 67 + 40 * Math.random()) % 360
       // Each leans away from the middle, as a crown of fronds spreads.
       const side = x < 0.5 ? -1 : 1
-      const f = { x, scale: 0.8 + 0.2 * Math.random(), hue, open: 0, rise: 0, ph: 6.3 * Math.random(), side, lean: side * (0.05 + 0.15 * Math.random()), tint: new Float32Array(NS), thue: new Float32Array(NS), wither: 0, shy: 0, sap: [], born: t, baby: false, parent: null, puff: null, goal: 0, ...opts }
+      const f = { x, scale: 0.8 + 0.2 * Math.random(), hue, open: 0, rise: 0, ph: 6.3 * Math.random(), side, lean: side * (0.05 + 0.15 * Math.random()), tint: new Float32Array(NS), thue: new Float32Array(NS), wither: 0, shy: 0, sap: [], born: t, baby: false, parent: null, puff: null, goal: 0, next: 0, ...opts }
       fronds.push(f)
       const kin = fronds.filter(q => !q.wither && q.baby === f.baby)
       if (kin.length > (f.baby ? MAXB : MAXF)) kin[0].wither = 0.001
@@ -264,8 +264,10 @@
         sprout({})
         wake = 1
       } else if (e.kind === 2) {
-        // The pinna just behind the coil lights and keeps a trace.
-        const j = Math.max(0, Math.min(NS - 1, Math.floor(NS * (f.open - 0.1 * Math.random()))))
+        // The pinna behind the coil lights and keeps a trace, each call
+        // the next pinna up, so a turn's tools stack from the foot.
+        const j = Math.min(NS - 1, Math.max(f.next, Math.floor(0.9 * NS * f.open)))
+        f.next = j + 1
         const h = CLASS_HUE[e.cls] ?? 200
         f.tint[j] = 1
         f.thue[j] = h
