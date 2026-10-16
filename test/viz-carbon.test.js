@@ -134,7 +134,8 @@ test('carbon: the two clocks, NIST\'s rates by one factor and light by another',
 })
 
 test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', () => {
-  const atoms = C.Ensemble.make(200, () => D.levels.findIndex(l => l.id === '2p3s_1Po_1'))
+  const N = 2000
+  const atoms = C.Ensemble.make(N, () => D.levels.findIndex(l => l.id === '2p3s_1Po_1'))
   let jumps = 0
   const lines = []
   C.Ensemble.step(atoms, 1, 0, () => assert.fail('no field, no collision'), (i, k) => {
@@ -148,11 +149,15 @@ test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', 
     lines.push(k)
   })
   // tau on the event clock is 2.7 ms, so in 1 s every atom has left,
-  // 92 % of them by 193.1 nm to 1D2, the rest to 1S0 and 3P, and rests.
+  // 92.35 % of them by 193.1 nm to 1D2, the rest to 1S0 and 3P, and
+  // rests. The share is binomial: at N = 2000 its standard deviation is
+  // 0.0059, so the bound of 0.03 is 5 of them and a correct ensemble
+  // fails it once in about 2 million runs. At N = 200 the bound of 0.05
+  // was 2.7 deviations, a false failure once in 130.
   assert.ok(atoms.every(a => !D.levels[a.lv].conf.includes('3s')))
   const to1D = lines.filter(k => D.levels[D.lines[k].l].id === '2p2_1D_2').length / lines.length
-  assert.ok(Math.abs(to1D - 0.923) < 0.05, `share to 1D2 ${to1D}`)
-  assert.strictEqual(jumps, 200)
+  assert.ok(Math.abs(to1D - 0.9235) < 0.03, `share to 1D2 ${to1D}`)
+  assert.strictEqual(jumps, N)
 })
 
 test('carbon: a cloud of M_L != 0 turns about the axis, one of M_L = 0 stands', () => {
