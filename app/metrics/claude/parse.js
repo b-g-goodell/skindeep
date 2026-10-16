@@ -3,6 +3,7 @@
 // updates (decisions 0011, 0012). Each returns [name, value] pairs.
 
 const compact = require('./compact')
+const limits = require('../limits')
 const { toolKey, num } = require('../names')
 
 const HOOK_FIELDS = [
@@ -53,6 +54,38 @@ function contextFrom (cu, window, threshold) {
   return out
 }
 
+// The statusline's limits as limits.items (decision 0011): the
+// five-hour and seven-day limits, a gateway's spend limit, then every
+// further window under rate_limits that carries used_percentage, such
+// as one model's weekly limit. Claude Code 2.1.301 sends no further
+// window (docs/research/usage-limits.md), so one it sends later appears
+// with no code change. A further window is named by its display_name,
+// else by its key: seven_day_<model> is that model's 7d limit.
+const WINDOWS = [['five_hour', '5h'], ['seven_day', '7d']]
+
+function modelName (s) {
+  const t = String(s).replace(/_/g, ' ').trim().slice(0, 40)
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+function limitItems (rl) {
+  const items = []
+  for (const [key, w] of Object.entries(rl)) {
+    if (!w || typeof w !== 'object' || Array.isArray(w)) continue
+    const at = { key, pct: w.used_percentage, resetsAt: w.resets_at }
+    const whole = WINDOWS.find(([k]) => k === key)
+    const part = WINDOWS.find(([k]) => key.startsWith(k + '_'))
+    if (key === 'spend_limit') at.label = 'spend'
+    else if (whole) at.window = whole[1]
+    else {
+      at.window = part ? part[1] : null
+      at.model = modelName(typeof w.display_name === 'string' && w.display_name.trim() ? w.display_name : part ? key.slice(part[0].length + 1) : key)
+    }
+    items.push(limits.item(at))
+  }
+  return limits.list(items.filter(i => i && !i.model).concat(items.filter(i => i && i.model)))
+}
+
 // compaction: compact.inputs(). The context family only when the
 // payload carries the window size.
 function fromStatusline (j, compaction) {
@@ -69,7 +102,7 @@ function fromStatusline (j, compaction) {
   out.push(['cost.usd', num(cost.total_cost_usd)], ['lines.added', num(cost.total_lines_added)],
     ['lines.removed', num(cost.total_lines_removed)])
   if (j.prompt_cache) out.push(['cache.hit_ratio', num(j.prompt_cache.hit_ratio)])
-  const rl = j.rate_limits || {}
+  const rl = j.rate_limits && typeof j.rate_limits === 'object' ? j.rate_limits : {}
   out.push(['limits.five_hour_pct', rl.five_hour ? num(rl.five_hour.used_percentage) : null],
     ['limits.five_hour_resets_at', rl.five_hour ? num(rl.five_hour.resets_at) : null],
     ['limits.seven_day_pct', rl.seven_day ? num(rl.seven_day.used_percentage) : null],
@@ -80,6 +113,7 @@ function fromStatusline (j, compaction) {
     out.push(['limits.spend_pct', num(sl.used_percentage)], ['limits.spend_resets_at', num(sl.resets_at)],
       ['limits.spend_usd', num(sl.used_usd)], ['limits.spend_limit_usd', num(sl.limit_usd)])
   }
+  out.push(['limits.items', limitItems(rl)])
   if (j.model && j.model.display_name) out.push(['model.name', String(j.model.display_name).slice(0, 40)])
   return out
 }

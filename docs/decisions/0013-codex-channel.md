@@ -1,7 +1,7 @@
 # 0013 Codex side channel
 
 Status: accepted 2026-10-11, discovery amended 2026-10-12, and for
-`fork` (decision 0026).
+`fork` (decision 0026), limits by `limit_id` 2026-10-15.
 
 ## Context
 
@@ -36,8 +36,11 @@ that holds the rollout open, so the child tree rarely holds it.
   `none`, with the routes tried.
 - Parser: `token_count` events give `tokens.in`, `tokens.out`,
   `tokens.cache_read` (cached_input_tokens), reasoning tokens counted in
-  `tokens.out`, `limits.five_hour_pct` and `limits.seven_day_pct` from
-  primary and secondary by `window_minutes`. Context fill =
+  `tokens.out`. Each `token_count` carries one limit's snapshot, keyed
+  by `limit_id`: the account's (`codex`) fills `limits.five_hour_*` and
+  `limits.seven_day_*` from primary and secondary by `window_minutes`,
+  and every limit's windows, a model's such as GPT-5.3-Codex-Spark
+  among them, are items of `limits.items` (decision 0011). Context fill =
   `last_token_usage.input_tokens / model_context_window` (cached tokens
   are inside input_tokens, never added on top). Tool calls by type from
   `function_call`, `custom_tool_call` and `local_shell_call` names.

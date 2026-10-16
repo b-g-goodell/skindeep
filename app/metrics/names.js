@@ -29,6 +29,7 @@ const NAMES = {
   'limits.spend_usd': 'US dollars spent against a gateway session\'s spend limit',
   'limits.spend_limit_usd': 'a gateway session\'s spend limit in US dollars',
   'limits.spend_resets_at': 'when a gateway session\'s spend limit resets, Unix seconds',
+  'limits.items': 'every usage limit the provider sends now, [{ key, label, window, model, pct, resets_at }]',
   'tools.total': 'tool calls this session',
   'tools.rate': 'tool calls in the last 60 s',
   'agents.active': 'subagents running now',
@@ -54,8 +55,8 @@ const NAMES = {
   'event.agent': 'counter: subagents started'
 }
 
-// The names whose value is a list, not a number (decision 0034).
-const LISTS = new Set(['checklist.items'])
+// The names whose value is a list, not a number (decisions 0034, 0011).
+const LISTS = new Set(['checklist.items', 'limits.items'])
 
 function isList (name) {
   return LISTS.has(name)

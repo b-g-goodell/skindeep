@@ -110,6 +110,10 @@ test('C5 a session change resets the session family, keeps events, seeds at once
     'limits.five_hour_resets_at': 1791787200,
     'limits.seven_day_pct': 0,
     'limits.seven_day_resets_at': 1792357200,
+    'limits.items': [
+      { key: 'five_hour', label: '5h', window: '5h', model: null, pct: 1, resets_at: 1791787200 },
+      { key: 'seven_day', label: '7d', window: '7d', model: null, pct: 0, resets_at: 1792357200 }
+    ],
     'tools.total': 0,
     'agents.active': 0,
     'state.busy': 0,

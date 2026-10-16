@@ -2,7 +2,7 @@
 
 Status: accepted 2026-10-11, the usage limits' resets and spend limit
 added 2026-10-13, the checklist family added 2026-10-14 (decision
-0034).
+0034), the list of every usage limit added 2026-10-15.
 
 ## Context
 
@@ -27,14 +27,21 @@ Dotted names. A metric absent for the current CLI reads as "no data"
   `limits.seven_day_pct`, `limits.seven_day_resets_at`, and a gateway
   session's `limits.spend_pct`, `limits.spend_usd`,
   `limits.spend_limit_usd`, `limits.spend_resets_at`. A reset is Unix
-  seconds.
+  seconds. `limits.items` is every limit the provider sends now, a
+  list of `{ key, label, window, model, pct, resets_at }`: the account's
+  limits first, then each model's, so a model the provider adds later
+  is one more item, never a new name. `window` is a short span (`5h`,
+  `7d`, `30d`), null for a spend limit, `model` the provider's name for
+  the model or null, `label` the two together, short enough for a
+  quarter tile (`Spark 5h`). A limit with no reading is no item, and
+  the list is null when there is none.
 - Activity: `tools.total`, `tools.rate` (per minute), `tools.<Name>` per
   tool type, `agents.active`, `lines.added`, `lines.removed`,
   `state.busy` (1 between prompt submit and stop).
 - Identity: `model.name` (text), `session.clock_s`, `session.compactions`.
 - Checklist (decision 0034): `checklist.items`, a list of `{ text,
-  state }`, the one list-valued name, `checklist.count`,
-  `checklist.done`.
+  state }`, `checklist.count`, `checklist.done`. It and
+  `limits.items` are the list-valued names.
 - Generic: `pty.out_bps`, `pty.in_kps`, `pty.idle_s`, `proc.cpu_pct`,
   `proc.mem_mb`.
 - Events (pulse counters that only increase): `event.output`,
@@ -43,30 +50,32 @@ Dotted names. A metric absent for the current CLI reads as "no data"
 
 Codex fills the same names where its rollout carries the figure.
 
-What Claude Code's `/usage` shows, and what reaches the app, read
-from Claude Code 2.1.299: its `/usage` screen's strings and the code
-that builds the statusline payload's `rate_limits`. `/usage` fetches
-its figures from Anthropic itself. The app makes no request of its own
-(the thin-wrapper ruling), so a figure no channel carries is left out.
+What each provider lists, and what reaches the app, read from Claude
+Code 2.1.301 and codex-cli 0.162.1 (`docs/research/usage-limits.md`).
+`/usage` fetches its figures from Anthropic itself. The app makes no
+request of its own (the thin-wrapper ruling), so a figure no channel
+carries is left out.
 
-| `/usage` figure | channel | metric |
+| Limit | channel | metric |
 | --- | --- | --- |
-| Current session: percent used | statusline `rate_limits.five_hour.used_percentage`, Codex rollout window of 300 min or less | `limits.five_hour_pct` |
-| Current session: resets | statusline `rate_limits.five_hour.resets_at`, Codex `resets_at` | `limits.five_hour_resets_at` |
-| Current week (all models): percent used | statusline `rate_limits.seven_day.used_percentage`, Codex window of 7 days or more | `limits.seven_day_pct` |
-| Current week (all models): resets | statusline `rate_limits.seven_day.resets_at`, Codex `resets_at` | `limits.seven_day_resets_at` |
-| Current week of one model (Sonnet only, or a server-named model) | none | none |
+| Current session (5 h) | statusline `rate_limits.five_hour`, the Codex account's window of 300 min or less | `limits.five_hour_pct`, `limits.five_hour_resets_at`, an item |
+| Current week (all models) | statusline `rate_limits.seven_day`, the Codex account's window of about 7 days | `limits.seven_day_pct`, `limits.seven_day_resets_at`, an item |
+| A Codex account's 30 day window (free plan) | Codex window of 43200 min | an item |
+| Spend limit of a gateway session | statusline `rate_limits.spend_limit`, gateway sessions only | `limits.spend_pct`, `limits.spend_usd`, `limits.spend_limit_usd`, `limits.spend_resets_at`, an item |
+| One model's limits, Codex (GPT-5.3-Codex-Spark: 5 h and 7 d) | Codex `token_count` snapshots of that `limit_id` | items |
+| Current week of one model, Claude Code | none in 2.1.301: a gap. A further window under the statusline's `rate_limits` becomes an item | an item, once sent |
 | Claude Code and Cowork credit, extra usage | none | none |
-| Spend limit of a gateway session | statusline `rate_limits.spend_limit`, gateway sessions only | `limits.spend_pct`, `limits.spend_usd`, `limits.spend_limit_usd`, `limits.spend_resets_at` |
 | Usage breakdown (last 24 h and the like) | none | none |
 
-A gateway session has no subscription limits, so every shipped skin's
-seven-day meter falls back to the spend limit, labelled as such, with
-its reset (the widgets' `fallback`, `docs/SKINS.md`).
+Every shipped skin draws `limits.items`, one meter per item, so a limit
+the provider stops sending, or never sends, takes no room (decision
+0007). The scalar names stay for a readout or dial that wants one
+figure.
 
 The statusline carries `rate_limits` only after the session's first
-response, for a subscription session: before it, or on an API key, the
-limit meters read `--`, as the CLI itself knows no figure yet.
+response, for a subscription session: before it, or on an API key,
+`limits.items` is null and the skins draw no limit, as the CLI itself
+knows no figure yet.
 
 ### Writing
 
@@ -97,9 +106,17 @@ and Generic do, and the bus exports no other write.
 ## Why
 
 One flat namespace keeps manifests readable. Null for "no data" lets a
-widget show a dash instead of a false zero.
+widget show a dash instead of a false zero. The usage limits are one
+list because the providers name their per-model limits themselves and
+add them without notice: a skin binds the list once and draws whatever
+it holds.
 
 ## Rejected
 
 - Per-CLI names (`claude.*`, `codex.*`): skins would need one binding
   per CLI.
+- One name per model's limit (`limits.model.<name>.pct`): a skin can
+  bind only names it knows, so a new model would need a new skin.
+- Reading the per-model weekly limit from `.claude.json`'s cache of
+  `/usage`: the file can hold an API key (decision 0012), and the cache
+  is written only when the user opens `/usage`.

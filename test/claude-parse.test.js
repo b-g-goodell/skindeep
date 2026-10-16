@@ -30,7 +30,7 @@ test('hook metadata drops content fields', () => {
   }
 })
 
-// Every usage figure the statusline carries, as Claude Code 2.1.299
+// Every usage figure the statusline carries, as Claude Code 2.1.301
 // builds rate_limits: five_hour and seven_day with their resets, and a
 // gateway session's spend_limit.
 test('the statusline\'s limits, their resets and a gateway spend limit become metrics', () => {
@@ -40,10 +40,29 @@ test('the statusline\'s limits, their resets and a gateway spend limit become me
   assert.deepStrictEqual([m['limits.five_hour_pct'], m['limits.five_hour_resets_at']], [1, 1791787200])
   assert.deepStrictEqual([m['limits.seven_day_pct'], m['limits.seven_day_resets_at']], [0, 1792357200])
   assert.deepStrictEqual([m['limits.spend_pct'], m['limits.spend_resets_at'], m['limits.spend_usd'], m['limits.spend_limit_usd']], [42.5, 1792400000, 85, 200])
+  assert.deepStrictEqual(m['limits.items'].map(i => [i.label, i.pct, i.resets_at]), [['5h', 1, 1791787200], ['7d', 0, 1792357200], ['spend', 42.5, 1792400000]])
   delete j.rate_limits
   const none = Object.fromEntries(parse.fromStatusline(j, compact.inputs({})))
   assert.strictEqual(none['limits.five_hour_resets_at'], null)
   assert.ok(!('limits.spend_pct' in none))
+  assert.strictEqual(none['limits.items'], null)
+})
+
+// limits.items (decision 0011). Claude Code 2.1.301 sends no per-model
+// window in the statusline (docs/research/usage-limits.md): the further
+// windows here are the shape the parser takes when one arrives, a
+// seven_day_<model> key or one with a display_name, beside the recorded
+// five_hour and seven_day.
+test('every window under rate_limits becomes an item, the account\'s first', () => {
+  const j = JSON.parse(fs.readFileSync(fx('statusline.json'), 'utf8'))
+  j.rate_limits = Object.assign({ seven_day_opus: { used_percentage: 31, resets_at: 1792357200 } }, j.rate_limits,
+    { seven_day_overage_included: { used_percentage: 7, resets_at: 1792357300, display_name: 'Fable' }, five_hour: undefined, odd: { resets_at: 5 } })
+  const items = Object.fromEntries(parse.fromStatusline(j, compact.inputs({})))['limits.items']
+  assert.deepStrictEqual(items, [
+    { key: 'seven_day', label: '7d', window: '7d', model: null, pct: 0, resets_at: 1792357200 },
+    { key: 'seven_day_opus', label: 'Opus 7d', window: '7d', model: 'Opus', pct: 31, resets_at: 1792357200 },
+    { key: 'seven_day_overage_included', label: 'Fable 7d', window: '7d', model: 'Fable', pct: 7, resets_at: 1792357300 }
+  ])
 })
 
 // Decision 0034: the agent's task list from the transcript. The

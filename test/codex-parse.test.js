@@ -99,3 +99,40 @@ test('a live tool call raises tools.rate once the bus ticks', async t => {
   bus.tick(Date.now() + 1)
   assert.strictEqual(bus.get('tools.rate'), 1, 'a replayed call is no rate sample')
 })
+
+// limits.items (decision 0011), from token_count lines recorded from
+// codex-cli 0.162 rollouts: the account's limit (limit_id codex, a Pro
+// plan's 7 d window) interleaved with a model's (codex_bengalfox,
+// GPT-5.3-Codex-Spark, 5 h and 7 d), a limit with no window (premium),
+// and a free plan's 30 d window.
+const recorded = fs.readFileSync(path.join(__dirname, 'fixtures', 'codex', 'limits.jsonl'), 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
+
+function feed (objs) {
+  const s = new CodexState()
+  const vals = {}
+  for (const o of objs) for (const [k, v] of s.add(o).set) vals[k] = v
+  return vals
+}
+
+test('each limit_id is its own limit, and a model\'s windows never overwrite the account\'s', () => {
+  const vals = feed(recorded.slice(0, 5))
+  const acc = recorded[1].payload.rate_limits.primary
+  const spark = recorded[3].payload.rate_limits
+  assert.strictEqual(spark.limit_name, 'GPT-5.3-Codex-Spark')
+  assert.deepStrictEqual([vals['limits.seven_day_pct'], vals['limits.seven_day_resets_at']], [acc.used_percent, acc.resets_at])
+  assert.strictEqual(vals['limits.five_hour_pct'], null)
+  assert.deepStrictEqual(vals['limits.items'], [
+    { key: 'codex.7d', label: '7d', window: '7d', model: null, pct: acc.used_percent, resets_at: acc.resets_at },
+    { key: 'codex_bengalfox.5h', label: 'Spark 5h', window: '5h', model: 'GPT-5.3-Codex-Spark', pct: spark.primary.used_percent, resets_at: spark.primary.resets_at },
+    { key: 'codex_bengalfox.7d', label: 'Spark 7d', window: '7d', model: 'GPT-5.3-Codex-Spark', pct: spark.secondary.used_percent, resets_at: spark.secondary.resets_at }
+  ])
+})
+
+test('a 30 day window is its own item, never the seven-day limit', () => {
+  const vals = feed(recorded.slice(5))
+  const w = recorded[5].payload.rate_limits.primary
+  assert.strictEqual(w.window_minutes, 43200)
+  assert.strictEqual(vals['limits.seven_day_pct'], null)
+  assert.deepStrictEqual(vals['limits.items'], [{ key: 'codex.30d', label: '30d', window: '30d', model: null, pct: w.used_percent, resets_at: w.resets_at }])
+  assert.strictEqual(feed(recorded.slice(4, 5))['limits.items'], null)
+})

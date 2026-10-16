@@ -2,6 +2,7 @@
 // Codex rollout lines to metric updates (decision 0013). Pure.
 
 const { EVENT } = require('../bus')
+const limits = require('../limits')
 const { toolKey, num } = require('../names')
 
 // Tool class for the visualization, as in the Claude adapter.
@@ -15,10 +16,66 @@ function toolClass (name) {
   return 0
 }
 
+// A window's scalar names: five_hour for 5 h or less, seven_day for
+// about a week. A 30 day window has only its item.
+function scalar (minutes) {
+  if (minutes <= 300) return 'five_hour'
+  if (minutes >= 6 * 1440 && minutes <= 8 * 1440) return 'seven_day'
+  return null
+}
+
+// A model's name as a skin's label shows it: the last word of a
+// hyphenated name, GPT-5.3-Codex-Spark as Spark, so a quarter tile has
+// room for it. The item keeps the whole name in model.
+function shortName (name) {
+  const last = name.split('-').pop()
+  return /^[A-Za-z][A-Za-z ]*$/.test(last) ? last : name
+}
+
 class CodexState {
   constructor () {
     this.prevOut = null
     this.meta = null
+    // The latest windows of each limit, by limit_id, in order of first
+    // appearance (decision 0011).
+    this.limitsById = new Map()
+  }
+
+  // One token_count's rate_limits: one limit's snapshot, its limit_id
+  // and limit_name, and its primary and secondary windows. The limit
+  // `codex` (or one with no limit_id) is the account's and fills the
+  // five-hour and seven-day names, null for a window it no longer
+  // sends. Another, such as codex_bengalfox named GPT-5.3-Codex-Spark,
+  // is one model's and has only its items. Snapshots of different
+  // limits interleave in one rollout.
+  limits (rl) {
+    const id = typeof rl.limit_id === 'string' && rl.limit_id ? rl.limit_id : 'codex'
+    const account = id === 'codex'
+    const model = account ? null : String(typeof rl.limit_name === 'string' && rl.limit_name.trim() ? rl.limit_name : id).slice(0, 40)
+    const windows = [rl.primary, rl.secondary]
+      .filter(w => w && typeof w === 'object' && num(w.window_minutes) && num(w.used_percent) !== null)
+      .sort((a, b) => a.window_minutes - b.window_minutes)
+    if (windows.length) this.limitsById.set(id, { model, windows })
+    else this.limitsById.delete(id)
+    const set = []
+    if (account) {
+      for (const which of ['five_hour', 'seven_day']) {
+        const w = windows.find(x => scalar(x.window_minutes) === which)
+        set.push([`limits.${which}_pct`, w ? num(w.used_percent) : null], [`limits.${which}_resets_at`, w ? num(w.resets_at) : null])
+      }
+    }
+    const items = []
+    const ids = [...this.limitsById.keys()].sort((a, b) => (b === 'codex') - (a === 'codex'))
+    for (const k of ids) {
+      const l = this.limitsById.get(k)
+      for (const w of l.windows) {
+        const window = limits.span(w.window_minutes)
+        const label = l.model ? `${shortName(l.model)} ${window}` : window
+        items.push(limits.item({ key: `${k}.${window}`, window, model: l.model, label, pct: w.used_percent, resetsAt: w.resets_at }))
+      }
+    }
+    set.push(['limits.items', limits.list(items)])
+    return set
   }
 
   // Returns { set: [[name, value]], add: [[name, n]], events: [[kind, cls]],
@@ -50,13 +107,8 @@ class CodexState {
         if (this.prevOut !== null && out > this.prevOut) r.samples.push(['tokens.out_rate', out - this.prevOut])
         this.prevOut = out
       }
-      const rl = p.rate_limits || {}
-      for (const w of [rl.primary, rl.secondary]) {
-        if (!w || !num(w.window_minutes)) continue
-        const which = w.window_minutes <= 300 ? 'five_hour' : w.window_minutes >= 7 * 24 * 60 ? 'seven_day' : null
-        if (!which) continue
-        r.set.push([`limits.${which}_pct`, num(w.used_percent)], [`limits.${which}_resets_at`, num(w.resets_at)])
-      }
+      const rl = p.rate_limits
+      if (rl && typeof rl === 'object') r.set.push(...this.limits(rl))
     } else if (obj.type === 'event_msg' && p.type === 'task_started') {
       r.set.push(['state.busy', 1])
       r.add.push(['event.prompt', 1])
