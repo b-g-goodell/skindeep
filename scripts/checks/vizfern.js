@@ -5,11 +5,11 @@
 // The frame rate of three panes all in fern, against three all in
 // gravity and three all in quantum, five rounds in turn so each set sees
 // the same host load, each set's median reported. Then one fern pane on
-// a 1200 by 760 window is captured every 0.5 s for 30 s, through more
-// than one octave of the zoom, the frames to OUT/fern-NN.png: no frame
-// is blank, the zoom advances, and no step between two neighbouring
-// frames changes the picture much more than the steps around it, so
-// the zoom's loop shows no jump. No page or console error. Fakes only.
+// a 1200 by 760 window is captured every 0.5 s for 30 s, through several
+// of the fake's turns, the frames to OUT/fern-NN.png: no frame is blank,
+// the fronds unroll, and no step between two neighbouring frames changes
+// the picture much more than the steps around it, so a sprout, a stop or
+// a withering shows no jump. No page or console error. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -109,19 +109,22 @@ const median = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)]
   for (let i = 0; i < FRAMES; i++) {
     const t0 = Date.now()
     const s = await viz.evaluate(grab)
-    s.probe = (await state()).panes[0].probe
+    const st = (await state()).panes[0]
+    s.probe = st.probe
+    s.beats = st.beats
     fs.writeFileSync(path.join(out, `fern-${String(i).padStart(2, '0')}.png`), Buffer.from(s.png.split(',')[1], 'base64'))
     shots.push(s)
     await sleep(Math.max(0, 500 - (Date.now() - t0)))
   }
   const steps = shots.slice(1).map((s, i) => changed(shots[i].grid, s.grid))
   const peaks = shots.map(s => peak(s.grid))
-  const zoom = shots.map(s => s.probe.zoom)
-  console.log('zoom', zoom.map(z => z.toFixed(2)).join(' '))
+  const grown = shots.map(s => s.probe.grown)
+  console.log('grown', grown.map(z => z.toFixed(2)).join(' '))
+  console.log('beats', shots.map(s => s.beats).join(' '))
   console.log('steps', steps.map(v => v.toFixed(3)).join(' '))
   console.log('step median', median(steps).toFixed(3), 'max', Math.max(...steps).toFixed(3), 'peak min', Math.min(...peaks))
   check(peaks.every(v => v > 40), 'a blank frame', peaks)
-  check(zoom[FRAMES - 1] - zoom[0] > 1, 'want more than one octave of zoom', zoom)
+  check(grown[FRAMES - 1] - grown[0] > 0.5, 'want the fronds to unroll', grown)
   check(Math.max(...steps) < 2.5 * median(steps) + 0.05, 'a step stands out of its neighbours: a jump', steps)
 
   console.log('errors', JSON.stringify(errors))
