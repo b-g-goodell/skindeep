@@ -100,3 +100,12 @@
   border-bottom: none; border-radius: 3px 3px 0 0; opacity: 1; }
 .tabs .option:hover { color: #3cff3c; background: #0a2a8a; }
 .tabs .option.on { padding-top: 3px; background: #020402; color: #3cff3c; text-shadow: 0 0 6px rgba(60, 255, 60, 0.55); }
+
+/* Every usage limit (decision 0011): one bar a limit under the sliders,
+   its reset at the right of its label, two columns for three or more. */
+.lims { gap: 3px; }
+.lims.n-3, .lims.n-4, .lims.n-5, .lims.n-6 { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; column-gap: 8px; row-gap: 3px; }
+.lims .limit-item { justify-content: flex-start; gap: 1px; }
+.lims .limit-item .resets { position: absolute; right: 0; top: 0; font: 8px/10px Silkscreen, monospace; letter-spacing: 1px; color: #3cff3c; opacity: 0.85; }
+.lims.n-3 .word, .lims.n-4 .word, .lims.n-5 .word, .lims.n-6 .word, .lims.n-3 .suffix, .lims.n-4 .suffix, .lims.n-5 .suffix, .lims.n-6 .suffix { display: none; }
+.lims.n-3 > :last-child, .lims.n-5 > :last-child { grid-column: span 2; }

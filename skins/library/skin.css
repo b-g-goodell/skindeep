@@ -57,8 +57,17 @@
 .marker .seg { border-radius: 2px; }
 .marker .seg.on { border-radius: 3px 1px 4px 2px; box-shadow: none; opacity: 0.88; }
 .marker.blue .seg.on { background: #2457b8; }
-.marker.red .seg.on { background: #c7362f; }
-.marker.green .seg.on { background: #2e8b4a; }
+/* Every usage limit (decision 0011), a marker colour a window: red for
+   five hours, green for a week or longer and a spend limit, orange and
+   purple for a model's. Two columns for three or more. */
+.lims { gap: 6px; }
+.lims.n-3, .lims.n-4, .lims.n-5, .lims.n-6 { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; column-gap: 14px; row-gap: 4px; }
+.lims.n-3 .suffix, .lims.n-4 .suffix, .lims.n-5 .suffix, .lims.n-6 .suffix,
+.lims.n-3 .word, .lims.n-4 .word, .lims.n-5 .word, .lims.n-6 .word { display: none; }
+.lims .marker .seg.on { background: #2e8b4a; }
+.lims .marker.span-5h .seg.on { background: #c7362f; }
+.lims .marker.model .seg.on { background: #7a4aa8; }
+.lims .marker.model.span-5h .seg.on { background: #d0731c; }
 .marker.nodata { opacity: 0.6; }
 
 /* Catalog cards: typed on cream stock, a red rule under the heading. */
@@ -79,3 +88,4 @@
 .brass .knob-image { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7)); }
 .brass .label { font: 11px/12px "Special Elite", monospace; letter-spacing: 2px; color: #f2dca4; }
 .brass .value { font: 13px/14px "Special Elite", monospace; color: #f8ecc8; }
+.lims.n-3 > :last-child, .lims.n-5 > :last-child { grid-column: span 2; }

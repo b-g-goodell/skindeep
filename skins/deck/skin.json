@@ -377,9 +377,9 @@
    "max": 100,
    "rect": {
     "right": 16,
-    "top": 28,
+    "top": 26,
     "width": 208,
-    "height": 38
+    "height": 32
    }
   },
   {
@@ -395,26 +395,28 @@
    "max": 1,
    "rect": {
     "right": 16,
-    "top": 72,
+    "top": 60,
     "width": 208,
-    "height": 38
+    "height": 32
    }
   },
   {
-   "id": "lim",
-   "type": "bar",
-   "bind": "limits.five_hour_pct", "resets": "limits.five_hour_resets_at",
-   "label": "5h limit",
+   "id": "lims",
+   "type": "limits",
+   "bind": "limits.items",
+   "meter": "bar",
+   "suffix": " limit",
+   "itemClass": "limit",
    "segments": 26,
    "gap": 1,
    "max": 100,
    "rect": {
     "right": 16,
-    "top": 118,
+    "top": 94,
     "width": 208,
-    "height": 28
+    "height": 56
    },
-   "class": "limit"
+   "class": "lims"
   },
   {
    "id": "pl-0",
@@ -641,20 +643,6 @@
    "class": "row"
   },
   {
-   "id": "pl-16",
-   "type": "readout",
-   "bind": "limits.seven_day_pct", "resets": "limits.seven_day_resets_at", "fallback": { "bind": "limits.spend_pct", "label": "spend limit", "resets": "limits.spend_resets_at" },
-   "label": "7d limit",
-   "format": "pct",
-   "rect": {
-    "right": 22,
-    "top": 554,
-    "width": 244,
-    "height": 21
-   },
-   "class": "row"
-  },
-  {
    "id": "pl-17",
    "type": "readout",
    "bind": "proc.mem_mb",
@@ -662,7 +650,7 @@
    "format": "int",
    "rect": {
     "right": 22,
-    "top": 577,
+    "top": 554,
     "width": 244,
     "height": 21
    },

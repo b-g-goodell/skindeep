@@ -200,7 +200,7 @@ holds them all, so bind it once:
 | --- | --- |
 | `meter` | `bar` (default) or `needle`: how each limit is drawn. The widget takes that type's options (`orientation`, `segments`, `gap` for a bar, `startAngle`, `endAngle`, `ticks`, `face` for a needle) and gives them to every meter |
 | `direction` | `column` (default): the meters stack top to bottom. `row`: side by side |
-| `suffix` | text after each limit's label: `" limit"` makes `5h limit` |
+| `suffix` | text after each limit's label: `" limit"` makes `5h limit`. It is a `.suffix` span, so a crowded layout can hide it |
 | `itemClass` | classes given to every meter, so your rules for a lone bar style them |
 
 Each meter is a `.w` of its type inside the widget, `.w-limits`. It
@@ -216,10 +216,20 @@ on, the number of meters, so a skin can lay out four meters in a grid
 and two in a column:
 
     .lims.n-3, .lims.n-4 { display: grid; grid-template-columns: 1fr 1fr; }
+    .lims.n-3 > :last-child { grid-column: span 2; }
 
 How many meters to plan for: Claude Code sends two (a gateway session
 one), Codex on a paid plan one to four. A meter whose limit has reset
 is dropped until the provider sends the new window's reading.
+
+How the shipped skins draw them:
+
+| Skin | Meters |
+| --- | --- |
+| `deck` | segmented bars under the sliders, green to yellow to red, the reset at the right of each label. Three or more go in two columns |
+| `phosphor` | segmented bars under the cache meter, two columns for three or more |
+| `coffee` | a jar of cold brew a limit on the table, its label and reset on tape. Four jars stand smaller |
+| `library` | a marker bar a limit on the whiteboard: red for five hours, green for a week or a spend limit, orange and purple for a model's. Two columns for three or more |
 
 ## Styling with CSS
 

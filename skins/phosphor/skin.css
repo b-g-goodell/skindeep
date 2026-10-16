@@ -57,3 +57,11 @@
 .w-needle .needle { stroke: #b8ffd0; stroke-width: 2.5; }
 .w-needle .pivot { fill: #3aff7e; }
 .w-needle .value { font: 22px/22px VT323, monospace; color: #8affb4; }
+
+/* Every usage limit (decision 0011): a bar a limit under the cache
+   meter, two columns for three or more. */
+.lims { gap: 6px; }
+.lims.n-3, .lims.n-4, .lims.n-5, .lims.n-6 { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; column-gap: 12px; row-gap: 6px; }
+.lims.n-3 .suffix, .lims.n-4 .suffix, .lims.n-5 .suffix, .lims.n-6 .suffix,
+.lims.n-3 .word, .lims.n-4 .word, .lims.n-5 .word, .lims.n-6 .word { display: none; }
+.lims.n-3 > :last-child, .lims.n-5 > :last-child { grid-column: span 2; }
