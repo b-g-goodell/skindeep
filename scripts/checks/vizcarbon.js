@@ -4,13 +4,17 @@
 // xvfb-run:
 //   node scripts/checks/vizcarbon.js OUT
 // One pane in Carbon on a 1200 by 760 window, fed by the fake claude's
-// turns, is watched by its probe and captured across cascades: a
-// visible photon with its source region, its shell, its detection, a
-// photon outside the visible, and the spectrum after the run. Then the
-// frame rate of three panes of a 720 by 460 window all in Carbon, all in
-// Gravity and all in Quantum, five rounds in turn, each set's median, as
-// vizmodes.js counts its sets, and each of those modes' median cost of a
-// draw on a canvas of its own. No page or console error. Frames go to
+// turns, is watched by its probe and captured: the drawn atom's jump
+// with its source flashing, visible fronts, ultraviolet and infrared
+// fronts, and the spectrum after the run. Then every pane's signal is
+// held at full activity, by an override of Synth's step in the page,
+// and a frame with hundreds of fronts is captured. Then each of Carbon,
+// Gravity and Quantum drawn alone on a 400 by 380 canvas at full
+// activity, fed through Synth's input: the median cost of a draw. Then
+// three panes of a 720 by 460 window all in one of those modes, five
+// rounds in turn, each set's median frame rate, as vizmodes.js counts
+// its sets, first on the fake session's own activity, then at full
+// activity. No page or console error. Frames go to
 // OUT/carbon-<phase>.png. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
@@ -67,10 +71,10 @@ function check (ok, msg, seen) {
 
   // Watch the probe and keep the first frame of each phase.
   const want = {
-    source: f => f.some(p => p.band === 'visible' && p.source && p.age > 0.12 && p.age < 0.5),
-    shell: f => f.some(p => p.band === 'visible' && p.age > 0.7 && p.age < 1.2),
-    detected: f => f.some(p => p.band === 'visible' && p.detected && p.age < 1.9),
-    invisible: f => f.some(p => p.band !== 'visible' && p.age > 0.4 && p.age < 1.1)
+    source: p => p.source,
+    visible: p => p.visible >= 2,
+    uv: p => p.uv >= 6,
+    ir: p => p.ir >= 6
   }
   const got = {}
   const t0 = Date.now()
@@ -80,10 +84,10 @@ function check (ok, msg, seen) {
     const p = (await state()).panes[0]
     probe = p.probe
     for (const [k, ok] of Object.entries(want)) {
-      if (got[k] || !ok(probe.flying)) continue
+      if (got[k] || !ok(probe)) continue
       await save(0, k)
-      got[k] = probe.flying
-      console.log('frame', k, JSON.stringify(probe.flying))
+      got[k] = true
+      console.log('frame', k, JSON.stringify(probe))
     }
     // A click on the atom now and then: a photon absorbed.
     if (Date.now() - t0 > 6000 * (clicks + 1)) {
@@ -95,13 +99,34 @@ function check (ok, msg, seen) {
   await sleep(2500)
   probe = (await state()).panes[0].probe
   await save(0, 'spectrum')
-  console.log('after', Math.round((Date.now() - t0) / 1000), 's', JSON.stringify(Object.assign({}, probe, { flying: probe.flying.length })))
+  console.log('after', Math.round((Date.now() - t0) / 1000), 's', JSON.stringify(probe))
   for (const k of Object.keys(want)) check(got[k], `no ${k} frame`)
   check(probe.photons > 0 && probe.detected > 0 && probe.lit > 0, 'want photons emitted, detected and lit', probe)
   check(probe.clicks === clicks, 'want every click counted', probe)
 
-  // Each mode drawn alone on a canvas of 400 by 380, its own signal
-  // stepped, 240 frames after 60 of warm-up: the median cost of a draw.
+  // Full activity in every pane, then a frame with hundreds of fronts.
+  await viz.evaluate(() => {
+    const S = window.Synth.Synth.prototype
+    if (S.held) return
+    S.held = S.step
+    S.step = function (dt, sound) {
+      S.held.call(this, dt, sound)
+      Object.assign(this.level, { bass: 1, treble: 1, busy: 1, idle: 0 })
+    }
+  })
+  let busy = null
+  for (let i = 0; i < 100 && !busy; i++) {
+    await sleep(100)
+    const p = (await state()).panes[0].probe
+    if (p.fronts >= 60) busy = p
+  }
+  check(busy, 'want 60 fronts at once at full activity')
+  await save(0, 'busy')
+  console.log('frame busy', JSON.stringify(busy))
+
+  // Each mode drawn alone on a canvas of 400 by 380, its own signal at
+  // full activity, 240 frames after 300 of warm-up: the median cost of a
+  // draw, and Carbon's fronts at the end.
   const cost = await viz.evaluate(() => {
     const out = {}
     for (const id of ['carbon', 'gravity', 'quantum']) {
@@ -111,19 +136,20 @@ function check (ok, msg, seen) {
       const r = window.VizCanvas[id](c)
       const s = new window.Synth.Synth()
       const ms = []
-      for (let i = 0; i < 300; i++) {
-        if (i % 40 === 0) s.trigger(i % 80 ? 2 : 3, 0)
+      for (let i = 0; i < 540; i++) {
+        s.input({ n: [5000, 0, 0, 200, 1, 0, 0], e: i % 40 === 0 ? [i % 80 ? 2 : 3, 0] : [] })
         s.step(1 / 60, null)
         const t0 = performance.now()
         r.draw(s, 1 / 60)
-        if (i >= 60) ms.push(performance.now() - t0)
+        if (i >= 300) ms.push(performance.now() - t0)
       }
       ms.sort((a, b) => a - b)
       out[id] = Math.round(ms[ms.length >> 1] * 100) / 100
+      if (r.probe && id === 'carbon') out.fronts = r.probe().fronts
     }
     return out
   })
-  console.log('median ms a draw, alone at 400x380', JSON.stringify(cost))
+  console.log('median ms a draw at full activity, alone at 400x380', JSON.stringify(cost))
 
   // Three panes, as vizmodes.js measures its sets.
   await size(720, 460)
@@ -132,22 +158,43 @@ function check (ok, msg, seen) {
     await sleep(900)
   }
   const sets = ['carbon', 'gravity', 'quantum']
-  const runs = sets.map(() => [])
-  for (let round = 0; round < 5; round++) {
-    for (const [k, id] of sets.entries()) {
-      const ids = (await tabs()).map(t => t.id)
-      for (let j = 0; j < 3; j++) await assign(ids[j], id)
-      await sleep(1500)
-      runs[k].push(await viz.evaluate(() => new Promise(resolve => {
-        let n = 0
-        const t0 = performance.now()
-        const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else resolve(n / 2) }
-        requestAnimationFrame(f)
-      })))
-      if (round === 0 && id === 'carbon') await save(0, 'split')
+  // The fake session's own activity first, then full activity.
+  await viz.evaluate(() => {
+    const S = window.Synth.Synth.prototype
+    if (S.held) S.step = S.held
+    delete S.held
+  })
+  for (const full of [false, true]) {
+    if (full) {
+      await viz.evaluate(() => {
+        const S = window.Synth.Synth.prototype
+        S.held = S.step
+        S.step = function (dt, sound) {
+          S.held.call(this, dt, sound)
+          Object.assign(this.level, { bass: 1, treble: 1, busy: 1, idle: 0 })
+        }
+      })
     }
+    const runs = sets.map(() => [])
+    for (let round = 0; round < 5; round++) {
+      for (const [k, id] of sets.entries()) {
+        const ids = (await tabs()).map(t => t.id)
+        for (let j = 0; j < 3; j++) await assign(ids[j], id)
+        await sleep(1500)
+        runs[k].push(await viz.evaluate(() => new Promise(resolve => {
+          let n = 0
+          const t0 = performance.now()
+          const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else resolve(n / 2) }
+          requestAnimationFrame(f)
+        })))
+        if (round === 0 && id === 'carbon') {
+          await save(0, full ? 'split-full' : 'split')
+          if (full) console.log('split pane at full activity', JSON.stringify((await state()).panes[0].probe))
+        }
+      }
+    }
+    sets.forEach((id, k) => console.log('fps with three panes', full ? 'full activity' : 'session', id, runs[k].join(' '), 'median', runs[k].slice().sort((a, b) => a - b)[2]))
   }
-  sets.forEach((id, k) => console.log('fps with three panes', id, runs[k].join(' '), 'median', runs[k].slice().sort((a, b) => a - b)[2]))
   check(!errors.length, 'page errors', errors)
 
   for (const tab of await tabs()) await win.evaluate(id => window.skinned.closeTab(id), tab.id)
