@@ -14,8 +14,12 @@
 // three panes of a 720 by 460 window all in one of those modes, five
 // rounds in turn, each set's median frame rate, as vizmodes.js counts
 // its sets, first on the fake session's own activity, then at full
-// activity. No page or console error. Frames go to
-// OUT/carbon-<phase>.png. Fakes only.
+// activity. Then four panes of 360 by 230, all in Carbon. At every
+// frame captured, in the one pane of 1200 by 760, in each Carbon pane
+// of the split and of the four, no two texts overlap: the ink box of
+// every text the probe reports and the box of the pane's drop-down.
+// No page or console error. Frames go to OUT/carbon-<phase>.png. Fakes
+// only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -58,10 +62,42 @@ function check (ok, msg, seen) {
     check((await win.evaluate(m => window.skinned.selectViz(m), id)).ok, `the menu refused ${id}`)
     await until(async () => (await state()).panes.find(p => p.tab === tab).mode === id, `tab ${tab} not in ${id}`)
   }
-  // Pane j's canvas as a PNG file.
+  // Pane j's canvas as a PNG file, and every Carbon pane's texts
+  // measured.
   async function save (j, name) {
     const png = await viz.evaluate(j => document.querySelectorAll('.pane')[j].querySelector('canvas:not([hidden])').toDataURL('image/png'), j)
     fs.writeFileSync(path.join(out, `carbon-${name}.png`), Buffer.from(png.split(',')[1], 'base64'))
+    await overlap(name)
+  }
+  // Two texts overlap where their boxes share more than half a pixel
+  // each way, below which ink boxes only touch.
+  const overlaps = []
+  const sizes = new Set()
+  async function overlap (name) {
+    const picks = await viz.evaluate(() => [...document.querySelectorAll('.pane')].map(e => {
+      const r = e.getBoundingClientRect()
+      const b = e.querySelector('.pick').getBoundingClientRect()
+      return { x: r.x, y: r.y, pick: { t: '(drop-down) ' + e.querySelector('.pick').textContent, x: b.x - r.x, y: b.y - r.y, w: b.width, h: b.height } }
+    }))
+    for (const p of (await state()).panes) {
+      if (p.mode !== 'carbon' || !p.probe || !p.probe.texts) continue
+      const pick = picks.find(q => q.x === p.x && q.y === p.y)
+      const boxes = p.probe.texts.filter(b => b.w > 0 && b.h > 0).concat(pick ? [pick.pick] : [])
+      sizes.add(`${p.w}x${p.h}`)
+      for (let i = 0; i < boxes.length; i++) {
+        for (let k = i + 1; k < boxes.length; k++) {
+          const a = boxes[i]
+          const b = boxes[k]
+          const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+          const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+          if (ox > 0.5 && oy > 0.5) {
+            const o = { frame: name, pane: `${p.w}x${p.h}`, a, b }
+            overlaps.push(o)
+            console.log('overlap', JSON.stringify(o))
+          }
+        }
+      }
+    }
   }
 
   await sleep(1500)
@@ -195,6 +231,21 @@ function check (ok, msg, seen) {
     }
     sets.forEach((id, k) => console.log('fps with three panes', full ? 'full activity' : 'session', id, runs[k].join(' '), 'median', runs[k].slice().sort((a, b) => a - b)[2]))
   }
+  // Four panes of 360 by 230, all in Carbon at full activity.
+  while ((await state()).panes.length < 4) {
+    await win.evaluate(() => window.skinned.newTab())
+    await sleep(900)
+  }
+  while ((await tabs()).length > 4) {
+    await win.evaluate(id => window.skinned.closeTab(id), (await tabs()).pop().id)
+    await sleep(900)
+  }
+  for (const id of (await tabs()).map(t => t.id)) await assign(id, 'carbon')
+  await sleep(2500)
+  await save(0, 'quarter')
+  console.log('texts measured in panes of', [...sizes].join(' '), 'overlaps', overlaps.length)
+  for (const s of ['1200x760', '360x230']) check(sizes.has(s), `want texts measured at ${s}`, [...sizes])
+  check(!overlaps.length, `${overlaps.length} overlapping pairs of texts, the first`, overlaps[0])
   check(!errors.length, 'page errors', errors)
 
   for (const tab of await tabs()) await win.evaluate(id => window.skinned.closeTab(id), tab.id)
