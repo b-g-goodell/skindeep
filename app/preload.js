@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('skinned', {
   settingsMenu: () => ipcRenderer.invoke('settings:menu'),
   setSetting: (id, value) => ipcRenderer.invoke('settings:set', id, value),
   onSettings: fn => ipcRenderer.on('settings', (_e, s) => fn(s)),
+  setPanel: (id, v) => ipcRenderer.invoke('panels:set', id, v),
+  resetPanels: () => ipcRenderer.invoke('panels:reset'),
   soundMuted: () => ipcRenderer.invoke('sound:state'),
   toggleSound: () => ipcRenderer.send('sound:toggle'),
   onSoundMuted: fn => ipcRenderer.on('sound:muted', (_e, m) => fn(m)),

@@ -1,7 +1,9 @@
 'use strict'
 // The user's settings: one definition for every skin. A skin
 // cannot add, remove or rename a setting. Each setting overrides one
-// manifest value, and null returns to the skin's own. Kept in
+// manifest value, and null returns to the skin's own. Beside them,
+// `panels` keeps the sizes the user dragged each skin's splits to,
+// by skin name and split id (decision 0035). Kept in
 // $XDG_STATE_HOME/claude-skins/settings.json, written by write and
 // rename, read at launch.
 
@@ -30,13 +32,39 @@ function file (env = process.env) {
 
 const valid = (id, v) => byId.has(id) && (v === null || byId.get(id).values.includes(v))
 
-// Every setting, null where the file has no valid value.
+// A split's size: a number of pixels. The skin clamps it to its range.
+const size = v => typeof v === 'number' && isFinite(v) && v >= 0
+
+// The panel sizes kept: names and ids as a skin's, sizes as above.
+function panelsOf (raw) {
+  const out = {}
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
+  for (const [skin, ids] of Object.entries(raw)) {
+    if (!/^[a-z0-9-]+$/.test(skin) || !ids || typeof ids !== 'object' || Array.isArray(ids)) continue
+    const kept = Object.fromEntries(Object.entries(ids).filter(([id, v]) => /^[a-z0-9-]+$/.test(id) && size(v)))
+    if (Object.keys(kept).length) out[skin] = kept
+  }
+  return out
+}
+
+// Every setting, null where the file has no valid value, and the panel
+// sizes.
 function load (f) {
   let raw = {}
   try { raw = JSON.parse(fs.readFileSync(f, 'utf8')) } catch (e) {}
   const out = {}
   for (const s of SETTINGS) out[s.id] = raw && valid(s.id, raw[s.id]) ? raw[s.id] : null
+  out.panels = panelsOf(raw && raw.panels)
   return out
+}
+
+// The settings with one split of one skin at a size, or, with id null,
+// every split of that skin back to the skin's own.
+function setPanel (values, skin, id, v) {
+  const panels = Object.assign({}, values.panels)
+  if (id === null) delete panels[skin]
+  else panels[skin] = Object.assign({}, panels[skin], { [id]: v })
+  return Object.assign({}, values, { panels })
 }
 
 function save (f, values) {
@@ -61,4 +89,4 @@ function menu (values, skin) {
   })
 }
 
-module.exports = { SETTINGS, file, load, save, valid, menu }
+module.exports = { SETTINGS, file, load, save, valid, menu, setPanel, panelsOf }

@@ -1,12 +1,15 @@
 'use strict'
-/* global Widgets */
+/* global Widgets, SkinSplits */
 // Builds a skin (decisions 0005, 0006): fonts through FontFace, a shadow
 // root inside the app-owned containment wrapper, panels and widgets from
 // their rects, the terminal's rect, theme and font from the manifest,
 // the same for every tab's terminal. Below the skin's minWidth, or below
 // its minimum skin area height, the skin is drawn scaled by the smaller of
 // the two ratios, and the terminal and the menu button, which live
-// outside it, get their rects scaled (decision 0006).
+// outside it, get their rects scaled (decision 0006). Each of the skin's
+// splits has a handle on the terminal's edge: a drag moves that edge,
+// the elements that follow it and the terminal, which reflows, and the
+// size is kept for the skin (decision 0035).
 
 window.SkinView = (function () {
   let widgets = []
@@ -20,6 +23,14 @@ window.SkinView = (function () {
   let dials = new Set()
   let listOff = false
   let picked = () => {}
+  let dragged = () => {}
+  // Every panel and widget as placed: its element, rect and follow.
+  let placed = []
+  // The splits' handles, and the size a drag holds until main keeps it.
+  let handles = []
+  let live = {}
+  let at = {}
+  const GRIP = 8
 
   function place (el, r, k = 1) {
     for (const key of ['left', 'right', 'top', 'bottom', 'width', 'height']) {
@@ -27,7 +38,11 @@ window.SkinView = (function () {
     }
   }
 
-  // The skin laid out at the area's size divided by k, then drawn at k.
+  // The sizes the user keeps for this skin's splits, a drag's over them.
+  const saved = () => Object.assign({}, (prefs.panels || {})[current.name], live)
+
+  // The skin laid out at the area's size divided by k, then drawn at k,
+  // its splits at their sizes in that layout.
   function layout () {
     if (!current || !stageEl) return
     const area = document.getElementById('stage')
@@ -45,8 +60,69 @@ window.SkinView = (function () {
       transform: k < 1 ? `scale(${k})` : '',
       transformOrigin: '0 0'
     })
-    place(document.getElementById('term'), current.terminal.rect, k)
+    at = SkinSplits.sizes(current, saved(), W / k, H / k)
+    for (const p of placed) place(p.el, SkinSplits.rect(p.rect, p.follow, current, at))
+    const t = SkinSplits.terminal(current, at)
+    place(document.getElementById('term'), t, k)
     placeMenu(current, k)
+    // A handle lies along the terminal's edge, just outside it, the same
+    // width at any scale, hidden while the window leaves its split no
+    // room to move.
+    const x0 = t.left * k
+    const x1 = W - t.right * k
+    const y0 = t.top * k
+    const y1 = H - t.bottom * k
+    for (const h of handles) {
+      const across = SkinSplits.horizontal(h.split.edge)
+      const r = across
+        ? { left: h.split.edge === 'left' ? x0 - GRIP : x1, top: y0, width: GRIP, height: y1 - y0 }
+        : { left: x0, top: h.split.edge === 'top' ? y0 - GRIP : y1, width: x1 - x0, height: GRIP }
+      place(h.el, r)
+      const room = SkinSplits.range(current, h.split, W / k, H / k)
+      h.el.hidden = room.min >= room.max
+    }
+  }
+
+  // A drag on a split's handle: the size follows the pointer, in the
+  // layout's pixels, within the range the window leaves, and is kept
+  // when the button is let go.
+  function handle (split) {
+    const el = document.createElement('div')
+    el.className = 'split-handle ' + (SkinSplits.horizontal(split.edge) ? 'across' : 'along') + ' ' + split.edge
+    el.dataset.id = split.id
+    const sign = split.edge === 'left' || split.edge === 'top' ? 1 : -1
+    el.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      el.setPointerCapture(e.pointerId)
+      el.classList.add('dragging')
+      const from = SkinSplits.horizontal(split.edge) ? e.clientX : e.clientY
+      const start = at[split.id]
+      let frame = 0
+      const move = ev => {
+        const pos = SkinSplits.horizontal(split.edge) ? ev.clientX : ev.clientY
+        live[split.id] = start + sign * (pos - from) / scale
+        if (!frame) frame = requestAnimationFrame(() => { frame = 0; layout() })
+      }
+      const up = () => {
+        el.removeEventListener('pointermove', move)
+        el.removeEventListener('pointerup', up)
+        el.removeEventListener('pointercancel', up)
+        el.classList.remove('dragging')
+        if (frame) cancelAnimationFrame(frame)
+        layout()
+        const v = Math.round(at[split.id])
+        delete live[split.id]
+        prefs = Object.assign({}, prefs, { panels: Object.assign({}, prefs.panels, { [current.name]: Object.assign({}, (prefs.panels || {})[current.name], { [split.id]: v }) }) })
+        layout()
+        dragged(split.id, v)
+      }
+      el.addEventListener('pointermove', move)
+      el.addEventListener('pointerup', up)
+      el.addEventListener('pointercancel', up)
+    })
+    return { el, split }
   }
   new ResizeObserver(layout).observe(document.getElementById('stage'))
 
@@ -75,9 +151,11 @@ window.SkinView = (function () {
     term.options.fontSize = prefs['terminal.fontSize'] || t.fontSize || 14
   }
 
-  // The user's settings, applied to every tab's terminal at once.
+  // The user's settings, applied to every tab's terminal at once, and
+  // the panel sizes kept for the skin.
   function setSettings (s, panes) {
     prefs = s || {}
+    layout()
     for (const p of panes()) {
       styleTerminal(p.term)
       p.fit.fit()
@@ -107,11 +185,13 @@ window.SkinView = (function () {
     const stage = document.createElement('div')
     stage.className = 'skin'
     root.appendChild(stage)
+    placed = []
     for (const p of skin.panels || []) {
       const el = document.createElement('div')
       el.className = 'panel ' + p.class
       place(el, p.rect)
       stage.appendChild(el)
+      placed.push({ el, rect: p.rect, follow: p.follow })
     }
     widgets = []
     for (const spec of skin.widgets || []) {
@@ -125,11 +205,17 @@ window.SkinView = (function () {
       place(w.el, s.rect)
       stage.appendChild(w.el)
       widgets.push(w)
+      placed.push({ el: w.el, rect: s.rect, follow: s.follow })
       if (w.toggle) {
         place(w.toggle.el, w.toggle.rect)
         stage.appendChild(w.toggle.el)
+        placed.push({ el: w.toggle.el, rect: w.toggle.rect, follow: spec.toggle.follow })
       }
     }
+    for (const h of handles) h.el.remove()
+    live = {}
+    handles = (skin.splits || []).map(handle)
+    for (const h of handles) document.getElementById('stage').appendChild(h.el)
     setDials(dials)
     terminal = skin.terminal
     current = skin
@@ -186,6 +272,28 @@ window.SkinView = (function () {
     mark()
   }
   function onPick (fn) { picked = fn }
+  // The callback a drag calls with the split's id and its size.
+  function onDrag (fn) { dragged = fn }
+
+  // The splits as laid out, for the live checks and the menu: each
+  // one's size, its range in this layout and its handle's box.
+  function splits () {
+    if (!current) return []
+    const area = document.getElementById('stage')
+    return handles.map(h => {
+      const r = SkinSplits.range(current, h.split, area.clientWidth / scale, area.clientHeight / scale)
+      const b = h.el.getBoundingClientRect()
+      return { id: h.split.id, edge: h.split.edge, size: at[h.split.id], min: r.min, max: r.max, def: r.def, shown: !h.el.hidden, cursor: getComputedStyle(h.el).cursor, box: { x: b.x, y: b.y, width: b.width, height: b.height } }
+    })
+  }
+
+  // The panels as drawn, for the live checks.
+  function panelBoxes () {
+    return placed.filter(p => p.el.classList.contains('panel')).map(p => {
+      const b = p.el.getBoundingClientRect()
+      return { class: p.el.className, box: { x: b.x, y: b.y, width: b.width, height: b.height } }
+    })
+  }
 
   // The dials open on the sessions dashboard (decision 0033), marked on
   // the widgets that open them.
@@ -232,5 +340,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, setDials, setListOff, onPick, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
+  return { apply, update, setDials, setListOff, onPick, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, terminalTheme: () => terminal && terminal.theme, scale: () => scale }
 })()

@@ -816,6 +816,20 @@ handle('settings:set', (_e, id, value) => {
   broadcast('settings', userSettings)
   return { ok: true }
 })
+// The sizes the user dragged the current skin's splits to, kept by the
+// skin's name, and every split of it back to the skin's own from the
+// menu (decision 0035).
+function savePanels (id, v) {
+  const skin = skins.current()
+  if (!skin) return { error: 'no skin' }
+  if (id !== null && (!(skin.splits || []).some(s => s.id === id) || typeof v !== 'number' || !isFinite(v) || v < 0)) return { error: `no split ${id} of ${v}` }
+  userSettings = settings.setPanel(userSettings, skin.name, id, v)
+  try { settings.save(settingsFile, userSettings) } catch (e) { log(`settings: ${e.message}`) }
+  broadcast('settings', userSettings)
+  return { ok: true }
+}
+handle('panels:set', (_e, id, v) => savePanels(String(id), v))
+handle('panels:reset', () => savePanels(null))
 handle('skin:select', (_e, id) => applied(id, skins.select(id)))
 handle('skin:open', async e => {
   const r = await dialog.showOpenDialog(parentOf(e), { title: 'Open skin', properties: ['openDirectory'] })
