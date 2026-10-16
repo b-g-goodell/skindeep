@@ -26,7 +26,7 @@ async function pick (win, label) {
   await openMenu(win)
   await win.locator('#menu .submenu', { hasText: 'Terminal font size' }).hover()
   await sleep(200)
-  await win.locator('#menu .submenu .sub .item', { hasText: label }).click()
+  await win.locator('#menu .submenu', { hasText: 'Terminal font size' }).locator('.sub .item', { hasText: label }).click()
   await sleep(800)
 }
 
