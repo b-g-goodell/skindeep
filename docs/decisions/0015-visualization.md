@@ -17,7 +17,8 @@ and 2026-10-15 for the fern forest (maintainer: "a full forest of fern
 leaves with drifting psychedelic colors and an infinite zoom-in") and
 then the fern garden (maintainer: "re: fern, get more creative"), and
 2026-10-15 for each tab's visualization in the tab strip (maintainer:
-"visualizations in the tabs").
+"visualizations in the tabs"), and 2026-10-15 for the Carbon mode
+(issue #144).
 
 ## Context
 
@@ -54,7 +55,7 @@ butterchurn-presets is MIT for its conversion only.
   shell, web, agent, other), a sweep on prompt submit and on stop, a low
   drone while idle, brightness from `tokens.out_rate`. Every mode draws
   from it.
-- Modes: sixteen, listed once in `app/viz/modes.js`, which the main process
+- Modes: seventeen, listed once in `app/viz/modes.js`, which the main process
   and the page both load, in the order they cycle and the menu lists
   them:
   - Drift, Rings, Plasma, Star dust and Whirlpool: butterchurn presets
@@ -71,7 +72,7 @@ butterchurn-presets is MIT for its conversion only.
     ported from its BSD source with its license in the file: three
     examples of the Superscope's built-in list over a fade, and the Dot
     Plane in its default colours.
-  - Fern, Go, Zoom out, Gravity, Gravity 3D and Quantum: the project's
+  - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum and Carbon: the project's
     procedural modes, one file each, no image or video. Each reacts to
     its pane's events, a prompt, a tool call in its class's colour, a
     stop, a subagent, and calms at idle. Fern: a night garden of fronds,
@@ -88,7 +89,11 @@ butterchurn-presets is MIT for its conversion only.
     distant stars they lens (see 2026-10-15: Gravity 3D). Quantum: the
     Schroedinger equation by split-step Fourier on a 128 by 64 grid,
     packets through slits onto a screen that records detections, a stop
-    measuring and collapsing the state. With the sound output alone,
+    measuring and collapsing the state. Carbon: the neutral carbon atom
+    on NIST's levels and lines, a side-on view of its electron density
+    in three dimensions beside its level diagram and spectrum, the
+    session's events exciting it and its photons leaving by NIST's
+    branching ratios (see 2026-10-15: Carbon). With the sound output alone,
     which brings no events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
@@ -122,6 +127,9 @@ butterchurn-presets is MIT for its conversion only.
     velocity in proportion to the drag, its aim drawn while pressed.
   - Gravity 3D: a drag turns the camera, a click throws a moon (see
     2026-10-15: Gravity 3D).
+  - Carbon: a drag turns the camera, a click on the atom absorbs a
+    photon from the present level, a click on the level diagram excites
+    the level under it by a collision (see 2026-10-15: Carbon).
   - Go: a click on a point plays it for the side to move, if the rules
     allow it.
   - Zoom out: a click leaves a white ring where it lands on the scene
@@ -187,7 +195,7 @@ page reads it, and nothing of it needs to reach the main process. A
 click that stepped the mode would take the click from the modes. The
 pointer's tone, for the modes that only draw the signal, makes each of
 them answer with no code of its own, and it is kept out of the events
-so a procedural mode never takes it for one. A flyout keeps the drop-down short: sixteen more
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: seventeen more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -544,3 +552,153 @@ and the night forest gave it a stage, so the two together were kept.
 | idle | the fronds curl half shut, the hues pale, fireflies come out, the light lingers |
 | sound output alone | a frond fully open sprouts the next while the sound goes on |
 | click | the fronds near it curl as a sensitive plant's do and unroll again, gold spores rise |
+
+## 2026-10-15: Carbon
+
+Maintainer, on issue #144: "a quantum-theoretically-accurate model of
+the carbon atom as one of the visualizations (changes in electron
+energy levels is the dynamic part ... NIST-posted energy levels". Built
+from `docs/research/carbon-atom.md` and its data, and for the photon
+from `docs/research/carbon-photon.md`.
+
+Interim: the owner is reshaping the mode's dynamics (the clock of the
+events, the cloud's rendering and the photon's). Each sits behind a
+small interface in `carbon.js`, `Clock`, `Cloud` and `Photon`, and the
+bullets on them below describe what is built now.
+
+- Carbon is a mode of its own, after Quantum in `modes.js`, drawn by
+  `app/viz/carbon.js` on a canvas of the CPU as the other procedural
+  modes are. Its data is `app/viz/carbon-data.js`, written by
+  `scripts/research/carbon_slim.js` from
+  `docs/research/carbon-atom-data.json`: the 68 levels, all 559 lines,
+  the Rydberg ladders, the outer-electron model and the Bunge 1993 basis.
+  `test/viz-carbon.test.js` rewrites it and fails if the file differs,
+  and checks it against the research data: every energy, $A$ and
+  branching ratio, the Ritz wavelengths $10^7/(E_k - E_i)$ against
+  NIST's within $2\times10^{-7}$, each level's branches summing to 1 and
+  $1/\sum A$ its lifetime, every level reaching the ground term by listed
+  decays.
+- Sources: NIST ASD 5.12 (Kramida, Ralchenko, Reader and NIST ASD Team
+  2024) for the levels, lines, $A$ and branching, Haris and Kramida 2017
+  for the ionization limit, Bunge, Barrientos and Bunge 1993 for the
+  ground orbitals, CIE 1931 and CSS Color 4 for the visible lines'
+  colours, as the research cites them. The photon: Scully and Zubairy
+  ch. 6, Berman, Kuzmich and Milonni 2025, and Jackson ch. 9, as
+  `carbon-photon.md` cites them.
+- The pane: the atom on the left, the level diagram on the right (below
+  in a tall pane), the spectrum along the bottom, the last jump's
+  caption at the top beside the drop-down.
+- The atom: a side-on view in three dimensions, its camera turning
+  slowly about the vertical. Its density is points drawn from the
+  orientation-summed density, round: each electron's radius from an
+  inverse-CDF table of $P(r)^2$ built once per orbital, its direction
+  uniform. $2s^2 2p^2$: Bunge's 1s, 2s and 2p. $2s2p^3$: one 2s electron
+  in 2p, in the same orbitals, an approximation. $2s^2 2p\,nl$: the
+  1s2 2s2 2p core and one outer electron of the research's
+  quantum-defect model, drawn in amber and labelled a model with its
+  mean radius. A jump replaces the cloud at once. 1.2 % of the points
+  are drawn afresh each 60th of a second: samples of where the electron would be
+  found, none of them moving. The view eases to 2.5 times the widest
+  orbital's mean radius, at least 5 bohr, with a scale bar in bohr and
+  nm, so an excited atom's growth shows as the core shrinking under a
+  scale that reads larger.
+- The level diagram: every level at its energy, 0 to the C II limit
+  $90\,820.348\ \mathrm{cm^{-1}}$ dashed at the top, in five columns,
+  singlet and triplet by parity and the quintet. The Rydberg ladders
+  of $2pnp\,{}^3D_3$ and $2pnd\,{}^3F^o_4$ are faint ticks toward the
+  limit. The present level is lit and named. The last jump is an arrow
+  in its light's colour, or grey and dashed outside 380 to 780 nm, with
+  its wavelength. The ground term's fine structure is an inset,
+  magnified, its present $J$ lit.
+- The spectrum: a log wavelength axis from 110 nm to 10 $\mu$m, every
+  line a faint tick in its colour or grey, the visible band marked, and
+  an off-scale bin for the ground term's three lines at 230 to 609
+  $\mu$m. A line flashes when one of its photons is detected and keeps
+  a bar that grows as the square root of its count. No gradient is
+  drawn for the band: the CIE table is not in the repository, and each
+  line carries its own colour.
+- The clock (research section 10, question 1): an allowed decay's
+  lifetime times $2\times10^7$, a slower one at its real lifetime up to
+  8 s, each wait drawn from the exponential about that mean. The pane
+  prints the real $\tau$, the factor or the cap, and the time to the
+  next jump. A $2p3s$ level waits 58 ms, a $2p4p$ one 2.8 to 4.9 s,
+  $2s2p^3\,{}^5S^o_2$ 33 ms and ${}^1S_0$ 1.66 s as they are, and
+  ${}^1D_2$ 8 s against its 57 min.
+- The ground term rests (question 6): a cascade stops on the $J$ it
+  reached, and the ${}^3P_{1,2}$ M1 decays of 44 and 146 days are not
+  run. A cap of 8 s on them would walk every cascade to ${}^3P_0$ in
+  16 s, which the answer forbids.
+- Colour (questions 2 and 3): a visible photon at full brightness in
+  its line's colour from the data, a line outside the visible grey and
+  dashed with its wavelength and band printed.
+- Questions 7 to 9, the builder's: a signal excites by collision or by
+  a photon absorbed from the present level, as the table says. The
+  slim file holds all 559 lines, 96 kB, so no branching ratio is
+  renormalized.
+- The photon, by `carbon-photon.md` section 4, in place of the owner's
+  first ruling of a photon from a point S toward a point F, which that
+  research finds has no basis: at a jump the source region, the
+  transition density $\psi_f^*\psi_i$ of the one electron the line
+  moves, drawn as points at the atom's scale for 1.1 s, in the line's
+  colour where positive and blue grey where negative, labelled. Its
+  radial part is an inverse-CDF table of $|P_f P_i|$, its angular part
+  $P_{l}^{|m|}(\cos\theta)\,P_{l'}^{|m'|}(\cos\theta)\cos(q\varphi)$,
+  the real part at one instant, by rejection. A jump of two electrons,
+  $2s^2 2p\,nl$ to or from $2s2p^3$, which only configuration mixing
+  allows, draws no source and says so. Then the shell: a sphere about
+  the atom, its front and four wavefronts behind it as points, each
+  point's brightness the radiation pattern of one $M$ component about
+  the atom's $z$ axis, drawn dashed and labelled "chosen" while a
+  photon flies. The component $q = \Delta M$ is drawn at random, each of
+  a multipole's components carrying an equal share, so the sum is the
+  isotropic emission of an unoriented atom: E1 and M1 $\sin^2\Theta$
+  for 0 and $(1 + \cos^2\Theta)/2$ for $\pm1$, E2 $\sin^2\Theta\cos^2\Theta$,
+  $1 - 3\cos^2\Theta + 4\cos^4\Theta$ and $1 - \cos^4\Theta$ for 0,
+  $\pm1$ and $\pm2$. The pane names the component and its pattern. A
+  photon outside the visible draws its shell grey, broken into dashes.
+  The shell reaches the pane's nearest edge in 1.5 s. There it is
+  detected: it collapses to one point, in a direction drawn from the
+  pattern, and the spectrum lights the line then, not at the jump.
+- Scales the pane states: the wavelength against the atom, for
+  example "538.0 nm = 699 x this atom" for $2p4p\,{}^1P_1$, whose outer
+  electron's mean radius is 14.55 bohr, and that the wavefront spacing,
+  the shell's thickness and its speed are symbols. The spacing grows as
+  $\lambda^{0.35}$, 4.5 pixels at 119 nm.
+- Checked by `scripts/checks/vizcarbon.js`: one pane watched by its
+  probe through the fake session's turns, a frame each of a visible
+  photon's source and shell, its detection, a photon outside the
+  visible and the spectrum after, then the frame rate below.
+  `vizmodes.js` captures Carbon in its phases with the other procedural
+  modes, `vizpointer.js` clicks it.
+- Frame rate, under swiftshader on a loaded host (load average 30 to
+  37 on 16 cores): drawn alone on a 400 by 380 canvas, a frame of Carbon
+  costs a median 3.2 ms, Gravity 0.7 and Quantum 1.1. Three panes of a
+  720 by 460 window all in one mode, five rounds in turn, ran at a
+  median of 20 frames per second in Carbon, 21 in Gravity and 19.5 in
+  Quantum. `vizmodes.js` gave 10.5 for Carbon, Fern and Go together,
+  15.5 for Fern, Go and Zoom out and 14.5 for Gravity, Gravity 3D and
+  Quantum.
+
+| Signal | Carbon |
+| --- | --- |
+| prompt | an electron collision lifts the atom to a $2p4d$ or $2p5s$ level, by statistical weight $g$: the longest cascades, the red lines and the 119 nm VUV |
+| stop | an electron collision onto a $2p4p$ level, by $g$: the blue, cyan, green and yellow lines, which no photon from the ground term can reach (even parity) |
+| tool call | a photon absorbed from the present level, by the E1 rule: the lines up from it, sorted by the upper level's energy and cut in five bands, read, edit, shell, web and agent taking the first to the fifth, other any. Within a band a line by $f_{ik}\lambda$, a lamp of flat spectral energy density. Nothing, and the pane says so, when no E1 line leads up |
+| subagent | a spin-exchange collision onto $2s2p^3\,{}^5S^o_2$, which no cascade reaches: the 296.5 and 296.7 nm intercombination lines after a real 33 ms |
+| output event | in the ground term, a thermal collision: $J$ drawn by Boltzmann's populations at 300 K, $g_J e^{-E_J/kT}$, 0.128 : 0.354 : 0.518, seen in the inset. Nothing while excited |
+| compaction | a superelastic collision quenches the atom to the ground term, $J$ as above, without light |
+| idle | no excitation: the cascade runs down to the ground term and rests, the camera slows, the cloud dims |
+| sound output alone | its rises count as output events |
+| drag on the atom | turns the camera, which holds 4 s |
+| click on the atom | a lamp: a photon absorbed from the present level, any band |
+| click on the level diagram | an electron collision onto the level nearest the click in that column, any level, spin and parity |
+
+Rejected:
+
+- A photon from a point S sampled from the upper density toward a point
+  F from the lower, the owner's first ruling: `carbon-photon.md` finds no
+  basis for it, and its section 4 replaces it.
+- One $M_L$ component of the cloud (question 4): a free atom has no
+  axis, so the cloud is round, and only the photon's component, drawn
+  for its pattern, takes the chosen axis.
+- A gradient for the visible band: no source in the repository.
