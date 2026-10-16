@@ -11,7 +11,8 @@
 // it copies the transcript into a new session, each seeded from the same
 // history when the transcript is gone. Transcripts stay after exit, for
 // a later --resume, and are pruned after a day. While the file
-// FAKE_CLAUDE_PAUSE names exists, no new turn starts, so the session idles.
+// FAKE_CLAUDE_PAUSE names exists, or that name with .<the fake's pid>
+// after it, no new turn starts, so the session idles.
 // A typed `/rename NAME` and Enter records the name as Claude Code
 // 2.1.296 does: a custom-title line in the transcript and
 // <session id>/custom-title.json beside it (decision 0032).
@@ -196,7 +197,7 @@ async function turn (k) {
   statusline()
   const pause = process.env.FAKE_CLAUDE_PAUSE
   for (let k = 1; ; k++) {
-    while (pause && fs.existsSync(pause)) await sleep(200)
+    while (pause && (fs.existsSync(pause) || fs.existsSync(`${pause}.${process.pid}`))) await sleep(200)
     await turn(k)
     await sleep(2500 + rnd(3000))
   }

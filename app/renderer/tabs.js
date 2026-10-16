@@ -3,8 +3,9 @@
 // the stage, out of reach of skin CSS, shown from the second tab on. A
 // press picks a tab, a drag moves it, a middle click or its close button
 // closes it, + opens the New tab... chooser (decision 0025). A tab
-// released outside the window leaves for a new window there. A tab in the background marks work in
-// progress and output not yet seen. The tab chords are keys that send
+// released outside the window leaves for a new window there. A tab with
+// a session draws its visualization (tabviz.js), and a tab in the
+// background marks output not yet seen. The tab chords are keys that send
 // the CLI nothing: Ctrl+Shift+T, Ctrl+Shift+W, Ctrl+Tab, Ctrl+Shift+Tab.
 // A right click on a tab opens a drop-down with Rename, which edits the
 // tab's name in place (decision 0032).
@@ -38,14 +39,17 @@ window.TabStrip = (function () {
     for (const t of s.tabs) {
       const back = t.id !== s.active
       const el = document.createElement('div')
-      el.className = 'tab' + (back ? '' : ' active') + (back && t.busy ? ' busy' : '') + (back && t.unseen ? ' unseen' : '')
+      el.className = 'tab' + (back ? '' : ' active') + (back && t.unseen ? ' unseen' : '')
       el.dataset.id = t.id
-      el.append(span('mark', ''), span('label', t.label))
+      el.append(span('mark', ''))
+      if (t.kind === 'term') el.append(window.TabViz.canvas(t.id))
+      el.append(span('label', t.label))
       if (t.folder) el.append(span('folder', t.folder))
       el.append(span('close', TIMES))
       strip.appendChild(el)
     }
     strip.appendChild(span('new', '+'))
+    window.TabViz.keep(new Set(s.tabs.filter(t => t.kind === 'term').map(t => t.id)))
   }
 
   function closePopup () {

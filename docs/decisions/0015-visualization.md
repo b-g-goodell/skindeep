@@ -14,7 +14,9 @@ for the pointer (maintainer: "the visualizations should respond to
 clicks and be moderately interactive. example: the quantum physics
 visualizer should allow me to click and drag to put up barriers"),
 and 2026-10-15 for the fern forest (maintainer: "a full forest of fern
-leaves with drifting psychedelic colors and an infinite zoom-in").
+leaves with drifting psychedelic colors and an infinite zoom-in"), and
+2026-10-15 for each tab's visualization in the tab strip (maintainer:
+"visualizations in the tabs").
 
 ## Context
 
@@ -433,3 +435,91 @@ Rejected:
   fraction of the cost.
 - Lensing the bodies and their trails: a trail's places bent near the
   Einstein ring drew zigzags, and a body apart from its trail.
+
+## 2026-10-15: each tab's visualization in the tab strip
+
+Maintainer: "visualizations in the tabs (i find the visualizations are
+helpful at determining if an agent has finished something". The test
+of every choice below: a glance at the tab strip tells a working agent
+from a finished one.
+
+- Where: in the tab strip, a canvas 44 by 16 CSS pixels in each tab
+  with a session, CLI tabs and monitor tabs, between the unseen mark
+  and the name, the active tab's too. The dashboard's tab has none.
+  When the tabs crowd, the canvas gives up to half its width to the
+  name. The strip shows from the second tab on (decision 0023), so a
+  lone tab draws none: no other tab is there to tell it from, and the
+  skin's meters and its pane show its state.
+- What: not the pane's mode. A band of the session's loudness that
+  scrolls right to left, a column every 125 ms, so a tab holds the last
+  5.5 s. A column's height is the level the pane's synthesiser eases
+  from the same numbers, its output and keys, its token rate and its
+  busy state, and an event lights its column in the scope's colour for
+  its kind or tool class. While the agent is busy the band shimmers, so
+  a tool call that prints nothing still reads as work.
+- Done: the busy state is not 1 and the tab has been quiet 2 s, no
+  terminal output and no event. Within about a second the band greys
+  and fades to a quarter, and a flat green line, the sessions
+  dashboard's colour for waiting, runs through it. The band scrolls out
+  in 5.5 s and leaves the line alone. A tab with no busy state, a plain
+  command or a Claude session watched from its transcript alone
+  (decision 0027), also needs its token rate over 10 s at zero. A
+  monitor tab has no terminal of its own, so its events alone count.
+- The numbers: `feed()` in `app/viz.js` drains each tab's events as
+  before, and hands the same numbers, whether the window is open or
+  not, to each main window that shows a strip, on the channel
+  `tab:viz`, each window its own tabs, 30 times a second, with two
+  numbers more: whether the tab lacks a busy state, and its quiet
+  seconds. One drain feeds both, so the pane and the tab see the same
+  events. The page eases the levels itself and runs no synthesiser.
+- The pulsing mark of a background tab at work (decision 0023) is gone:
+  the band says the same of every tab. The mark of output not yet seen
+  stays, so a finished tab whose result is unread shows both.
+- Cost: the page draws on a canvas backed by the CPU, and redraws
+  every tab at once as a column closes, 8 times a second, since under
+  software GL each new frame of the strip recomposites the window. A
+  done tab whose line has settled is not redrawn. Measured by
+  `scripts/checks/tabviz.js cost` against c5d1a70, the commit before,
+  six tabs of the fake claude at work, three alternating rounds on a
+  host at load average 26 to 40 on 16 cores, under swiftshader, the
+  medians:
+
+  | | before | after |
+  | --- | --- | --- |
+  | no viz window: main window frame rate | 29.2 | 29.0 |
+  | main window frame median, p95 (ms) | 16.7, 116.6 | 16.7, 66.8 |
+  | main renderer timer lag p95 (ms) | 2.2 | 1.7 |
+  | main renderer CPU (% of a core) | 11.3 | 12.4 |
+  | viz window open: its frame rate | 5.5 | 7.3 |
+  | main window frame rate | 7.6 | 8.1 |
+
+  The difference is within the rounds' spread but for the main
+  renderer's CPU, about one point of a core more. With the window open
+  both are bound by the GPU process, whose five butterchurn panes run
+  in software GL.
+- Checked by `scripts/checks/tabviz.js look`: four tabs of the fake
+  claude, two held idle, in deck and phosphor, then at a quarter tile
+  and at eight tabs there. Each held tab shows the flat line alone,
+  each working tab a band, the strip stays 24 px high, and a held tab
+  let go works again.
+
+Why: the strip is the one place where every tab shows at once. The
+pane's modes do not survive the size: a fern, a Go board or a wave
+function is a smear in 44 by 16 pixels, butterchurn needs a WebGL
+context, and the main window's terminals already hold theirs (xterm's
+WebGL addon), and a mode per tab would run in the renderer that draws
+the terminal. Motion against a flat line is what the eye catches in a
+strip. The synthesiser's 1024 samples and 48 bands per frame per tab
+are the work that would compete with the terminal, and the band needs
+only its levels.
+
+Rejected:
+
+- The tab's body beside the terminal: only the active tab's body shows,
+  so it tells nothing of the others, and the room belongs to the skin's
+  insets, of which a quarter tile has none to spare (decision 0006).
+- The pane's own mode, drawn small: unreadable, and the cost above.
+- Copying each pane's picture from the window: nothing while the window
+  is closed, and a read back from the GPU for every frame.
+- A taller strip: a quarter tile's skin area would lose the rows.
+

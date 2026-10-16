@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('skinned', {
   onHouse: fn => ipcRenderer.on('house', (_e, h) => fn(h)),
   onStrip: fn => ipcRenderer.on('strip', (_e, s) => fn(s)),
   onMetrics: fn => ipcRenderer.on('metrics', (_e, m) => fn(m)),
+  onTabViz: fn => ipcRenderer.on('tab:viz', (_e, list) => fn(Array.from(list, x => ({ k: Number(x.k), n: Array.from(x.n, Number), e: Array.from(x.e, Number), u: Number(x.u), q: Number(x.q) })))),
   onSkin: fn => ipcRenderer.on('skin:load', (_e, s) => fn(s)),
   listSkins: () => ipcRenderer.invoke('skins:list'),
   selectSkin: id => ipcRenderer.invoke('skin:select', id),

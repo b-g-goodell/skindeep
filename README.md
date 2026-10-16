@@ -84,6 +84,9 @@ and the cache ratio.
 
 The visualizer turns each tab's session into a made-up sound, so output
 thumps, tool calls ring and the picture calms when the agent idles.
+With two tabs or more, each tab draws its own small trace of it in the
+tab strip: a moving band while its agent works, a flat green line once
+it is done.
 **Visualization input** in the menu switches it to what your speakers
 play, and it never records a microphone. Each pane has a drop-down at
 its top left to pick its mode, and space steps through them all, five

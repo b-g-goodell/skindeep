@@ -1,6 +1,6 @@
 # skindeep design
 
-Status: current, 2026-10-14. User documentation is `README.md`, the skin
+Status: current, 2026-10-15. User documentation is `README.md`, the skin
 format `docs/SKINS.md`.
 
 Contents: Goal, Architecture, Decisions.
@@ -57,7 +57,8 @@ quiet sounds of its place.
         |                 the last skin used of each window
         |
         |-- main window renderer (app/renderer/)
-        |     identity strip | tab strip from the second tab |
+        |     identity strip | tab strip from the second tab, each
+        |     tab's visualization a small Canvas2D trace (tabviz.js) |
         |     contained skin wrapper > shadow root (panels, widgets) |
         |     one xterm.js pane per tab at the manifest insets |
         |     the skin's menu button > DOM drop-down (tabs, open skin,
@@ -81,7 +82,8 @@ quiet sounds of its place.
 Data flow: each tab's pty bytes go to its xterm.js unchanged. Side
 channels (statusline JSON, command hooks, transcript JSONL, Codex rollout,
 `/proc`) feed the tab's bus. The active tab's bus pushes snapshots at
-10 Hz to the main renderer (widgets) and a numeric frame to the viz. Nothing flows back into the pty but the user's
+10 Hz to the main renderer (widgets). Every tab's numbers and events go
+at 30 Hz to the viz and to the tab strip. Nothing flows back into the pty but the user's
 own keys, pastes and mouse reports.
 
 ## Decisions
