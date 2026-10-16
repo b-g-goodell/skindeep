@@ -8,7 +8,8 @@
 // both, is recorded the same way, and the sound output is recorded only
 // while the window is open on an input that takes it. The pointer belongs
 // to the page, whose modes answer it, save a press on a drop-down, which
-// is read here.
+// is read here. The same numbers go each frame to the tab strip, open
+// window or not, which draws each tab's own small visualization.
 
 const { BrowserWindow, screen } = require('electron')
 const path = require('path')
@@ -51,12 +52,15 @@ function startInput (records) {
 class Viz {
   // tabs(): every tab in strip order, { id, bus, active, pane }, pane
   // false for a tab drawn by no pane, whose events are dropped. parent:
-  // the main window's view (app/view.js). log: the app's log.
-  constructor (tabs, title, parent, log = () => {}) {
+  // the main window's view (app/view.js). log: the app's log. strip:
+  // called each frame, open or not, with every pane's tab's numbers,
+  // [{ k, n, e }], for the tab strip's own drawing of each.
+  constructor (tabs, title, parent, log = () => {}, strip = () => {}) {
     this.tabs = tabs
     this.title = title
     this.parent = parent
     this.log = log
+    this.strip = strip
     this.win = null
     this.dir = modeDir()
     const records = last.read(this.dir)
@@ -229,19 +233,25 @@ class Viz {
   // Numbers only, per pane in strip order: the tab's id, its place in
   // the strip from 1, whether it is active, the mode's index, whether its
   // drop-down is open, rates, levels and event codes. No session text.
-  // Every tab's events are drained, so none piles up while the window is
-  // closed.
+  // Every tab's events are drained here alone, and the same numbers go
+  // to the tab strip, so none piles up while the window is closed and
+  // the strip and the pane see the same events.
   feed () {
-    const events = new Map(this.tabs().map(t => [t.id, t.bus.drainEvents()]))
-    if (!this.isOpen()) return
     const all = this.tabs()
-    const p = this.panes().map(t => {
+    const events = new Map(all.map(t => [t.id, t.bus.drainEvents()]))
+    const nums = new Map(all.filter(t => t.pane).map(t => {
       const g = n => {
         const v = t.bus.get(n)
         return typeof v === 'number' && isFinite(v) ? v : 0
       }
       const n = [g('pty.out_bps'), g('pty.in_kps'), g('pty.idle_s'), g('tokens.out_rate'), g('state.busy'), g('proc.cpu_pct'), g('context.used_pct')]
-      return { k: t.id, i: all.findIndex(x => x.id === t.id) + 1, a: t.active ? 1 : 0, m: t.mode, o: t.id === this.menu ? 1 : 0, n, e: (events.get(t.id) || []).map(Number) }
+      return [t.id, { k: t.id, n, e: (events.get(t.id) || []).map(Number) }]
+    }))
+    this.strip([...nums.values()])
+    if (!this.isOpen()) return
+    const p = this.panes().map(t => {
+      const { n, e } = nums.get(t.id)
+      return { k: t.id, i: all.findIndex(x => x.id === t.id) + 1, a: t.active ? 1 : 0, m: t.mode, o: t.id === this.menu ? 1 : 0, n, e }
     })
     // src: the input's index. st: the sound output's state, 0 none yet,
     // 1 live, 2 failed. s: its newest samples, while it takes them.

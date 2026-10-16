@@ -586,7 +586,6 @@ function tabState (win = tabs.current) {
       id: t.id,
       label: names.get(t),
       folder: n.get(names.get(t)) > 1 ? path.basename(t.cwd) || t.cwd : null,
-      busy: t.bus.get('state.busy') === 1,
       unseen: t.unseen,
       kind: t.dashboard ? 'dashboard' : 'term'
     }))
@@ -872,7 +871,16 @@ app.whenReady().then(async () => {
     bounds: () => { const w = wins.get(tabs.current) || first; return w.view.bounds() },
     focus: () => { const w = wins.get(tabs.current) || first; w.view.focus() }
   }
-  viz = new Viz(vizTabs, 'visualization: ' + identity.title(nameOf(tabs.active)), beside, log)
+  // Each window with a tab strip gets its tabs' numbers each frame, for
+  // the visualization each tab draws in the strip.
+  const strips = list => {
+    const of = new Map(list.map(x => [x.k, x]))
+    for (const w of wins.values()) {
+      const mine = tabs.inWin(w.id)
+      if (mine.length > 1) w.view.send('tab:viz', mine.filter(t => of.has(t.id)).map(t => of.get(t.id)))
+    }
+  }
+  viz = new Viz(vizTabs, 'visualization: ' + identity.title(nameOf(tabs.active)), beside, log, strips)
   if (opts.viz) first.view.whenLoaded(() => viz.open())
 })
 

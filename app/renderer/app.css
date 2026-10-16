@@ -34,8 +34,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
 #tabs .folder { color: #777; }
 #tabs .mark { flex: none; width: 7px; height: 7px; border-radius: 50%; visibility: hidden; }
 #tabs .unseen .mark { visibility: visible; background: #6fa8dc; }
-#tabs .busy .mark { visibility: visible; background: #e0b050; animation: tab-busy 0.8s ease-in-out infinite alternate; }
-@keyframes tab-busy { from { opacity: 0.25; } to { opacity: 1; } }
+/* Each tab's visualization (decision 0015), W x H of tabviz.js, which
+   gives up to half its width to the name when the tabs crowd. */
+#tabs .viz { flex: 0 1 44px; min-width: 22px; height: 16px; background: #000; border-radius: 2px; }
 #tabs .close { flex: none; width: 16px; text-align: center; color: #777; border-radius: 3px; }
 #tabs .close:hover { background: #3a3a3a; color: #fff; }
 #tabs .new { flex: none; width: 26px; text-align: center; }
