@@ -3,15 +3,19 @@
 // that runs on the fakes alone, each mode of it, each under
 // scripts/clean-env xvfb-run, with scripts/fake first on PATH so no
 // real claude, codex or gh runs and no token is spent.
-//   node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...]
+//   node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...] [--no-record]
 // --jobs: checks run at once, default 3. --timeout: seconds a check may
 // take, default 900. --only: the jobs named, as their OUT folder is
-// named (tabs-keys, p5). Each check's log goes to OUT/<job>.log and its
-// own OUT to OUT/<job>/. The summary names each failing job with its
-// log's error line, and the exit is 1 on any failure.
+// named (tabs-keys, p5), and no pass record. Each check's log goes to
+// OUT/<job>.log and its own OUT to OUT/<job>/. The summary names each
+// failing job with its log's error line, and the exit is 1 on any
+// failure. A full pass on a clean tree records HEAD's tree
+// (scripts/checks/passrecord.js), which ops/publish.py requires;
+// --no-record skips it.
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
+const passrecord = require('./passrecord')
 
 const root = path.join(__dirname, '..', '..')
 const fakes = path.join(root, 'scripts', 'fake')
@@ -53,23 +57,24 @@ const SOCKET_TAIL = '/run/claude-skins/4194304/tab-99/hooks.sock'.length
 const name = job => [job[0], ...job.slice(1).map(a => a.startsWith('--') ? a.slice(2, 6) : a)].join('-')
 
 function args (argv) {
-  const o = { jobs: 3, timeout: 900, only: null, out: null }
+  const o = { jobs: 3, timeout: 900, only: null, record: true, out: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--jobs') o.jobs = Number(argv[++i])
     else if (a === '--timeout') o.timeout = Number(argv[++i])
     else if (a === '--only') o.only = argv[++i].split(',')
+    else if (a === '--no-record') o.record = false
     else if (!a.startsWith('--') && !o.out) o.out = path.resolve(a)
     else throw new Error(`unknown argument ${a}`)
   }
-  if (!o.out || !(o.jobs >= 1) || !(o.timeout > 0)) throw new Error('usage: node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...]')
+  if (!o.out || !(o.jobs >= 1) || !(o.timeout > 0)) throw new Error('usage: node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...] [--no-record]')
   return o
 }
 
 // Every file of scripts/checks is a job or excluded, so a new check is
 // never left out unseen.
 function unlisted () {
-  const known = new Set(JOBS.map(j => j[0]).concat(Object.keys(EXCLUDED).map(k => k.split(' ')[0]), ['suite']))
+  const known = new Set(JOBS.map(j => j[0]).concat(Object.keys(EXCLUDED).map(k => k.split(' ')[0]), ['suite', 'passrecord']))
   return fs.readdirSync(__dirname).filter(f => f.endsWith('.js')).map(f => f.slice(0, -3)).filter(n => !known.has(n))
 }
 
@@ -130,9 +135,14 @@ async function main () {
   const longest = Math.max(...jobs.map(j => name(j).length))
   if (o.out.length + 1 + longest + SOCKET_TAIL > 107) throw new Error(`OUT ${o.out} is too long for a socket path under it: keep it to ${107 - 1 - longest - SOCKET_TAIL} bytes or fewer`)
 
+  const tree = passrecord.tree(root)
+  const changes = passrecord.dirty(root)
+  // Why no record will be written, or '' if a full pass writes one.
+  let skip = !o.record ? '--no-record' : o.only ? '--only' : changes ? `tree dirty (${changes.split('\n')[0]})` : ''
+  if (skip) console.log(`no pass record: ${skip}`)
   for (const [k, why] of Object.entries(EXCLUDED)) console.log(`excluded ${k}: ${why}`)
   fs.mkdirSync(o.out, { recursive: true })
-  console.log(`${jobs.length} jobs, ${o.jobs} at once`)
+  console.log(`${jobs.length} jobs, ${o.jobs} at once, tree ${tree}`)
 
   const t0 = Date.now()
   const queue = jobs.slice()
@@ -146,7 +156,10 @@ async function main () {
   const failed = results.filter(r => !r.ok)
   for (const r of failed) console.log(`failed ${r.job}: ${r.why}`)
 
-  console.log(`suite: ${results.length - failed.length} pass, ${failed.length} fail of ${jobs.length}, wall ${wall} s`)
+  if (!skip && failed.length) skip = 'a job failed'
+  if (!skip && (passrecord.tree(root) !== tree || passrecord.dirty(root))) skip = 'the tree changed during the run'
+  const note = skip ? `no pass record: ${skip}` : `recorded ${passrecord.write(root, { jobs: jobs.length, wall_s: wall })}`
+  console.log(`suite: ${results.length - failed.length} pass, ${failed.length} fail of ${jobs.length}, wall ${wall} s, tree ${tree}, ${note}`)
   process.exitCode = failed.length ? 1 : 0
 }
 
