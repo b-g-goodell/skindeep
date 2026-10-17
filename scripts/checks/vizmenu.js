@@ -86,13 +86,13 @@ function record () {
   const target = MODES.find(m => m.id === 'quantum' && !modes(s).includes('quantum')) || MODES.find(m => !modes(s).includes(m.id))
   const row = t.menu[MODES.indexOf(target)]
   // Read at the press, within a tone's 0.5 s: a mode that heard the
-  // press would hold a tone, or a quantum barrier.
+  // press would hold a tone, or a quantum press.
   await viz.mouse.move(...centre(row))
   await viz.mouse.down()
   const pressed = await look()
   await viz.mouse.up()
   console.log('at the row\'s press', JSON.stringify(pressed.panes.map(p => ({ mode: p.mode, touches: p.touches, probe: p.probe }))))
-  check(pressed.panes.every(p => p.touches === 0 && !(p.probe && p.probe.strokes)), 'the row\'s press reached a mode', pressed.panes)
+  check(pressed.panes.every(p => p.touches === 0 && !(p.probe && p.probe.presses)), 'the row\'s press reached a mode', pressed.panes)
   t = await until(look, t => t.panes[1].mode === target.id && t.menu.length === 0, 5000)
   console.log('picked', JSON.stringify({ target: target.id, before: modes(s), after: modes(t), open: t.panes.map(p => p.open), record: record() }))
   check(t.panes[1].mode === target.id, `want pane 2 in ${target.id}`, modes(t))
@@ -104,7 +104,7 @@ function record () {
   await sleep(1200)
   t = await look()
   const probe = t.panes[1].probe
-  if (target.id === 'quantum') check(probe && probe.strokes === 0, 'the row\'s click reached the quantum mode', probe)
+  if (target.id === 'quantum') check(probe && probe.presses === 0, 'the row\'s click reached the quantum mode', probe)
   await viz.screenshot({ path: path.join(out, 'menu-picked.png') })
 
   // A click in pane 2's body goes to its mode, which stays.
@@ -114,7 +114,7 @@ function record () {
   const u = await look()
   console.log('body click', JSON.stringify({ modes: modes(u), probe: u.panes[1].probe, touches: u.panes[1].touches }))
   check(modes(u).join() === modes(t).join(), 'a click in a pane changed a mode', modes(u))
-  if (target.id === 'quantum') check(u.panes[1].probe.strokes === 1, 'want the click to reach the quantum mode', u.panes[1].probe)
+  if (target.id === 'quantum') check(u.panes[1].probe.presses === 1, 'want the click to reach the quantum mode', u.panes[1].probe)
   check(!u.panes.some(p => p.open), 'a click in a pane opened a drop-down', u.panes.map(p => p.open))
 
   // A press outside an open drop-down closes it and changes no mode.
