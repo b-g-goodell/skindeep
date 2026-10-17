@@ -20,7 +20,12 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
 (issue #158) and for the gravitational waves of the Gravity modes
-(issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170).
+(issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
+for Quantum play (owner: "creatively
+improve the interactivity of the quantum visualizer, and to add maybe
+particles of various wavelengths interacting instead of just one
+particle of one wavelength, and procedurally generated walls of
+potential instead of always using the same 2 apertures").
 
 ## Context
 
@@ -95,9 +100,11 @@ butterchurn-presets is MIT for its conversion only.
     2026-10-15: Gravity 3D, and 2026-10-17: Gravity 3D's optics), and their
     waves, both polarizations, which carry energy away, so a tight pair
     inspirals and chirps until it merges (see 2026-10-16). Quantum: the
-    Schroedinger equation by split-step Fourier on a 128 by 64 grid,
-    packets through slits onto a screen that records detections, a stop
-    measuring and collapsing the state. Carbon: the neutral carbon atom
+    Gross-Pitaevskii equation by split-step Fourier on a 128 by 64
+    grid, packets of the session's wavelengths, drawn in the colour of
+    their wavelength, at a wall generated from a seed, onto a screen
+    that records detections, a stop measuring and collapsing the state
+    (see 2026-10-17: Quantum play). Carbon: the neutral carbon atom
     on NIST's levels and lines, an ensemble at one site that an energy
     field from the session excites and that jumps by Monte Carlo at
     NIST's rates, one atom's cloud drawn in three dimensions, every
@@ -123,14 +130,15 @@ butterchurn-presets is MIT for its conversion only.
   the pointer to its pane until the release. Nothing the pointer does
   changes a mode, the pane layout or the tab, and the keyboard stays
   with the terminal. Each mode answers in its own way:
-  - Quantum: a press and drag paints a barrier along the path, a ridge
-    of potential 2.5 high and about three points wide, above the
-    packets' energy of 0.4 to 1 and below the wall's 4. Fresh, it
-    lets through about one part in 100000 of a packet, so a packet
+  - Quantum: a drag throws a packet, a press held still for a quarter
+    second then dragged paints a barrier along the path, a ridge of
+    potential 2.5 high and about three points wide, above the packets'
+    energy of 0.1 to 2, and a click measures softly where it falls
+    (see 2026-10-17: Quantum play). Fresh, the barrier lets through
+    about one part in 100000 of a packet of energy 0.5, so a packet
     scatters off it, and it leaks only as it fades toward their energy,
-    after about 5 s. It fades
-    with a time constant of 4 s and is gone in about 16. A click drops a short
-    one. The barrier is drawn in amber over the wave.
+    after about 5 s. It fades with a time constant of 4 s and is gone
+    in about 16. The barrier is drawn in amber over the wave.
   - Gravity: the release throws a moon from the press: a click puts it
     on a circular orbit about the heaviest body, a drag gives it a
     velocity in proportion to the drag, its aim drawn while pressed.
@@ -1254,3 +1262,132 @@ Rejected:
   the new nodes' rays costing what the pixels' had.
 - WebGL: the mode would take one of the eight contexts.
 - Kerr geodesics per ray: see the spin, above.
+
+## 2026-10-17: Quantum play
+
+Owner, 2026-10-17: "creatively improve the interactivity of the quantum
+visualizer, and to add maybe particles of various wavelengths
+interacting instead of just one particle of one wavelength, and
+procedurally generated walls of potential instead of always using the
+same 2 apertures". The design is the builder's.
+
+- The model: the Gross-Pitaevskii equation, $i\,\partial_t\psi =
+  -\tfrac12\nabla^2\psi + (V + U(\rho))\psi$ with $\rho = |\psi|^2$,
+  $\hbar = m = 1$, the mean-field equation of a repulsive condensate,
+  so packets push on one another where they overlap, and a dense
+  packet spreads faster than a free one. The plain Schroedinger
+  equation superposes packets without any interaction. The term is
+  saturable, $U = g\rho / (1 + \rho/\rho_s)$ with $g = 25$ and $\rho_s
+  = 0.02$, so it never passes $0.5$ and the phase it adds in a half
+  step stays small: at a fired packet's peak density of about $0.004$
+  it is $0.08$, at a thrown packet's $0.01$ it is $0.17$, at a
+  collapsed packet's $0.04$ it is $0.33$, against packet energies
+  $k^2/2$ of $0.1$ to $2$. The step is split-step Fourier as before,
+  the half steps of $V + U$ reading $U$ from the density they act on,
+  each factor a phase, so the step is unitary, which
+  `test/viz-modes.test.js` holds to $10^{-9}$ with the term on, and
+  the same test sees a packet's variance grow more than 1.5 times
+  faster with the term than without. The norm leaves through the
+  absorbing mask at the edges, strongest at the left where reflected
+  packets go, and through the screen. Not unitary, and said in the
+  file's header: a measurement, which projects and rescales to the
+  norm before, and the cap that rescales the state when its norm
+  passes 3, which also lowers $U$. $U$ is applied from a table of
+  1024 phases over $[0, g\rho_s]$, and skipped where $\rho < 2\times
+  10^{-5}$.
+- The wavelengths: a tool call fires a packet of its class's
+  wavenumber, 0.5, 0.75, 1, 1.25, 1.5 or 1.75 by class 0 to 5, a
+  prompt 1, a subagent two at once of 0.75 and 1.5, an output event
+  0.6 to 1.5 by the bass, and a throw 0.4 to 2 by the drag's length.
+  The drawing makes them readable: the hue at a point is the local
+  wavenumber, the phase difference to the next point along $x$ and
+  along $y$, on a spectral scale from red at 0.4 through yellow, green
+  and blue to violet at 2, the brightness is the amplitude, dimmed
+  where the local wavenumber is under 0.4, a wave at rest or standing,
+  and the phase itself modulates the brightness, so a red packet
+  carries wide stripes and a violet one narrow. A point whose phase
+  flips between neighbours, a node of a standing wave or of the beat
+  of two packets, is drawn dark grey. A collapsed packet, at rest,
+  starts red and spreads into rings from red at its centre to violet
+  at its edge, the condensate's expansion.
+- The walls: `wallgen(seed)` in `quantum.js`, a pure function of the
+  seed through a mulberry32 generator, replaces the table of four
+  layouts. The family is the seed modulo six, so consecutive prompts
+  walk through slits (one to four, random centres and widths), a
+  grating (pitch 6 to 12, half the time a second grating half a pitch
+  over, a Talbot carpet), discs (two to five, a fifth of them wells),
+  a cavity (two thin walls 10 to 24 apart, each 0.6 to 1.6 high, so
+  each is half-silvered to the packets, sometimes with a slit), blocks
+  (four to eight), and wells (a lens, a parabolic well 8 to 13 wide
+  that focuses, a guide along $x$, or both), and the rest is drawn
+  from the seed, with one or two discs added a third of the time.
+  Heights are 0.5 to 1.8 three times in four and 2 to 3 otherwise,
+  against the packets' energies of 0.1 to 2, so a slow red packet
+  reflects where a fast violet one passes, and a wall of 3 stops
+  everything. Wells go to $-1.2$. The wall lies in columns 34 to 109,
+  clear of the firing point at 16 to 24, the screen at 114 and the
+  absorber's rows, which the unit test holds for seeds 1 to 24 with
+  the determinism and the bounds. A prompt takes the next seed. The
+  wall is drawn in blue-grey, brighter the taller, wells in
+  purple-blue, deeper the darker.
+- The pointer, three gestures told apart by the press: a press moved 6
+  pixels before a quarter second passes is a throw, its aim drawn from
+  the press as a line in the colour of the wavenumber it will throw,
+  with a ring at the press, and the release fires a packet 4 points
+  wide from the press along the drag, $k = 0.4 + L/20$ for a drag of
+  $L$ grid points, capped at 2. A press held still a quarter second
+  arms the brush, an amber ring that closes on the pointer as the hold
+  runs, and then paints the barrier of 2026-10-15 along its path. A
+  press released before either is a click, a soft measurement of the
+  position: the window $w = e^{-r^2/2R^2}$, $R = 5$ points, and its
+  complement $\sqrt{1 - w^2}$ are the two outcomes' operators of an
+  unsharp position measurement, the first drawn with the probability
+  $\langle\psi|w^2|\psi\rangle / \langle\psi|\psi\rangle$. Found, the
+  state collapses into the window and a white ring flashes out. Not
+  found, the window is carved out of the wave and a blue ring marks the
+  miss. A click with no wave to measure drops a packet at rest, which
+  the mean-field term then spreads. The probe reports `presses`,
+  `strokes`, `throws`, `pokes`, `catches`, the barrier's height and
+  cells, and the wall's `seed` and `family`. `vizpointer.js` holds a
+  press 400 ms before its drag and wants one stroke and a barrier of
+  40 cells, then an immediate drag for one throw and no stroke, then a
+  click for one measurement, and the fade as before. `vizmenu.js` reads
+  `presses` where it read `strokes`.
+- Cost, under swiftshader on this host: a frame of Quantum alone on a
+  400 by 380 canvas at full activity costs a median 3.0 ms, p90 4.0,
+  at load average 15 to 17, against 2.2 and 3.5 before the change at
+  load average 8 to 10, measured by the method of `vizcarbon.js`. The
+  extra is the two `atan2` per lit point of the hue and the mean-field
+  pass. The grid and the FFT are unchanged. `vizmodes.js` ran three
+  panes of Gravity, Gravity 3D and Quantum at 19.5, 20, 22, 15 and
+  25.5 frames a second over its five rounds, median 20, at load
+  average 15 to 32, and the host's load sets that more than the mode.
+
+| Signal | Quantum |
+| --- | --- |
+| prompt | the next seed's wall, and a packet of $k = 1$ |
+| tool call | a packet of the class's wavenumber, 0.5 to 1.75, red to violet |
+| subagent | two packets at once, $k$ 0.75 and 1.5, the fast one leading |
+| output event | a packet of $k$ 0.6 to 1.5 by the bass |
+| bass, busy | the clock: steps a second |
+| stop, compaction | a measurement: the state collapses to a narrow packet that spreads into rings |
+| idle | the wall fades into a harmonic trap holding a packet set circling in it, which breathes under the term |
+| drag | a throw along the drag, its wavelength by the drag's length |
+| hold, then drag | an amber barrier along the path |
+| click | a soft measurement under the click: a catch and a white ring, or a carved hole and a blue ring |
+
+Rejected:
+
+- Several species on separate grids coupled through their densities:
+  twice the transforms a step for an interaction the one-field term
+  already shows, and a packet's species would have to be drawn by a
+  colour the local wavenumber already gives.
+- A focusing term, $g < 0$: in two dimensions a dense enough packet
+  collapses, and the saturation that would hold it is the same
+  switch a repulsive term needs for nothing.
+- The hue as the phase, as before: it showed the stripes but no
+  wavelength as a colour, and two packets of different wavelength read
+  as one rainbow.
+- A click that drops a barrier, as before: the measurement is the
+  interaction a wave function has and nothing else offers, and the
+  brush keeps the barrier.
