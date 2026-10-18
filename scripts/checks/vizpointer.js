@@ -56,10 +56,11 @@ async function until (get, ok, ms, step = 100) {
   }
 
   // Every mode: a click at the pane's centre, then near a corner, for
-  // go, whose centre may hold a stone. The gravity modes' waves, which
+  // go, whose centre may hold a stone. The gravity modes' waves and
+  // Gravity 3D's trace, lens records, camera and holes' places, which
   // change every frame, are not the click's answer.
   const answer = q => {
-    const { pair, sources, ...rest } = q || {}
+    const { pair, sources, trace, lens, hole, cam, at, ...rest } = q || {}
     return JSON.stringify(rest)
   }
   for (const m of MODES) {
