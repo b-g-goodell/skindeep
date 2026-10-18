@@ -1,8 +1,9 @@
 'use strict'
 // Gravity 3D mode (decision 0015): the Gravity mode's bodies in three
-// dimensions, seen through a perspective camera that turns about their
-// centre of mass, with black holes. G = 1 and c = C, so a hole of mass M
-// has its Schwarzschild radius r_s = 2 M / C^2. A hole pulls by the
+// dimensions, with black holes, seen through a perspective camera that
+// turns about the heaviest hole, held at the pane's centre (anchor).
+// G = 1 and c = C, so a hole of mass M has its Schwarzschild radius
+// r_s = 2 M / C^2. A hole pulls by the
 // Paczynski-Wiita potential -M / (r - r_+), r_+ its horizon, which puts
 // the last stable circular orbit at 3 r_s, and a spinning (Kerr) hole,
 // of spin a = chi M / C^2, drags what moves near it by the Lense-Thirring
@@ -473,6 +474,61 @@
     return [-q[0] / m, -q[1] / m, -q[2] / m]
   }
 
+  // The view's centre (decision 0015, 2026-10-18): the heaviest hole, or
+  // null when there is none and the view takes the origin, where centre
+  // puts the centre of mass. Only the camera follows it: the bodies
+  // still move about their centre of mass.
+  function anchor (bodies) {
+    let a = null
+    for (const b of bodies) if (b.hole && (!a || b.m > a.m)) a = b
+    return a
+  }
+
+  // Camera V for a pane w by h, at turn yaw about the vertical and height
+  // pitch, in radians, about the place o: its basis (right r, up u,
+  // toward the camera e), its centre on screen and its focal length.
+  function aim (V, yaw, pitch, w, h, o) {
+    const cy = Math.cos(yaw)
+    const sy = Math.sin(yaw)
+    const cp = Math.cos(pitch)
+    const sp = Math.sin(pitch)
+    V.o = o
+    V.e = [cp * cy, cp * sy, sp]
+    V.r = [-sy, cy, 0]
+    V.u = [-sp * cy, -sp * sy, cp]
+    V.cx = w / 2
+    V.cy = h / 2
+    V.f = Math.min(w, h) / 2 / Math.tan(0.42)
+  }
+
+  // A point of the world in camera V's frame, into out: right, up and
+  // depth along the view, the camera V.D from V.o. The trace reads the
+  // holes so.
+  function frameOf (V, x, y, z, out) {
+    x -= V.o[0]
+    y -= V.o[1]
+    z -= V.o[2]
+    out[0] = x * V.r[0] + y * V.r[1] + z * V.r[2]
+    out[1] = x * V.u[0] + y * V.u[1] + z * V.u[2]
+    out[2] = V.D - (x * V.e[0] + y * V.e[1] + z * V.e[2])
+    return out
+  }
+
+  // A point of the world into P by camera V: its place on screen, its
+  // depth along the view and its scale.
+  function place (V, P, x, y, z) {
+    x -= V.o[0]
+    y -= V.o[1]
+    z -= V.o[2]
+    const X = x * V.r[0] + y * V.r[1]
+    const Y = x * V.u[0] + y * V.u[1] + z * V.u[2]
+    const d = Math.max(1, V.D - (x * V.e[0] + y * V.e[1] + z * V.e[2]))
+    P.k = V.f / d
+    P.x = V.cx + X * P.k
+    P.y = V.cy - Y * P.k
+    P.d = d
+  }
+
   // A seeded generator, so every pane shows the same sky.
   function rng (s) {
     return () => {
@@ -668,11 +724,17 @@
     // The last frame's trace: its size, the pixels traced one by one,
     // its planes and holes.
     let traced = null
+    // The view's centre at the last frame: the hole's number, its place
+    // on screen and in the trace's frame (null without a hole), and the
+    // recentrings of the bodies so far.
+    let held = null
+    let recentred = 0
     // The pane's signal clock at the last frame.
     let tick = 0
-    // The frame's projection: centre, focal length, camera distance and
-    // basis (right, up, toward the camera).
-    const V = { cx: 0, cy: 0, f: 1, D: 620, r: [1, 0, 0], u: [0, 1, 0], e: [0, 0, 1] }
+    // The frame's projection: centre on screen, focal length, camera
+    // distance from the place it turns about, o, and basis (right, up,
+    // toward the camera).
+    const V = { cx: 0, cy: 0, f: 1, D: 620, o: [0, 0, 0], r: [1, 0, 0], u: [0, 1, 0], e: [0, 0, 1] }
     const P = { x: 0, y: 0, d: 0, k: 0 }
     // The waves, their grid of cells' colours and the pair the probe
     // watches.
@@ -685,6 +747,7 @@
     let ws = null
     const hv = [0, 0]
     const at = [0, 0, 0]
+    const cf = [0, 0, 0]
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
       const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0 }
@@ -854,6 +917,7 @@
 
     // The bodies recentred, the waves' places moved with them.
     function recentre () {
+      recentred++
       const [dx, dy, dz] = centre(bodies, dust)
       field.shift(dx, dy, dz)
     }
@@ -891,31 +955,13 @@
       cap()
     }
 
-    // The camera's basis from its turn and height.
-    function aim (w, h) {
-      const cy = Math.cos(cam.yaw)
-      const sy = Math.sin(cam.yaw)
-      const cp = Math.cos(cam.pitch)
-      const sp = Math.sin(cam.pitch)
-      V.e = [cp * cy, cp * sy, sp]
-      V.r = [-sy, cy, 0]
-      V.u = [-sp * cy, -sp * sy, cp]
-      V.cx = w / 2
-      V.cy = h / 2
-      V.f = Math.min(w, h) / 2 / Math.tan(0.42)
+    // The camera from its turn and height, about the heaviest hole.
+    function point (w, h) {
+      const a = anchor(bodies)
+      aim(V, cam.yaw, cam.pitch, w, h, a ? [a.x, a.y, a.z] : [0, 0, 0])
     }
 
-    // A point of the world into P: its place on screen, its depth along
-    // the view and its scale.
-    function project (x, y, z) {
-      const X = x * V.r[0] + y * V.r[1]
-      const Y = x * V.u[0] + y * V.u[1] + z * V.u[2]
-      const d = Math.max(1, V.D - (x * V.e[0] + y * V.e[1] + z * V.e[2]))
-      P.k = V.f / d
-      P.x = V.cx + X * P.k
-      P.y = V.cy - Y * P.k
-      P.d = d
-    }
+    const project = (x, y, z) => place(V, P, x, y, z)
 
     function style (hue, sat, light, a) {
       const key = (((hue | 0) * 128 + (sat | 0)) * 128 + (light | 0)) * 32 + Math.round(a * 20)
@@ -1324,9 +1370,10 @@
       const hs = new Float64Array(4 * hb.length)
       const bref = new Float64Array(hb.length)
       hb.forEach((b, i) => {
-        hs[4 * i] = b.x * V.r[0] + b.y * V.r[1] + b.z * V.r[2]
-        hs[4 * i + 1] = b.x * V.u[0] + b.y * V.u[1] + b.z * V.u[2]
-        hs[4 * i + 2] = V.D - (b.x * V.e[0] + b.y * V.e[1] + b.z * V.e[2])
+        frameOf(V, b.x, b.y, b.z, cf)
+        hs[4 * i] = cf[0]
+        hs[4 * i + 1] = cf[1]
+        hs[4 * i + 2] = cf[2]
         hs[4 * i + 3] = RING * rs(b.m)
         // Where a cell's linear map would be off by a pixel or more, the
         // light from far behind bent by theta_E^2 / theta: the error of
@@ -1570,7 +1617,7 @@
         // it in the last 4 s.
         const now = synth.t
         if (now - cam.held > 4 && !staged) cam.yaw += dt * 0.06 * (1 - 0.8 * L.idle)
-        aim(w, h)
+        point(w, h)
         const dim = staged ? 1 : 1 - 0.45 * L.idle
         // Trails: long while busy, gone while idle, when time all but
         // stops.
@@ -1619,15 +1666,19 @@
         const sc = scene(kt, tw, th, dim, keep, null)
         if (!fimg || fimg.width !== tw || fimg.height !== th) fimg = fx.createImageData(tw, th)
         traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh, slices: sc.audit }
+        const a = anchor(bodies)
+        const ai = a ? sc.holes.indexOf(a) : -1
+        held = ai < 0 ? null : { id: a.id, x: a.px, y: a.py, cx: V.cx, cy: V.cy, X: sc.hs[4 * ai], Y: sc.hs[4 * ai + 1] }
         present(out, fimg, kt)
         look(sc, kt, dim, keep)
         tick = now
       },
 
-      // A drag turns the camera about the centre: across, about the
-      // vertical, and up and down, its height. A click throws a moon
-      // from the point under it, on the plane through the centre facing
-      // the camera, on a circular orbit about the heaviest body.
+      // A drag turns the camera about the view's centre, the heaviest
+      // hole: across, about the vertical, and up and down, its height. A
+      // click throws a moon from the point under it, on the plane through
+      // that centre facing the camera, on a circular orbit about the
+      // heaviest body.
       pointer (kind, x, y, down) {
         if (kind === 'down') {
           press = { x0: x, y0: y, yaw: cam.yaw, pitch: cam.pitch, moved: false }
@@ -1655,7 +1706,7 @@
         const k = V.f / V.D
         const X = (x - V.cx) / k
         const Y = -(y - V.cy) / k
-        const p = [0, 1, 2].map(i => X * V.r[i] + Y * V.u[i])
+        const p = [0, 1, 2].map(i => V.o[i] + X * V.r[i] + Y * V.u[i])
         const s = sun()
         let rel = [p[0] - s.x, p[1] - s.y, p[2] - s.z]
         let d = len(...rel)
@@ -1694,7 +1745,7 @@
         staged = true
         cam.yaw = yaw
         cam.pitch = pitch
-        aim(canvas.width, canvas.height)
+        point(canvas.width, canvas.height)
         bodies = []
         dust = []
         flares = []
@@ -1745,15 +1796,18 @@
       // and holes, and per class of matter [painted, painted on a slice
       // that does not hold its depth, to paint]), the records of the body
       // and the hole judged behind a hole (look), the camera's turn and
-      // height, and the holes' places and masses.
+      // height, the holes' places and masses, the view's centre (held:
+      // the heaviest hole's number, its place on screen, the pane's
+      // centre, and its place across the trace's axis, X right and Y up)
+      // and the recentrings so far.
       probe () {
         asked = performance.now()
-        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]) }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), held, recentred }
       }
     }
   }
 
-  const api = { step, fall, centre, horizon, circular, rs, C, CHI_MAX, PANE, quadrupole: W.quadrupole }
+  const api = { step, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, C, CHI_MAX, PANE, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)
