@@ -1161,7 +1161,8 @@ behind it vanished under paint.
   pixels, so a cell nearer a hole than the $b$ where that is one pixel,
   or $1.5 b_c$, is traced pixel by pixel. The frame is traced at a
   reduced scale and drawn up to the pane: at most 30000 pixels a pane,
-  or 90000 a window when a pane fills more of it. A split window's
+  or 90000 a window when a pane fills more of it, by default (the
+  setting of 2026-10-18 moves both). A split window's
   three panes of 240 by 460 trace at 0.52, 126 by 240, and a lone pane
   of 1200 by 760 at 0.314, 377 by 239. That costs the picture its
   sharpness: a star or a grain of 1 pixel spreads over about 2 pixels
@@ -1520,3 +1521,29 @@ Rejected:
 - A factor of 100, every photon counted as a flash: fronts would take
   about 42 s to cross the view, and WCAG counts a flash only over its
   area.
+
+## 2026-10-18: Gravity 3D's sharpness as a setting
+
+Owner, 2026-10-18: Gravity 3D's traced pixel cap as a setting. The cap
+of 30000 pixels a pane and 90000 a window (see 2026-10-17) is what
+spreads a star or a grain over 2 to 3 pixels, and a larger one costs
+frame rate: in the runs of 2026-10-17 three panes of 240 by 460 ran at
+a median 25 frames per second at 45000 and 135000, and in the second
+run at 27.5 at 30000 and 90000.
+
+- A setting in File, Settings: Gravity 3D sharpness, 15000, 45000,
+  60000, 90000 or 135000 pixels a pane, the window's cap three times
+  the pane's, or Default, 30000 and 90000 as before. `viz.trace` in
+  `settings.json`, null for Default. The menu writes each as "45000 px
+  a pane". 15000 is for a slow host. 45000 and 135000 is the budget
+  before 2026-10-17, and at 135000 a lone pane of the default 720 by
+  460 window traces whole. The default is left out of the list, as
+  each setting's is, and `settings.TRACE_OWN` is the mode's `PANE`,
+  which `test/settings.test.js` holds equal.
+- The trace's scale is
+  $k = \min(1, \max(\sqrt{P/(w h)}, \sqrt{3P/\max(A, w h)}))$, $P$
+  the setting, $w h$ the pane and $A$ the window, in device pixels.
+  The mode reads $P$ each frame through `env.trace()`, which the
+  window's numeric frame carries (`r`), so a change shows on the next
+  frame.
+

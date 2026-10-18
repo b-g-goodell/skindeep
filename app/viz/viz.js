@@ -33,9 +33,12 @@
   // The text size, a factor (decision 0036): the drop-downs, the
   // captions and a mode's own text, which reads it through text().
   let text = 1
-  // The frame rate cap, frames a second or 0 for none (decision 0036).
+  // The frame rate cap, frames a second or 0 for none (decision 0036),
+  // and Gravity 3D's traced pixels a pane, 0 for the mode's own
+  // (decision 0015), which a mode reads through trace().
   let cap = 0
-  const env = { text: () => text }
+  let trace = 0
+  const env = { text: () => text, trace: () => trace }
 
   try {
     const probe = document.createElement('canvas').getContext('webgl2')
@@ -235,6 +238,7 @@
     const was = sound.src + ':' + sound.st
     sound = { src: f.src, st: f.st, s: f.s }
     cap = f.c
+    trace = f.r
     if (f.t !== text) {
       text = f.t
       document.documentElement.style.setProperty('--viz-text', String(text))
@@ -299,7 +303,7 @@
   }
 
   // mode: the active pane's, else the first's. drawn: the frames drawn,
-  // cap as the last frame set it. A pane's clock: its synthesiser's
+  // cap and trace as the last frame set them. A pane's clock: its synthesiser's
   // seconds, and milkTime its butterchurn's, which steps by its own
   // reading of the time between the frames it renders.
   window.vizState = () => {
@@ -313,6 +317,7 @@
       webgl: !!bc,
       drawn,
       cap,
+      trace,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
       panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, clock: p.synth.t, milkTime: p.milk ? p.milk.renderer.time : null, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }

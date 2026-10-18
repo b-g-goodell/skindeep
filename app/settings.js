@@ -4,8 +4,9 @@
 // overrides the manifest's, and the three text sizes scale the text of
 // the skin, of the window's own parts and of the visualization window
 // (decision 0036). The visualization's frame rate caps the frames its
-// window draws (decision 0036). null returns to the skin's or the app's
-// own. Beside them,
+// window draws (decision 0036), and Gravity 3D's sharpness is the pixels
+// it traces a pane (decision 0015). null returns to the skin's or the
+// app's own. Beside them,
 // `panels` keeps the sizes the user dragged each skin's splits to,
 // by skin name and split id (decision 0035). Kept in
 // $XDG_STATE_HOME/claude-skins/settings.json, written by write and
@@ -22,6 +23,10 @@ const TEXT_SCALES = [70, 80, 90, 110, 125, 150]
 // The visualization's frame rate caps, in frames a second. null: no cap,
 // the display's own rate.
 const FRAME_RATES = [15, 20, 24, 30, 60]
+// Gravity 3D's traced pixels a pane, a window three times as many.
+// null: the mode's own PANE, TRACE_OWN.
+const TRACES = [15000, 45000, 60000, 90000, 135000]
+const TRACE_OWN = 30000
 
 // own: the value null stands for, own(skin). show: a value as the menu
 // writes it.
@@ -65,6 +70,14 @@ const SETTINGS = [
     own: () => null,
     show: v => v === null ? 'display rate' : `${v} fps`,
     none: 'Uncapped'
+  },
+  {
+    id: 'viz.trace',
+    label: 'Gravity 3D sharpness',
+    values: TRACES,
+    own: () => TRACE_OWN,
+    show: v => `${v} px a pane`,
+    none: 'Default'
   }
 ]
 
@@ -143,4 +156,4 @@ const value = (values, id) => {
   return values && s.values.includes(values[id]) ? values[id] : s.own(null)
 }
 
-module.exports = { SETTINGS, TEXT_SCALES, FRAME_RATES, file, load, save, valid, menu, scale, value, setPanel, panelsOf }
+module.exports = { SETTINGS, TEXT_SCALES, FRAME_RATES, TRACES, TRACE_OWN, file, load, save, valid, menu, scale, value, setPanel, panelsOf }

@@ -812,6 +812,7 @@ handle('settings:get', () => userSettings)
 function vizSettings () {
   viz.setText(settings.scale(userSettings, 'text.viz'))
   viz.setCap(settings.value(userSettings, 'viz.fps'))
+  viz.setTrace(settings.value(userSettings, 'viz.trace'))
 }
 handle('settings:menu', () => settings.menu(userSettings, skins.current()))
 handle('settings:set', (_e, id, value) => {
