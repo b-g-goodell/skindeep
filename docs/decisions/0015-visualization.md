@@ -362,8 +362,9 @@ distant background of stars".
   trail is the places a body passed, kept every 1.5 units of time or 4
   of travel and projected each frame. Matter at $d$ from a hole heats
   as $\min(1, (2.3 r_s/d)^2)$, toward orange, white and then blue
-  white, larger and brighter, a hot grain beamed by
-  $(1 + 0.6 v_\parallel/c)^2$ toward the camera. Merger rings and the
+  white, larger and brighter. What emits is shifted in colour and
+  brightness by its motion and by the holes' potential (see
+  2026-10-18: Gravity 3D's Doppler shift). Merger rings and the
   idle dimming are the Gravity mode's.
 - A hole is not drawn. Its shadow, of radius
   $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$, the image of its photon
@@ -1131,9 +1132,10 @@ behind it vanished under paint.
 - A ray takes, front to back, the planes it crosses and, unless
   captured, the sky. A colour is taken as found: specific intensity
   is constant along a ray ($I_\nu/\nu^3$, Liouville, as James et al.,
-  arXiv:1502.03808, use it, with no frequency shift here), so a lensed
-  source is magnified by its area, not brightened. The Doppler beaming
-  of the disc's hot grains is their emission's, as before.
+  arXiv:1502.03808, use it), so a lensed source is magnified by its
+  area, not brightened. The shift of an emitter's light by its motion
+  and by the holes' potential is applied where it is drawn, on its
+  slice (see 2026-10-18: Gravity 3D's Doppler shift).
 - Spin is not in the optics: the light is Schwarzschild's for every
   hole, and nothing paints a shift. A spinning hole's shadow bulges on
   the side moving away and flattens on the side moving toward the
@@ -1613,3 +1615,152 @@ Rejected:
   move every frame, and the culls would measure from the hole.
 - Easing the view across a merger, so the trails glide rather than
   move by the recoil: the hole would leave the centre for the glide.
+
+## 2026-10-18: Gravity 3D's Doppler shift
+
+Owner, issue #172, 2026-10-16: "we want gravity 3d visualization to
+also take the doppler effect into account".
+
+Before (`app/viz/gravity3d.js` at 711d1d7), only the hot dust was
+beamed, its alpha scaled by
+$\max(0.35, \min(2.2, (1 + 0.6 v_\parallel/C)^2))$, $v_\parallel$ its
+speed toward the camera relative to the hole that heats it most. No
+colour was shifted.
+
+- The factor: `doppler` gives
+  $D = 1/(\gamma(1 - \beta\cos\theta))$, $\beta = v/C$ at the mode's
+  $C = 11.5$, $\theta$ the angle between the emitter's velocity and
+  the straight line from it to the camera. One function serves the
+  dust, the bodies and the trails (`emit`). $\beta$ is capped at 0.99:
+  the Paczynski-Wiita pull has no speed limit, and a grain that plunges
+  from the last stable orbit can pass $C$.
+- The frame: velocities are taken relative to the view's centre, the
+  heaviest hole (see 2026-10-18: Gravity 3D's centre), or the origin,
+  at rest, when there is no hole. The camera stands 620 from that hole
+  and goes where it goes, so the hole's frame is the camera's, and a
+  hole's own disc is seen as it turns about the hole. In the frame of
+  the centre of mass, the physics', the seed's hole moves at up to
+  0.254, $\beta = 0.022$ (in Node, a hole of 900, a body of 80 at 175
+  for the companion and two of 3.5 at 215 and 245, on circular orbits,
+  stepped 1000 units of time), which would lay a common shift
+  of up to 2.2% on its whole disc, swinging with the companion's
+  orbit. The camera's own turn about the hole is the viewer's, not a
+  motion of the simulation, and takes no part.
+- Unshifted: the distant stars, as the issue directs, though in this
+  frame they would take the hole's motion about the centre of mass,
+  the same 2.2% at most. The flares, which mark an event at a place,
+  and the waves' picture, a diagram of the strain and not light, are
+  unshifted too. Nothing of a hole is painted, so nothing of one is
+  shifted.
+- The line of sight is the straight one from the emitter to the
+  camera. A lensed image's light leaves the emitter in another
+  direction, most for matter close behind a hole, but matter is drawn
+  once, on its slice, for all its images (see 2026-10-17: Gravity 3D's
+  optics), so each image of a grain takes the shift of its straight
+  line.
+- Gravitational redshift is applied with the kinematic shift: the
+  shift is $g = D \prod_h \sqrt{1 - r_{s,h}/r_h}$ over the holes, $r_h$
+  the emitter's distance from hole $h$ (`lapse`), and $g = 0$ within
+  $r_s$, where the Schwarzschild factor has no static observer: a
+  grain between a spinning hole's horizon and $r_s$ is drawn black.
+  For one hole the product is the shift of an emitter whose speed is
+  measured by the static observer where it is, $\theta$ that
+  observer's angle to the light it sends. Here $v$ is the
+  Paczynski-Wiita speed, $\beta = 0.57$ at the last stable orbit of
+  the seed's hole against $1/2$ in Schwarzschild, and $\theta$ the
+  straight line's, so near a hole it is an approximation, and for
+  several holes a weak-field one. The factor is 0.816 at $3 r_s$ and
+  0.935 at $8 r_s$. The camera's own, 0.989 at 620 from the seed's
+  hole, is left out: the issue's factor is for a distant observer.
+- The colour rule (`shift`): $\lambda_{obs} = \lambda_{em}/g$. A hue's
+  nominal emitted wavelength is that of the spectral colour of that
+  hue. For each wavelength from 440 to 640 nm, every 0.25 nm, the mode
+  computes when it loads the colour of the CIE 1931 colour matching
+  functions, by the multi-lobe fit of Wyman, Sloan and Shirley (JCGT
+  2(2), 2013, eq. 4 and table 1), in linear sRGB (IEC 61966-2-1), mixed with white
+  until no channel is negative, which keeps its dominant wavelength,
+  and that colour's CSS hue. The hue falls strictly over that range,
+  from 271.8 at 440 nm through 0 at 611.0 nm to 341.6 at 640 nm, and
+  the fit's hue folds back below 440 nm and stops falling past 644 nm,
+  so the range ends there and a shifted wavelength is clamped to it. A
+  hue turns toward 271.8, violet, for $g > 1$ and toward 341.6, the
+  deepest red, for $g < 1$. The hues of sRGB's primaries take 611.0,
+  549.2 and 462.9 nm. The purples, between 271.8 and 341.6, have no
+  wavelength: one moves along their arc by the part
+  $\ln g / \ln(640/440)$ of it, toward violet for $g > 1$ and red for
+  $g < 1$. A body's colour is shifted after its heat sets it (`hot`).
+  At the mode's speeds the shift is large: the disc's orange, hue 30,
+  591.5 nm, turns green (150.7) at $g = 1.1$, violet (263.0) at 1.3
+  and the deepest red at 0.9.
+- Brightness: $g^3$, from the invariance of $I_\nu/\nu^3$ that the
+  optics use, the spectrum's shape left out: the issue's $D^3$ for a
+  discrete emitter, spectral index 0. It scales a grain's alpha, a
+  body's glow and a trail's alpha, each clamped at 1, past which the
+  grains still add, being drawn lighter. A body's disc takes it in
+  its lightness, up to 80%, past which its hue would wash to white. It
+  replaces the dust's former factor. A hole's flash still brightens
+  the hot matter about it.
+- The gain is 1, no exaggeration, and the pane says nothing of it. The
+  seed's disc moves at $\beta$ 0.28 at $8 r_s$ to 0.57 at $3 r_s$, $D$
+  1.33 to 1.92 coming and 0.75 to 0.52 going, and the companion and
+  the planets at 175, 215 and 245 at $\beta$ 0.21, 0.19 and 0.18, $D$
+  1.24 to 0.81 at most, so the shift reads as it is.
+- Trails: each trail place keeps the body's velocity there, relative
+  to the view's centre (`tv`), and each of a trail's six pieces takes
+  the shift of its middle place, so a trail shows where the body came
+  toward the camera and where it went away.
+- The dust's batching stands: a grain's shift is taken in steps of
+  0.02 in $\ln g$, so grains of near shifts and one heat share a
+  fill, and each fill and alpha is one path. A draw of a pane of 400
+  by 380 at full activity made a median of 202 to 212 fill calls
+  against 165 to 173 at 711d1d7, in the rounds below.
+- Frame rate, under swiftshader on this host, by the script of
+  2026-10-17 (gravity3d alone at full activity, then one pane of a
+  1200 by 760 window and three panes of 240 by 460 in a 720 by 460
+  window, five times 2 s each), 711d1d7 and this tree in turn, three
+  rounds each. The host stood at a load of 36 to 66 throughout, the
+  first figure of /proc/loadavg read at each line, far above the 14
+  that gated the runs of 2026-10-17, so each figure moved widely
+  between its times of 2 s. The median of a draw at 400 by 380 was
+  10.0, 10.6 and 10.5 ms at 711d1d7 (loads 39.1, 41.4, 53.3) against
+  10.3, 10.8 and 12.1 now (43.2, 46.3, 66.5), and at 1200 by 760 15.9,
+  16.0 and 15.1 against 17.5, 16.4 and 18.6. Three panes ran at a
+  median of 14, 15 and 6.5 frames per second at 711d1d7 (loads 40.8,
+  44.1, 63.4) against 14, 7.5 and 10.5 now (40.5, 52.2, 64.8), and one
+  pane of 1200 by 760 at 15, 12.5 and 9 (40.5, 42.4, 55.3) against 13,
+  9.5 and 10.5 (42.4, 48.6, 62.9): within the load's spread. In the
+  first two rounds, of nearer load, the draw cost 0.2 to 0.3 ms more at
+  400 by 380 and 0.4 to 1.6 ms more at 1200 by 760.
+- Checked by `test/viz-gravity3d.test.js`: $D = 1$ at rest and within
+  $10^{-4}$ of 1 across the line at $\beta = 0.01$, above 1 coming
+  and below 1 going, and at $\beta = 0.6$ the values 2, 8/7, 0.8 and
+  0.5 at $\theta$ of 0, 60, 90 and 180 degrees, and $\beta$ capped
+  past $C$. The colour rule leaves every hue at $D = 1$, turns the
+  spectral hues and the purples toward violet at $D = 1.05$ and toward
+  red at $D = 0.95$, divides a hue's nominal wavelength by $D$ to
+  $10^{-6}$ nm, and clamps at the range's ends. The gravitational
+  factor is $\sqrt{3}/2$ at $4 r_s$ and 0 within $r_s$.
+  `scripts/checks/vizmodes.js` stages a hole of 900 with a disc of 420
+  grains seen 0.15 rad above its plane, in Gravity 3D's full pane and
+  its small one, and less the same scene without the disc, wants the
+  side coming toward the camera more than 1.5 times as bright and its
+  blue over red more than 1.2 times the other side's. In the run of
+  this tree it read 3.79 and 1.45 in the full pane and 3.19 and 1.45
+  in a small pane of 300 by 380. In both frames the approaching side
+  shows violet, cyan and green grains and the receding side faint red
+  ones. Without the control the lensed glow of the galaxy, on one
+  side of the hole, held the full pane's colour ratio to 1.18.
+  `scripts/checks/vizlens.js` still sees its moons and its hole
+  behind the hole, 8 of 8 points each, the moon at rest 250 behind
+  the hole now shifted by its lapse, 0.972 in frequency.
+
+Rejected:
+
+- A hue linear in $\ln\lambda$, 700 nm at hue 0 to 380 nm at 270 (the
+  first build): it put hue 30 at 655 nm, where sRGB's orange lies near
+  591, so a grain coming toward the camera turned green where its
+  light is blue.
+- The frame of the centre of mass: see the frame, above.
+- Each grain shifted relative to the hole that heats it most, as the
+  old beaming was: every grain would have a frame of its own, and the
+  bodies none.
