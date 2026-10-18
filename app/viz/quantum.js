@@ -807,6 +807,8 @@
         const at = grid(x, y)
         if (kind === 'down' && at) {
           presses++
+          // A release lost outside the window leaves the last stroke's pen.
+          pen = null
           press = { x0: at[0], y0: at[1], px: x, py: y, t: performance.now(), gesture: null, cx: at[0], cy: at[1] }
           return
         }
