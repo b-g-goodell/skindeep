@@ -23,7 +23,7 @@ const MENUS = ['File', 'Agents', 'Skins', 'Visualization']
 // order. Skins lists the shipped skins after its heading.
 const WANT = {
   File: ['New tab', 'New tab...', 'Close tab', 'Reopen closed tab', 'Duplicate tab', 'Next tab', 'Previous tab',
-    'Settings', 'Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size', 'Reset panel sizes', 'Housekeeping', 'Forget remembered skin', 'Open log folder', 'Clear logs'],
+    'Settings', 'Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size', 'Visualization frame rate', 'Gravity 3D sharpness', 'Reset panel sizes', 'Housekeeping', 'Forget remembered skin', 'Open log folder', 'Clear logs'],
   Agents: ['Agent sessions', 'Sessions dashboard'],
   Skins: ['Open skin...', 'Skins', ...fs.readdirSync(path.join(root, 'skins')).filter(n => fs.existsSync(path.join(root, 'skins', n, 'skin.json'))).sort()],
   Visualization: ['Hide visualization', 'Visualization mode', 'Visualization input', 'Mute skin sounds']

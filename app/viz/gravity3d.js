@@ -52,12 +52,12 @@
   const T3 = typeof module === 'object' && module.exports ? require('./trace') : root.VizTrace
   // The camera's first height, on which the sky's bright stars lie.
   const PITCH = 0.36
-  // The trace: at most PANE pixels a pane, or WINDOW pixels a window
-  // when a pane fills more of it, its lens map's nodes STEP pixels
-  // apart, SUB slices behind the nearest hole, and the sky's cube faces
-  // at most CUBE pixels square.
+  // The trace: at most PANE pixels a pane, or WINDOW = 3 PANE pixels a
+  // window when a pane fills more of it, PANE the setting Gravity 3D
+  // sharpness (env.trace) or this default, its lens map's nodes STEP
+  // pixels apart, SUB slices behind the nearest hole, and the sky's cube
+  // faces at most CUBE pixels square.
   const PANE = 30000
-  const WINDOW = 90000
   const STEP = 6
   const SUB = 8
   const CUBE = 1024
@@ -1605,7 +1605,8 @@
         // window however it is split.
         const view = canvas.ownerDocument && canvas.ownerDocument.defaultView
         const area = view ? view.innerWidth * view.innerHeight * (view.devicePixelRatio || 1) ** 2 : w * h
-        const kt = Math.min(1, Math.max(Math.sqrt(PANE / (w * h)), Math.sqrt(WINDOW / Math.max(area, w * h))))
+        const pane = (env && env.trace && env.trace()) || PANE
+        const kt = Math.min(1, Math.max(Math.sqrt(pane / (w * h)), Math.sqrt(3 * pane / Math.max(area, w * h))))
         const tw = Math.ceil(w * kt)
         const th = Math.ceil(h * kt)
         tcx = V.cx * kt
@@ -1752,7 +1753,7 @@
     }
   }
 
-  const api = { step, fall, centre, horizon, circular, rs, C, CHI_MAX, quadrupole: W.quadrupole }
+  const api = { step, fall, centre, horizon, circular, rs, C, CHI_MAX, PANE, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)

@@ -54,12 +54,14 @@ test('every mode the menu lists has a renderer the viz page loads', () => {
 test('preset equations give finite numbers for quiet and loud input', () => {
   const { window } = loadPage()
   const fn = src => new Function('a', `${src || ''} return a;`) // eslint-disable-line no-new-func
+  // Butterchurn's own defaults of the values the presets' steps scale.
+  const DEFAULTS = { zoom: 1, rot: 0, warp: 0.01, dx: 0, dy: 0, sx: 1, sy: 1, wave_a: 1, ob_a: 0, ib_a: 0, mv_a: 0 }
   const OUT = ['zoom', 'rot', 'warp', 'cx', 'cy', 'dx', 'dy', 'sx', 'sy', 'decay', 'wave_r', 'wave_g', 'wave_b', 'wave_a', 'wave_x', 'wave_y', 'q1']
   for (const m of MODES.filter(m => m.kind === 'milk')) {
     const p = window.VizPresets[m.id]
     for (const level of [0, 0.5, 3]) {
       const audio = { time: 7.3, frame: 220, fps: 60, bass: level, mid: level, treb: level, bass_att: level, mid_att: level, treb_att: level, vol: level }
-      const a = fn(p.init_eqs_str)(Object.assign({}, p.baseVals, audio))
+      const a = fn(p.init_eqs_str)(Object.assign({}, DEFAULTS, p.baseVals, audio))
       const f = fn(p.frame_eqs_str)(Object.assign({}, a, audio))
       for (const k of OUT) if (k in f) assert.ok(Number.isFinite(f[k]), `${m.id} frame ${k} = ${f[k]} at level ${level}`)
       for (const rad of [0, 0.05, 0.5, 0.71]) {

@@ -166,6 +166,9 @@
     let grown = 0
     const fronds = []
     const spores = []
+    // The light a frame adds, as a share of what a frame of 1/60 s adds:
+    // the buffer then holds as much light at any frame rate (draw).
+    let gain = 1
     const flies = Array.from({ length: 40 }, () => ({ x: Math.random(), y: 0.25 + 0.65 * Math.random(), ph: 6.3 * Math.random(), v: 0.4 + Math.random() }))
 
     // A line of light into the buffer, a dot a pixel.
@@ -182,9 +185,9 @@
         const iy = y | 0
         if (ix >= 0 && iy >= 0 && ix < bw && iy < bh) {
           const at = iy * bw + ix
-          R[at] += r
-          G[at] += g
-          B[at] += b
+          R[at] += r * gain
+          G[at] += g * gain
+          B[at] += b * gain
         }
         x += sx
         y += sy
@@ -202,7 +205,7 @@
         for (let ix = x0; ix <= x1; ix++) {
           const d = ((ix - x) * (ix - x) + (iy - y) * (iy - y)) * k
           if (d >= 1) continue
-          const w = (1 - d) * (1 - d)
+          const w = (1 - d) * (1 - d) * gain
           const at = iy * bw + ix
           R[at] += r * w
           G[at] += g * w
@@ -472,8 +475,13 @@
         }
         for (let i = fronds.length - 1; i >= 0; i--) if (fronds[i].wither >= 1) fronds.splice(i, 1)
 
-        // The light fades fast at work, lingers at idle.
-        const fade = Math.exp(-dt / (0.06 + 0.5 * idle))
+        // The light fades fast at work, lingers at idle. A light held
+        // still fills the buffer to its added light over 1 - fade, so
+        // each frame adds its light times (1 - fade) / (1 - fade of 1/60
+        // s): as much at 15 frames a second as at 60.
+        const tau = 0.06 + 0.5 * idle
+        const fade = Math.exp(-dt / tau)
+        gain = (1 - fade) / (1 - Math.exp(-1 / 60 / tau))
         for (let i = 0; i < R.length; i++) {
           R[i] *= fade
           G[i] *= fade
@@ -525,9 +533,12 @@
         for (let k = 0; k < 30; k++) spores.push({ x: x * bw / cw, y: y * bh / ch, vx: S * 70 * (Math.random() - 0.5), vy: S * (-20 - 50 * Math.random()), c, t })
       },
 
-      // For the live checks: the clicks, the unrolling so far, the fronds.
+      // For the live checks: the clicks, the unrolling so far, the fronds,
+      // and for the tests the light the buffer holds.
       probe () {
-        return { clicks, grown, fronds: fronds.length }
+        let light = 0
+        if (R) for (let i = 0; i < R.length; i++) light += R[i] + G[i] + B[i]
+        return { clicks, grown, fronds: fronds.length, light }
       }
     }
   }

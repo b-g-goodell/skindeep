@@ -6,15 +6,18 @@ window.VizCanvas = window.VizCanvas || {}
 ;(function (reg) {
   const CLASS_HUE = [200, 120, 40, 0, 280, 320]
   const KIND_HUE = { 1: 160, 3: 60, 4: 190, 5: 300, 6: 0 }
+  const FADE = 0.22
 
   function create (canvas) {
     const g = canvas.getContext('2d')
     return {
-      draw (synth) {
+      // dt: the seconds since the frame before. The afterglow fades by
+      // FADE each 1/60 s.
+      draw (synth, dt = 1 / 60) {
         const w = canvas.width
         const h = canvas.height
         const L = synth.level
-        g.fillStyle = 'rgba(0, 0, 0, 0.22)'
+        g.fillStyle = `rgba(0, 0, 0, ${1 - Math.pow(1 - FADE, 60 * dt)})`
         g.fillRect(0, 0, w, h)
 
         // Spectrum along the bottom.

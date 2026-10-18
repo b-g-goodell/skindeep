@@ -6,13 +6,38 @@
 // screenshots named cosmic dust and vortex, with no line of the
 // originals: a swarm of small green-gold dots in a slow dim vortex, and
 // copper spiral arms wound from jagged white scribbles.
+//
+// Butterchurn applies a preset's warp once a frame it renders, so each
+// step of a frame is scaled to the time since the frame drawn before,
+// k = 60 dt, in frames of 1/60 s (decision 0036): the page sets
+// VizStep.k before each render, dt bounded at 0.1 s as the page bounds
+// it. A factor f a frame becomes f^k: the zoom and the stretch sx, sy,
+// and the warp shader's fade. A term t a frame becomes k t: the
+// rotation, the shift dx, dy, the warp's amplitude and the fade's
+// subtraction. What is drawn into the feedback each frame, the waves,
+// the custom waves' dots and the borders, has its alpha times k, so
+// that as much light a second goes in as fades out, until the alpha
+// meets 1, where GL clamps it. The
+// frame equations put k in q32, which the pixel equations and the warp
+// shader read. Terms in time, and the warp's animation in time, need
+// none.
+
+window.VizStep = { k: 1 }
 
 window.VizPresets = (function () {
-  const WARP = 'shader_body {\nret = texture2D(sampler_main, uv).rgb;\nret -= 0.004;\n}\n'
+  const K = "(typeof VizStep === 'object' ? VizStep.k : 1)"
+  const STEP = `a.q32 = ${K};`
+  // After the frame equations: what the frame draws into the feedback.
+  const FEED = 'a.wave_a = a.wave_a*a.q32; a.ob_a = a.ob_a*a.q32; a.ib_a = a.ib_a*a.q32; a.mv_a = a.mv_a*a.q32;'
+  // After the pixel equations: the warp of each vertex.
+  const MOVE = 'a.zoom = Math.pow(a.zoom, a.q32); a.sx = Math.pow(a.sx, a.q32); a.sy = Math.pow(a.sy, a.q32); a.rot = a.rot*a.q32; a.dx = a.dx*a.q32; a.dy = a.dy*a.q32; a.warp = a.warp*a.q32;'
+  // After a custom wave's frame equations: its alpha.
+  const LIGHT = `a.a = a.a*${K};`
+  const WARP = 'shader_body {\nret = texture2D(sampler_main, uv).rgb;\nret -= 0.004*q32;\n}\n'
   const COMP = 'shader_body {\nret = texture2D(sampler_main, uv).rgb;\nret *= hue_shader;\n}\n'
 
   function preset (baseVals, frame, pixel, extra) {
-    return Object.assign({
+    const p = Object.assign({
       baseVals,
       shapes: [],
       waves: [],
@@ -22,6 +47,10 @@ window.VizPresets = (function () {
       warp: WARP,
       comp: COMP
     }, extra || {})
+    p.frame_eqs_str = STEP + p.frame_eqs_str + FEED
+    p.pixel_eqs_str = p.pixel_eqs_str + MOVE
+    p.waves = p.waves.map(w => Object.assign({}, w, { frame_eqs_str: (w.frame_eqs_str || '') + LIGHT }))
+    return p
   }
 
   const drift = preset({
@@ -94,7 +123,7 @@ window.VizPresets = (function () {
       dots(120, 0.70, 0.90, 0.55, 'a.a = 0.2 + 0.3*a.mid_att;', 0),
       dots(60, 0.65, 0.45, 0.85, 'a.a = 0.15 + 0.2*a.bass_att;', 0)
     ],
-    warp: 'shader_body {\nret = texture2D(sampler_main, uv).rgb;\nret -= 0.004;\n}\n',
+    warp: WARP,
     comp: 'shader_body {\nvec3 m = texture2D(sampler_main, uv).rgb;\nvec3 b = texture2D(sampler_blur1, uv).rgb;\nret = m*vec3(0.95, 1.0, 0.85) + b*vec3(0.45, 0.6, 0.65) + vec3(0.01, 0.02, 0.017);\n}\n'
   })
 
@@ -126,7 +155,7 @@ window.VizPresets = (function () {
   'a.zoom = a.zoom + 0.01*a.rad;',
   {
     waves: [scribble(0), scribble(3.1416)],
-    warp: 'shader_body {\nret = texture2D(sampler_main, uv).rgb*vec3(0.985, 0.95, 0.9);\nret -= 0.006;\n}\n',
+    warp: 'shader_body {\nret = texture2D(sampler_main, uv).rgb*pow(vec3(0.985, 0.95, 0.9), vec3(q32));\nret -= 0.006*q32;\n}\n',
     comp: 'shader_body {\nvec3 m = texture2D(sampler_main, uv).rgb;\nfloat core = max(0.0, 1.0 - rad*7.0);\nret = m + vec3(1.0, 0.85, 0.65)*core*core*(0.12 + 0.2*bass_att) + vec3(0.016, 0.013, 0.012);\n}\n'
   })
 

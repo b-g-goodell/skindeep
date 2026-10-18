@@ -74,8 +74,12 @@ class Viz {
     this.modeOf = new Map()
     // The tab whose pane's drop-down is open, or null.
     this.menu = null
-    // The visualization text size as a factor (decision 0036).
+    // The visualization text size as a factor, and the frame rate cap,
+    // 0 for none (decision 0036). Gravity 3D's traced pixels a pane, 0
+    // for the mode's own (decision 0015).
     this.text = 1
+    this.cap = 0
+    this.trace = 0
     this.base = startMode(records)
     this.inputs = inputDir()
     const inputs = last.read(this.inputs)
@@ -170,6 +174,18 @@ class Viz {
   // The visualization text size, a factor, sent with every frame.
   setText (t) {
     this.text = t
+  }
+
+  // The frame rate cap, frames a second, null for none, sent with every
+  // frame.
+  setCap (fps) {
+    this.cap = fps || 0
+  }
+
+  // Gravity 3D's traced pixels a pane, null for the mode's own, sent
+  // with every frame.
+  setTrace (px) {
+    this.trace = px || 0
   }
 
   step (pane) {
@@ -276,9 +292,9 @@ class Viz {
     })
     // src: the input's index. st: the sound output's state, 0 none yet,
     // 1 live, 2 failed. s: its newest samples, while it takes them. t:
-    // the text size.
+    // the text size. c: the frame rate cap. r: Gravity 3D's trace.
     const st = SOUND_STATUS[this.sound.status]
-    this.win.webContents.send('frame', { p, src: this.input, st, s: this.input > 0 && st === 1 ? this.sound.samples() : new Float32Array(0), t: this.text })
+    this.win.webContents.send('frame', { p, src: this.input, st, s: this.input > 0 && st === 1 ? this.sound.samples() : new Float32Array(0), t: this.text, c: this.cap, r: this.trace })
   }
 }
 

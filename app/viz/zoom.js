@@ -388,9 +388,12 @@
           marks.push({ level: n, x: (Math.random() - 0.5) * 0.8, y: (Math.random() - 0.5) * 0.8, hue, t })
         }
         marks = marks.filter(m => t - m.t < 6)
+        // The surge decays with a time constant of 2 s, and its part of
+        // the zoom is its integral over the frame.
+        const was = surge
         surge *= Math.exp(-dt / 2)
         pulse = Math.max(0, pulse - dt / 1.2)
-        z += dt * (0.05 + 0.12 * Math.min(1, L.bass) + 0.1 * L.busy + 0.35 * surge) * (1 - 0.92 * L.idle)
+        z += (dt * (0.05 + 0.12 * Math.min(1, L.bass) + 0.1 * L.busy) + 0.35 * 2 * (was - surge)) * (1 - 0.92 * L.idle)
         z %= K
 
         g.setTransform(1, 0, 0, 1, 0, 0)
