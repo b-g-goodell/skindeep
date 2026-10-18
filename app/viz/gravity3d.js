@@ -1409,8 +1409,10 @@
         const rec = { b: o2.b, i: o2.i, fr, r: o2.R, hidden: fr.dist + o2.R <= fr.o.R }
         if (!hole || (rec.hidden && !hole.hidden) || (rec.hidden === hole.hidden && o2.b.m > hole.b.m)) hole = rec
       }
-      if (body) seen = record(body, false, sc, kt, dim, keep)
+      // The hole's control reuses the frame's slices, and the body's
+      // redraws them without the body, so the hole goes first.
       if (hole) seenHole = record(hole, true, sc, kt, dim, keep)
+      if (body) seen = record(body, false, sc, kt, dim, keep)
     }
 
     function record (t, isHole, sc, kt, dim, keep) {
