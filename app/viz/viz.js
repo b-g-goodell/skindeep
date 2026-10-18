@@ -1,5 +1,5 @@
 'use strict'
-/* global Synth, VizModes, VizCanvas, VizPresets, VizLayout, butterchurn */
+/* global Synth, VizModes, VizCanvas, VizPresets, VizLayout, VizPace, butterchurn */
 // The visualization page (decision 0015), fed only by window.vizFeed
 // numeric frames: one entry per pane, each a tab of the main window with
 // its own signal and the index of its mode in modes.js, and the input:
@@ -33,6 +33,8 @@
   // The text size, a factor (decision 0036): the drop-downs, the
   // captions and a mode's own text, which reads it through text().
   let text = 1
+  // The frame rate cap, frames a second or 0 for none (decision 0036).
+  let cap = 0
   const env = { text: () => text }
 
   try {
@@ -232,6 +234,7 @@
   window.vizFeed.onFrame(f => {
     const was = sound.src + ':' + sound.st
     sound = { src: f.src, st: f.st, s: f.s }
+    cap = f.c
     if (f.t !== text) {
       text = f.t
       document.documentElement.style.setProperty('--viz-text', String(text))
@@ -266,10 +269,22 @@
     dropdown()
   })
 
+  // Each display frame the cap lets through is drawn, and every mode
+  // advances by the time since the frame drawn before (pace.js). drawn:
+  // the frames drawn, for the live checks.
   let prev = performance.now()
+  let next = 0
+  let drawn = 0
   function loop (now) {
+    const d = VizPace.due(now, next, cap)
+    next = d.next
+    if (!d.draw) {
+      requestAnimationFrame(loop)
+      return
+    }
     const dt = Math.min(0.1, (now - prev) / 1000)
     prev = now
+    drawn++
     for (const p of panes.values()) {
       p.synth.step(dt, sound)
       if (p.shown < 0) continue
@@ -283,7 +298,10 @@
     requestAnimationFrame(loop)
   }
 
-  // mode: the active pane's, else the first's.
+  // mode: the active pane's, else the first's. drawn: the frames drawn,
+  // cap as the last frame set it. A pane's clock: its synthesiser's
+  // seconds, and milkTime its butterchurn's, which steps by its own
+  // reading of the time between the frames it renders.
   window.vizState = () => {
     const list = [...panes.values()]
     const main = list.find(p => p.a === 1) || list[0]
@@ -293,8 +311,10 @@
       menu: [...menu.children].map(r => ({ label: r.textContent.trim(), current: r.classList.contains('current'), x: parseFloat(r.style.left), y: parseFloat(r.style.top), w: parseFloat(r.style.width), h: parseFloat(r.style.height) })),
       mode: id(main),
       webgl: !!bc,
+      drawn,
+      cap,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
-      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, clock: p.synth.t, milkTime: p.milk ? p.milk.renderer.time : null, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   // For the live checks alone: pane k's mode stages a scene and holds it

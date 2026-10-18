@@ -129,3 +129,40 @@ which bounds the range at 150 percent.
   and the quarter tile would hold no skin with two tabs.
 - The fit run every frame: a readout's value changes ten times a
   second. A value that widens may run past its fit for up to a second.
+
+## 2026-10-18: the visualization's frame rate
+
+Owner, 2026-10-18: a frame-rate cap for every visualization, in the
+settings.
+
+- A fifth setting in File, Settings: Visualization frame rate, 15, 20,
+  24, 30 or 60 frames a second, or Uncapped, the default, which draws
+  at the display's own rate as before. `viz.fps` in `settings.json`,
+  null for Uncapped. 60 caps a display faster than 60 Hz, and a rate
+  above the display's draws at the display's.
+- The visualization window's page draws only the display frames the
+  cap lets through (`app/viz/pace.js`): each frame drawn is due one
+  gap of 1000 / fps ms after the one before was due, so the frames
+  drawn keep to the cap over any run and never exceed it by more than
+  one in a second, and a frame up to 2 ms early counts as on time, so
+  that the jitter of the display's clock skips none. A loop more than a
+  gap behind starts again from now.
+- The modes' clocks do not change. Every mode advances by the time
+  since the frame drawn before, as it did by the time since the
+  display's frame before: the synthesiser's levels and samples, the
+  Canvas2D modes' physics and fades, Superscope's steps of 1/60 s and
+  Dot plane's of 1/30 s, and butterchurn's clock, which reads the time between
+  the frames it renders. The page's bound of 0.1 s a frame, against a
+  stall, is above the gap at 15. A butterchurn preset's per-frame warp,
+  its zoom, rotation and decay applied once a frame drawn, is
+  MilkDrop's and moves per frame, as it moves faster on a faster
+  display today: at a cap below the display's rate its trails and its
+  zoom move fewer steps a second, while its colours and every term in
+  `time` keep their speed.
+- It applies at once: each numeric frame to the window carries the
+  cap (`c`), as it carries the text size.
+- `test/viz-pace.test.js` replays 60 Hz and 144 Hz displays with and
+  without jitter against each cap.
+
+Rejected: a cap by a timer instead of the display's frames, which
+would draw between them.

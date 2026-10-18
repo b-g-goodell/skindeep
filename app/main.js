@@ -808,13 +808,18 @@ on('sound:toggle', () => {
 const settingsFile = settings.file()
 let userSettings = settings.load(settingsFile)
 handle('settings:get', () => userSettings)
+// The visualization's settings, sent with each of its frames.
+function vizSettings () {
+  viz.setText(settings.scale(userSettings, 'text.viz'))
+  viz.setCap(settings.value(userSettings, 'viz.fps'))
+}
 handle('settings:menu', () => settings.menu(userSettings, skins.current()))
 handle('settings:set', (_e, id, value) => {
   if (!settings.valid(id, value)) return { error: `no setting ${id} of ${value}` }
   userSettings = Object.assign({}, userSettings, { [id]: value })
   try { settings.save(settingsFile, userSettings) } catch (e) { log(`settings: ${e.message}`) }
   broadcast('settings', userSettings)
-  if (viz) viz.setText(settings.scale(userSettings, 'text.viz'))
+  if (viz) vizSettings()
   return { ok: true }
 })
 // The sizes the user dragged the current skin's splits to, kept by the
@@ -904,7 +909,7 @@ app.whenReady().then(async () => {
     }
   }
   viz = new Viz(vizTabs, 'visualization: ' + identity.title(nameOf(tabs.active)), beside, log, strips)
-  viz.setText(settings.scale(userSettings, 'text.viz'))
+  vizSettings()
   if (opts.viz) first.view.whenLoaded(() => viz.open())
 })
 

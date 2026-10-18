@@ -12,11 +12,11 @@ test('a missing or broken file, and any value outside a setting\'s list, read as
   const d = tmp()
   try {
     const f = path.join(d, 'settings.json')
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, panels: {} })
     fs.writeFileSync(f, '{not json')
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, panels: {} })
     fs.writeFileSync(f, JSON.stringify({ 'terminal.fontSize': 19, other: 3 }))
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, panels: {} })
   } finally {
     fs.rmSync(d, { recursive: true, force: true })
   }
@@ -28,7 +28,7 @@ test('a saved setting reads back, and the menu marks it beside the skin\'s own v
     const f = path.join(d, 'deeper', 'settings.json')
     settings.save(f, { 'terminal.fontSize': 20 })
     const v = settings.load(f)
-    assert.deepStrictEqual(v, { 'terminal.fontSize': 20, 'text.skin': null, 'text.window': null, 'text.viz': null, panels: {} })
+    assert.deepStrictEqual(v, { 'terminal.fontSize': 20, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, panels: {} })
     const [row] = settings.menu(v, { terminal: { fontSize: 19 } })
     assert.strictEqual(row.choices[0].label, 'Skin default (19 px)')
     assert.strictEqual(row.choices[0].current, false)
@@ -49,7 +49,7 @@ test('a text size reads back as a factor, and the menu offers it beside the defa
     assert.deepStrictEqual([v['text.skin'], v['text.window'], v['text.viz']], [150, 80, null])
     assert.deepStrictEqual(['text.skin', 'text.window', 'text.viz', 'terminal.fontSize'].map(id => settings.scale(v, id)), [1.5, 0.8, 1, 1])
     const rows = settings.menu(v, null)
-    assert.deepStrictEqual(rows.map(r => r.label), ['Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size'])
+    assert.deepStrictEqual(rows.map(r => r.label), ['Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size', 'Visualization frame rate'])
     const skin = rows[1]
     assert.strictEqual(skin.choices[0].label, 'Skin default (100%)')
     assert.deepStrictEqual(skin.choices.map(c => c.label).slice(1), settings.TEXT_SCALES.map(p => `${p}%`))
@@ -71,6 +71,31 @@ test('only a defined setting and one of its values is valid', () => {
   assert.ok(settings.valid('text.window', 150))
   assert.ok(!settings.valid('text.window', 100))
   assert.ok(!settings.valid('text.window', 1.5))
+  for (const v of [15, 20, 24, 30, 60, null]) assert.ok(settings.valid('viz.fps', v), `viz.fps ${v}`)
+  for (const v of [0, 25, 120, '30', 30.5]) assert.ok(!settings.valid('viz.fps', v), `viz.fps ${v}`)
+})
+
+// The visualization's frame rate cap (decision 0036): frames a second,
+// null for none, the display's own rate.
+test('a frame rate cap reads back, null in effect for none, and the menu offers it beside Uncapped', () => {
+  const d = tmp()
+  try {
+    const f = path.join(d, 'settings.json')
+    settings.save(f, { 'viz.fps': 24 })
+    assert.strictEqual(settings.value(settings.load(f), 'viz.fps'), 24)
+    settings.save(f, { 'viz.fps': 25 })
+    const v = settings.load(f)
+    assert.strictEqual(v['viz.fps'], null)
+    assert.strictEqual(settings.value(v, 'viz.fps'), null)
+    assert.strictEqual(settings.value({ 'text.viz': 150 }, 'text.viz'), 150)
+    assert.strictEqual(settings.value({}, 'text.viz'), 100)
+    assert.strictEqual(settings.value({}, 'no.such'), null)
+    const row = settings.menu(settings.load(f), null).find(r => r.id === 'viz.fps')
+    assert.deepStrictEqual(row.choices.map(c => c.label), ['Uncapped (display rate)', '15 fps', '20 fps', '24 fps', '30 fps', '60 fps'])
+    assert.deepStrictEqual(row.choices.filter(c => c.current).map(c => c.value), [null])
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true })
+  }
 })
 
 // Panel sizes (decision 0035): kept by skin name and split id, a
