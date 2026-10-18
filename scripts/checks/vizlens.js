@@ -27,8 +27,9 @@
 // what lies behind it, shows outside the central shadow. Three frames
 // of each go to OUT/lens-<size>-<k>.png and OUT/lens-hole-full-<k>.png.
 // At every frame read, the probe's audit shows each class of matter,
-// dust, bodies, trails and flares, drawn whole on the slices of its
-// depths, the planes the trace bends, and each was drawn in the run.
+// dust, bodies, trails and flares, painted whole, each piece on the
+// slice that holds its depth, counted where it is painted, and each was
+// painted in the run.
 // No page or console error. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')

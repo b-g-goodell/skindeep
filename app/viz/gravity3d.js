@@ -921,10 +921,20 @@
       return s
     }
 
-    // Squares of side s centred at (x, y) on slice L, batched by fill and
-    // alpha and filled one path a batch: on a canvas of the CPU a call
-    // costs more than its few pixels.
-    function rect (L, fill, a, x, y, s) {
+    // The frame's audit (scene): per class of matter, the pieces painted,
+    // those painted on a slice that does not hold their depth z, and the
+    // pieces to paint. Each paint below counts what it puts on slice L.
+    let audit = null
+    function paint (cls, L, z) {
+      audit[cls][0]++
+      if (z < L.lo || z >= L.hi) audit[cls][1]++
+    }
+
+    // Squares of side s centred at (x, y) on slice L, a grain at depth
+    // z, batched by fill and alpha and filled one path a batch: on a
+    // canvas of the CPU a call costs more than its few pixels.
+    function rect (L, fill, a, x, y, s, z) {
+      paint('dust', L, z)
       const k = Math.min(20, Math.round(a * 20))
       if (k <= 0) return
       let bins = L.batch.get(fill)
@@ -1014,6 +1024,7 @@
     }
 
     function drawTrail (L, t) {
+      paint('trails', L, t.z)
       const { b, i0, i1 } = t
       const tr = b.trail
       const c = L.g
@@ -1038,6 +1049,7 @@
     }
 
     function drawBody (L, b, dim) {
+      paint('bodies', L, b.pd)
       const c = L.g
       const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * b.pd / V.D))
       const lit = dim * fog
@@ -1257,23 +1269,15 @@
         L.zs += P.d
         L.ws++
       }
-      // What each class drew, and of it what lies outside its slice's
-      // depths, and how many it had to draw: every grain, body, trail
-      // piece and flare is drawn on the slice of its depth, or the trace
-      // bends it wrongly.
-      const audit = { dust: [0, 0, dust.length], bodies: [0, 0, order.length - (order.includes(skip) ? 1 : 0)], trails: [0, 0, 0], flares: [0, 0, flares.length] }
+      // What each class painted, and of it what lies outside the depths
+      // of the slice it was painted on, and how many it had to paint:
+      // every grain, body, trail piece and flare is painted on the slice
+      // of its depth, or the trace bends it wrongly.
+      audit = { dust: [0, 0, dust.length], bodies: [0, 0, order.length - (order.includes(skip) ? 1 : 0)], trails: [0, 0, 0], flares: [0, 0, flares.length] }
       for (const b of order) audit.trails[2] += b.trail.length ? trailCount(b, keep) : 0
-      const count = (cls, L, z) => {
-        audit[cls][0]++
-        if (z < L.lo || z >= L.hi) audit[cls][1]++
-      }
       const planes = []
       for (let i = 0; i < ns; i++) {
         const L = pool[i]
-        for (const d of L.dust) count('dust', L, d.pd)
-        for (const b of L.bodies) count('bodies', L, b.pd)
-        for (const t of L.trails) count('trails', L, t.z)
-        for (const f of L.flares) count('flares', L, f.z)
         if (!L.ws) continue
         const c = L.g
         for (const t of L.trails) drawTrail(L, t)
@@ -1284,13 +1288,14 @@
           const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * d.pd / V.D))
           const a = (0.55 + 0.45 * heat) * dim * fog * (heat > 0.05 ? d.beam : 1)
           const s = 1.2 + 1.3 * heat
-          rect(L, style(hue, sat, light, 1), a, d.px, d.py, s)
+          rect(L, style(hue, sat, light, 1), a, d.px, d.py, s, d.pd)
           mark(L, d.px - s, d.py - s, d.px + s, d.py + s)
         }
         flush(L)
         c.globalCompositeOperation = 'source-over'
         for (const b of L.bodies) drawBody(L, b, dim)
         for (const f of L.flares) {
+          paint('flares', L, f.z)
           c.strokeStyle = `rgba(255, 230, 170, ${f.a})`
           c.lineWidth = 2
           c.beginPath()
@@ -1663,8 +1668,8 @@
       // drag, what the holes have swallowed, the bodies and the dust, the
       // waves' sources and the pair watched (waves.js), the last frame's
       // trace (its size, the pixels traced one by one, its planes and
-      // holes, and per class of matter [drawn, drawn outside its slice's
-      // depths, to draw]), the records of a body and a hole behind a hole (look),
+      // holes, and per class of matter [painted, painted on a slice that
+      // does not hold its depth, to paint]), the records of a body and a hole behind a hole (look),
       // the camera's turn and height, and the holes' places and masses.
       probe () {
         asked = performance.now()
