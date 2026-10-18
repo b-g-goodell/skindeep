@@ -1367,7 +1367,7 @@
     // radius te of its depth, the shadow's radius R, its own reach r and
     // a body's disc, all in the pane's pixels, the trace's scale k,
     // whether it is hidden, the pixels of the drawn frame outside the
-    // shadow that differ from the control by 40 in a channel or more
+    // shadow that differ from the control by 16 in a channel or more
     // (lighter for a body, darker for a hole, whose image is its shadow),
     // those on its own side of the hole as its outer image, their least
     // and greatest distance from the hole, the degrees about it they span
@@ -1472,7 +1472,9 @@
           if (dist <= o.R + 2) continue
           let e = 0
           for (let ch = 0; ch < 3; ch++) e = Math.max(e, isHole ? c[k + ch] - a[k + ch] : a[k + ch] - c[k + ch])
-          if (e < 40) continue
+          // 16, the least step vizlens reads as shown: a body far behind
+          // the hole, dimmed by its fog, lifts its image by 31 to 39.
+          if (e < 16) continue
           rec.pixels++
           const dg = Math.floor((Math.atan2(y + 0.5 - o.y, x + 0.5 - o.x) + Math.PI) / (2 * Math.PI) * 360) % 360
           if (!deg[dg] || e > deg[dg][2]) deg[dg] = [x, y, e, c[k], c[k + 1], c[k + 2]]
