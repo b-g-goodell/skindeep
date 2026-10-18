@@ -657,6 +657,11 @@
     let press = null
     let thrown = 0
     let turns = 0
+    // Each body's number, and the body and the hole the live checks
+    // judge (look): the last moon thrown or body placed, the last hole
+    // placed.
+    let made = 0
+    const judged = { body: 0, hole: 0 }
     let swallowed = 0
     // The last frame's trace: its size, the pixels traced one by one,
     // its planes and holes.
@@ -680,7 +685,7 @@
     const at = [0, 0, 0]
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
-      const b = { x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0 }
+      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0 }
       b.r = b.hole ? horizon(b) : radius(m, b.star)
       bodies.push(b)
       return b
@@ -1350,23 +1355,26 @@
       W.label(c, canvas.width, env && env.text ? env.text() : 1)
     }
 
-    // For the live check (vizlens.js), while the probe asks: the body,
-    // and the hole of the holes behind another, nearest the line of the
-    // hole in front of it, and if it lies, glow and all, within that
-    // hole's shadow, so that a straight ray would hide it, the frame
-    // drawn again without it (ctl), the control: a body left out of its
-    // slice, a hole out of the trace. The record (seen, seenHole) holds
-    // u, its distance from the line over the weak-field Einstein radius
-    // te of its depth, the shadow's radius R and its own r, all in the
-    // pane's pixels, whether it is hidden, the pixels of the drawn frame
-    // outside the shadow that differ from the control by 40 in a channel
-    // or more (lighter for a body, darker for a hole, whose image is its
-    // shadow), those on its own side of the hole as its outer image,
-    // their least and greatest distance from the hole, the degrees about
-    // it they span and their spread along the line to it and across it,
-    // and up to 8 of them in distinct degrees about the hole, each
-    // [x, y] with the control's colour there, alt. Both frames are read
-    // whole, after everything nearer is drawn over them.
+    // For the live check (vizlens.js), while the probe asks: the body and
+    // the hole the checks judge (judged), when another hole lies in front
+    // of it,
+    // and if it lies, glow and all, within the shadow of the hole in
+    // front nearest its line, so that a straight ray would hide it, the
+    // frame drawn again without it (ctl), the control: a body left out of
+    // its slice, a hole out of the trace. The record (seen, seenHole)
+    // holds its number and kind, the number and mass of the hole in front
+    // (by), u, its distance from the line over the weak-field Einstein
+    // radius te of its depth, the shadow's radius R, its own reach r and
+    // a body's disc, all in the pane's pixels, the trace's scale k,
+    // whether it is hidden, the pixels of the drawn frame outside the
+    // shadow that differ from the control by 40 in a channel or more
+    // (lighter for a body, darker for a hole, whose image is its shadow),
+    // those on its own side of the hole as its outer image, their least
+    // and greatest distance from the hole, the degrees about it they span
+    // and their spread along the line to it and across it, and up to 8 of
+    // them in distinct degrees about the hole, each [x, y] with the
+    // control's colour there, alt. Both frames are read whole, after
+    // everything nearer is drawn over them.
     const ctl = document.createElement('canvas')
     const cg = ctl.getContext('2d', { willReadFrequently: true })
     let cimg = null
@@ -1376,8 +1384,6 @@
     function look (sc, kt, dim, keep) {
       seen = seenHole = null
       if (performance.now() - asked > 2000) return
-      const w = canvas.width
-      const h = canvas.height
       const hb = sc.holes
       // Each hole in front of the camera: centre, depth, shadow radius.
       const on = []
@@ -1399,20 +1405,19 @@
       }
       let body = null
       for (const b of bodies) {
-        if (b.hole) continue
+        if (b.hole || b.id !== judged.body) continue
         const fr = front(b.px, b.py, b.pd, null)
         if (!fr) continue
         // Its glow's reach: the whole of it within the shadow.
         const r = reach(b)[1]
-        const rec = { b, fr, r, hidden: fr.dist + r <= fr.o.R }
-        if (!body || (rec.hidden && !body.hidden) || (rec.hidden === body.hidden && fr.dist / fr.o.R < body.fr.dist / body.fr.o.R)) body = rec
+        body = { b, fr, r, disc: reach(b)[0], hidden: fr.dist + r <= fr.o.R }
       }
       let hole = null
       for (const o2 of on) {
+        if (o2.b.id !== judged.hole) continue
         const fr = front(o2.x, o2.y, o2.Z, o2.b)
         if (!fr) continue
-        const rec = { b: o2.b, i: o2.i, fr, r: o2.R, hidden: fr.dist + o2.R <= fr.o.R }
-        if (!hole || (rec.hidden && !hole.hidden) || (rec.hidden === hole.hidden && o2.b.m > hole.b.m)) hole = rec
+        hole = { b: o2.b, i: o2.i, fr, r: o2.R, disc: o2.R, hidden: fr.dist + o2.R <= fr.o.R }
       }
       // The hole's control reuses the frame's slices, and the body's
       // redraws them without the body, so the hole goes first.
@@ -1423,7 +1428,8 @@
     function record (t, isHole, sc, kt, dim, keep) {
       const { fr, r, hidden } = t
       const o = fr.o
-      const rec = { hole: isHole, star: !!t.b.star, m: t.b.m, u: fr.dist / fr.te, te: fr.te, R: o.R, r, hx: o.x, hy: o.y, x: t.b.px, y: t.b.py, hidden, pixels: 0, outer: { pixels: 0, lo: 0, hi: 0, span: 0 }, pts: [], alt: [] }
+      const kind = t.b.hole ? 'hole' : t.b.star ? 'star' : t.b.comet ? 'comet' : 'planet'
+      const rec = { id: t.b.id, kind, hole: isHole, star: !!t.b.star, m: t.b.m, by: { id: o.b.id, m: o.b.m }, disc: t.disc, k: kt, u: fr.dist / fr.te, te: fr.te, R: o.R, r, hx: o.x, hy: o.y, x: t.b.px, y: t.b.py, hidden, pixels: 0, outer: { pixels: 0, lo: 0, hi: 0, span: 0 }, pts: [], alt: [] }
       if (!hidden) return rec
       const w = canvas.width
       const h = canvas.height
@@ -1659,21 +1665,37 @@
         if (len(...t) < 1e-3 * d) t = [V.u[1] * rel[2] - V.u[2] * rel[1], V.u[2] * rel[0] - V.u[0] * rel[2], V.u[0] * rel[1] - V.u[1] * rel[0]]
         const tl = len(...t)
         const v = circular(s, d)
-        body(s.x + rel[0], s.y + rel[1], s.z + rel[2], s.vx + v * t[0] / tl, s.vy + v * t[1] / tl, s.vz + v * t[2] / tl, 2 + Math.random() * 3, 55, 'planet')
+        judged.body = body(s.x + rel[0], s.y + rel[1], s.z + rel[2], s.vx + v * t[0] / tl, s.vy + v * t[1] / tl, s.vz + v * t[2] / tl, 2 + Math.random() * 3, 55, 'planet').id
         thrown++
         trim()
       },
 
-      // For the live checks: the moons thrown, the camera's turns by a
-      // drag, what the holes have swallowed, the bodies and the dust, the
-      // waves' sources and the pair watched (waves.js), the last frame's
-      // trace (its size, the pixels traced one by one, its planes and
-      // holes, and per class of matter [painted, painted on a slice that
-      // does not hold its depth, to paint]), the records of a body and a hole behind a hole (look),
-      // the camera's turn and height, and the holes' places and masses.
+      // For the live checks: a body of kind and mass m at X right of,
+      // Y above and Z beyond the heaviest body, as the camera sees it, at
+      // rest with that body, made the body or the hole the checks judge
+      // (look). Returns its number.
+      place (kind, m, X, Y, Z) {
+        const s = sun()
+        const at = [V.r, V.u, V.e].map(v => s.x * v[0] + s.y * v[1] + s.z * v[2])
+        const p = [0, 1, 2].map(i => (at[0] + X) * V.r[i] + (at[1] + Y) * V.u[i] + (at[2] - Z) * V.e[i])
+        const b = body(p[0], p[1], p[2], s.vx, s.vy, s.vz, m, kind === 'hole' ? 0 : kind === 'comet' ? 190 : 55, kind)
+        if (b.hole) judged.hole = b.id
+        else judged.body = b.id
+        return b.id
+      },
+
+      // For the live checks: the numbers of the body and the hole judged
+      // and whether each is still there, the moons thrown, the camera's
+      // turns by a drag, what the holes have swallowed, the bodies and the
+      // dust, the waves' sources and the pair watched (waves.js), the last
+      // frame's trace (its size, the pixels traced one by one, its planes
+      // and holes, and per class of matter [painted, painted on a slice
+      // that does not hold its depth, to paint]), the records of the body
+      // and the hole judged behind a hole (look), the camera's turn and
+      // height, and the holes' places and masses.
       probe () {
         asked = performance.now()
-        return { thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]) }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]) }
       }
     }
   }

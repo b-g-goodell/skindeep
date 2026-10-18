@@ -5,11 +5,15 @@
 // One pane in Gravity 3D, fed by the fake claude, in a 1200 by 760
 // window and then a 360 by 230 one. A drag levels the camera with the
 // central hole's equator, and a click throws a moon on an orbit about
-// the hole in that plane, so it passes behind the hole once a turn. At a
-// frame where the probe reports a body behind a hole within u = 0.5 of
-// its line, its unlensed disc and glow wholly inside the hole's shadow,
-// so that a straight ray would hide it, pixels of the frame outside
-// the shadow show it: the mode drew that frame again without the body,
+// the hole in that plane, so it passes behind the hole once a turn. The
+// moon is the one body judged: the mode records it alone, by its number
+// (gravity3d judged), and a moon lost to a hole or a merger is thrown
+// again. A frame is judged where the record puts the moon behind the
+// heaviest hole, the one it orbits, within u = 0.5 of its line, its unlensed disc and glow wholly inside
+// the hole's shadow, so that a straight ray would hide it, and its disc
+// spans a radius of MIN_DISC = 1 pixel of the trace or more (its disc
+// in the pane's pixels times the trace's scale k): pixels of the frame
+// outside the shadow show it: the mode drew that frame again without the body,
 // the control, and chose up to 8 points where the two whole frames
 // differ most, after everything nearer was drawn. Here the pane's
 // canvas is read at those points against the control's colours: at
@@ -18,13 +22,17 @@
 // image of a moon may span only a few degrees about the hole, and so
 // give fewer than 8 points. In the full pane its outer
 // image is also an arc: its pixels spread across the line to the hole
-// more than 1.5 times as far as along it. Then, in
-// the full pane, once a hole of 100 or more joins the central one (a
-// subagent adds one of 150 to 300), drags turn the camera until that
-// hole lies behind the central one, its unlensed shadow wholly inside
-// the central shadow, and the frame is read in the same way against a
-// control traced without that hole: its image, the light it takes from
-// what lies behind it, shows outside the central shadow. Three frames
+// more than 1.5 times as far as along it. Then, in the full pane, a drag
+// that ends where it began holds the camera still for 4 s, and the check
+// places a hole of 200 at rest with the central one, HOLE_Z beyond it
+// and HOLE_X across the line of sight (gravity3d place), its unlensed
+// shadow wholly inside the central shadow, the hole judged, and the
+// frame is read in the same way against a control traced without that
+// hole: its image, the light it takes from what lies behind it, shows
+// outside the central shadow. A placed hole that drifts off the line or
+// is lost is placed again. When an arm times out, the failure carries
+// the probe's state: the bodies judged, the holes, what they have
+// swallowed and the last record. Three frames
 // of each go to OUT/lens-<size>-<k>.png and OUT/lens-hole-full-<k>.png.
 // At every frame read, the probe's audit shows each class of matter,
 // dust, bodies, trails and flares, painted whole, each piece on the
@@ -44,14 +52,31 @@ function check (ok, msg, seen) {
   if (!ok) throw new Error(seen === undefined ? msg : `${msg}, saw ${JSON.stringify(seen)}`)
 }
 
-// In the page: the pane's record of a body, or with hole of a hole of
-// 100 or more, and when it lies within u = 0.5 of a hole's line, hidden
-// from straight rays, the frame, as a PNG, and the frame's colour at
+// The least radius of the judged body's disc, in pixels of the trace.
+const MIN_DISC = 1
+// The hole the check places: its mass, and how far beyond the central
+// hole and across the line of sight.
+const HOLE_M = 200
+const HOLE_Z = 280
+const HOLE_X = 10
+
+// The probe's state when an arm times out.
+function state (probe, rec) {
+  if (!probe) return { probe: null }
+  return { judged: probe.judged, thrown: probe.thrown, swallowed: probe.swallowed, at: probe.at, record: rec && { ...rec, pts: undefined, alt: undefined } }
+}
+
+// In the page: the pane's record of the body or the hole judged, and
+// when it is the one judged, lies within u = 0.5 of the line of the
+// heaviest hole, in front of it, hidden from straight rays, and spans
+// enough of the trace, the frame, as a PNG, and the frame's colour at
 // each of the record's points.
-function frame (hole) {
+function frame ([hole, least]) {
   const p = window.vizState().panes[0]
   const l = p.probe && p.probe[hole ? 'hole' : 'lens']
-  if (!l || l.u >= 0.5 || !l.hidden || (hole && l.m < 100)) return { lens: l || null, probe: p.probe }
+  const id = p.probe && p.probe.judged[hole ? 'hole' : 'body']
+  const heaviest = p.probe ? Math.max(...p.probe.at.map(h => h[3])) : 0
+  if (!l || l.id !== id || l.by.m !== heaviest || l.u >= 0.5 || !l.hidden || l.disc * l.k < least) return { lens: l || null, probe: p.probe }
   const c = [...document.querySelectorAll('.pane canvas:not([hidden])')][0]
   const g = c.getContext('2d')
   const seen = l.pts.map(([x, y]) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3)))
@@ -79,18 +104,6 @@ function slices (probe, where) {
     check(off === 0 && n === want, `${where}: ${k} off the slices of their depths`, a)
     drew[k] += n
   }
-}
-
-// The camera's turn and height that put hole b behind hole a, the camera
-// 620 from the centre of mass on the line through them.
-function behind (a, b) {
-  const v = [0, 1, 2].map(i => a[i] - b[i])
-  const A = v[0] ** 2 + v[1] ** 2 + v[2] ** 2
-  const B = 2 * (b[0] * v[0] + b[1] * v[1] + b[2] * v[2])
-  const C = b[0] ** 2 + b[1] ** 2 + b[2] ** 2 - 620 * 620
-  const t = (-B + Math.sqrt(B * B - 4 * A * C)) / (2 * A)
-  const p = [0, 1, 2].map(i => b[i] + t * v[i])
-  return { yaw: Math.atan2(p[1], p[0]), pitch: Math.asin(p[2] / 620) }
 }
 
 ;(async () => {
@@ -130,24 +143,41 @@ function behind (a, b) {
     // A moon about 110 from the centre: the pane's scale is its focal
     // length, min(w, h) / 2 / tan(0.42), over the camera's distance 620.
     const k = Math.min(p.w, p.h) / 2 / Math.tan(0.42) / 620
-    const thrown = (await pane()).probe.thrown
-    await viz.mouse.click(cx + 110 * k, cy)
-    check((await pane()).probe.thrown === thrown + 1, `${name}: no moon thrown`)
+    const throwMoon = async () => {
+      const thrown = (await pane()).probe.thrown
+      await viz.mouse.click(cx + 110 * k, cy)
+      const st = (await pane()).probe
+      check(st.thrown === thrown + 1, `${name}: no moon thrown`)
+      return st.judged.body
+    }
+    let moon = await throwMoon()
 
     const t0 = Date.now()
     const kept = []
     let last = null
+    let probe = null
+    let small = 0
     while (kept.length < 3 && Date.now() - t0 < 240000) {
-      const f = await viz.evaluate(frame, false)
+      const f = await viz.evaluate(frame, [false, MIN_DISC])
       slices(f.probe, name)
+      probe = f.probe
       last = f.lens
       if (f.png) {
+        check(f.lens.id === moon && f.lens.kind === 'planet', `${name}: the record judged another body than the moon thrown`, state(probe, last))
         kept.push(f)
         fs.writeFileSync(path.join(out, `lens-${name}-${kept.length - 1}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
         await sleep(300)
-      } else await sleep(40)
+        continue
+      }
+      if (last && last.id === moon && last.hidden && last.u < 0.5 && last.disc * last.k < MIN_DISC) small++
+      if (!probe.judged.live[0]) {
+        console.log(name, 'the moon was lost, another thrown', JSON.stringify(state(probe, last)))
+        moon = await throwMoon()
+      }
+      await sleep(40)
     }
-    check(kept.length === 3, `${name}: no body passed behind a hole within u 0.5 in 240 s`, last)
+    if (small) console.log(name, `frames of the moon hidden but under ${MIN_DISC} traced pixel, not judged: ${small}`)
+    check(kept.length === 3, `${name}: the moon did not pass behind a hole within u 0.5 in 240 s`, state(probe, last))
     for (const f of kept) {
       const l = f.lens
       const o = l.outer
@@ -160,50 +190,50 @@ function behind (a, b) {
     }
     if (name !== 'full') continue
 
-    // A hole behind the central one: wait for a second hole of 100 or
-    // more, then turn the camera onto the line through the two, again
-    // and again as they move, until three frames show it lensed.
-    let st = null
-    for (let i = 0; i < 1200; i++) {
-      st = (await pane()).probe
-      if (st.at.filter(h => h[3] >= 100).length >= 2) break
-      await sleep(100)
+    // A hole behind the central one: the camera held by a drag that
+    // ends where it began, a hole placed beyond the central one, and its
+    // frames read, the hole placed again if it is lost or leaves the
+    // line before three frames show it.
+    const hold = async () => {
+      await viz.mouse.move(cx, cy)
+      await viz.mouse.down()
+      await viz.mouse.move(cx + 8, cy, { steps: 2 })
+      await viz.mouse.move(cx, cy, { steps: 2 })
+      await viz.mouse.up()
     }
-    const big = () => st.at.slice().sort((a, b) => b[3] - a[3])
-    check(big().length >= 2 && big()[1][3] >= 100, 'full: no second hole of 100 or more in 120 s', st.at)
+    const placeHole = async () => {
+      await hold()
+      return viz.evaluate(([m, x, z]) => window.vizFlat(0).place('hole', m, x, 0, z), [HOLE_M, HOLE_X, HOLE_Z])
+    }
+    let hole = await placeHole()
+    let placed = Date.now()
+    let places = 1
     const holes = []
     const t1 = Date.now()
     let lastHole = null
-    while (holes.length < 3 && Date.now() - t1 < 180000) {
-      const f = await viz.evaluate(frame, true)
+    let probe2 = null
+    while (holes.length < 3 && Date.now() - t1 < 60000) {
+      const f = await viz.evaluate(frame, [true, 0])
       slices(f.probe, 'hole full')
+      probe2 = f.probe
       lastHole = f.lens
       if (f.png) {
+        check(f.lens.id === hole && f.lens.kind === 'hole', 'full: the record judged another hole than the one placed', state(probe2, lastHole))
         holes.push(f)
         fs.writeFileSync(path.join(out, `lens-hole-full-${holes.length - 1}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
         await sleep(300)
         continue
       }
-      st = f.probe
-      const [a, b] = big()
-      if (!b || b[3] < 100) {
-        await sleep(100)
-        continue
+      if (!probe2.judged.live[1] || Date.now() - placed > 3000) {
+        console.log('hole full', 'placed again', JSON.stringify(state(probe2, lastHole)))
+        hole = await placeHole()
+        placed = Date.now()
+        places++
       }
-      const want = behind(a, b)
-      let dyaw = want.yaw - st.cam.yaw
-      dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw))
-      const dx = Math.max(-0.4 * p.w, Math.min(0.4 * p.w, -dyaw / 0.008))
-      const dy = Math.max(-0.4 * p.h, Math.min(0.4 * p.h, (want.pitch - st.cam.pitch) / 0.008))
-      if (Math.hypot(dx, dy) >= 6) {
-        await viz.mouse.move(cx, cy)
-        await viz.mouse.down()
-        await viz.mouse.move(cx + dx, cy + dy, { steps: 4 })
-        await viz.mouse.up()
-      }
-      await sleep(60)
+      await sleep(40)
     }
-    check(holes.length === 3, 'full: no hole passed behind the central one within u 0.5 in 180 s', lastHole)
+    console.log('hole full', `holes placed: ${places}`)
+    check(holes.length === 3, 'full: no placed hole showed behind the central one within u 0.5 in 60 s', state(probe2, lastHole))
     for (const f of holes) {
       const l = f.lens
       const n = shown(f)

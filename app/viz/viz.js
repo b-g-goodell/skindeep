@@ -297,5 +297,11 @@
       panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
+  // For the live checks: pane k's mode, where it is drawn on a canvas of
+  // the CPU, so a check can place what it judges (gravity3d place).
+  window.vizFlat = k => {
+    const p = [...panes.values()][k]
+    return p && p.flat ? p.flat : null
+  }
   requestAnimationFrame(loop)
 })()
