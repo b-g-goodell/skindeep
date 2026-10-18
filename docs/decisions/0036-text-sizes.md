@@ -162,7 +162,9 @@ settings.
 - It applies at once: each numeric frame to the window carries the
   cap (`c`), as it carries the text size.
 - `test/viz-pace.test.js` replays 60 Hz and 144 Hz displays with and
-  without jitter against each cap.
+  without jitter against each cap, and `scripts/checks/vizcaps.js`
+  counts the frames the window draws at 15 and uncapped, and reads the
+  synthesiser's and butterchurn's clocks against the page's.
 
 Rejected: a cap by a timer instead of the display's frames, which
 would draw between them.

@@ -1546,4 +1546,6 @@ run at 27.5 at 30000 and 90000.
   The mode reads $P$ each frame through `env.trace()`, which the
   window's numeric frame carries (`r`), so a change shows on the next
   frame.
+- `scripts/checks/vizcaps.js` sets the default, 135000 and 15000 and
+  wants the traced frame of the size this formula gives each.
 
