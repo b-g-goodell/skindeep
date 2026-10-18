@@ -1070,6 +1070,8 @@
     let dots = []
     let src = null
     let cl = null
+    // The drawn atom's axis as last drawn, [x0, y0, x1, y1] on the pane.
+    let axisLine = null
     const view = VIEW
     let field = 0
     const born = []
@@ -1707,6 +1709,7 @@
       const nx = q0.x
       const ny = q0.y
       const q1 = F.project(n[0] * e, n[1] * e, n[2] * e)
+      axisLine = [nx, ny, q1.x, q1.y]
       g.strokeStyle = 'rgba(111, 227, 255, 0.8)'
       g.lineWidth = 1.5
       g.beginPath()
@@ -2228,11 +2231,11 @@
       // source flashes, the field, the photons of the last second, and the
       // ink box of every text drawn, for the check of overlapping text.
       // The magnetic field B, the event clock's time, the drawn atom's
-      // axis then and the time its axis was last set, its g_J and Larmor
-      // rate, the dial's, pulse button's and trace's places, and after a
-      // pulse the rate at the detector over TRACE_T before and after it,
-      // as [seconds from the pulse, rate] by emission time, with 2 f_L of
-      // the pulsed level.
+      // axis then and as last drawn on the pane, the time its axis was
+      // last set, its g_J and Larmor rate, the dial's, pulse button's
+      // and trace's places, and after a pulse the rate at the detector
+      // over TRACE_T before and after it, as [seconds from the pulse,
+      // rate] by emission time, with 2 f_L of the pulsed level.
       probe () {
         const lv = levels[atoms[0].lv]
         const r4 = v => Math.round(v * 1e4) / 1e4
@@ -2245,6 +2248,7 @@
           B: { mT: mag.T * 1e3, deg: mag.deg },
           now,
           axis: Larmor.axis(atoms[0], now, mag),
+          axisLine,
           t0: atoms[0].t0,
           lifted,
           gJ: lv.gJ,
