@@ -1361,10 +1361,11 @@
       const w = canvas.width
       const h = canvas.height
       const hb = sc.holes
-      // Each hole on screen: centre, depth, shadow radius.
-      const on = hb.map((b, i) => {
+      // Each hole in front of the camera: centre, depth, shadow radius.
+      const on = []
+      hb.forEach((b, i) => {
         const Z = sc.hs[4 * i + 2]
-        return { b, i, Z, x: b.px, y: b.py, R: V.f * Math.tan(Math.asin(Math.min(1, sc.hs[4 * i + 3] / Z))) }
+        if (Z > 2 * sc.hs[4 * i + 3]) on.push({ b, i, Z, x: b.px, y: b.py, R: V.f * Math.tan(Math.asin(sc.hs[4 * i + 3] / Z)) })
       })
       // The hole in front of depth d nearest (x, y) on screen, its
       // distance and the Einstein radius there.
