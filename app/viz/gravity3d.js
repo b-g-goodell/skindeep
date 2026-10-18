@@ -1369,6 +1369,7 @@
     // whether it is hidden, the pixels of the drawn frame outside the
     // shadow that differ from the control by 16 in a channel or more
     // (lighter for a body, darker for a hole, whose image is its shadow),
+    // and nearer the hole in front than any other hole on screen,
     // those on its own side of the hole as its outer image, their least
     // and greatest distance from the hole, the degrees about it they span
     // and their spread along the line to it and across it, and up to 8 of
@@ -1410,14 +1411,14 @@
         if (!fr) continue
         // Its glow's reach: the whole of it within the shadow.
         const r = reach(b)[1]
-        body = { b, fr, r, disc: reach(b)[0], hidden: fr.dist + r <= fr.o.R }
+        body = { b, fr, r, disc: reach(b)[0], hidden: fr.dist + r <= fr.o.R, others: on.filter(q => q !== fr.o) }
       }
       let hole = null
       for (const o2 of on) {
         if (o2.b.id !== judged.hole) continue
         const fr = front(o2.x, o2.y, o2.Z, o2.b)
         if (!fr) continue
-        hole = { b: o2.b, i: o2.i, fr, r: o2.R, disc: o2.R, hidden: fr.dist + o2.R <= fr.o.R }
+        hole = { b: o2.b, i: o2.i, fr, r: o2.R, disc: o2.R, hidden: fr.dist + o2.R <= fr.o.R, others: on.filter(q => q !== fr.o && q !== o2) }
       }
       // The hole's control reuses the frame's slices, and the body's
       // redraws them without the body, so the hole goes first.
@@ -1470,6 +1471,8 @@
           const k = 4 * (y * w + x)
           const dist = len(x + 0.5 - o.x, y + 0.5 - o.y)
           if (dist <= o.R + 2) continue
+          // Nearer another hole, it may be that hole's image: left out.
+          if (t.others.some(q => len(x + 0.5 - q.x, y + 0.5 - q.y) < dist)) continue
           let e = 0
           for (let ch = 0; ch < 3; ch++) e = Math.max(e, isHole ? c[k + ch] - a[k + ch] : a[k + ch] - c[k + ch])
           // 16, the least step vizlens reads as shown: a body far behind
