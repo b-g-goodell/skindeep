@@ -56,7 +56,12 @@ async function until (get, ok, ms, step = 100) {
   }
 
   // Every mode: a click at the pane's centre, then near a corner, for
-  // go, whose centre may hold a stone.
+  // go, whose centre may hold a stone. The gravity modes' waves, which
+  // change every frame, are not the click's answer.
+  const answer = q => {
+    const { pair, sources, ...rest } = q || {}
+    return JSON.stringify(rest)
+  }
   for (const m of MODES) {
     const p = await show(m.id)
     const before = p.probe
@@ -67,11 +72,11 @@ async function until (get, ok, ms, step = 100) {
       await viz.mouse.click(p.x + p.w * u, p.y + p.h * v)
       after = await pane()
       tones = Math.max(tones, after.touches)
-      if (before ? JSON.stringify(after.probe) !== JSON.stringify(before) : tones > 0) break
+      if (before ? answer(after.probe) !== answer(before) : tones > 0) break
     }
     console.log(m.id, JSON.stringify({ before, after: after.probe, tones }))
     check(after.mode === m.id, `${m.id}: a click stepped the mode`, after.mode)
-    if (before) check(JSON.stringify(after.probe) !== JSON.stringify(before), `${m.id}: the probe did not change`, after.probe)
+    if (before) check(answer(after.probe) !== answer(before), `${m.id}: the probe did not change`, after.probe)
     else check(tones > 0, `${m.id}: no tone for the click`)
   }
 

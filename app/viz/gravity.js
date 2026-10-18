@@ -10,7 +10,10 @@
 // the star's mass, a subagent a second star, a compaction drags every
 // body inward, and an output event a puff of dust. The pointer throws a
 // moon: a click drops one on a circular orbit, a drag flings it from the
-// press with the drag's velocity, its aim drawn while pressed.
+// press with the drag's velocity, its aim drawn while pressed. The
+// bodies radiate gravitational waves (waves.js), drawn in the plane at a
+// wave speed of C, which drives the waves alone, not the dynamics: the
+// seed's pair of stars in close orbit spins a two-armed spiral of h_+.
 
 ;(function (root) {
   const CLASS_HUE = [200, 120, 40, 0, 280, 320]
@@ -20,6 +23,15 @@
   const MAX_DUST = 360
   // The view's half size, in simulation units.
   const VIEW = 240
+  const W = typeof module === 'object' && module.exports ? require('./waves') : root.VizWaves
+  // The waves' speed: a front crosses the view of 480 in 42 units of
+  // time, 1 to 4 s at the clock's usual rates.
+  const C = 11.5
+  // The seed's tight pair: two stars of PAIR_M at PAIR_SEP, PAIR_R from
+  // the star.
+  const PAIR_M = 64
+  const PAIR_SEP = 22
+  const PAIR_R = 170
 
   // One leapfrog step of h for bodies { x, y, vx, vy, m, r }, then
   // mergers. Returns the points where bodies merged.
@@ -87,7 +99,8 @@
     return star ? 4 + 1.1 * Math.cbrt(m) : 1.2 + 1.3 * Math.cbrt(m)
   }
 
-  // Total momentum to zero and the centre of mass to the origin.
+  // Total momentum to zero and the centre of mass to the origin. Returns
+  // the shift.
   function centre (bodies) {
     let m = 0
     let px = 0
@@ -101,16 +114,18 @@
       x += b.m * b.x
       y += b.m * b.y
     }
-    if (!m) return
+    if (!m) return [0, 0, 0]
     for (const b of bodies) {
       b.vx -= px / m
       b.vy -= py / m
       b.x -= x / m
       b.y -= y / m
     }
+    return [-x / m, -y / m, 0]
   }
 
-  function create (canvas) {
+  // env.text(): the visualization text size, a factor (decision 0036).
+  function create (canvas, env) {
     // Drawn on a canvas of the CPU, then blitted to the pane: under
     // swiftshader the pane's canvas rasterizes paths and gradients in
     // software GL, several times slower.
@@ -132,6 +147,15 @@
     let view = null
     let aim = null
     let thrown = 0
+    // The waves, their grid of cells and the pair the probe watches.
+    const field = new W.Field(C)
+    const watch = new W.Watch(field, false)
+    const grid = document.createElement('canvas')
+    const gg = grid.getContext('2d', { willReadFrequently: true })
+    let img = null
+    let hs = null
+    let vs = null
+    const hv = [0, 0]
 
     function body (x, y, vx, vy, m, hue, star) {
       const b = { x, y, vx, vy, m, hue, star: !!star, r: radius(m, star), ax: 0, ay: 0 }
@@ -153,13 +177,21 @@
       body(s.x + r * Math.cos(a), s.y + r * Math.sin(a), s.vx - v * Math.sin(a), s.vy + v * Math.cos(a), m, hue)
     }
 
+    // The star, a planet, and a pair of stars in close orbit about each
+    // other farther out, which radiates.
     function seed () {
       bodies = []
       dust = []
+      field.reset()
       body(0, 0, 0, 0, 900, 48, true)
-      for (const [r, hue] of [[60, 200], [150, 120], [205, 30]]) {
-        const v = Math.sqrt(900 / r)
-        body(r, 0, 0, v, 2 + Math.random() * 3, hue)
+      body(60, 0, 0, Math.sqrt(900 / 60), 2 + Math.random() * 3, 200)
+      const a = Math.random() * Math.PI * 2
+      const V = Math.sqrt((900 + 2 * PAIR_M) / PAIR_R)
+      // The pair's circular speed, softened.
+      const v = Math.sqrt(2 * PAIR_M * PAIR_SEP * PAIR_SEP / (PAIR_SEP * PAIR_SEP + SOFT) ** 1.5) / 2
+      const [c, si] = [Math.cos(a), Math.sin(a)]
+      for (const [k, hue] of [[1, 15], [-1, 30]]) {
+        body(PAIR_R * c + k * PAIR_SEP / 2 * c, PAIR_R * si + k * PAIR_SEP / 2 * si, -(V + k * v) * si, (V + k * v) * c, PAIR_M, hue, true)
       }
       // A belt of dust between the inner planets.
       for (let k = 0; k < 160; k++) {
@@ -195,7 +227,7 @@
         s.r = radius(s.m, s.star)
         flares.push({ x: s.x, y: s.y, t: clock, r: s.r })
       } else if (e.kind === 5) {
-        if (bodies.filter(b => b.star).length < 3) {
+        if (bodies.filter(b => b.star).length < 5) {
           const a = Math.random() * Math.PI * 2
           const r = 150 + Math.random() * 60
           const m = 150 + Math.random() * 200
@@ -223,7 +255,13 @@
     function trim () {
       while (bodies.length > MAX_BODIES) bodies.splice(bodies.indexOf(bodies.filter(b => !b.star).reduce((a, b) => a.m < b.m ? a : b)), 1)
       if (dust.length > MAX_DUST) dust.splice(0, dust.length - MAX_DUST)
-      centre(bodies)
+      recentre()
+    }
+
+    // The bodies recentred, the waves' places moved with them.
+    function recentre () {
+      const [dx, dy] = centre(bodies)
+      field.shift(dx, dy, 0)
     }
 
     // Dust falls in the bodies' field, stepped as they are.
@@ -244,6 +282,58 @@
         d.x += d.vx * h
         d.y += d.vy * h
       }
+    }
+
+    // The waves on a grid of cells, 32 across the pane's shorter side and
+    // 8 px at least, blurred up to the pane: at each, the sum over
+    // sources of h_+ in the plane, the only polarization there, as
+    // shown (waves.js), + in a cool tint and - in a warm one, opaque over
+    // black: the frame's ground, the trails added over it.
+    function drawWaves (w, h, s, cx, cy, dim) {
+      const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
+      const gw = Math.ceil(w / cell) + 1
+      const gh = Math.ceil(h / cell) + 1
+      if (grid.width !== gw || grid.height !== gh || !img) {
+        grid.width = gw
+        grid.height = gh
+        img = gg.createImageData(gw, gh)
+        hs = new Float32Array(gw * gh)
+        vs = new Float32Array(gw * gh)
+      }
+      const px = img.data
+      const traces = [...field.traces.values()]
+      const k = 0.4 * dim
+      // A cell and a half's light time.
+      const blur = 1.5 * cell / s / C
+      for (let j = 0; j < gh; j++) {
+        const y = (j * cell - cy) / s
+        for (let i = 0; i < gw; i++) {
+          const x = (i * cell - cx) / s
+          let hp = 0
+          for (const tr of traces) if (field.wave(tr, clock, x, y, 0, hv, null, blur)) hp += hv[0]
+          hs[j * gw + i] = hp
+        }
+      }
+      W.shown(hs, gw, gh, vs)
+      for (let j = 0; j < gh; j++) {
+        for (let i = 0; i < gw; i++) {
+          const v = vs[j * gw + i] * k
+          const o = 4 * (j * gw + i)
+          if (v >= 0) {
+            px[o] = 60 * v
+            px[o + 1] = 150 * v
+            px[o + 2] = 255 * v
+          } else {
+            px[o] = -255 * v
+            px[o + 1] = -150 * v
+            px[o + 2] = -60 * v
+          }
+          px[o + 3] = 255
+        }
+      }
+      gg.putImageData(img, 0, 0)
+      g.imageSmoothingEnabled = true
+      g.drawImage(grid, 0, 0, gw, gh, -cell / 2, -cell / 2, gw * cell, gh * cell)
     }
 
     seed()
@@ -272,8 +362,12 @@
           fall(hh)
           left -= hh
           clock += hh
+          // After the step: a body merged in it carries its last
+          // acceleration for one sample, and the pair's end leaves as a
+          // front.
+          watch.sample(clock, field.sample(clock, bodies))
         }
-        if (bursts.length) centre(bodies)
+        if (bursts.length) recentre()
         for (const m of bursts) flares.push({ x: m.x, y: m.y, t: clock, r: 6 + 2 * Math.cbrt(m.m) })
         bodies = bodies.filter(b => b.star || Math.hypot(b.x, b.y) < VIEW * 4)
         dust = dust.filter(d => Math.hypot(d.x, d.y) < VIEW * 2 && bodies.every(b => (b.x - d.x) ** 2 + (b.y - d.y) ** 2 > b.r * b.r))
@@ -307,7 +401,11 @@
           b.sx = x
           b.sy = y
         }
+        // The waves under the trails, which are added over them.
+        drawWaves(w, h, s, cx, cy, dim)
+        g.globalCompositeOperation = 'lighter'
         g.drawImage(trails, 0, 0)
+        g.globalCompositeOperation = 'source-over'
 
         // The bodies and the flares over the trails.
         for (const b of bodies) {
@@ -344,6 +442,7 @@
           g.stroke()
           g.setLineDash([])
         }
+        W.label(g, w, env && env.text ? env.text() : 1)
         out.drawImage(layer, 0, 0)
       },
 
@@ -379,13 +478,14 @@
         trim()
       },
 
-      // For the live checks: the bodies and the moons thrown.
+      // For the live checks: the bodies, the moons thrown, the waves'
+      // sources and the pair watched (waves.js).
       probe () {
-        return { thrown, bodies: bodies.length }
+        return { thrown, bodies: bodies.length, sources: field.traces.size, pair: watch.report() }
       }
     }
   }
 
-  if (typeof module === 'object' && module.exports) module.exports = { step, centre }
+  if (typeof module === 'object' && module.exports) module.exports = { step, centre, quadrupole: W.quadrupole, C }
   else (root.VizCanvas = root.VizCanvas || {}).gravity = create
 })(this)

@@ -7,6 +7,7 @@
 const test = require('node:test')
 const assert = require('node:assert')
 const g = require('../app/viz/gravity3d')
+const W = require('../app/viz/waves')
 
 const M = 900
 const RS = g.rs(M)
@@ -115,4 +116,105 @@ test('gravity3d: a spinning hole drags an inclined orbit round in its own sense'
     if (!sense) assert.ok(Math.abs(turned) < 1e-6, `no spin, the node turned ${turned}`)
     else assert.ok(Math.abs(turned / (sense * lt) - 1) < 0.1, `spin ${sense}: the node turned ${turned}, Lense-Thirring ${sense * lt}`)
   }
+})
+
+// The waves (issue #163). A circular binary of masses m1, m2 at
+// separation a about the origin at time t, in the plane spanned by unit
+// p and q, Omega^2 = (m1 + m2) / a^3, with its Newtonian accelerations.
+function binary (m1, m2, a, t, p = [1, 0, 0], q = [0, 1, 0]) {
+  const M = m1 + m2
+  const w = Math.sqrt(M / a ** 3)
+  const c = Math.cos(w * t)
+  const s = Math.sin(w * t)
+  const at = (u, v) => [0, 1, 2].map(i => u * p[i] + v * q[i])
+  return [[m1, m2 / M], [m2, -m1 / M]].map(([m, k]) => {
+    const [x, y, z] = at(k * a * c, k * a * s)
+    const [vx, vy, vz] = at(-k * a * w * s, k * a * w * c)
+    const [ax, ay, az] = at(-k * a * w * w * c, -k * a * w * w * s)
+    return { m, x, y, z, vx, vy, vz, ax, ay, az }
+  })
+}
+
+test('gravity3d: an inclined circular binary\'s Iddot oscillates at 2 Omega with amplitude 2 mu a^2 Omega^2', () => {
+  const p = [1, 0, 0]
+  const q = [0, Math.cos(0.7), Math.sin(0.7)]
+  for (const [m1, m2, a] of [[50, 30, 16], [900, 300, 120]]) {
+    const M = m1 + m2
+    const w = Math.sqrt(M / a ** 3)
+    const A = 2 * (m1 * m2 / M) * a * a * w * w
+    for (let t = 0; t < 2 * Math.PI / w; t += 0.41) {
+      const Q = g.quadrupole(binary(m1, m2, a, t, p, q))
+      // -A (cos 2 w t (p p - q q) + sin 2 w t (p q + q p)), as [xx, yy, zz, xy, xz, yz].
+      const T = (i, j) => -A * (Math.cos(2 * w * t) * (p[i] * p[j] - q[i] * q[j]) + Math.sin(2 * w * t) * (p[i] * q[j] + q[i] * p[j]))
+      const want = [T(0, 0), T(1, 1), T(2, 2), T(0, 1), T(0, 2), T(1, 2)]
+      Q.forEach((v, i) => assert.ok(Math.abs(v - want[i]) < 1e-9 * A, `${m1}+${m2} at ${a}, t ${t}, component ${i}: ${v}, want ${want[i]}`))
+    }
+  }
+})
+
+test('gravity3d: a lone body moving uniformly has no Iddot', () => {
+  const Q = g.quadrupole([{ m: 900, x: 40, y: -10, z: 5, vx: 0.5, vy: 0.2, vz: -1, ax: 0, ay: 0, az: 0 }])
+  assert.ok(Q.every(v => Math.abs(v) < 1e-12), JSON.stringify(Q))
+})
+
+// Along the orbit's axis both polarizations, each 4 m1 m2 / (c^4 a r);
+// in its plane h_x vanishes and h_+ halves. Far out, where the near
+// zone's fade is under a percent.
+test('gravity3d: the waves are strongest along the axis, both polarizations there, h_+ alone and half in the plane', () => {
+  const [m1, m2, a] = [50, 30, 16]
+  const w = Math.sqrt((m1 + m2) / a ** 3)
+  const field = new W.Field(g.C)
+  // The same two bodies throughout, moved along the orbit.
+  const bodies = binary(m1, m2, a, 0)
+  let t = 0
+  for (; t < 120; t += 0.25) field.sample(t, binary(m1, m2, a, t).map((b, i) => Object.assign(bodies[i], b)))
+  t -= 0.25
+  const tr = [...field.traces.entries()].find(([k]) => k !== 'all')[1]
+  const r = 1000
+  const near = []
+  tr.at(tr.last(), near)
+  const fade = (r * r / (r * r + near[3] ** 2)) ** 2
+  const full = 4 * m1 * m2 / (g.C ** 4 * a * r) * fade
+  const h = [0, 0]
+  const most = (x, y, z) => {
+    const m = [0, 0]
+    for (let k = 0; k < 64; k++) {
+      // One wave period, pi / Omega, of retarded time.
+      assert.ok(field.wave(tr, t - k / 64 * Math.PI / w, x, y, z, h))
+      m[0] = Math.max(m[0], Math.abs(h[0]))
+      m[1] = Math.max(m[1], Math.abs(h[1]))
+    }
+    return m
+  }
+  const axis = most(0, 0, r)
+  assert.ok(Math.abs(axis[0] / full - 1) < 0.01 && Math.abs(axis[1] / full - 1) < 0.01, `on the axis h_+ ${axis[0]}, h_x ${axis[1]}, want ${full}`)
+  for (const ang of [0, 1, 2.5]) {
+    const plane = most(r * Math.cos(ang), r * Math.sin(ang), 0)
+    assert.ok(plane[1] < 1e-9 * full, `in the plane h_x ${plane[1]}`)
+    assert.ok(Math.abs(plane[0] / (full / 2) - 1) < 0.01, `in the plane h_+ ${plane[0]}, want ${full / 2}`)
+  }
+  // Between, at inclination i: h_+ (1 + cos^2 i) / 2, h_x cos i.
+  const i = 1
+  const mid = most(r * Math.sin(i), 0, r * Math.cos(i))
+  assert.ok(Math.abs(mid[0] / (full * (1 + Math.cos(i) ** 2) / 2) - 1) < 0.01, `at ${i} rad h_+ ${mid[0]}`)
+  assert.ok(Math.abs(mid[1] / (full * Math.cos(i)) - 1) < 0.01, `at ${i} rad h_x ${mid[1]}`)
+})
+
+// Peters: a circular pair shrinks at 64/5 m1 m2 M / (c^5 a^3), so a^4 =
+// a0^4 - 4 beta t. Two stars of 500 at 100, where the softening moves
+// the pull by a tenth of a percent, over 2.7 orbits.
+test('gravity3d: radiation reaction shrinks a circular pair at Peters\' rate, momentum kept', () => {
+  const m = 500
+  const a0 = 100
+  const v = Math.sqrt(2 * m * a0 * a0 / (a0 * a0 + 9) ** 1.5)
+  const A = { x: a0 / 2, y: 0, z: 0, vx: 0, vy: v / 2, vz: 0, m, r: 1 }
+  const B = { x: -a0 / 2, y: 0, z: 0, vx: 0, vy: -v / 2, vz: 0, m, r: 1 }
+  const bodies = [A, B]
+  const beta = 64 / 5 * m * m * 2 * m / g.C ** 5
+  let t = 0
+  for (; t < 540; t += 0.25) g.step(bodies, 0.25)
+  const a = Math.hypot(A.x - B.x, A.y - B.y, A.z - B.z)
+  const peters = (a0 ** 4 - 4 * beta * t) ** 0.25
+  assert.ok(Math.abs((a0 - a) / (a0 - peters) - 1) < 0.03, `shrank ${a0 - a}, Peters ${a0 - peters}`)
+  momentum(bodies).forEach(p => assert.ok(Math.abs(p) < 1e-9, `momentum ${momentum(bodies)}`))
 })

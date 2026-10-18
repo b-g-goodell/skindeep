@@ -12,7 +12,11 @@
 // Gravity mode, softened. Each hole is drawn as its shadow, ringed by its
 // photon ring at sqrt(27) / 2 r_s, and bends the light of what lies
 // behind it by the point-mass lens: the distant stars, and the dust, its
-// disc's far side among it. The signal and the pointer: see react and
+// disc's far side among it. The bodies radiate gravitational waves
+// (waves.js) at c, which carry energy away: every pair feels the 2.5PN
+// radiation reaction, so a tight pair inspirals at Peters' rate, its
+// waves chirping, until it merges. The seed's companion is such a pair,
+// a star and a small hole. The signal and the pointer: see react and
 // pointer.
 
 ;(function (root) {
@@ -38,6 +42,13 @@
   const SLOW = 0.995
   const DISC = 10
   const RING = Math.sqrt(27) / 2
+  const W = typeof module === 'object' && module.exports ? require('./waves') : root.VizWaves
+  // The seed's companion: a star of PAIR_STAR and a hole of PAIR_HOLE at
+  // PAIR_SEP, PAIR_R from the hole.
+  const PAIR_STAR = 50
+  const PAIR_HOLE = 30
+  const PAIR_SEP = 16
+  const PAIR_R = 175
 
   const rs = m => 2 * m / C2
   // Math.hypot is several times slower.
@@ -72,11 +83,62 @@
 
   const lt = [0, 0, 0]
 
+  // Radiation reaction on the pair a, b: the 2.5PN relative acceleration
+  // in the Burke-Thorne gauge (Iyer and Will 1995, alpha = -1, beta = 0),
+  //   8/5 eta M^2 / (c^5 r^3) [(3 v^2 + 17/3 M / r) rdot n - (v^2 + 3 M / r) v],
+  // M = m_a + m_b, eta = m_a m_b / M^2, r = x_a - x_b and v its rate,
+  // split by mass so momentum holds. On a circular orbit it takes
+  // 32/5 eta^2 M^5 / (c^5 r^5) of energy a unit of time, Peters' rate,
+  // so r shrinks at 64/5 m_a m_b M / (c^5 r^3). At most a tenth of the
+  // Newtonian pull, which a Paczynski-Wiita plunge would pass.
+  function reaction (a, b) {
+    const M = a.m + b.m
+    const rx = a.x - b.x
+    const ry = a.y - b.y
+    const rz = a.z - b.z
+    const vx = a.vx - b.vx
+    const vy = a.vy - b.vy
+    const vz = a.vz - b.vz
+    const r2 = rx * rx + ry * ry + rz * rz
+    const r = Math.sqrt(r2)
+    if (r < 1e-6) return
+    const v2 = vx * vx + vy * vy + vz * vz
+    const rd = (rx * vx + ry * vy + rz * vz) / r
+    const g = M / r
+    let k = 1.6 * (a.m * b.m / (M * M)) * M * M / (C2 * C2 * C * r2 * r)
+    const A = k * (3 * v2 + 17 / 3 * g) * rd / r
+    const B = k * (v2 + 3 * g)
+    let ax = A * rx - B * vx
+    let ay = A * ry - B * vy
+    let az = A * rz - B * vz
+    const most = 0.1 * M / r2
+    const l = len(ax, ay, az)
+    if (l > most) {
+      k = most / l
+      ax *= k
+      ay *= k
+      az *= k
+    }
+    a.ax += ax * b.m / M
+    a.ay += ay * b.m / M
+    a.az += az * b.m / M
+    b.ax -= ax * a.m / M
+    b.ay -= ay * a.m / M
+    b.az -= az * a.m / M
+  }
+
+  // The accelerations, and in (ex, ey, ez) the part of each that the
+  // Paczynski-Wiita pull adds within r_+ of a horizon, where it grows
+  // without bound: the waves leave it out (waves.js), so a fall's burst
+  // is bounded as in general relativity, near mu c^2 in Iddot.
   function accel (bodies) {
     for (const a of bodies) {
       a.ax = 0
       a.ay = 0
       a.az = 0
+      a.ex = 0
+      a.ey = 0
+      a.ez = 0
     }
     for (let i = 0; i < bodies.length; i++) {
       const a = bodies[i]
@@ -92,6 +154,15 @@
           const d = Math.sqrt(dx * dx + dy * dy + dz * dz)
           const gap = Math.max(d - s, 0.02 * s)
           f = 1 / (gap * gap * d)
+          const e = f - 1 / (Math.max(gap, s) ** 2 * d)
+          if (e) {
+            a.ex += dx * e * b.m
+            a.ey += dy * e * b.m
+            a.ez += dz * e * b.m
+            b.ex -= dx * e * a.m
+            b.ey -= dy * e * a.m
+            b.ez -= dz * e * a.m
+          }
         } else {
           const d2 = dx * dx + dy * dy + dz * dz + SOFT
           f = 1 / (d2 * Math.sqrt(d2))
@@ -102,6 +173,7 @@
         b.ax -= dx * f * a.m
         b.ay -= dy * f * a.m
         b.az -= dz * f * a.m
+        reaction(a, b)
       }
     }
     for (const h of bodies) {
@@ -187,9 +259,24 @@
     h.r = horizon(h)
   }
 
+  // The least distance between a and b over the last substep hs, their
+  // relative motion taken as straight: a fall that crossed a horizon
+  // within one substep is caught.
+  function least (a, b, hs) {
+    const rx = a.x - b.x
+    const ry = a.y - b.y
+    const rz = a.z - b.z
+    const vx = a.vx - b.vx
+    const vy = a.vy - b.vy
+    const vz = a.vz - b.vz
+    const v2 = vx * vx + vy * vy + vz * vz
+    const s = v2 > 0 ? Math.max(0, Math.min(hs, (rx * vx + ry * vy + rz * vz) / v2)) : 0
+    return len(rx - vx * s, ry - vy * s, rz - vz * s)
+  }
+
   // Swallowings, then mergers of bodies that touch, as in the Gravity
   // mode. Each is pushed to its list.
-  function collide (bodies, merged, swallowed) {
+  function collide (bodies, merged, swallowed, hs = 0) {
     for (let i = 0; i < bodies.length; i++) {
       for (let j = i + 1; j < bodies.length; j++) {
         let a = bodies[i]
@@ -197,7 +284,7 @@
         const d = len(a.x - b.x, a.y - b.y, a.z - b.z)
         if (a.hole || b.hole) {
           if (b.hole && (!a.hole || b.m > a.m)) [a, b] = [b, a]
-          if (d > horizon(a) + (b.hole ? horizon(b) : 0)) continue
+          if (least(a, b, hs) > horizon(a) + (b.hole ? horizon(b) : 0)) continue
           absorb(a, b)
           bodies[i] = a
           swallowed.push({ x: a.x, y: a.y, z: a.z, m: b.m, hole: a })
@@ -229,7 +316,7 @@
     while (t < h) {
       const hs = Math.min(h - t, Math.max(h / 256, limit(bodies)))
       leap(bodies, hs)
-      collide(bodies, merged, swallowed)
+      collide(bodies, merged, swallowed, hs)
       t += hs
     }
     return { merged, swallowed }
@@ -336,7 +423,7 @@
   }
 
   // Total momentum to zero and the centre of mass to the origin, the
-  // dust and the trails moved with the bodies.
+  // dust and the trails moved with the bodies. Returns the shift.
   function centre (bodies, dust = []) {
     let m = 0
     const p = [0, 0, 0]
@@ -350,7 +437,7 @@
       q[1] += b.m * b.y
       q[2] += b.m * b.z
     }
-    if (!m) return
+    if (!m) return [0, 0, 0]
     for (const o of [...bodies, ...dust]) {
       o.vx -= p[0] / m
       o.vy -= p[1] / m
@@ -365,6 +452,7 @@
         o.trail[i + 2] -= q[2] / m
       }
     }
+    return [-q[0] / m, -q[1] / m, -q[2] / m]
   }
 
   // A seeded generator, so every pane shows the same sky.
@@ -457,7 +545,8 @@
     return [215, 70 * t, 88 + 8 * t]
   }
 
-  function create (canvas) {
+  // env.text(): the visualization text size, a factor (decision 0036).
+  function create (canvas, env) {
     // Drawn on a canvas of the CPU, then blitted to the pane, as the
     // Gravity mode is.
     const out = canvas.getContext('2d')
@@ -494,6 +583,18 @@
     // basis (right, up, toward the camera).
     const V = { cx: 0, cy: 0, f: 1, D: 620, r: [1, 0, 0], u: [0, 1, 0], e: [0, 0, 1] }
     const P = { x: 0, y: 0, d: 0, k: 0 }
+    // The waves, their grid of cells and the pair the probe watches.
+    const field = new W.Field(C)
+    const watch = new W.Watch(field, true)
+    const grid = document.createElement('canvas')
+    const gg = grid.getContext('2d', { willReadFrequently: true })
+    let img = null
+    let hs = null
+    let xs = null
+    let vs = null
+    let ws = null
+    const hv = [0, 0]
+    const at = [0, 0, 0]
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
       const b = { x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, layer: 0, heat: 0 }
@@ -547,19 +648,37 @@
     }
 
     // A spinning hole at the centre with its disc, a companion star that
-    // feeds it, and three planets.
+    // feeds it, in a tight pair with a small hole, and two planets.
     function seed () {
       bodies = []
       dust = []
+      field.reset()
       const h = body(0, 0, 0, 0, 0, 0, 900, 0, 'hole')
       const n = tilt(0.12)
       Object.assign(h, { chi: 0.7, jx: n[0], jy: n[1], jz: n[2] })
       h.r = horizon(h)
       const s = rs(h.m)
       disc(h, 420, 3.3 * s, 8 * s, 30)
-      orbit(h, 175, tilt(0.35), Math.random() * 6.3, 80, 48, 'star')
-      for (const [r, hue] of [[128, 200], [215, 120], [245, 30]]) orbit(h, r, tilt(0.3), Math.random() * 6.3, 2 + Math.random() * 3, hue)
+      pair(h, tilt(0.35), Math.random() * 6.3)
+      for (const [r, hue] of [[215, 120], [245, 30]]) orbit(h, r, tilt(0.3), Math.random() * 6.3, 2 + Math.random() * 3, hue)
       centre(bodies, dust)
+    }
+
+    // The companion about h, in the plane of unit normal n at angle a: a
+    // star and a hole on a circular orbit about each other in the
+    // Paczynski-Wiita pull, in that plane and sense, their centre of mass
+    // on a circular orbit about h.
+    function pair (h, n, a) {
+      const M = PAIR_STAR + PAIR_HOLE
+      const c = orbit(h, PAIR_R, n, a, M, 48, 'star')
+      bodies.pop()
+      const [p, q] = basis(n)
+      const u = [0, 1, 2].map(i => Math.cos(a) * p[i] + Math.sin(a) * q[i])
+      const t = [0, 1, 2].map(i => -Math.sin(a) * p[i] + Math.cos(a) * q[i])
+      const v = Math.sqrt(M * PAIR_SEP) / (PAIR_SEP - rs(PAIR_HOLE))
+      for (const [m, k, hue, kind] of [[PAIR_STAR, PAIR_HOLE / M, 48, 'star'], [PAIR_HOLE, -PAIR_STAR / M, 0, 'hole']]) {
+        body(c.x + k * PAIR_SEP * u[0], c.y + k * PAIR_SEP * u[1], c.z + k * PAIR_SEP * u[2], c.vx + k * v * t[0], c.vy + k * v * t[1], c.vz + k * v * t[2], m, hue, kind)
+      }
     }
 
     function planet (hue, m) {
@@ -640,7 +759,13 @@
     function trim () {
       while (bodies.length > MAX_BODIES) bodies.splice(bodies.indexOf(bodies.filter(b => !b.star && !b.hole).reduce((a, b) => a.m < b.m ? a : b)), 1)
       cap()
-      centre(bodies, dust)
+      recentre()
+    }
+
+    // The bodies recentred, the waves' places moved with them.
+    function recentre () {
+      const [dx, dy, dz] = centre(bodies, dust)
+      field.shift(dx, dy, dz)
     }
 
     function cap () {
@@ -954,6 +1079,93 @@
       g.fill()
     }
 
+    // The waves on a grid of cells, 32 across the pane's shorter side and
+    // 8 px at least, blurred up to the pane, each source's on the plane
+    // through it that faces the camera: at each cell the sums over
+    // sources of h_+ and h_x in the camera's basis, the line of sight and
+    // the direction across it in that plane, which is the source's own
+    // where its axis lies in the plane or along the line of sight, as
+    // shown (waves.js) squared, its sign kept, h_+ in blue and amber, h_x
+    // in teal and rose, opaque over black: the frame's ground, the sky
+    // added over it.
+    function drawWaves (w, h, dim) {
+      const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
+      const gw = Math.ceil(w / cell) + 1
+      const gh = Math.ceil(h / cell) + 1
+      if (grid.width !== gw || grid.height !== gh || !img) {
+        grid.width = gw
+        grid.height = gh
+        img = gg.createImageData(gw, gh)
+        hs = new Float32Array(gw * gh)
+        xs = new Float32Array(gw * gh)
+        vs = new Float32Array(gw * gh)
+        ws = new Float32Array(gw * gh)
+      }
+      const src = []
+      for (const tr of field.traces.values()) {
+        tr.at(tr.last(), at)
+        project(at[0], at[1], at[2])
+        src.push({ tr, x: at[0], y: at[1], z: at[2], sx: P.x, sy: P.y, k: P.k, blur: 1.5 * cell / P.k / C })
+      }
+      const px = img.data
+      const { r, u } = V
+      const k = 0.7 * dim
+      for (let j = 0; j < gh; j++) {
+        for (let i = 0; i < gw; i++) {
+          let hp = 0
+          let hx = 0
+          for (const o of src) {
+            const X = (i * cell - o.sx) / o.k
+            const Y = -(j * cell - o.sy) / o.k
+            if (!field.wave(o.tr, clock, o.x + X * r[0] + Y * u[0], o.y + X * r[1] + Y * u[1], o.z + Y * u[2], hv, V.e, o.blur)) continue
+            hp += hv[0]
+            hx += hv[1]
+          }
+          hs[j * gw + i] = hp
+          xs[j * gw + i] = hx
+        }
+      }
+      W.shown(hs, gw, gh, vs)
+      W.shown(xs, gw, gh, ws)
+      for (let j = 0; j < gh; j++) {
+        for (let i = 0; i < gw; i++) {
+          const a0 = vs[j * gw + i]
+          const b0 = ws[j * gw + i]
+          const a = a0 * Math.abs(a0) * k
+          const b = b0 * Math.abs(b0) * k
+          const o = 4 * (j * gw + i)
+          let R = 0
+          let G = 0
+          let B = 0
+          if (a >= 0) {
+            R += 70 * a
+            G += 140 * a
+            B += 255 * a
+          } else {
+            R -= 255 * a
+            G -= 150 * a
+            B -= 60 * a
+          }
+          if (b >= 0) {
+            R += 60 * b
+            G += 190 * b
+            B += 210 * b
+          } else {
+            R -= 230 * b
+            G -= 110 * b
+            B -= 120 * b
+          }
+          px[o] = R
+          px[o + 1] = G
+          px[o + 2] = B
+          px[o + 3] = 255
+        }
+      }
+      gg.putImageData(img, 0, 0)
+      g.imageSmoothingEnabled = true
+      g.drawImage(grid, 0, 0, gw, gh, -cell / 2, -cell / 2, gw * cell, gh * cell)
+    }
+
     seed()
     return {
       draw (synth, dt) {
@@ -983,8 +1195,12 @@
           feed(hh)
           left -= hh
           clock += hh
+          // After the step: a body merged or swallowed in it carries its
+          // last acceleration for one sample, and the pair's end leaves
+          // as a front.
+          watch.sample(clock, field.sample(clock, bodies))
         }
-        if (bursts.length || eaten.length) centre(bodies, dust)
+        if (bursts.length || eaten.length) recentre()
         for (const m of bursts) flares.push({ x: m.x, y: m.y, z: m.z, t: clock, r: 6 + 2 * Math.cbrt(m.m) })
         for (const m of eaten) {
           m.hole.flash = 1
@@ -1015,8 +1231,6 @@
         // stops.
         const keep = 1 - 0.85 * L.idle
         g.globalCompositeOperation = 'source-over'
-        g.fillStyle = '#000'
-        g.fillRect(0, 0, w, h)
 
         // The holes on screen, far to near: a body or a grain is drawn
         // after every hole behind it and before every one in front.
@@ -1032,6 +1246,7 @@
           for (const o of holes) if (o.d > d) n++
           return n
         }
+        drawWaves(w, h, dim)
         drawSky(holes, dim, w, h)
         const hs = holes.map(o => ({ b: o.b, s: o.s }))
         for (const b of bodies) {
@@ -1111,6 +1326,7 @@
           g.arc(P.x, P.y, (f.r + (clock - f.t) * 3) * P.k, 0, Math.PI * 2)
           g.stroke()
         }
+        W.label(g, w, env && env.text ? env.text() : 1)
         out.drawImage(layer, 0, 0)
         tick = now
       },
@@ -1171,14 +1387,15 @@
 
       // For the live checks: the moons thrown, the camera's turns by a
       // drag, what the holes have swallowed, the stars drawn as arcs or
-      // rings, the bodies and the dust.
+      // rings, the bodies and the dust, the waves' sources and the pair
+      // watched (waves.js).
       probe () {
-        return { thrown, turns, swallowed, arcs, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length }
+        return { thrown, turns, swallowed, arcs, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report() }
       }
     }
   }
 
-  const api = { step, fall, centre, horizon, circular, rs, C, CHI_MAX }
+  const api = { step, fall, centre, horizon, circular, rs, C, CHI_MAX, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)
