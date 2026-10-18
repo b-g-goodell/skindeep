@@ -658,10 +658,12 @@
     let thrown = 0
     let turns = 0
     // Each body's number, and the body and the hole the live checks
-    // judge (look): the last moon thrown or body placed, the last hole
-    // placed.
+    // judge (look), set only by a staged scene (stage).
     let made = 0
     const judged = { body: 0, hole: 0 }
+    // A scene a check staged (stage): no event, step or turn of the
+    // camera moves it, and it is drawn at full light with whole trails.
+    let staged = false
     let swallowed = 0
     // The last frame's trace: its size, the pixels traced one by one,
     // its planes and holes.
@@ -1519,11 +1521,11 @@
         const w = canvas.width
         const h = canvas.height
         if (w < 4 || h < 4) return
-        for (const e of synth.since(since)) react(e)
+        for (const e of synth.since(since)) if (!staged) react(e)
         const L = synth.level
         // Simulation time per second: the clock, as in the Gravity mode.
         const speed = (6 + 30 * Math.min(1, L.bass) + 14 * L.busy + 10 * L.treble) * (1 - 0.9 * L.idle)
-        let left = Math.min(speed * dt, 60 * H)
+        let left = staged ? 0 : Math.min(speed * dt, 60 * H)
         const bursts = []
         const eaten = []
         while (left > 0) {
@@ -1551,7 +1553,7 @@
         }
         bodies = bodies.filter(b => b.star || b.hole || len(b.x, b.y, b.z) < VIEW * 4)
         dust = dust.filter(d => !d.gone && len(d.x, d.y, d.z) < VIEW * 2 && bodies.every(b => b.hole || (b.x - d.x) ** 2 + (b.y - d.y) ** 2 + (b.z - d.z) ** 2 > b.r * b.r))
-        if (bodies.length < 2) seed()
+        if (bodies.length < 2 && !staged) seed()
         for (const b of bodies) {
           b.flash *= Math.exp(-dt / 0.6)
           // A place every 1.5 time units, or every 4 units of travel.
@@ -1567,12 +1569,12 @@
         // The camera turns slowly by itself, unless the pointer turned
         // it in the last 4 s.
         const now = synth.t
-        if (now - cam.held > 4) cam.yaw += dt * 0.06 * (1 - 0.8 * L.idle)
+        if (now - cam.held > 4 && !staged) cam.yaw += dt * 0.06 * (1 - 0.8 * L.idle)
         aim(w, h)
-        const dim = 1 - 0.45 * L.idle
+        const dim = staged ? 1 : 1 - 0.45 * L.idle
         // Trails: long while busy, gone while idle, when time all but
         // stops.
-        const keep = 1 - 0.85 * L.idle
+        const keep = staged ? 1 : 1 - 0.85 * L.idle
         // The holes, for the heat, and the bodies and grains on screen:
         // their places, depths and scales, unlensed, as the trace reads
         // them.
@@ -1670,23 +1672,68 @@
         if (len(...t) < 1e-3 * d) t = [V.u[1] * rel[2] - V.u[2] * rel[1], V.u[2] * rel[0] - V.u[0] * rel[2], V.u[0] * rel[1] - V.u[1] * rel[0]]
         const tl = len(...t)
         const v = circular(s, d)
-        judged.body = body(s.x + rel[0], s.y + rel[1], s.z + rel[2], s.vx + v * t[0] / tl, s.vy + v * t[1] / tl, s.vz + v * t[2] / tl, 2 + Math.random() * 3, 55, 'planet').id
+        body(s.x + rel[0], s.y + rel[1], s.z + rel[2], s.vx + v * t[0] / tl, s.vy + v * t[1] / tl, s.vz + v * t[2] / tl, 2 + Math.random() * 3, 55, 'planet')
         thrown++
         trim()
       },
 
-      // For the live checks: a body of kind and mass m at X right of,
-      // Y above and Z beyond the heaviest body, as the camera sees it, at
-      // rest with that body, made the body or the hole the checks judge
-      // (look). Returns its number.
-      place (kind, m, X, Y, Z) {
-        const s = sun()
-        const at = [V.r, V.u, V.e].map(v => s.x * v[0] + s.y * v[1] + s.z * v[2])
-        const p = [0, 1, 2].map(i => (at[0] + X) * V.r[i] + (at[1] + Y) * V.u[i] + (at[2] - Z) * V.e[i])
-        const b = body(p[0], p[1], p[2], s.vx, s.vy, s.vz, m, kind === 'hole' ? 0 : kind === 'comet' ? 190 : 55, kind)
-        if (b.hole) judged.hole = b.id
-        else judged.body = b.id
-        return b.id
+      // For the live checks: a scene staged and held still. The camera at
+      // turn yaw and height pitch, a hole of mass m at the centre, its
+      // spin along the vertical, and items, each { kind, m, Z, u, a } or
+      // { kind, m, Z, X, Y }: a planet, a star, a hole, a grain (dust) or
+      // a flare (of radius r), Z beyond the hole along the line of sight
+      // (nearer if negative), and from the hole's line u weak-field
+      // Einstein radii of its depth at a degrees from the camera's right
+      // toward its up, or X right and Y up, at rest, and a planet with trail
+      // given a straight trail of that many places toward the right,
+      // 4 apart. Every other body, grain, flare and wave is gone. judge
+      // names the items judged: { body, hole }, indices into items.
+      // Returns the items' numbers.
+      stage ({ yaw, pitch, m, items, judge }) {
+        staged = true
+        cam.yaw = yaw
+        cam.pitch = pitch
+        aim(canvas.width, canvas.height)
+        bodies = []
+        dust = []
+        flares = []
+        field.reset()
+        const c = body(0, 0, 0, 0, 0, 0, m, 0, 'hole')
+        const ids = items.map(it => {
+          let X = it.X
+          let Y = it.Y
+          if (it.u !== undefined) {
+            const d = V.D + it.Z
+            const te = Math.sqrt(2 * rs(c.m) * it.Z / (V.D * d))
+            const a = it.a * Math.PI / 180
+            X = it.u * te * d * Math.cos(a)
+            Y = it.u * te * d * Math.sin(a)
+          }
+          const p = [0, 1, 2].map(i => X * V.r[i] + Y * V.u[i] - it.Z * V.e[i])
+          if (it.kind === 'dust') {
+            dust.push(grain({ x: p[0], y: p[1], z: p[2], hue: 30 }))
+            return 0
+          }
+          if (it.kind === 'flare') {
+            flares.push({ x: p[0], y: p[1], z: p[2], t: clock, r: it.r })
+            return 0
+          }
+          const b = body(p[0], p[1], p[2], 0, 0, 0, it.m, it.kind === 'hole' ? 0 : 55, it.kind)
+          for (let k = it.trail || 0; k > 0; k--) b.trail.push(p[0] + 4 * k * V.r[0], p[1] + 4 * k * V.r[1], p[2] + 4 * k * V.r[2])
+          b.tt = clock
+          return b.id
+        })
+        judged.body = judge.body === undefined ? 0 : ids[judge.body]
+        judged.hole = judge.hole === undefined ? 0 : ids[judge.hole]
+        return ids
+      },
+
+      // For the live checks: the staged scene let go, and the mode seeded
+      // again.
+      unstage () {
+        staged = false
+        judged.body = judged.hole = 0
+        seed()
       },
 
       // For the live checks: the numbers of the body and the hole judged

@@ -3,43 +3,39 @@
 // decision 0015) under xvfb-run:
 //   node scripts/checks/vizlens.js OUT
 // One pane in Gravity 3D, fed by the fake claude, in a 1200 by 760
-// window and then a 360 by 230 one. A drag levels the camera with the
-// central hole's equator, and a click throws a moon on an orbit about
-// the hole in that plane, so it passes behind the hole once a turn. The
-// moon is the one body judged: the mode records it alone, by its number
-// (gravity3d judged), and a moon lost to a hole, a merger or the cap on
-// bodies is thrown again. A frame is judged where the record puts the
-// moon behind the heaviest hole, the one it orbits, within u = 0.5 of
-// its line, its unlensed disc and glow wholly inside the hole's shadow,
-// so that a straight ray would hide it, and its disc spans a radius of
-// MIN_DISC = 1 pixel of the trace or more (its disc in the pane's
-// pixels times the trace's scale k), and where its outer image falls 10
-// pixels or more inside the pane. There, pixels of the frame outside
-// the shadow show it. The mode drew that frame again without the body,
-// the control, and chose up to 8 points where the two whole frames
-// differ most, after everything nearer was drawn. Here the pane's
-// canvas is read at those points against the control's colours: at
-// three quarters of them at least, one at least, it differs by 16 in a
-// channel or more, which only the body's light gives. A small pane's
-// image of a moon may span only a few degrees about the hole, and so
-// give fewer than 8 points. In the full pane its outer image is also an
-// arc: its pixels spread across the line to the hole more than 1.5
-// times as far as along it. Then, in the full pane, a drag that ends
-// where it began holds the camera still for 4 s, and the check places a
-// hole of 200 at rest with the central one, HOLE_Z beyond it and HOLE_X
-// across the line of sight (gravity3d place), its unlensed shadow
-// wholly inside the central shadow, the hole judged, and the frame is
-// read in the same way against a control traced without that hole: its
-// image, the light it takes from what lies behind it, shows outside the
-// central shadow. A placed hole that drifts off the line or is lost is
-// placed again. When an arm times out, the failure carries the probe's
-// state: the bodies judged, the holes, what they have swallowed and the
-// last record. Three frames of each go to OUT/lens-<size>-<k>.png and
-// OUT/lens-hole-full-<k>.png. At every frame read, the probe's audit
-// shows each class of matter, dust, bodies, trails and flares, painted
-// whole, each piece on the slice that holds its depth, counted where it
-// is painted, and each was painted in the run. No page or console
-// error. Fakes only.
+// window and then a 360 by 230 one. First, in the full pane, a smoke
+// pass of the running mode for SMOKE ms judges no lensing: it reads the
+// slice audit of each frame and wants no page error. Every judged frame
+// is of a scene the check stages and the mode holds still
+// (window.vizStage, gravity3d stage): no event, step or turn of the
+// camera moves it, and no other body, grain, flare or wave is in it.
+// The camera is level, a hole of M at the centre, and with it EXTRA,
+// matter of every class: grains before and behind the hole, a planet
+// with a trail and a flare behind it, all far from the line of sight.
+// Moon frames, in both panes: a moon of 4, MOON_Z beyond the hole, at
+// each u and angle of MOONS, its unlensed disc and glow wholly inside
+// the hole's shadow, so that a straight ray would hide it, and its disc
+// a radius of MIN_DISC = 1 pixel of the trace or more (its disc in the
+// pane's pixels times the trace's scale k), the moon judged. The mode
+// draws that frame again without the moon, the control, and picks up
+// to 8 points where the two whole frames differ, by 16 in a channel or
+// more, outside the shadow and nearer the hole than any other, after
+// everything nearer is drawn. Here the pane's canvas is read at those
+// points against the control's colours: at three quarters of them at
+// least, one at least, it differs by 16 in a channel or more, which
+// only the moon's light gives. In the full pane the outer image is also
+// an arc: its pixels spread across the line to the hole more than 1.5
+// times as far as along it. Hole frames, in the full pane: a hole of
+// 200, HOLE_Z beyond the central one, at each u and angle of HOLES, its
+// unlensed shadow wholly inside the central shadow, judged the same way
+// against a control traced without it: its image, the light it takes
+// from what lies behind it, shows outside the central shadow. A staged
+// frame the mode does not judge within 5 s fails with the probe's state.
+// Frames go to OUT/lens-<size>-<k>.png and OUT/lens-hole-full-<k>.png.
+// At every frame read, the probe's audit shows each class of matter,
+// dust, bodies, trails and flares, painted whole, each piece on the
+// slice that holds its depth, counted where it is painted, and the
+// staged frames paint each class. No page or console error. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -53,18 +49,31 @@ function check (ok, msg, seen) {
   if (!ok) throw new Error(seen === undefined ? msg : `${msg}, saw ${JSON.stringify(seen)}`)
 }
 
-// The least radius of the judged body's disc, in pixels of the trace.
+// The smoke pass's length, in ms.
+const SMOKE = 8000
+// The least radius of the judged moon's disc, in pixels of the trace.
 const MIN_DISC = 1
-// The hole the check places: its mass, and how far beyond the central
-// hole and across the line of sight.
-const HOLE_M = 200
+// The staged scene: the camera's turn, the central hole's mass, and the
+// matter of every class about it, X right, Y up and Z beyond the hole.
+const YAW = 0.6
+const M = 900
+const EXTRA = [
+  { kind: 'dust', Z: -150, X: -120, Y: 60 },
+  { kind: 'dust', Z: 200, X: 150, Y: -80 },
+  { kind: 'dust', Z: 400, X: -160, Y: -90 },
+  { kind: 'planet', m: 2, Z: 300, X: 200, Y: 100, trail: 12 },
+  { kind: 'flare', Z: 150, X: -190, Y: 110, r: 8 }
+]
+// The moon frames, [u, degrees], and the hole frames.
+const MOON_Z = 250
+const MOONS = [[0.12, 30], [0.25, 150], [0.36, 270]]
 const HOLE_Z = 280
-const HOLE_X = 10
+const HOLES = [[0.06, 0], [0.12, 120], [0.18, 240]]
 
-// The probe's state when an arm times out.
+// The probe's state when a staged frame is not judged.
 function state (probe, rec) {
   if (!probe) return { probe: null }
-  return { judged: probe.judged, thrown: probe.thrown, swallowed: probe.swallowed, at: probe.at, record: rec && { ...rec, pts: undefined, alt: undefined } }
+  return { judged: probe.judged, at: probe.at, cam: probe.cam, record: rec && { ...rec, pts: undefined, alt: undefined } }
 }
 
 // In the page: the pane's record of the body or the hole judged, and
@@ -82,9 +91,9 @@ function frame ([hole, least]) {
   if (!l || l.id !== id || l.by.m !== heaviest || l.u >= 0.5 || !l.hidden || l.disc * l.k < least) return { lens: l || null, probe: p.probe }
   const c = [...document.querySelectorAll('.pane canvas:not([hidden])')][0]
   const d = Math.hypot(l.x - l.hx, l.y - l.hy) || 1
-  const out = l.te * (l.u + Math.sqrt(l.u * l.u + 4)) / 2
-  const ix = l.hx + out * (l.x - l.hx) / d
-  const iy = l.hy + out * (l.y - l.hy) / d
+  const reach = l.te * (l.u + Math.sqrt(l.u * l.u + 4)) / 2
+  const ix = l.hx + reach * (l.x - l.hx) / d
+  const iy = l.hy + reach * (l.y - l.hy) / d
   if (ix < 10 || iy < 10 || ix > c.width - 10 || iy > c.height - 10) return { lens: l, probe: p.probe }
   const g = c.getContext('2d')
   const seen = l.pts.map(([x, y]) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3)))
@@ -99,10 +108,10 @@ function shown (f) {
 }
 
 // Every frame the check reads: each class of matter, the dust, the
-// bodies, the trails' pieces and the flares, drew all it had, each piece
-// on the slice of its depth, so the trace bends each as it bends the
-// others at that depth. A class drawn on any other slice, or not at
-// all, is caught here. drew counts each class's pieces over the run.
+// bodies, the trails' pieces and the flares, painted all it had, each
+// piece on the slice of its depth, so the trace bends each as it bends
+// the others at that depth. A class painted on any other slice, or not
+// at all, is caught here. drew counts each class's pieces over the run.
 const drew = { dust: 0, bodies: 0, trails: 0, flares: 0 }
 function slices (probe, where) {
   const a = probe && probe.trace && probe.trace.slices
@@ -132,124 +141,66 @@ function slices (probe, where) {
   check((await win.evaluate(() => window.skinned.selectViz('gravity3d'))).ok, 'the menu refused gravity3d')
   for (let i = 0; i < 300 && (await pane()).mode !== 'gravity3d'; i++) await sleep(100)
 
+  // The smoke pass: the running mode, its audit read, nothing judged.
+  await size([1200, 760])
+  await sleep(1500)
+  const t0 = Date.now()
+  let reads = 0
+  while (Date.now() - t0 < SMOKE) {
+    slices((await pane()).probe, 'smoke')
+    reads++
+    await sleep(250)
+  }
+  console.log('smoke', `${reads} frames read`)
+
+  // A staged scene with item it judged, and its first judged frame.
+  async function judge (where, item, hole, least) {
+    const spec = { yaw: YAW, pitch: 0, m: M, items: [item, ...EXTRA], judge: hole ? { hole: 0 } : { body: 0 } }
+    const ids = await viz.evaluate(s => window.vizStage(0, s), spec)
+    check(ids && ids[0] > 0, `${where}: the mode staged no scene`, ids)
+    const t = Date.now()
+    let f = null
+    while (Date.now() - t < 5000) {
+      f = await viz.evaluate(frame, [hole, least])
+      slices(f.probe, where)
+      if (f.png) break
+      await sleep(100)
+    }
+    check(f && f.png, `${where}: the staged frame was not judged`, state(f && f.probe, f && f.lens))
+    check(f.lens.id === ids[0], `${where}: the record judged another body than the one staged`, state(f.probe, f.lens))
+    return f
+  }
+
   for (const [name, W, H] of [['full', 1200, 760], ['small', 360, 230]]) {
     await size([W, H])
     await sleep(1500)
-    const p = await pane()
-    check(p.mode === 'gravity3d', 'want gravity3d shown', p.mode)
-    const cx = p.x + p.w / 2
-    const cy = p.y + p.h / 2
-    // A drag moves the camera's height 0.008 rad a pixel: drags level it.
-    for (let i = 0; i < 6; i++) {
-      const lift = Math.max(-0.4 * p.h, Math.min(0.4 * p.h, -(await pane()).probe.cam.pitch / 0.008))
-      if (Math.abs(lift) < 6) break
-      await viz.mouse.move(cx, cy)
-      await viz.mouse.down()
-      await viz.mouse.move(cx, cy + lift, { steps: 9 })
-      await viz.mouse.up()
-    }
-    // A moon about 110 from the centre: the pane's scale is its focal
-    // length, min(w, h) / 2 / tan(0.42), over the camera's distance 620.
-    const k = Math.min(p.w, p.h) / 2 / Math.tan(0.42) / 620
-    const throwMoon = async () => {
-      const thrown = (await pane()).probe.thrown
-      await viz.mouse.click(cx + 110 * k, cy)
-      const st = (await pane()).probe
-      check(st.thrown === thrown + 1, `${name}: no moon thrown`)
-      return st.judged.body
-    }
-    let moon = await throwMoon()
-
-    const t0 = Date.now()
-    const kept = []
-    let last = null
-    let probe = null
-    let small = 0
-    while (kept.length < 3 && Date.now() - t0 < 240000) {
-      const f = await viz.evaluate(frame, [false, MIN_DISC])
-      slices(f.probe, name)
-      probe = f.probe
-      last = f.lens
-      if (f.png) {
-        check(f.lens.id === moon && f.lens.kind === 'planet', `${name}: the record judged another body than the moon thrown`, state(probe, last))
-        kept.push(f)
-        fs.writeFileSync(path.join(out, `lens-${name}-${kept.length - 1}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
-        await sleep(300)
-        continue
-      }
-      if (last && last.id === moon && last.hidden && last.u < 0.5 && last.disc * last.k < MIN_DISC) small++
-      if (!probe.judged.live[0]) {
-        console.log(name, 'the moon was lost, another thrown', JSON.stringify(state(probe, last)))
-        moon = await throwMoon()
-      }
-      await sleep(40)
-    }
-    if (small) console.log(name, `frames of the moon hidden but under ${MIN_DISC} traced pixel, not judged: ${small}`)
-    check(kept.length === 3, `${name}: the moon did not pass behind a hole within u 0.5 in 240 s`, state(probe, last))
-    for (const f of kept) {
+    check((await pane()).mode === 'gravity3d', 'want gravity3d shown')
+    for (const [k, [u, a]] of MOONS.entries()) {
+      const f = await judge(`${name} moon ${k}`, { kind: 'planet', m: 4, Z: MOON_Z, u, a }, false, MIN_DISC)
+      fs.writeFileSync(path.join(out, `lens-${name}-${k}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
       const l = f.lens
       const o = l.outer
       const aspect = o.pixels ? o.across / Math.max(0.5, o.radial) : 0
       const n = shown(f)
-      console.log(name, `${f.w}x${f.h}`, JSON.stringify({ u: l.u, te: l.te, R: l.R, r: l.r, star: l.star, hidden: l.hidden, pixels: l.pixels, outer: o, aspect, shown: `${n} of ${l.pts.length}`, pts: l.pts, seen: f.seen, alt: l.alt }))
+      console.log(name, `${f.w}x${f.h}`, JSON.stringify({ u: l.u, te: l.te, R: l.R, r: l.r, disc: l.disc, k: l.k, hidden: l.hidden, pixels: l.pixels, outer: o, aspect, shown: `${n} of ${l.pts.length}`, pts: l.pts, seen: f.seen, alt: l.alt }))
+      check(l.kind === 'planet', `${name}: the record judged another kind than the moon`, state(f.probe, l))
       check(l.pixels > 0, `${name}: the body behind the hole is hidden`, { ...l, pts: undefined, alt: undefined })
       check(l.pts.length && n >= 0.75 * l.pts.length, `${name}: the frame does not show the body's image`, { pts: l.pts, seen: f.seen, alt: l.alt })
       if (name === 'full') check(o.pixels > 0 && aspect > 1.5, `${name}: the outer image is not an arc`, { outer: o, aspect })
     }
     if (name !== 'full') continue
-
-    // A hole behind the central one: the camera held by a drag that
-    // ends where it began, a hole placed beyond the central one, and its
-    // frames read, the hole placed again if it is lost or leaves the
-    // line before three frames show it.
-    const hold = async () => {
-      await viz.mouse.move(cx, cy)
-      await viz.mouse.down()
-      await viz.mouse.move(cx + 8, cy, { steps: 2 })
-      await viz.mouse.move(cx, cy, { steps: 2 })
-      await viz.mouse.up()
-    }
-    const placeHole = async () => {
-      await hold()
-      return viz.evaluate(([m, x, z]) => window.vizFlat(0).place('hole', m, x, 0, z), [HOLE_M, HOLE_X, HOLE_Z])
-    }
-    let hole = await placeHole()
-    let placed = Date.now()
-    let places = 1
-    const holes = []
-    const t1 = Date.now()
-    let lastHole = null
-    let probe2 = null
-    while (holes.length < 3 && Date.now() - t1 < 60000) {
-      const f = await viz.evaluate(frame, [true, 0])
-      slices(f.probe, 'hole full')
-      probe2 = f.probe
-      lastHole = f.lens
-      if (f.png) {
-        check(f.lens.id === hole && f.lens.kind === 'hole', 'full: the record judged another hole than the one placed', state(probe2, lastHole))
-        holes.push(f)
-        fs.writeFileSync(path.join(out, `lens-hole-full-${holes.length - 1}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
-        await sleep(300)
-        continue
-      }
-      if (!probe2.judged.live[1] || Date.now() - placed > 3000) {
-        console.log('hole full', 'placed again', JSON.stringify(state(probe2, lastHole)))
-        hole = await placeHole()
-        placed = Date.now()
-        places++
-      }
-      await sleep(40)
-    }
-    console.log('hole full', `holes placed: ${places}`)
-    check(holes.length === 3, 'full: no placed hole showed behind the central one within u 0.5 in 60 s', state(probe2, lastHole))
-    for (const f of holes) {
+    for (const [k, [u, a]] of HOLES.entries()) {
+      const f = await judge(`hole ${k}`, { kind: 'hole', m: 200, Z: HOLE_Z, u, a }, true, 0)
+      fs.writeFileSync(path.join(out, `lens-hole-full-${k}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
       const l = f.lens
       const n = shown(f)
       console.log('hole full', JSON.stringify({ m: l.m, u: l.u, te: l.te, R: l.R, r: l.r, hidden: l.hidden, pixels: l.pixels, outer: l.outer, shown: `${n} of ${l.pts.length}`, pts: l.pts, seen: f.seen, alt: l.alt }))
+      check(l.kind === 'hole', 'full: the record judged another kind than the hole', state(f.probe, l))
       check(l.pixels > 0, 'full: the hole behind the hole is hidden', { ...l, pts: undefined, alt: undefined })
       check(l.pts.length && n >= 0.75 * l.pts.length, 'full: the frame does not show the hole\'s image', { pts: l.pts, seen: f.seen, alt: l.alt })
     }
   }
+  check(await viz.evaluate(() => window.vizUnstage(0)), 'the mode would not let the staged scene go')
 
   console.log('drawn on their slices', JSON.stringify(drew))
   for (const k of Object.keys(drew)) check(drew[k] > 0, `no ${k} drawn in the run`, drew)
