@@ -1198,29 +1198,36 @@ behind it vanished under paint.
   fail with its behaviour removed: the table replaced by $2 r_s/b$,
   capture removed, the bend removed, each hole's $b$ taken from the
   unbent ray.
-- `scripts/checks/vizlens.js`, in a full pane and a small one: a moon
-  thrown in the central hole's equator passes behind it, wholly within
-  the shadow, glow and all, so that a straight ray would hide it. The
-  moon is the one body judged, by its number, behind the heaviest hole
-  where its disc spans a radius of 1 traced pixel or more and its outer
-  image falls inside the pane, and a moon lost to a hole, a merger or
-  the cap on bodies is thrown again. The mode draws that frame again
-  without it and picks points where the two whole frames differ by 16 in
-  a channel or more, after everything nearer is drawn, and the pane's
-  canvas is read there against the control: the moon is seen. At 40, the
-  first threshold, a body far behind the hole, dimmed by its fog, lifted
-  its image by 31 to 39 on a lit ground and was counted unseen. Late in
-  a long run a hole grown past 2000 put the outer image out of the
-  frame. In the full pane the outer image spreads across the line to the
-  hole more than 1.5 times as far as along it. With the camera held, the
-  check places a hole of 200 beyond the central one, and it is seen the
-  same way, against a control traced without it. At every frame read,
-  each grain, body, trail piece and flare is counted where it is
-  painted, on the slice that holds its depth. Each fails with its
-  behaviour removed: with the bend removed, "the body behind the hole is
-  hidden", and with the dust, the bodies, the trails or the flares
-  listed on the nearest slice, or the dust painted on the farthest, "off
-  the slices of their depths".
+- `scripts/checks/vizlens.js`, in a full pane and a small one. A smoke
+  pass of the running mode reads the slice audit of each frame and
+  judges no lensing. Every judged frame is of a scene the check stages
+  and the mode holds still (gravity3d stage, reached only through
+  window.vizStage): no event, step or turn of the camera moves it, and
+  it holds a hole of 900 at the centre, the thing judged, and grains
+  before and behind the hole, a planet with a trail and a flare behind
+  it, so every frame paints every class. A moon of 4, 250 beyond the
+  hole, at u of 0.12, 0.25 and 0.36, wholly within the shadow, glow and
+  all, so that a straight ray would hide it, its disc a radius of 1
+  traced pixel or more: the mode draws that frame again without it and
+  picks points where the two whole frames differ by 16 in a channel or
+  more, outside the shadow and nearer the hole than any other, after
+  everything nearer is drawn, and the pane's canvas is read there
+  against the control: the moon is seen. At 40, the first threshold, a
+  body far behind the hole, dimmed by its fog, lifted its image by 31 to
+  39 on a lit ground and was counted unseen. In the full pane the outer
+  image spreads across the line to the hole more than 1.5 times as far
+  as along it. A hole of 200, 280 beyond the central one, at u of 0.06,
+  0.12 and 0.18, is seen the same way, against a control traced without
+  it. At every frame read, each grain, body, trail piece and flare is
+  counted where it is painted, on the slice that holds its depth. Each
+  fails with its behaviour removed: with the bend removed, "the body
+  behind the hole is hidden", with the dust, the bodies, the trails or
+  the flares listed on the nearest slice, or the dust painted on the
+  farthest, "off the slices of their depths", and with the least disc
+  made too large to meet, "the staged frame was not judged". The checks
+  judged a live, random run before: a moon that took in a star kept its
+  number, a second hole lensed the moon into its outer image, a hole
+  merged before it was seen.
 
 Rejected:
 
