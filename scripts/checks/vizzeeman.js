@@ -29,7 +29,7 @@ const errors = []
 const MU_B_H = 1.39962449171e10
 // The event clock's factor, and its slowing from 1e6 (issue #166), by
 // which the trace's window and the beat's frequency scale.
-const EVENT = require('../../app/viz/carbon').EVENT
+const { EVENT, TRACE_T } = require('../../app/viz/carbon')
 const SLOW = EVENT / 1e6
 
 function check (ok, msg, seen) {
@@ -215,10 +215,15 @@ function turned (a, b, u) {
   const pb = p.probe.pulseButton
   const pulses = p.probe.pulses
   await viz.mouse.click(p.x + pb.x + pb.w / 2, p.y + pb.y + pb.h / 2)
-  await sleep(1000 * SLOW)
+  // The window after the pulse is TRACE_T of the mode's clock, which
+  // falls behind wall time when frames are slow.
+  const t2 = Date.now()
+  let beat = (await pane()).probe
+  while (Date.now() - t2 < 4000 * SLOW && !(beat.beat && beat.now >= beat.beat.t + TRACE_T)) {
+    await sleep(200)
+    beat = (await pane()).probe
+  }
   await save(0, 'beat')
-  await sleep(400)
-  const beat = (await pane()).probe
   fs.writeFileSync(path.join(out, 'zeeman-beat.json'), JSON.stringify(beat.beat))
   check(beat.pulses === pulses + 1 && beat.beat, 'want the click to fire a pulse', { pulses: beat.pulses, beat: !!beat.beat })
   check(Math.abs(beat.beat.f2 - f2) < 1e-9 * f2, 'want the stated beat 2 f_L of 2p4p 3P2', { stated: beat.beat.f2, f2 })
