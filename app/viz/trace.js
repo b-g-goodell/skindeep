@@ -758,7 +758,7 @@
     return traced
   }
 
-  const api = { RING, BBAR, N, deflection, exact, closest, trace, STRIDE, MAXSEG, plane, held, render, ray, skyTiles, gathered: () => [R, Gc, B, T] }
+  const api = { RING, BBAR, deflection, trace, STRIDE, MAXSEG, plane, render, skyTiles }
   if (typeof module === 'object' && module.exports) module.exports = api
   else root.VizTrace = api
 })(this)
