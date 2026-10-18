@@ -13,8 +13,10 @@
 // the control, and chose up to 8 points where the two whole frames
 // differ most, after everything nearer was drawn. Here the pane's
 // canvas is read at those points against the control's colours: at
-// three quarters of them at least it differs by 16 in a channel or
-// more, which only the body's light gives. In the full pane its outer
+// three quarters of them at least, one at least, it differs by 16 in a
+// channel or more, which only the body's light gives. A small pane's
+// image of a moon may span only a few degrees about the hole, and so
+// give fewer than 8 points. In the full pane its outer
 // image is also an arc: its pixels spread across the line to the hole
 // more than 1.5 times as far as along it. Then, in
 // the full pane, once a hole of 100 or more joins the central one (a
@@ -132,7 +134,7 @@ function behind (a, b) {
       const n = shown(f)
       console.log(name, `${f.w}x${f.h}`, JSON.stringify({ u: l.u, te: l.te, R: l.R, r: l.r, star: l.star, hidden: l.hidden, pixels: l.pixels, outer: o, aspect, shown: `${n} of ${l.pts.length}`, pts: l.pts, seen: f.seen, alt: l.alt }))
       check(l.pixels > 0, `${name}: the body behind the hole is hidden`, { ...l, pts: undefined, alt: undefined })
-      check(l.pts.length >= 4 && n >= 0.75 * l.pts.length, `${name}: the frame does not show the body's image`, { pts: l.pts, seen: f.seen, alt: l.alt })
+      check(l.pts.length && n >= 0.75 * l.pts.length, `${name}: the frame does not show the body's image`, { pts: l.pts, seen: f.seen, alt: l.alt })
       if (name === 'full') check(o.pixels > 0 && aspect > 1.5, `${name}: the outer image is not an arc`, { outer: o, aspect })
     }
     if (name !== 'full') continue
@@ -185,7 +187,7 @@ function behind (a, b) {
       const n = shown(f)
       console.log('hole full', JSON.stringify({ m: l.m, u: l.u, te: l.te, R: l.R, r: l.r, hidden: l.hidden, pixels: l.pixels, outer: l.outer, shown: `${n} of ${l.pts.length}`, pts: l.pts, seen: f.seen, alt: l.alt }))
       check(l.pixels > 0, 'full: the hole behind the hole is hidden', { ...l, pts: undefined, alt: undefined })
-      check(l.pts.length >= 4 && n >= 0.75 * l.pts.length, 'full: the frame does not show the hole\'s image', { pts: l.pts, seen: f.seen, alt: l.alt })
+      check(l.pts.length && n >= 0.75 * l.pts.length, 'full: the frame does not show the hole\'s image', { pts: l.pts, seen: f.seen, alt: l.alt })
     }
   }
 
