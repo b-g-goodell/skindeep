@@ -662,6 +662,10 @@
         // The sky: on one face, its place bilinear, else its direction.
         const one = !cap && sky && fi[n00] === fi[n10] && fi[n00] === fi[n01] && fi[n00] === fi[n11]
         const face = fi[n00]
+        // That face's lit tiles, read first: most of the sky is black.
+        const tiles = one ? sky.lit[face] : null
+        const nt = sky ? sky.nt : 0
+        const Fm = sky ? sky.F - 1.001 : 0
         const lit = !cap && sky
         for (let y = y0; y < y1; y++) {
           const v = (y - y0) * iS
@@ -716,7 +720,11 @@
               B = g2 + s2 * du
               T = 1
               if (lit) {
-                if (one) skyAdd(sky, face, ex + sx * du, ey + sy * du)
+                if (one) {
+                  const qx = ex + sx * du
+                  const qy = ey + sy * du
+                  if (tiles[((qy <= 0 ? 0 : qy >= Fm ? Fm : qy) >> 2) * nt + ((qx <= 0 ? 0 : qx >= Fm ? Fm : qx) >> 2)]) skyAdd(sky, face, qx, qy)
+                }
                 else {
                   skyPlace(sky, ex + sx * du, ey + sy * du, ez + sz * du)
                   skyAdd(sky, FI, FX, FY)
@@ -744,7 +752,11 @@
               B += T * (g2 + s2 * du)
             }
             if (lit && T > 0.004) {
-              if (one) skyAdd(sky, face, ex + sx * du, ey + sy * du)
+              if (one) {
+                const qx = ex + sx * du
+                const qy = ey + sy * du
+                if (tiles[((qy <= 0 ? 0 : qy >= Fm ? Fm : qy) >> 2) * nt + ((qx <= 0 ? 0 : qx >= Fm ? Fm : qx) >> 2)]) skyAdd(sky, face, qx, qy)
+              }
               else {
                 skyPlace(sky, ex + sx * du, ey + sy * du, ez + sz * du)
                 skyAdd(sky, FI, FX, FY)
