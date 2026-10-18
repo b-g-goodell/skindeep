@@ -920,6 +920,11 @@
       recentred++
       const [dx, dy, dz] = centre(bodies, dust)
       field.shift(dx, dy, dz)
+      for (const f of flares) {
+        f.x += dx
+        f.y += dy
+        f.z += dz
+      }
     }
 
     function cap () {
@@ -1592,8 +1597,8 @@
           // as a front.
           watch.sample(clock, field.sample(clock, bodies))
         }
-        if (bursts.length || eaten.length) recentre()
         for (const m of bursts) flares.push({ x: m.x, y: m.y, z: m.z, t: clock, r: 6 + 2 * Math.cbrt(m.m) })
+        if (bursts.length || eaten.length) recentre()
         for (const m of eaten) {
           m.hole.flash = 1
           swallowed++
