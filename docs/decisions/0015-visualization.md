@@ -1567,7 +1567,7 @@ of mass's drift since the last.
   the heaviest body), and after it swallows a body or a hole, the
   merged hole, which is the same body. With no hole the view takes the
   origin, the centre of mass. `anchor` in `app/viz/gravity3d.js`
-  chooses it once a frame.
+  chooses it each frame.
 - Only the camera follows it. The camera stands 620 from it, turns
   about it by itself and by the pointer's drag, and every world point
   is taken relative to it: `place` for the bodies, the dust, the
@@ -1600,7 +1600,7 @@ of mass's drift since the last.
   body or trail point on screen by $10^{-9}$ pixels. A star of 50
   swallowed leaves the merged hole at the centre and moves the trails
   by its recoil alone, 0.64 pixels there. Without the offset the hole
-  stands 3 and 4 pixels off at the first step and the recentring moves
+  stands 3.2 and 3.6 pixels off at the first step and the recentring moves
   the screen by 1.1 pixels. `scripts/checks/vizmodes.js` reads the probe's `held` at
   every poll of Gravity 3D's full pane while its pair turns three
   times, and at its small pane's frames: the hole within a pixel of
