@@ -9,10 +9,15 @@
 // acceleration v x B, B = (2 M a / (C r^3)) (j - 3 (j . n) n), j its axis
 // and n the direction from it. What crosses a horizon is swallowed, its
 // mass and angular momentum the hole's. Other pairs attract as in the
-// Gravity mode, softened. Each hole is drawn as its shadow, ringed by its
-// photon ring at sqrt(27) / 2 r_s, and bends the light of what lies
-// behind it by the point-mass lens: the distant stars, and the dust, its
-// disc's far side among it. The bodies radiate gravitational waves
+// Gravity mode, softened. Nothing of a hole is painted: every pixel of
+// the frame is a ray traced backward from the camera (trace.js), bent
+// at each hole by the exact Schwarzschild deflection and captured within
+// sqrt(27) / 2 r_s, through the scene drawn flat on slices of depth, the
+// bodies, their trails, the dust and the flares, to the waves' ground
+// and the distant stars. The shadow, the photon ring, arcs, Einstein
+// rings, inner images and one hole seen through another all follow from
+// that one rule. The optics are Schwarzschild's: spin drags matter, as
+// above, but bends no light here. The bodies radiate gravitational waves
 // (waves.js) at c, which carry energy away: every pair feels the 2.5PN
 // radiation reaction, so a tight pair inspirals at Peters' rate, its
 // waves chirping, until it merges. The seed's companion is such a pair,
@@ -41,8 +46,21 @@
   const VISC = 0.01
   const SLOW = 0.995
   const DISC = 10
+  // The capture radius over r_s: a ray of smaller impact parameter falls in.
   const RING = Math.sqrt(27) / 2
   const W = typeof module === 'object' && module.exports ? require('./waves') : root.VizWaves
+  const T3 = typeof module === 'object' && module.exports ? require('./trace') : root.VizTrace
+  // The camera's first height, on which the sky's bright stars lie.
+  const PITCH = 0.36
+  // The trace: at most PANE pixels a pane, or WINDOW pixels a window
+  // when a pane fills more of it, its lens map's nodes STEP pixels
+  // apart, SUB slices behind the nearest hole, and the sky's cube faces
+  // at most CUBE pixels square.
+  const PANE = 45000
+  const WINDOW = 135000
+  const STEP = 6
+  const SUB = 8
+  const CUBE = 1024
   // The seed's companion: a star of PAIR_STAR and a hole of PAIR_HOLE at
   // PAIR_SEP, PAIR_R from the hole.
   const PAIR_STAR = 50
@@ -545,6 +563,76 @@
     return [215, 70 * t, 88 + 8 * t]
   }
 
+  // Where unit n falls on face fi of a cube of directions, each of its
+  // two coordinates in [-1, 1], as the trace reads it (trace.js:
+  // skyPlace), or null if it points away from it.
+  function onFace (fi, n) {
+    const ax = fi >> 1
+    const c = n[ax] * (fi & 1 ? -1 : 1)
+    if (c <= 0.2) return null
+    return ax === 0 ? [n[1] / c, n[2] / c] : ax === 1 ? [n[0] / c, n[2] / c] : [n[0] / c, n[1] / c]
+  }
+
+  // A face's pixels a radian at place p over those at its centre: the
+  // geometric mean of the radial (1 + a^2 + b^2) and the tangential
+  // sqrt(1 + a^2 + b^2) stretch of the gnomonic map.
+  function stretch (p) {
+    const q = 1 + p[0] * p[0] + p[1] * p[1]
+    return Math.sqrt(q * Math.sqrt(q))
+  }
+
+  // The sky on a cube of faces F pixels square, F / 2 pixels a radian at
+  // a face's centre, a star drawn scale times its size in a pane's
+  // pixels, over black: the light from infinity, which the trace reads
+  // along each ray's last direction. The two last built are kept, which
+  // panes of a size share.
+  let SKY = null
+  const cubes = []
+  function cube (F, scale) {
+    for (const c of cubes) if (c.F === F && c.scale === scale) return c
+    if (!SKY) SKY = sky(PITCH)
+    const { stars, haze } = SKY
+    const can = document.createElement('canvas')
+    can.width = can.height = F
+    const g = can.getContext('2d', { willReadFrequently: true })
+    const blue = sprite(228)
+    const warm = sprite(32)
+    const faces = []
+    for (let fi = 0; fi < 6; fi++) {
+      g.globalCompositeOperation = 'source-over'
+      g.globalAlpha = 1
+      g.fillStyle = '#000'
+      g.fillRect(0, 0, F, F)
+      g.globalCompositeOperation = 'lighter'
+      for (const o of haze) {
+        const p = onFace(fi, o.n)
+        if (!p) continue
+        const sz = o.size * F / 2 * stretch(p)
+        const x = (p[0] + 1) * F / 2
+        const y = (p[1] + 1) * F / 2
+        if (x < -sz || y < -sz || x > F + sz || y > F + sz) continue
+        g.globalAlpha = Math.min(1, o.a)
+        g.drawImage(o.warm ? warm : blue, x - sz, y - sz, 2 * sz, 2 * sz)
+      }
+      for (const s of stars) {
+        const p = onFace(fi, s.n)
+        if (!p) continue
+        const sz = s.size * scale * stretch(p)
+        const x = (p[0] + 1) * F / 2
+        const y = (p[1] + 1) * F / 2
+        if (x < -sz || y < -sz || x > F + sz || y > F + sz) continue
+        g.globalAlpha = s.b
+        g.fillStyle = `hsl(${s.hue}, ${s.sat | 0}%, 85%)`
+        g.fillRect(x - sz / 2, y - sz / 2, sz, sz)
+      }
+      faces.push(g.getImageData(0, 0, F, F).data)
+    }
+    const c = { F, scale, faces, lit: T3.skyTiles(faces, F), nt: Math.ceil(F / 4) }
+    cubes.unshift(c)
+    if (cubes.length > 2) cubes.pop()
+    return c
+  }
+
   // env.text(): the visualization text size, a factor (decision 0036).
   function create (canvas, env) {
     // Drawn on a canvas of the CPU, then blitted to the pane, as the
@@ -552,15 +640,13 @@
     const out = canvas.getContext('2d')
     const layer = document.createElement('canvas')
     const g = layer.getContext('2d', { willReadFrequently: true })
-    const mark = {}
-    const PITCH = 0.36
-    const { stars, haze } = sky(PITCH)
-    for (const s of stars) {
-      s.fill = `hsl(${s.hue}, ${s.sat | 0}%, 85%)`
-      s.arc = `hsl(${s.hue}, ${(s.sat + 20) | 0}%, 85%)`
-    }
-    const blue = sprite(228)
-    const warm = sprite(32)
+    // The traced frame, at the trace's scale, and the waves' ground.
+    const frame = document.createElement('canvas')
+    const fx = frame.getContext('2d', { willReadFrequently: true })
+    let fimg = null
+    const gcan = document.createElement('canvas')
+    const gcx = gcan.getContext('2d', { willReadFrequently: true })
+    const since = {}
     const styles = new Map()
     let bodies = []
     let dust = []
@@ -576,7 +662,9 @@
     let thrown = 0
     let turns = 0
     let swallowed = 0
-    let arcs = 0
+    // The last frame's trace: its size, the pixels traced one by one,
+    // its planes and holes.
+    let traced = null
     // The pane's signal clock at the last frame.
     let tick = 0
     // The frame's projection: centre, focal length, camera distance and
@@ -597,7 +685,7 @@
     const at = [0, 0, 0]
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
-      const b = { x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, layer: 0, heat: 0 }
+      const b = { x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0 }
       b.r = b.hole ? horizon(b) : radius(m, b.star)
       bodies.push(b)
       return b
@@ -628,7 +716,7 @@
     // A grain, every one of the same shape, which keeps the loops over
     // them fast.
     function grain (o) {
-      return Object.assign({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hue: 0, disc: false, gone: false, px: 0, py: 0, pd: 1, pk: 0, layer: 0, mu: 1, inner: false, ix: 0, iy: 0, imu: 0, heat: 0, beam: 1 }, o)
+      return Object.assign({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hue: 0, disc: false, gone: false, px: 0, py: 0, pd: 1, heat: 0, beam: 1 }, o)
     }
 
     // Grains on circular orbits about hole h, in its equator.
@@ -827,34 +915,6 @@
       P.d = d
     }
 
-    // The Einstein radius, in pixels squared, of hole o for a source at
-    // depth d (Infinity for the sky): theta_E^2 = 2 r_s (D_s - D_l) /
-    // (D_l D_s), a point-mass lens.
-    function einstein (o, d) {
-      if (d === Infinity) return V.f * V.f * 2 * o.s / o.d
-      return d <= o.d ? 0 : V.f * V.f * 2 * o.s * (d - o.d) / (o.d * d)
-    }
-
-    // P moved to its outer image through every hole in front of it. Its
-    // magnification in P.mu.
-    function lens (holes, d) {
-      P.mu = 1
-      for (const o of holes) {
-        const t2 = einstein(o, d)
-        if (!t2) continue
-        const bx = P.x - o.x
-        const by = P.y - o.y
-        const b = len(bx, by) || 1e-3
-        const te = Math.sqrt(t2)
-        const u = b / te
-        const s = Math.sqrt(u * u + 4)
-        const tp = (u + s) / 2
-        P.x = o.x + bx / b * tp * te
-        P.y = o.y + by / b * tp * te
-        P.mu *= (u * u + 2) / (2 * u * s) + 0.5
-      }
-    }
-
     function style (hue, sat, light, a) {
       const key = (((hue | 0) * 128 + (sat | 0)) * 128 + (light | 0)) * 32 + Math.round(a * 20)
       let s = styles.get(key)
@@ -866,36 +926,36 @@
       return s
     }
 
-    // Squares of side s centred at (x, y), batched by fill and alpha and
-    // filled one path a batch: on a canvas of the CPU a call costs more
-    // than its few pixels.
-    const batch = new Map()
-    function rect (fill, a, x, y, s) {
+    // Squares of side s centred at (x, y) on slice L, batched by fill and
+    // alpha and filled one path a batch: on a canvas of the CPU a call
+    // costs more than its few pixels.
+    function rect (L, fill, a, x, y, s) {
       const k = Math.min(20, Math.round(a * 20))
       if (k <= 0) return
-      let bins = batch.get(fill)
+      let bins = L.batch.get(fill)
       if (!bins) {
         bins = []
-        batch.set(fill, bins)
+        L.batch.set(fill, bins)
       }
       ;(bins[k] || (bins[k] = [])).push(x - s / 2, y - s / 2, s)
     }
 
-    function flush () {
-      for (const [fill, bins] of batch) {
-        g.fillStyle = fill
+    function flush (L) {
+      const c = L.g
+      for (const [fill, bins] of L.batch) {
+        c.fillStyle = fill
         for (let k = 1; k < bins.length; k++) {
           const b = bins[k]
           if (!b || !b.length) continue
-          g.globalAlpha = k / 20
-          g.beginPath()
-          for (let i = 0; i < b.length; i += 3) g.rect(b[i], b[i + 1], b[i + 2], b[i + 2])
-          g.fill()
+          c.globalAlpha = k / 20
+          c.beginPath()
+          for (let i = 0; i < b.length; i += 3) c.rect(b[i], b[i + 1], b[i + 2], b[i + 2])
+          c.fill()
           b.length = 0
         }
       }
-      if (batch.size > 600) batch.clear()
-      g.globalAlpha = 1
+      if (L.batch.size > 600) L.batch.clear()
+      c.globalAlpha = 1
     }
 
     // The heat of a point at (x, y, z) from the holes: 0 far out, about
@@ -916,128 +976,26 @@
       return heat
     }
 
-    // The distant stars and the galaxy's glow, lensed by each hole: a
-    // star's outer image pushed out, its inner one inside the Einstein
-    // ring, both drawn as arcs when it lies close behind the hole, a
-    // ring when it lines up.
-    function drawSky (holes, dim, w, h) {
-      g.globalCompositeOperation = 'lighter'
-      const { r, u, e, f, cx, cy } = V
-      for (const o of haze) {
-        const n = o.n
-        const Z = -(n[0] * e[0] + n[1] * e[1] + n[2] * e[2])
-        if (Z < 0.1) continue
-        P.x = cx + f * (n[0] * r[0] + n[1] * r[1]) / Z
-        P.y = cy - f * (n[0] * u[0] + n[1] * u[1] + n[2] * u[2]) / Z
-        lens(holes, Infinity)
-        const sz = o.size * f * Math.min(2, Math.sqrt(P.mu))
-        if (P.x < -sz || P.y < -sz || P.x > w + sz || P.y > h + sz) continue
-        g.globalAlpha = Math.min(1, o.a * dim)
-        g.drawImage(o.warm ? warm : blue, P.x - sz, P.y - sz, 2 * sz, 2 * sz)
-      }
-      for (const s of stars) {
-        const n = s.n
-        const Z = -(n[0] * e[0] + n[1] * e[1] + n[2] * e[2])
-        if (Z < 0.1) continue
-        const x0 = cx + f * (n[0] * r[0] + n[1] * r[1]) / Z
-        const y0 = cy - f * (n[0] * u[0] + n[1] * u[1] + n[2] * u[2]) / Z
-        P.x = x0
-        P.y = y0
-        lens(holes, Infinity)
-        const a = s.b * dim
-        if (P.x >= 0 && P.y >= 0 && P.x < w && P.y < h) rect(s.fill, a * Math.min(2, P.mu), P.x, P.y, s.size * Math.min(2.5, Math.sqrt(P.mu)))
-        // Inner images and arcs, by the hole nearest the star's line.
-        for (const o of holes) {
-          const te = Math.sqrt(einstein(o, Infinity))
-          const bx = x0 - o.x
-          const by = y0 - o.y
-          const b = len(bx, by)
-          const uu = b / te
-          if (uu > 2.5) continue
-          const sq = Math.sqrt(uu * uu + 4)
-          const tm = (sq - uu) / 2
-          const mum = (uu * uu + 2) / (2 * uu * sq) - 0.5
-          const ang = Math.atan2(by, bx)
-          if (uu < 0.3) {
-            // The star seen as a disc of radius RHO theta_E: an arc of
-            // half angle asin(RHO / u) on each side, a ring within RHO.
-            const RHO = 0.05
-            const half = uu <= RHO ? Math.PI : Math.asin(RHO / uu)
-            g.strokeStyle = s.arc
-            g.globalAlpha = Math.min(1, a * (0.5 + 0.5 * (1 - uu / 0.3)))
-            g.lineWidth = 0.8 + s.size * 0.3
-            g.beginPath()
-            g.arc(o.x, o.y, (uu + sq) / 2 * te, ang - half, ang + half)
-            arcs++
-            g.stroke()
-            g.beginPath()
-            g.arc(o.x, o.y, tm * te, ang + Math.PI - half, ang + Math.PI + half)
-            g.stroke()
-          } else if (mum > 0.02) {
-            rect(s.fill, a * mum * 1.5, o.x - bx / b * tm * te, o.y - by / b * tm * te, s.size * Math.min(1.5, Math.sqrt(mum) + 0.5))
-          }
-        }
-      }
-      flush()
-      g.globalCompositeOperation = 'source-over'
-    }
-
-    // A hole: the soft glow of its lensed disc light, its shadow and its
-    // photon ring at sqrt(27) / 2 r_s apparent. A spinning hole's shadow
-    // is flattened on its approaching side and shifted toward the
-    // receding one, by about 2 a sin i, i its tilt from the line of
-    // sight.
-    function drawHole (o, dim) {
-      const b = o.b
-      const R = RING * o.s * o.k
-      const t = [V.e[1] * b.jz - V.e[2] * b.jy, V.e[2] * b.jx - V.e[0] * b.jz, V.e[0] * b.jy - V.e[1] * b.jx]
-      let tx = t[0] * V.r[0] + t[1] * V.r[1] + t[2] * V.r[2]
-      let ty = -(t[0] * V.u[0] + t[1] * V.u[1] + t[2] * V.u[2])
-      const sini = len(tx, ty)
-      if (sini > 1e-6) {
-        tx /= sini
-        ty /= sini
-      }
-      const shift = 2 * b.chi * b.m / C2 * sini * o.k
-      const flat = 1 - 0.22 * b.chi * sini
-      const ox = o.x - tx * shift
-      const oy = o.y - ty * shift
-      const path = () => {
-        g.beginPath()
-        for (let k = 0; k <= 48; k++) {
-          const a = k / 48 * Math.PI * 2
-          let p = Math.cos(a) * R
-          const q = Math.sin(a) * R
-          if (p > 0) p *= flat
-          const x = ox + p * tx - q * ty
-          const y = oy + p * ty + q * tx
-          if (k) g.lineTo(x, y)
-          else g.moveTo(x, y)
-        }
-        g.closePath()
-      }
-      const glow = g.createRadialGradient(ox, oy, R * 0.9, ox, oy, R * 2.2)
-      glow.addColorStop(0, `hsla(36, 100%, 70%, ${(0.25 + 0.4 * b.flash) * dim})`)
-      glow.addColorStop(1, 'hsla(36, 100%, 50%, 0)')
-      g.fillStyle = glow
-      g.fillRect(ox - R * 2.2, oy - R * 2.2, R * 4.4, R * 4.4)
-      path()
-      g.fillStyle = '#000'
-      g.fill()
-      g.strokeStyle = `hsla(40, 100%, ${80 + 15 * b.flash}%, ${Math.min(1, (0.55 + 0.45 * b.flash) * dim)})`
-      g.lineWidth = Math.max(1, R * 0.07) * (1 + b.flash)
-      g.stroke()
-    }
+    // The trace's centre and focal length, in its pixels, the sky's
+    // cube, and the waves' ground: a plane that only emits, at the mean
+    // depth of the waves' sources, read at its edge beyond the screen,
+    // smooth, so read at the trace's nodes where they serve.
+    let tcx = 0
+    let tcy = 0
+    let tf = 1
+    let sk = null
+    let groundZ = V.D
+    let ground = null
 
     // A body's trail: its places, kept in the world as the camera moves,
-    // projected each frame, fading with age.
-    function drawTrail (b, layerOf, L, dim, keep) {
+    // projected each frame, fading with age, in CH chunks, each on the
+    // slice of its middle place.
+    function trails (b, dim, keep, put) {
       const tr = b.trail
       const n = Math.min(tr.length / 3, Math.ceil(keep * tr.length / 3))
       if (n < 2) return
       const CH = 6
       const per = Math.ceil(n / CH)
-      g.lineWidth = Math.max(1, Math.min(3, b.r * b.pk * 0.8))
       const start = tr.length / 3 - n
       for (let c = 0; c < CH; c++) {
         const i0 = start + c * per
@@ -1045,38 +1003,53 @@
         if (i1 <= i0) continue
         const m = 3 * ((i0 + i1) >> 1)
         project(tr[m], tr[m + 1], tr[m + 2])
-        if (layerOf(P.d) !== L) continue
-        const a = (c + 1) / CH * 0.9 * dim
-        g.strokeStyle = style(b.hue, b.comet ? 40 : 85, b.comet ? 80 : 60, a)
-        g.beginPath()
-        for (let i = i0; i <= i1; i++) {
-          project(tr[3 * i], tr[3 * i + 1], tr[3 * i + 2])
-          if (i === i0) g.moveTo(P.x, P.y)
-          else g.lineTo(P.x, P.y)
-        }
-        if (i1 === start + n - 1) g.lineTo(b.px, b.py)
-        g.stroke()
+        put(P.d, { b, i0, i1, a: (c + 1) / CH * 0.9 * dim, end: i1 === start + n - 1 })
       }
     }
 
-    function drawBody (b, dim) {
+    function drawTrail (L, t) {
+      const { b, i0, i1 } = t
+      const tr = b.trail
+      const c = L.g
+      const lw = Math.max(1, Math.min(3, b.r * b.pk * 0.8))
+      c.lineWidth = lw
+      c.strokeStyle = style(b.hue, b.comet ? 40 : 85, b.comet ? 80 : 60, t.a)
+      c.beginPath()
+      for (let i = i0; i <= i1; i++) {
+        project(tr[3 * i], tr[3 * i + 1], tr[3 * i + 2])
+        if (i === i0) c.moveTo(P.x, P.y)
+        else c.lineTo(P.x, P.y)
+        mark(L, P.x - lw, P.y - lw, P.x + lw, P.y + lw)
+      }
+      if (t.end) c.lineTo(b.px, b.py)
+      c.stroke()
+    }
+
+    // The glow's and the disc's radius of body b on screen.
+    function reach (b) {
+      const r = Math.max(1.5, b.r * b.pk * (b.star ? 1 : 1.4))
+      return [r, b.star ? r * 3.2 : b.heat > 0.15 ? r * (1.5 + 3 * b.heat) : r]
+    }
+
+    function drawBody (L, b, dim) {
+      const c = L.g
       const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * b.pd / V.D))
       const lit = dim * fog
-      const r = Math.max(1.5, b.r * b.pk * (b.star ? 1 : 1.4))
+      const [r, R] = reach(b)
       const [hue, sat, light] = hot(b.hue, b.star ? 100 : b.comet ? 40 : 80, b.star ? 90 : b.comet ? 85 : 62, b.heat)
       if (b.star || b.heat > 0.15) {
-        const R = b.star ? r * 3.2 : r * (1.5 + 3 * b.heat)
-        const glow = g.createRadialGradient(b.px, b.py, r * 0.3, b.px, b.py, R)
+        const glow = c.createRadialGradient(b.px, b.py, r * 0.3, b.px, b.py, R)
         glow.addColorStop(0, `hsla(${hue | 0}, 100%, 85%, ${lit})`)
         glow.addColorStop(0.35, `hsla(${hue | 0}, 100%, 60%, ${0.35 * lit})`)
         glow.addColorStop(1, `hsla(${hue | 0}, 100%, 50%, 0)`)
-        g.fillStyle = glow
-        g.fillRect(b.px - R, b.py - R, 2 * R, 2 * R)
+        c.fillStyle = glow
+        c.fillRect(b.px - R, b.py - R, 2 * R, 2 * R)
       }
-      g.fillStyle = `hsl(${hue | 0}, ${sat | 0}%, ${(light * lit) | 0}%)`
-      g.beginPath()
-      g.arc(b.px, b.py, r, 0, Math.PI * 2)
-      g.fill()
+      c.fillStyle = `hsl(${hue | 0}, ${sat | 0}%, ${(light * lit) | 0}%)`
+      c.beginPath()
+      c.arc(b.px, b.py, r, 0, Math.PI * 2)
+      c.fill()
+      mark(L, b.px - R, b.py - R, b.px + R, b.py + R)
     }
 
     // The waves on a grid of cells, 32 across the pane's shorter side and
@@ -1086,9 +1059,11 @@
     // the direction across it in that plane, which is the source's own
     // where its axis lies in the plane or along the line of sight, as
     // shown (waves.js) squared, its sign kept, h_+ in blue and amber, h_x
-    // in teal and rose, opaque over black: the frame's ground, the sky
-    // added over it.
-    function drawWaves (w, h, dim) {
+    // in teal and rose, over black, blurred up at the trace's scale kt
+    // into gcan, tw by th: the frame's ground, a plane at the sources'
+    // mean depth that emits this light and hides nothing, which the
+    // trace bends as it bends what else lies at that depth.
+    function drawWaves (w, h, dim, kt, tw, th) {
       const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
       const gw = Math.ceil(w / cell) + 1
       const gh = Math.ceil(h / cell) + 1
@@ -1102,11 +1077,14 @@
         ws = new Float32Array(gw * gh)
       }
       const src = []
+      let zs = 0
       for (const tr of field.traces.values()) {
         tr.at(tr.last(), at)
         project(at[0], at[1], at[2])
+        zs += P.d
         src.push({ tr, x: at[0], y: at[1], z: at[2], sx: P.x, sy: P.y, k: P.k, blur: 1.5 * cell / P.k / C })
       }
+      groundZ = src.length ? zs / src.length : V.D
       const px = img.data
       const { r, u } = V
       const k = 0.7 * dim
@@ -1162,8 +1140,345 @@
         }
       }
       gg.putImageData(img, 0, 0)
-      g.imageSmoothingEnabled = true
-      g.drawImage(grid, 0, 0, gw, gh, -cell / 2, -cell / 2, gw * cell, gh * cell)
+      if (gcan.width !== tw || gcan.height !== th) {
+        gcan.width = tw
+        gcan.height = th
+      }
+      gcx.imageSmoothingEnabled = true
+      gcx.drawImage(grid, 0, 0, gw, gh, -cell * kt / 2, -cell * kt / 2, gw * cell * kt, gh * cell * kt)
+      ground = T3.plane(groundZ, gcx.getImageData(0, 0, tw, th).data, tw, th, ground)
+      ground.edge = ground.add = ground.smooth = true
+    }
+
+    // The slices the scene is drawn on, flat, near to far, and a slice's
+    // box on screen, in the pane's pixels, grown to hold what is drawn.
+    const pool = []
+    function mark (L, x0, y0, x1, y1) {
+      const b = L.box
+      if (x0 < b[0]) b[0] = x0
+      if (y0 < b[1]) b[1] = y0
+      if (x1 > b[2]) b[2] = x1
+      if (y1 > b[3]) b[3] = y1
+    }
+
+    // The depths that part the slices: each hole's, and behind the
+    // nearest hole SUB slices to far, equal in the sum over the holes in
+    // front of sqrt((z - z_h) / z), so that a slice's Einstein radii
+    // differ little across it.
+    function bounds (far) {
+      const zs = []
+      for (const b of bodies) if (b.hole) zs.push(b.pd)
+      zs.sort((a, b) => a - b)
+      const out = zs.slice()
+      if (!zs.length || far <= zs[0]) return out
+      const q = z => {
+        let s = 0
+        for (const h of zs) if (z > h) s += Math.sqrt((z - h) / z)
+        return s
+      }
+      const q1 = q(far)
+      for (let i = 1; i < SUB; i++) {
+        let lo = zs[0]
+        let hi = far
+        for (let it = 0; it < 30; it++) {
+          const m = (lo + hi) / 2
+          if (q(m) < q1 * i / SUB) lo = m
+          else hi = m
+        }
+        out.push((lo + hi) / 2)
+      }
+      return out.sort((a, b) => a - b)
+    }
+
+    // The scene for the trace at scale kt, tw by th: every body but skip,
+    // the trails, the dust and the flares drawn flat on the slice of their
+    // depth, each slice's drawing a plane at its content's mean depth,
+    // and the holes in the camera's frame.
+    function scene (kt, tw, th, dim, keep, skip) {
+      let far = 0
+      for (const b of bodies) if (!b.hole) far = Math.max(far, b.pd)
+      for (const d of dust) far = Math.max(far, d.pd)
+      const bs = bounds(far + 1)
+      const ns = bs.length + 1
+      while (pool.length < ns) pool.push({ c: document.createElement('canvas'), g: null, batch: new Map(), box: [0, 0, 0, 0], last: null, plane: null })
+      for (let i = 0; i < ns; i++) {
+        const L = pool[i]
+        if (!L.g) L.g = L.c.getContext('2d', { willReadFrequently: true })
+        if (L.c.width !== tw || L.c.height !== th) {
+          L.c.width = tw
+          L.c.height = th
+          L.last = null
+        }
+        L.g.setTransform(1, 0, 0, 1, 0, 0)
+        if (L.last) L.g.clearRect(L.last[0], L.last[1], L.last[2], L.last[3])
+        L.last = null
+        L.g.setTransform(kt, 0, 0, kt, 0, 0)
+        L.g.lineCap = 'round'
+        L.box[0] = L.box[1] = Infinity
+        L.box[2] = L.box[3] = -Infinity
+        L.zs = 0
+        L.ws = 0
+        L.lo = i ? bs[i - 1] : 0
+        L.hi = i < bs.length ? bs[i] : Infinity
+        L.dust = []
+        L.bodies = []
+        L.trails = []
+        L.flares = []
+      }
+      const at = z => {
+        let i = 0
+        while (i < bs.length && bs[i] <= z) i++
+        return pool[i]
+      }
+      const order = bodies.filter(b => !b.hole).sort((a, b) => b.pd - a.pd)
+      for (const b of order) {
+        const L = at(b.pd)
+        if (b !== skip) L.bodies.push(b)
+        L.zs += 20 * b.pd
+        L.ws += 20
+        if (b.trail.length) {
+          trails(b, dim, keep, (z, t) => {
+            const M = at(z)
+            M.trails.push(t)
+            M.zs += z
+            M.ws++
+          })
+        }
+      }
+      for (const d of dust) {
+        const L = at(d.pd)
+        L.dust.push(d)
+        L.zs += d.pd
+        L.ws++
+      }
+      for (const f of flares) {
+        project(f.x, f.y, f.z)
+        const L = at(P.d)
+        L.flares.push({ x: P.x, y: P.y, r: (f.r + (clock - f.t) * 3) * P.k, a: (1 - (clock - f.t) / 18) ** 2 })
+        L.zs += P.d
+        L.ws++
+      }
+      const planes = []
+      for (let i = 0; i < ns; i++) {
+        const L = pool[i]
+        if (!L.ws) continue
+        const c = L.g
+        for (const t of L.trails) drawTrail(L, t)
+        c.globalCompositeOperation = 'lighter'
+        for (const d of L.dust) {
+          const heat = d.heat
+          const [hue, sat, light] = hot(d.hue, 70, 75, Math.round(heat * 12) / 12)
+          const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * d.pd / V.D))
+          const a = (0.55 + 0.45 * heat) * dim * fog * (heat > 0.05 ? d.beam : 1)
+          const s = 1.2 + 1.3 * heat
+          rect(L, style(hue, sat, light, 1), a, d.px, d.py, s)
+          mark(L, d.px - s, d.py - s, d.px + s, d.py + s)
+        }
+        flush(L)
+        c.globalCompositeOperation = 'source-over'
+        for (const b of L.bodies) drawBody(L, b, dim)
+        for (const f of L.flares) {
+          c.strokeStyle = `rgba(255, 230, 170, ${f.a})`
+          c.lineWidth = 2
+          c.beginPath()
+          c.arc(f.x, f.y, f.r, 0, Math.PI * 2)
+          c.stroke()
+          mark(L, f.x - f.r - 2, f.y - f.r - 2, f.x + f.r + 2, f.y + f.r + 2)
+        }
+        const x0 = Math.max(0, Math.floor(L.box[0] * kt) - 1)
+        const y0 = Math.max(0, Math.floor(L.box[1] * kt) - 1)
+        const x1 = Math.min(tw, Math.ceil(L.box[2] * kt) + 1)
+        const y1 = Math.min(th, Math.ceil(L.box[3] * kt) + 1)
+        if (x1 <= x0 || y1 <= y0) continue
+        L.last = [x0, y0, x1 - x0, y1 - y0]
+        const z = Math.min(L.hi - 1e-3, Math.max(L.lo + 1e-3, L.zs / L.ws))
+        L.plane = T3.plane(z, L.g.getImageData(x0, y0, x1 - x0, y1 - y0).data, x1 - x0, y1 - y0, L.plane, x0, y0)
+        planes.push(L.plane)
+      }
+      const hb = bodies.filter(b => b.hole)
+      const hs = new Float64Array(4 * hb.length)
+      const bref = new Float64Array(hb.length)
+      hb.forEach((b, i) => {
+        hs[4 * i] = b.x * V.r[0] + b.y * V.r[1] + b.z * V.r[2]
+        hs[4 * i + 1] = b.x * V.u[0] + b.y * V.u[1] + b.z * V.u[2]
+        hs[4 * i + 2] = V.D - (b.x * V.e[0] + b.y * V.e[1] + b.z * V.e[2])
+        hs[4 * i + 3] = RING * rs(b.m)
+        // Where a cell's linear map would be off by a pixel or more, the
+        // light from far behind bent by theta_E^2 / theta: the error of
+        // the line across S pixels is S^2 r_s D^2 / (2 f b^3).
+        bref[i] = Math.max(1.5 * hs[4 * i + 3], Math.cbrt(STEP * STEP * rs(b.m) * hs[4 * i + 2] ** 2 / (2 * tf)))
+      })
+      if (ground) {
+        let i = 0
+        while (i < planes.length && planes[i].z < ground.z) i++
+        planes.splice(i, 0, ground)
+      }
+      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, bref, planes, sky: sk, holes: hb }
+    }
+
+    // The traced frame img, at scale kt, onto the canvas of c, scaled up
+    // to the pane, under the pane's label.
+    function present (c, img, kt) {
+      if (frame.width !== img.width || frame.height !== img.height) {
+        frame.width = img.width
+        frame.height = img.height
+      }
+      fx.putImageData(img, 0, 0)
+      c.setTransform(1, 0, 0, 1, 0, 0)
+      c.globalCompositeOperation = 'source-over'
+      c.globalAlpha = 1
+      c.imageSmoothingEnabled = true
+      c.drawImage(frame, 0, 0, img.width, img.height, 0, 0, img.width / kt, img.height / kt)
+      W.label(c, canvas.width, env && env.text ? env.text() : 1)
+    }
+
+    // For the live check (vizlens.js), while the probe asks: the body,
+    // and the hole of the holes behind another, nearest the line of the
+    // hole in front of it, and if it lies, glow and all, within that
+    // hole's shadow, so that a straight ray would hide it, the frame
+    // drawn again without it (ctl), the control: a body left out of its
+    // slice, a hole out of the trace. The record (seen, seenHole) holds
+    // u, its distance from the line over the weak-field Einstein radius
+    // te of its depth, the shadow's radius R and its own r, all in the
+    // pane's pixels, whether it is hidden, the pixels of the drawn frame
+    // outside the shadow that differ from the control by 40 in a channel
+    // or more (lighter for a body, darker for a hole, whose image is its
+    // shadow), those on its own side of the hole as its outer image,
+    // their least and greatest distance from the hole, the degrees about
+    // it they span and their spread along the line to it and across it,
+    // and up to 8 of them in distinct degrees about the hole, each
+    // [x, y] with the control's colour there, alt. Both frames are read
+    // whole, after everything nearer is drawn over them.
+    const ctl = document.createElement('canvas')
+    const cg = ctl.getContext('2d', { willReadFrequently: true })
+    let cimg = null
+    let asked = -1e9
+    let seen = null
+    let seenHole = null
+    function look (sc, kt, dim, keep) {
+      seen = seenHole = null
+      if (performance.now() - asked > 2000) return
+      const w = canvas.width
+      const h = canvas.height
+      const hb = sc.holes
+      // Each hole on screen: centre, depth, shadow radius.
+      const on = hb.map((b, i) => {
+        const Z = sc.hs[4 * i + 2]
+        return { b, i, Z, x: b.px, y: b.py, R: V.f * Math.tan(Math.asin(Math.min(1, sc.hs[4 * i + 3] / Z))) }
+      })
+      // The hole in front of depth d nearest (x, y) on screen, its
+      // distance and the Einstein radius there.
+      const front = (x, y, d, skip) => {
+        let best = null
+        for (const o of on) {
+          if (o.b === skip || o.Z >= d) continue
+          const dist = len(x - o.x, y - o.y)
+          if (!best || dist / o.R < best.dist / best.o.R) best = { o, dist }
+        }
+        if (best) best.te = V.f * Math.sqrt(2 * rs(best.o.b.m) * (d - best.o.Z) / (best.o.Z * d))
+        return best
+      }
+      let body = null
+      for (const b of bodies) {
+        if (b.hole) continue
+        const fr = front(b.px, b.py, b.pd, null)
+        if (!fr) continue
+        // Its glow's reach: the whole of it within the shadow.
+        const r = reach(b)[1]
+        const rec = { b, fr, r, hidden: fr.dist + r <= fr.o.R }
+        if (!body || (rec.hidden && !body.hidden) || (rec.hidden === body.hidden && fr.dist / fr.o.R < body.fr.dist / body.fr.o.R)) body = rec
+      }
+      let hole = null
+      for (const o2 of on) {
+        const fr = front(o2.x, o2.y, o2.Z, o2.b)
+        if (!fr) continue
+        const rec = { b: o2.b, i: o2.i, fr, r: o2.R, hidden: fr.dist + o2.R <= fr.o.R }
+        if (!hole || (rec.hidden && !hole.hidden) || (rec.hidden === hole.hidden && o2.b.m > hole.b.m)) hole = rec
+      }
+      if (body) seen = record(body, false, sc, kt, dim, keep)
+      if (hole) seenHole = record(hole, true, sc, kt, dim, keep)
+    }
+
+    function record (t, isHole, sc, kt, dim, keep) {
+      const { fr, r, hidden } = t
+      const o = fr.o
+      const rec = { hole: isHole, star: !!t.b.star, m: t.b.m, u: fr.dist / fr.te, te: fr.te, R: o.R, r, hx: o.x, hy: o.y, x: t.b.px, y: t.b.py, hidden, pixels: 0, outer: { pixels: 0, lo: 0, hi: 0, span: 0 }, pts: [], alt: [] }
+      if (!hidden) return rec
+      const w = canvas.width
+      const h = canvas.height
+      let csc = sc
+      if (isHole) {
+        const keepI = []
+        for (let i = 0; i < sc.nh; i++) if (i !== t.i) keepI.push(i)
+        const hs = new Float64Array(4 * keepI.length)
+        const bref = new Float64Array(keepI.length)
+        keepI.forEach((i, k) => {
+          for (let c = 0; c < 4; c++) hs[4 * k + c] = sc.hs[4 * i + c]
+          bref[k] = sc.bref[i]
+        })
+        csc = Object.assign({}, sc, { hs, nh: keepI.length, bref })
+      } else csc = scene(kt, sc.w, sc.h, dim, keep, t.b)
+      if (!cimg || cimg.width !== sc.w || cimg.height !== sc.h) cimg = cg.createImageData(sc.w, sc.h)
+      T3.render(csc, cimg.data)
+      if (ctl.width !== w || ctl.height !== h) {
+        ctl.width = w
+        ctl.height = h
+      }
+      present(cg, cimg, kt)
+      const a = g.getImageData(0, 0, w, h).data
+      const c = cg.getImageData(0, 0, w, h).data
+      const deg = new Array(360).fill(null)
+      const out = new Set()
+      let lo = Infinity
+      let hi = 0
+      // Sums for the outer image's spread across and along the line to
+      // the hole: distances, and unit vectors about the hole.
+      let s1 = 0
+      let s2 = 0
+      let cx = 0
+      let cy = 0
+      const outer = []
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const k = 4 * (y * w + x)
+          const dist = len(x + 0.5 - o.x, y + 0.5 - o.y)
+          if (dist <= o.R + 2) continue
+          let e = 0
+          for (let ch = 0; ch < 3; ch++) e = Math.max(e, isHole ? c[k + ch] - a[k + ch] : a[k + ch] - c[k + ch])
+          if (e < 40) continue
+          rec.pixels++
+          const dg = Math.floor((Math.atan2(y + 0.5 - o.y, x + 0.5 - o.x) + Math.PI) / (2 * Math.PI) * 360) % 360
+          if (!deg[dg] || e > deg[dg][2]) deg[dg] = [x, y, e, c[k], c[k + 1], c[k + 2]]
+          if ((x + 0.5 - o.x) * (t.b.px - o.x) + (y + 0.5 - o.y) * (t.b.py - o.y) <= 0) continue
+          rec.outer.pixels++
+          lo = Math.min(lo, dist)
+          hi = Math.max(hi, dist)
+          out.add(dg)
+          s1 += dist
+          s2 += dist * dist
+          cx += (x + 0.5 - o.x) / dist
+          cy += (y + 0.5 - o.y) / dist
+          outer.push(x + 0.5 - o.x, y + 0.5 - o.y)
+        }
+      }
+      // The outer image's spread: radial, the deviation of its distances,
+      // and tangential, of its pixels' offsets across its mean direction.
+      const n = rec.outer.pixels
+      if (n) {
+        const m = s1 / n
+        const cl = len(cx, cy) || 1
+        let t2 = 0
+        for (let i = 0; i < outer.length; i += 2) t2 += (outer[i] * -cy / cl + outer[i + 1] * cx / cl) ** 2
+        Object.assign(rec.outer, { lo, hi, span: out.size, radial: Math.sqrt(Math.max(0, s2 / n - m * m)), across: Math.sqrt(t2 / n) })
+      }
+      const full = deg.filter(Boolean)
+      const np = Math.min(8, full.length)
+      for (let k = 0; k < np; k++) {
+        const p = full[Math.floor(k * full.length / np)]
+        rec.pts.push([p[0], p[1]])
+        rec.alt.push([p[3], p[4], p[5]])
+      }
+      return rec
     }
 
     seed()
@@ -1176,7 +1491,7 @@
           layer.width = w
           layer.height = h
         }
-        for (const e of synth.since(mark)) react(e)
+        for (const e of synth.since(since)) react(e)
         const L = synth.level
         // Simulation time per second: the clock, as in the Gravity mode.
         const speed = (6 + 30 * Math.min(1, L.bass) + 14 * L.busy + 10 * L.treble) * (1 - 0.9 * L.idle)
@@ -1230,103 +1545,51 @@
         // Trails: long while busy, gone while idle, when time all but
         // stops.
         const keep = 1 - 0.85 * L.idle
-        g.globalCompositeOperation = 'source-over'
-
-        // The holes on screen, far to near: a body or a grain is drawn
-        // after every hole behind it and before every one in front.
+        // The holes, for the heat, and the bodies and grains on screen:
+        // their places, depths and scales, unlensed, as the trace reads
+        // them.
         const holes = []
-        for (const b of bodies) {
-          if (!b.hole) continue
-          project(b.x, b.y, b.z)
-          holes.push({ b, x: P.x, y: P.y, d: P.d, k: P.k, s: rs(b.m) })
-        }
-        holes.sort((a, b) => b.d - a.d)
-        const layerOf = d => {
-          let n = 0
-          for (const o of holes) if (o.d > d) n++
-          return n
-        }
-        drawWaves(w, h, dim)
-        drawSky(holes, dim, w, h)
-        const hs = holes.map(o => ({ b: o.b, s: o.s }))
+        for (const b of bodies) if (b.hole) holes.push({ b, s: rs(b.m) })
         for (const b of bodies) {
           project(b.x, b.y, b.z)
           b.pd = P.d
           b.pk = P.k
           b.px = P.x
           b.py = P.y
-          b.layer = layerOf(P.d)
-          b.heat = b.hole ? 0 : heatAt(hs.filter(o => o.b !== b), b.x, b.y, b.z)
+          b.heat = b.hole ? 0 : heatAt(holes.filter(o => o.b !== b), b.x, b.y, b.z)
         }
         for (const d of dust) {
           project(d.x, d.y, d.z)
-          const x0 = P.x
-          const y0 = P.y
           d.pd = P.d
-          d.pk = P.k
-          d.layer = layerOf(P.d)
-          const behind = holes.filter(o => o.d < P.d)
-          lens(behind, P.d)
           d.px = P.x
           d.py = P.y
-          d.mu = P.mu
-          // The inner image, inside the ring, of a grain close behind a
-          // hole.
-          d.inner = false
-          for (const o of behind) {
-            const t2 = einstein(o, d.pd)
-            if (!t2) continue
-            const bx = x0 - o.x
-            const by = y0 - o.y
-            const b = len(bx, by) || 1e-3
-            const te = Math.sqrt(t2)
-            const u = b / te
-            if (u > 2) continue
-            const s = Math.sqrt(u * u + 4)
-            const tm = (s - u) / 2
-            d.inner = true
-            d.ix = o.x - bx / b * tm * te
-            d.iy = o.y - by / b * tm * te
-            d.imu = (u * u + 2) / (2 * u * s) - 0.5
-          }
-          d.heat = heatAt(hs, d.x, d.y, d.z)
+          d.heat = heatAt(holes, d.x, d.y, d.z)
           // Beaming: brighter where the grain comes toward the camera.
+          // A hole's flash brightens the hot matter about it.
           const o = hotHole
           const vl = o && d.heat > 0.05 ? ((d.vx - o.vx) * V.e[0] + (d.vy - o.vy) * V.e[1] + (d.vz - o.vz) * V.e[2]) / C : 0
-          d.beam = Math.max(0.35, Math.min(2.2, (1 + 0.6 * vl) ** 2))
+          d.beam = Math.max(0.35, Math.min(2.2, (1 + 0.6 * vl) ** 2)) * (1 + (o ? 1.5 * o.flash * d.heat : 0))
         }
-        const order = bodies.filter(b => !b.hole).sort((a, b) => b.pd - a.pd)
-        g.lineCap = 'round'
-        for (let Lr = 0; Lr <= holes.length; Lr++) {
-          for (const b of order) if (b.trail.length) drawTrail(b, layerOf, Lr, dim, keep)
-          g.globalCompositeOperation = 'lighter'
-          for (const d of dust) {
-            if (d.layer !== Lr) continue
-            const heat = d.heat
-            const [hue, sat, light] = hot(d.hue, 70, 75, Math.round(heat * 12) / 12)
-            const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * d.pd / V.D))
-            const a = (0.55 + 0.45 * heat) * dim * fog * (heat > 0.05 ? d.beam : 1)
-            const fill = style(hue, sat, light, 1)
-            rect(fill, a, d.px, d.py, (1.2 + 1.3 * heat) * Math.min(2, Math.sqrt(d.mu)))
-            if (d.inner && d.imu > 0.03) rect(fill, a * d.imu * 2, d.ix, d.iy, 1.5)
-          }
-          flush()
-          g.globalCompositeOperation = 'source-over'
-          for (const b of order) if (b.layer === Lr) drawBody(b, dim)
-          if (Lr < holes.length) drawHole(holes[Lr], dim)
-        }
-
         flares = flares.filter(f => clock - f.t < 18)
-        for (const f of flares) {
-          const a = (1 - (clock - f.t) / 18) ** 2
-          project(f.x, f.y, f.z)
-          g.strokeStyle = `rgba(255, 230, 170, ${a})`
-          g.lineWidth = 2
-          g.beginPath()
-          g.arc(P.x, P.y, (f.r + (clock - f.t) * 3) * P.k, 0, Math.PI * 2)
-          g.stroke()
-        }
-        W.label(g, w, env && env.text ? env.text() : 1)
+        // The trace's scale: the pixels traced bounded a pane, and a
+        // window however it is split.
+        const view = canvas.ownerDocument && canvas.ownerDocument.defaultView
+        const area = view ? view.innerWidth * view.innerHeight * (view.devicePixelRatio || 1) ** 2 : w * h
+        const kt = Math.min(1, Math.max(Math.sqrt(PANE / (w * h)), Math.sqrt(WINDOW / Math.max(area, w * h))))
+        const tw = Math.ceil(w * kt)
+        const th = Math.ceil(h * kt)
+        tcx = V.cx * kt
+        tcy = V.cy * kt
+        tf = V.f * kt
+        const F = Math.min(CUBE, Math.round(2 * tf))
+        const cb = cube(F, F / (2 * V.f))
+        sk = { F, faces: cb.faces, lit: cb.lit, nt: cb.nt, dim, m: [V.r[0], V.r[1], V.r[2], V.u[0], V.u[1], V.u[2], -V.e[0], -V.e[1], -V.e[2]] }
+        drawWaves(w, h, dim, kt, tw, th)
+        const sc = scene(kt, tw, th, dim, keep, null)
+        if (!fimg || fimg.width !== tw || fimg.height !== th) fimg = fx.createImageData(tw, th)
+        traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh }
+        present(g, fimg, kt)
+        look(sc, kt, dim, keep)
         out.drawImage(layer, 0, 0)
         tick = now
       },
@@ -1386,11 +1649,14 @@
       },
 
       // For the live checks: the moons thrown, the camera's turns by a
-      // drag, what the holes have swallowed, the stars drawn as arcs or
-      // rings, the bodies and the dust, the waves' sources and the pair
-      // watched (waves.js).
+      // drag, what the holes have swallowed, the bodies and the dust, the
+      // waves' sources and the pair watched (waves.js), the last frame's
+      // trace (its size, the pixels traced one by one, its planes and
+      // holes), the records of a body and a hole behind a hole (look),
+      // the camera's turn and height, and the holes' places and masses.
       probe () {
-        return { thrown, turns, swallowed, arcs, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report() }
+        asked = performance.now()
+        return { thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]) }
       }
     }
   }
