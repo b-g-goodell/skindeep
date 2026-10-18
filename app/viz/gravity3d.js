@@ -635,11 +635,9 @@
 
   // env.text(): the visualization text size, a factor (decision 0036).
   function create (canvas, env) {
-    // Drawn on a canvas of the CPU, then blitted to the pane, as the
-    // Gravity mode is.
+    // The scene is drawn on canvases of the CPU and traced into frame,
+    // which alone is drawn up to the pane.
     const out = canvas.getContext('2d')
-    const layer = document.createElement('canvas')
-    const g = layer.getContext('2d', { willReadFrequently: true })
     // The traced frame, at the trace's scale.
     const frame = document.createElement('canvas')
     const fx = frame.getContext('2d', { willReadFrequently: true })
@@ -1441,10 +1439,10 @@
         ctl.height = h
       }
       present(cg, cimg, kt)
-      const a = g.getImageData(0, 0, w, h).data
+      const a = out.getImageData(0, 0, w, h).data
       const c = cg.getImageData(0, 0, w, h).data
       const deg = new Array(360).fill(null)
-      const out = new Set()
+      const degs = new Set()
       let lo = Infinity
       let hi = 0
       // Sums for the outer image's spread across and along the line to
@@ -1469,7 +1467,7 @@
           rec.outer.pixels++
           lo = Math.min(lo, dist)
           hi = Math.max(hi, dist)
-          out.add(dg)
+          degs.add(dg)
           s1 += dist
           s2 += dist * dist
           cx += (x + 0.5 - o.x) / dist
@@ -1485,7 +1483,7 @@
         const cl = len(cx, cy) || 1
         let t2 = 0
         for (let i = 0; i < outer.length; i += 2) t2 += (outer[i] * -cy / cl + outer[i + 1] * cx / cl) ** 2
-        Object.assign(rec.outer, { lo, hi, span: out.size, radial: Math.sqrt(Math.max(0, s2 / n - m * m)), across: Math.sqrt(t2 / n) })
+        Object.assign(rec.outer, { lo, hi, span: degs.size, radial: Math.sqrt(Math.max(0, s2 / n - m * m)), across: Math.sqrt(t2 / n) })
       }
       const full = deg.filter(Boolean)
       const np = Math.min(8, full.length)
@@ -1503,10 +1501,6 @@
         const w = canvas.width
         const h = canvas.height
         if (w < 4 || h < 4) return
-        if (layer.width !== w || layer.height !== h) {
-          layer.width = w
-          layer.height = h
-        }
         for (const e of synth.since(since)) react(e)
         const L = synth.level
         // Simulation time per second: the clock, as in the Gravity mode.
@@ -1604,9 +1598,8 @@
         const sc = scene(kt, tw, th, dim, keep, null)
         if (!fimg || fimg.width !== tw || fimg.height !== th) fimg = fx.createImageData(tw, th)
         traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh, slices: sc.audit }
-        present(g, fimg, kt)
+        present(out, fimg, kt)
         look(sc, kt, dim, keep)
-        out.drawImage(layer, 0, 0)
         tick = now
       },
 
