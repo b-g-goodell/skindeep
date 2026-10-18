@@ -97,8 +97,9 @@ it is done.
 your speakers play, and it never records a microphone. Each pane has a
 drop-down at its top left to pick its mode, and space steps through
 them all, six of which [docs/viz-modes.png](docs/viz-modes.png) shows.
-A click goes to the mode: a drag in Quantum raises a barrier, a click
-in Go plays a stone, and a click on Carbon's level diagram excites the
+A click goes to the mode: in Quantum a drag throws a packet, a press
+held still paints a barrier and a click measures, a click in Go plays
+a stone, and a click on Carbon's level diagram excites the
 atom to that level.
 
 ## Skins
