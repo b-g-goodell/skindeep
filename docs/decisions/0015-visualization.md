@@ -353,8 +353,9 @@ distant background of stars".
   and plunge. The star nearest a hole sheds grains from the point
   between them where the pulls balance, L1, at 1.1 to 1.45 times its
   own angular speed: a stream that feeds the disc.
-- Drawing: the camera, 620 from the centre of mass with a half view
-  angle of 0.42 rad, turns about it. Bodies, grains and trails are
+- Drawing: the camera, 620 from the heaviest hole with a half view
+  angle of 0.42 rad, turns about it (see 2026-10-18: Gravity 3D's
+  centre). Bodies, grains and trails are
   drawn flat on slices of depth and seen through the trace (see
   2026-10-17: Gravity 3D's optics), and bodies are sized and dimmed
   with distance. A
@@ -394,7 +395,7 @@ distant background of stars".
 - Pointer: a drag past 5 pixels turns the camera, across about the
   vertical and up and down in height, which holds for 4 s before the
   camera turns by itself again. A click throws a moon from the point
-  under it, on the plane through the centre facing the camera, on a
+  under it, on the plane through the heaviest hole facing the camera, on a
   circular orbit about the heaviest body in the plane of that body's
   spin, at least 3.3 $r_s$ out. `scripts/checks/vizpointer.js` drags
   and clicks it.
@@ -1549,3 +1550,66 @@ run at 27.5 at 30000 and 90000.
 - `scripts/checks/vizcaps.js` sets the default, 135000 and 15000 and
   wants the traced frame of the size this formula gives each.
 
+## 2026-10-18: Gravity 3D's centre
+
+Owner, issue #171: "the gravity 3d simulation can stay visually
+centered on the central black hole".
+
+The camera turned about the origin, where `centre` puts the centre of
+mass. The seed's hole of 900 circles that centre at about 14 units,
+since the companion of 80 at 175 and the planets pull it, so it moved
+on screen by some 20 pixels of a full pane, and every recentring after
+a swallowing, a merger or an event moved the whole frame by the centre
+of mass's drift since the last.
+
+- The view's centre is the heaviest hole: the seed's, which nothing in
+  a run outweighs (a subagent's hole is 150 to 300, and a stop grows
+  the heaviest body), and after it swallows a body or a hole, the
+  merged hole, which is the same body. With no hole the view takes the
+  origin, the centre of mass. `anchor` in `app/viz/gravity3d.js`
+  chooses it once a frame.
+- Only the camera follows it. The camera stands 620 from it, turns
+  about it by itself and by the pointer's drag, and every world point
+  is taken relative to it: `place` for the bodies, the dust, the
+  trails, the flares and the waves' sources, and so the slices, their
+  depths and the waves' ground, and `frameOf` for the holes the trace
+  reads, so each lens plane and the hole's traced shadow sit where the
+  hole is, at the pane's centre and on the trace's axis. A click's moon
+  starts on the plane through the hole facing the camera. The distant
+  stars are directions and do not move.
+- The physics is as before: `centre` still sets total momentum to zero
+  and the centre of mass at the origin, at the seed, after each event
+  and after each merger or swallowing, and the culls of far bodies and
+  grains still measure from it. A recentring moves the hole with
+  everything else, so it moves nothing on screen.
+- A swallowing moves the hole itself: the merged hole stands at the
+  pair's centre of mass, so the trails, fixed in the world, move on
+  screen by its recoil, $m_b/(m_h + m_b)$ of the distance between them,
+  and by the hole's own fall toward the body in that step. Measured for
+  a trail point 150 from the seed's hole in a pane of 1200 by 760, the
+  body sent in at 20 from 1.2 times the sum of the horizons: 0.99
+  pixels for a star of 50, 1.7 for the companion's hole of 80, after it
+  has taken its star, and 6.5 for a subagent's hole of 300. The view is
+  not eased across it: the hole stays at the centre on every frame.
+- Checked by `test/viz-gravity3d.test.js`. The seed's system, stepped
+  2000 times and recentred every 50, the camera turning and its height
+  moving, keeps total momentum zero and the heaviest hole at the pane's
+  centre to $10^{-6}$ pixels and on the trace's axis, while the hole
+  strays more than 8 from the centre of mass and the companion crosses
+  more than 100 pixels. A recentring after a planet leaves moves no
+  body or trail point on screen by $10^{-9}$ pixels. A star of 50
+  swallowed leaves the merged hole at the centre and moves the trails
+  by its recoil alone, 0.64 pixels there. Without the offset the hole
+  stands 3 and 4 pixels off at the first step and the recentring moves
+  the screen by 1.1 pixels. `scripts/checks/vizmodes.js` reads the probe's `held` at
+  every poll of Gravity 3D's full pane while its pair turns three
+  times, and at its small pane's frames: the hole within a pixel of
+  the pane's centre and on the trace's axis.
+
+Rejected:
+
+- Translating the world each step so the hole sits at the origin: the
+  same picture, but the waves' history, the trails and the dust would
+  move every frame, and the culls would measure from the hole.
+- Easing the view across a merger, so the trails glide rather than
+  move by the recoil: the hole would leave the centre for the glide.
