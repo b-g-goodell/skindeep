@@ -1130,7 +1130,12 @@ behind it vanished under paint.
   $b$ of a hole, the inner disc, is bent as if its light left the lens
   plane. A slice is one plane, so its content is bent as at its mean
   depth. Matter outside the view is not drawn, so its inner images,
-  which would fall inside the view, are missing.
+  which would fall inside the view, are missing. The waves' picture is
+  a grid of cells about 24 pixels wide blurred up, and where the lens
+  magnifies it, near an Einstein ring, the cells show as blocks: the
+  ground's own grid, not the lens map, whose interpolation differed
+  from a pixel-by-pixel trace of the same scene by 0.4 to 1.3 of 255 on
+  the mean.
 - Cost. The lens map is traced at nodes 6 pixels apart, and a cell
   whose four corner rays met the same holes in the same order, none
   turned back, all captured or none, takes its rays' crossings and
@@ -1142,8 +1147,10 @@ behind it vanished under paint.
   reduced scale and drawn up to the pane: at most 45000 pixels a pane,
   or 135000 a window when a pane fills more of it. A split window's
   three panes of 240 by 460 trace at 0.64, a lone pane of 1200 by 760
-  at 0.385. The sky's black tiles and the slices' empty tiles are
-  skipped.
+  at 0.385. That costs the full pane its sharpness: a star of 1 pixel
+  is drawn at 0.4 and the frame scaled up, so its stars soften and its
+  small bodies blur, where the split panes keep most of theirs. The
+  sky's black tiles and the slices' empty tiles are skipped.
 - Frame rate, under swiftshader on a host at a load of 20 to 22, the
   tree of 6ee641f and this one in turn, twice each, by one script that
   draws the mode alone at full activity, then runs one pane of a 1200
