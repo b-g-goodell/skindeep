@@ -1202,23 +1202,25 @@ behind it vanished under paint.
   thrown in the central hole's equator passes behind it, wholly within
   the shadow, glow and all, so that a straight ray would hide it. The
   moon is the one body judged, by its number, behind the heaviest hole
-  and where its disc spans a radius of 1 traced pixel or more, and a
-  moon lost to a hole, a merger or the cap on bodies is thrown again.
-  The mode draws that frame again without it and picks points where the
-  two whole frames differ by 16 in a channel or more, after everything
-  nearer is drawn, and the pane's canvas is read there against the
-  control: the moon is seen. At 40, the first threshold, a body far
-  behind the hole, dimmed by its fog, lifted its image by 31 to 39 on a
-  lit ground and was counted unseen. In the full pane the outer image
-  spreads across the line to the hole more than 1.5 times as far as
-  along it. With the camera held, the check places a hole of 200 beyond
-  the central one, and it is seen the same way, against a control traced
-  without it. At every frame read, each grain, body, trail piece and
-  flare is counted where it is painted, on the slice that holds its
-  depth. Each fails with its behaviour removed: with the bend removed,
-  "the body behind the hole is hidden", and with the dust, the bodies,
-  the trails or the flares listed on the nearest slice, or the dust
-  painted on the farthest, "off the slices of their depths".
+  where its disc spans a radius of 1 traced pixel or more and its outer
+  image falls inside the pane, and a moon lost to a hole, a merger or
+  the cap on bodies is thrown again. The mode draws that frame again
+  without it and picks points where the two whole frames differ by 16 in
+  a channel or more, after everything nearer is drawn, and the pane's
+  canvas is read there against the control: the moon is seen. At 40, the
+  first threshold, a body far behind the hole, dimmed by its fog, lifted
+  its image by 31 to 39 on a lit ground and was counted unseen. Late in
+  a long run a hole grown past 2000 put the outer image out of the
+  frame. In the full pane the outer image spreads across the line to the
+  hole more than 1.5 times as far as along it. With the camera held, the
+  check places a hole of 200 beyond the central one, and it is seen the
+  same way, against a control traced without it. At every frame read,
+  each grain, body, trail piece and flare is counted where it is
+  painted, on the slice that holds its depth. Each fails with its
+  behaviour removed: with the bend removed, "the body behind the hole is
+  hidden", and with the dust, the bodies, the trails or the flares
+  listed on the nearest slice, or the dust painted on the farthest, "off
+  the slices of their depths".
 
 Rejected:
 

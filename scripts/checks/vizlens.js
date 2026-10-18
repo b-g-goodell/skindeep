@@ -7,38 +7,39 @@
 // central hole's equator, and a click throws a moon on an orbit about
 // the hole in that plane, so it passes behind the hole once a turn. The
 // moon is the one body judged: the mode records it alone, by its number
-// (gravity3d judged), and a moon lost to a hole or a merger is thrown
-// again. A frame is judged where the record puts the moon behind the
-// heaviest hole, the one it orbits, within u = 0.5 of its line, its unlensed disc and glow wholly inside
-// the hole's shadow, so that a straight ray would hide it, and its disc
-// spans a radius of MIN_DISC = 1 pixel of the trace or more (its disc
-// in the pane's pixels times the trace's scale k): pixels of the frame
-// outside the shadow show it: the mode drew that frame again without the body,
+// (gravity3d judged), and a moon lost to a hole, a merger or the cap on
+// bodies is thrown again. A frame is judged where the record puts the
+// moon behind the heaviest hole, the one it orbits, within u = 0.5 of
+// its line, its unlensed disc and glow wholly inside the hole's shadow,
+// so that a straight ray would hide it, and its disc spans a radius of
+// MIN_DISC = 1 pixel of the trace or more (its disc in the pane's
+// pixels times the trace's scale k), and where its outer image falls 10
+// pixels or more inside the pane. There, pixels of the frame outside
+// the shadow show it. The mode drew that frame again without the body,
 // the control, and chose up to 8 points where the two whole frames
 // differ most, after everything nearer was drawn. Here the pane's
 // canvas is read at those points against the control's colours: at
 // three quarters of them at least, one at least, it differs by 16 in a
 // channel or more, which only the body's light gives. A small pane's
 // image of a moon may span only a few degrees about the hole, and so
-// give fewer than 8 points. In the full pane its outer
-// image is also an arc: its pixels spread across the line to the hole
-// more than 1.5 times as far as along it. Then, in the full pane, a drag
-// that ends where it began holds the camera still for 4 s, and the check
-// places a hole of 200 at rest with the central one, HOLE_Z beyond it
-// and HOLE_X across the line of sight (gravity3d place), its unlensed
-// shadow wholly inside the central shadow, the hole judged, and the
-// frame is read in the same way against a control traced without that
-// hole: its image, the light it takes from what lies behind it, shows
-// outside the central shadow. A placed hole that drifts off the line or
-// is lost is placed again. When an arm times out, the failure carries
-// the probe's state: the bodies judged, the holes, what they have
-// swallowed and the last record. Three frames
-// of each go to OUT/lens-<size>-<k>.png and OUT/lens-hole-full-<k>.png.
-// At every frame read, the probe's audit shows each class of matter,
-// dust, bodies, trails and flares, painted whole, each piece on the
-// slice that holds its depth, counted where it is painted, and each was
-// painted in the run.
-// No page or console error. Fakes only.
+// give fewer than 8 points. In the full pane its outer image is also an
+// arc: its pixels spread across the line to the hole more than 1.5
+// times as far as along it. Then, in the full pane, a drag that ends
+// where it began holds the camera still for 4 s, and the check places a
+// hole of 200 at rest with the central one, HOLE_Z beyond it and HOLE_X
+// across the line of sight (gravity3d place), its unlensed shadow
+// wholly inside the central shadow, the hole judged, and the frame is
+// read in the same way against a control traced without that hole: its
+// image, the light it takes from what lies behind it, shows outside the
+// central shadow. A placed hole that drifts off the line or is lost is
+// placed again. When an arm times out, the failure carries the probe's
+// state: the bodies judged, the holes, what they have swallowed and the
+// last record. Three frames of each go to OUT/lens-<size>-<k>.png and
+// OUT/lens-hole-full-<k>.png. At every frame read, the probe's audit
+// shows each class of matter, dust, bodies, trails and flares, painted
+// whole, each piece on the slice that holds its depth, counted where it
+// is painted, and each was painted in the run. No page or console
+// error. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -68,9 +69,11 @@ function state (probe, rec) {
 
 // In the page: the pane's record of the body or the hole judged, and
 // when it is the one judged, lies within u = 0.5 of the line of the
-// heaviest hole, in front of it, hidden from straight rays, and spans
-// enough of the trace, the frame, as a PNG, and the frame's colour at
-// each of the record's points.
+// heaviest hole, in front of it, hidden from straight rays, spans
+// enough of the trace, and its outer image, te (u + sqrt(u^2 + 4)) / 2
+// from the hole toward it, falls 10 pixels or more inside the pane, the
+// frame, as a PNG, and the frame's colour at each of the record's
+// points.
 function frame ([hole, least]) {
   const p = window.vizState().panes[0]
   const l = p.probe && p.probe[hole ? 'hole' : 'lens']
@@ -78,6 +81,11 @@ function frame ([hole, least]) {
   const heaviest = p.probe ? Math.max(...p.probe.at.map(h => h[3])) : 0
   if (!l || l.id !== id || l.by.m !== heaviest || l.u >= 0.5 || !l.hidden || l.disc * l.k < least) return { lens: l || null, probe: p.probe }
   const c = [...document.querySelectorAll('.pane canvas:not([hidden])')][0]
+  const d = Math.hypot(l.x - l.hx, l.y - l.hy) || 1
+  const out = l.te * (l.u + Math.sqrt(l.u * l.u + 4)) / 2
+  const ix = l.hx + out * (l.x - l.hx) / d
+  const iy = l.hy + out * (l.y - l.hy) / d
+  if (ix < 10 || iy < 10 || ix > c.width - 10 || iy > c.height - 10) return { lens: l, probe: p.probe }
   const g = c.getContext('2d')
   const seen = l.pts.map(([x, y]) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3)))
   return { lens: l, seen, png: c.toDataURL('image/png'), w: c.width, h: c.height, probe: p.probe }
