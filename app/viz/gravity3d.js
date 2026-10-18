@@ -56,8 +56,8 @@
   // when a pane fills more of it, its lens map's nodes STEP pixels
   // apart, SUB slices behind the nearest hole, and the sky's cube faces
   // at most CUBE pixels square.
-  const PANE = 45000
-  const WINDOW = 135000
+  const PANE = 30000
+  const WINDOW = 90000
   const STEP = 6
   const SUB = 8
   const CUBE = 1024
