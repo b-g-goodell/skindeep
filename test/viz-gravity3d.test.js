@@ -218,3 +218,120 @@ test('gravity3d: radiation reaction shrinks a circular pair at Peters\' rate, mo
   assert.ok(Math.abs((a0 - a) / (a0 - peters) - 1) < 0.03, `shrank ${a0 - a}, Peters ${a0 - peters}`)
   momentum(bodies).forEach(p => assert.ok(Math.abs(p) < 1e-9, `momentum ${momentum(bodies)}`))
 })
+
+// The view's centre (issue #171). The seed's system as the mode builds
+// it: a hole of 900 spinning at 0.7, a companion at 175, a star of 50
+// and a hole of 30 16 apart about their centre of mass, and planets of
+// 4 at 215 and 245, all about their common centre of mass.
+function seeded () {
+  const h = hole(0.7, [0, Math.sin(0.1), Math.cos(0.1)])
+  const bodies = [h]
+  const add = (r, a, m, kind, inc = 0) => {
+    const v = g.circular(h, r)
+    const b = { x: r * Math.cos(a), y: r * Math.sin(a) * Math.cos(inc), z: r * Math.sin(a) * Math.sin(inc), vx: -v * Math.sin(a), vy: v * Math.cos(a) * Math.cos(inc), vz: v * Math.cos(a) * Math.sin(inc), m, r: 2, hole: kind === 'hole', chi: 0, jx: 0, jy: 0, jz: 1, star: kind === 'star', trail: [] }
+    if (b.hole) b.r = g.horizon(b)
+    bodies.push(b)
+    return b
+  }
+  const c = add(175, 0.4, 80, 'star', 0.3)
+  bodies.pop()
+  const v = Math.sqrt(80 * 16) / (16 - g.rs(30))
+  for (const [m, k, kind] of [[50, 30 / 80, 'star'], [30, -50 / 80, 'hole']]) {
+    const b = { x: c.x + k * 16, y: c.y, z: c.z, vx: c.vx, vy: c.vy + k * v, vz: c.vz, m, r: kind === 'hole' ? 0 : 6, hole: kind === 'hole', chi: 0, jx: 0, jy: 0, jz: 1, star: kind === 'star', trail: [] }
+    if (b.hole) b.r = g.horizon(b)
+    bodies.push(b)
+  }
+  add(215, 2, 4, 'planet', 0.2)
+  add(245, 4, 4, 'planet', -0.25)
+  g.centre(bodies)
+  return bodies
+}
+
+// A camera as the mode's, over a full pane of 1200 by 760, about the
+// heaviest hole.
+function camera (bodies, yaw, pitch = 0.36, w = 1200, h = 760) {
+  const V = { D: 620 }
+  const a = g.anchor(bodies)
+  g.aim(V, yaw, pitch, w, h, a ? [a.x, a.y, a.z] : [0, 0, 0])
+  return V
+}
+const onScreen = (V, x, y, z) => {
+  const P = {}
+  g.place(V, P, x, y, z)
+  return [P.x, P.y]
+}
+
+test('gravity3d: the view holds the heaviest hole at the pane\'s centre while the companion orbits about the centre of mass', () => {
+  const bodies = seeded()
+  const h = bodies[0]
+  const star = bodies[1]
+  const out = []
+  let off = 0
+  const span = [Infinity, -Infinity]
+  for (let k = 0; k < 2000; k++) {
+    g.step(bodies, 0.25)
+    // The mode recentres at every event and swallowing.
+    if (k % 50 === 49) g.centre(bodies)
+    momentum(bodies).forEach(p => assert.ok(Math.abs(p) < 1e-6, `step ${k}: momentum ${momentum(bodies)}`))
+    assert.strictEqual(g.anchor(bodies), h, `step ${k}: another body anchors the view`)
+    const V = camera(bodies, 0.6 + 0.004 * k, 0.36 + 0.3 * Math.sin(k / 300))
+    const [x, y] = onScreen(V, h.x, h.y, h.z)
+    assert.ok(Math.abs(x - 600) < 1e-6 && Math.abs(y - 380) < 1e-6, `step ${k}: the hole at ${x}, ${y}`)
+    g.frameOf(V, h.x, h.y, h.z, out)
+    assert.ok(Math.abs(out[0]) < 1e-9 && Math.abs(out[1]) < 1e-9 && Math.abs(out[2] - 620) < 1e-9, `step ${k}: the trace sees the hole at ${out}`)
+    off = Math.max(off, Math.hypot(h.x, h.y, h.z))
+    const s = onScreen(V, star.x, star.y, star.z)
+    span[0] = Math.min(span[0], s[0])
+    span[1] = Math.max(span[1], s[0])
+  }
+  // The hole circles the centre of mass, where the view stood before.
+  assert.ok(off > 8, `the hole strayed only ${off} from the centre of mass`)
+  assert.ok(span[1] - span[0] > 100, `the companion crossed only ${span[1] - span[0]} pixels`)
+})
+
+test('gravity3d: a recentring moves nothing on screen, and a swallowing keeps the hole at the centre, the trails moved by its recoil alone', () => {
+  const bodies = seeded()
+  const h = bodies[0]
+  const p = bodies[3]
+  for (let k = 0; k < 40; k++) {
+    g.step(bodies, 0.25)
+    p.trail.push(p.x, p.y, p.z)
+  }
+  const places = V => [h, ...bodies.slice(1, 3)].map(b => onScreen(V, b.x, b.y, b.z)).concat(Array.from({ length: p.trail.length / 3 }, (_, i) => onScreen(V, p.trail[3 * i], p.trail[3 * i + 1], p.trail[3 * i + 2])))
+  const most = (a, b) => Math.max(...a.map((q, i) => Math.hypot(q[0] - b[i][0], q[1] - b[i][1])))
+  // The far planet leaves, as the mode drops a body past its reach: the
+  // centre of mass moves, and the recentring moves every body and trail.
+  bodies.splice(4, 1)
+  const before = places(camera(bodies, 1))
+  const q = g.centre(bodies)
+  assert.ok(Math.hypot(...q) > 0.5, `the recentring moved the bodies only ${Math.hypot(...q)}`)
+  const after = places(camera(bodies, 1))
+  assert.ok(most(before, after) < 1e-9, `a recentring moved the screen by ${most(before, after)} pixels`)
+  // A star of 50 falls in from 1.2 r_+, and the mode recentres.
+  const r = 1.2 * g.horizon(h)
+  bodies.push({ x: h.x + r, y: h.y, z: h.z, vx: h.vx - 20, vy: h.vy, vz: h.vz, m: 50, r: 6, star: true, trail: [] })
+  const was = [h.x, h.y, h.z]
+  const V0 = camera(bodies, 1)
+  const trail0 = places(V0).slice(3)
+  const { swallowed } = g.step(bodies, 0.25)
+  assert.strictEqual(swallowed.length, 1)
+  const q2 = g.centre(bodies)
+  assert.strictEqual(g.anchor(bodies), h)
+  const V1 = camera(bodies, 1)
+  const [x, y] = onScreen(V1, h.x, h.y, h.z)
+  assert.ok(Math.abs(x - 600) < 1e-6 && Math.abs(y - 380) < 1e-6, `the merged hole at ${x}, ${y}`)
+  // The trails moved on screen by the hole's own move across the
+  // recentring, its recoil, under a pixel.
+  const move = most(trail0, places(V1).slice(3))
+  const recoil = Math.hypot(h.x - was[0] - q2[0], h.y - was[1] - q2[1], h.z - was[2] - q2[2])
+  assert.ok(move < 1, `the trails jumped ${move} pixels at the swallowing, the hole's recoil ${recoil}`)
+  assert.ok(move > 0 && move < recoil * V1.f / 300, `the trails moved ${move} pixels for a recoil of ${recoil}`)
+})
+
+test('gravity3d: with no hole the view stands at the origin, the centre of mass', () => {
+  assert.strictEqual(g.anchor([{ m: 50, x: 3, y: 0, z: 0, star: true }, { m: 4, x: -40, y: 1, z: 0 }]), null)
+  const V = camera([{ m: 50, x: 3, y: 0, z: 0, star: true }], 0.6)
+  assert.deepStrictEqual(V.o, [0, 0, 0])
+  const [x, y] = onScreen(V, 0, 0, 0)
+  assert.ok(x === 600 && y === 380)
+})
