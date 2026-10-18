@@ -153,18 +153,36 @@ settings.
   Canvas2D modes' physics and fades, Superscope's steps of 1/60 s and
   Dot plane's of 1/30 s, and butterchurn's clock, which reads the time between
   the frames it renders. The page's bound of 0.1 s a frame, against a
-  stall, is above the gap at 15. A butterchurn preset's per-frame warp,
-  its zoom, rotation and decay applied once a frame drawn, is
-  MilkDrop's and moves per frame, as it moves faster on a faster
-  display today: at a cap below the display's rate its trails and its
-  zoom move fewer steps a second, while its colours and every term in
-  `time` keep their speed.
+  stall, is above the gap at 15.
+- Butterchurn applies a preset's warp once a frame it renders, as
+  MilkDrop does, so the presets' steps are scaled to the frame
+  (`app/viz/presets.js`). The page sets k = 60 dt before each render,
+  dt the time since the frame drawn before, bounded at 0.1 s, so k is
+  in frames of 1/60 s. A factor a frame becomes its k-th power: the
+  zoom, the stretch sx and sy, and the warp shader's fade by a colour.
+  A term a frame becomes k times itself: the rotation, the shift dx
+  and dy, the warp's amplitude and the warp shader's fade by
+  subtraction. What a frame draws into the feedback, the waveform, the
+  custom waves' dots, the borders and the motion vectors, has k times
+  its alpha, so as much light a second goes in as fades out, until the
+  alpha meets 1, where GL clamps it. A cap, a 144 Hz display and a slow
+  host then move at one speed. Terms in `time`, and the warp's
+  animation, which butterchurn drives by its clock, need none, and q1,
+  which butterchurn resets each frame, smooths nothing to scale.
+- Left: butterchurn's darkened centre (Drift's `darken_center`), a
+  fan drawn into the feedback each frame at an alpha of its own, which
+  no preset term reaches. The decay base values are unused: the
+  presets' own warp shaders fade the feedback, and butterchurn applies
+  `decay` only in its default one.
 - It applies at once: each numeric frame to the window carries the
   cap (`c`), as it carries the text size.
 - `test/viz-pace.test.js` replays 60 Hz and 144 Hz displays with and
   without jitter against each cap, and `scripts/checks/vizcaps.js`
-  counts the frames the window draws at 15 and uncapped, and reads the
-  synthesiser's and butterchurn's clocks against the page's.
+  counts the frames the window draws at 15 and uncapped, reads the
+  synthesiser's and butterchurn's clocks against the page's, and
+  Drift's zoom a second at 15 against uncapped.
+  `test/viz-presets.test.js` runs each preset's equations at k of 0.6
+  to 6 against k = 1.
 
 Rejected: a cap by a timer instead of the display's frames, which
 would draw between them.

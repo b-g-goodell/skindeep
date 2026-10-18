@@ -1,5 +1,5 @@
 'use strict'
-/* global Synth, VizModes, VizCanvas, VizPresets, VizLayout, VizPace, butterchurn */
+/* global Synth, VizModes, VizCanvas, VizPresets, VizStep, VizLayout, VizPace, butterchurn */
 // The visualization page (decision 0015), fed only by window.vizFeed
 // numeric frames: one entry per pane, each a tab of the main window with
 // its own signal and the index of its mode in modes.js, and the input:
@@ -60,7 +60,7 @@
   }
 
   function make (k) {
-    const p = { k, i: 0, a: 0, o: 0, x: 0, y: 0, w: 0, h: 0, menu: null, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
+    const p = { k, i: 0, a: 0, o: 0, x: 0, y: 0, w: 0, h: 0, zoomed: 0, turned: 0, menu: null, synth: new Synth.Synth(), milk: null, why: '', shown: -1, flat: null }
     p.el = el('div', 'pane')
     p.milkCanvas = el('canvas')
     p.flatCanvas = el('canvas')
@@ -289,6 +289,9 @@
     const dt = Math.min(0.1, (now - prev) / 1000)
     prev = now
     drawn++
+    // The butterchurn presets' steps of this frame, in frames of 1/60 s
+    // (presets.js).
+    VizStep.k = 60 * dt
     for (const p of panes.values()) {
       p.synth.step(dt, sound)
       if (p.shown < 0) continue
@@ -297,6 +300,13 @@
       } else if (p.milk) {
         const b = p.synth.bytes()
         p.milk.render({ audioLevels: { timeByteArray: b, timeByteArrayL: b, timeByteArrayR: b } })
+        // For the live checks: the warp butterchurn applied this frame at
+        // its mesh's last vertex, summed: the log of the zoom and the turn.
+        const v = p.milk.renderer.mdVSVertex
+        if (v) {
+          p.zoomed += Math.log(v.zoom)
+          p.turned += v.rot
+        }
       }
     }
     requestAnimationFrame(loop)
@@ -305,7 +315,8 @@
   // mode: the active pane's, else the first's. drawn: the frames drawn,
   // cap and trace as the last frame set them. A pane's clock: its synthesiser's
   // seconds, and milkTime its butterchurn's, which steps by its own
-  // reading of the time between the frames it renders.
+  // reading of the time between the frames it renders. warp: the zoom's
+  // log and the turn butterchurn has applied, summed (loop).
   window.vizState = () => {
     const list = [...panes.values()]
     const main = list.find(p => p.a === 1) || list[0]
@@ -319,7 +330,7 @@
       cap,
       trace,
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
-      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, clock: p.synth.t, milkTime: p.milk && !p.flat ? p.milk.renderer.time : null, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
+      panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, clock: p.synth.t, milkTime: p.milk && !p.flat ? p.milk.renderer.time : null, warp: p.milk && !p.flat ? { zoom: p.zoomed, rot: p.turned } : null, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   // For the live checks alone: pane k's mode stages a scene and holds it

@@ -16,9 +16,13 @@
 // clock keeps wall time within 10 percent. Where it offers fewer, as
 // on a loaded host, the run says the cap does not bind there, and the
 // clock is held to the page's bound of 0.1 s a frame drawn: between
-// 0.6 and 1.05 times min(1, 0.1 fps). Every setting goes through the
-// main window's settings api, as the menu's pick does. No page or
-// console error. Fakes only. Frames go to OUT/caps-<case>.png.
+// 0.6 and 1.05 times min(1, 0.1 fps). Drift's zoom a second, the log
+// of the factor its warp applied summed over the frames, is within
+// ZOOM_TOL at 15 of uncapped where the cap binds, and printed where it
+// does not. The fake idles throughout, so the levels that drive the
+// presets hold near steady. Every setting goes through the main
+// window's settings api, as the menu's pick does. No page or console
+// error. Fakes only. Frames go to OUT/caps-<case>.png.
 const { launch, shot, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -37,9 +41,17 @@ function check (ok, msg, seen) {
 const SPAN = 4000
 const CAP = 15
 const BIND = 1.3
+// Drift's zoom a second at the cap against uncapped, as a share of it:
+// its bass term follows the fake's sound, which the paused session
+// holds near steady.
+const ZOOM_TOL = 0.15
 
 ;(async () => {
-  const { app, win } = await launch([fake], { appArgs: ['--skin', 'deck'], env: { SKINNED_GL: 'swiftshader', XDG_STATE_HOME: path.join(out, 'state') } })
+  // The fake idles, so the levels that drive the presets hold near
+  // steady.
+  const pause = path.join(out, 'pause')
+  fs.writeFileSync(pause, '')
+  const { app, win } = await launch([fake], { appArgs: ['--skin', 'deck'], env: { SKINNED_GL: 'swiftshader', XDG_STATE_HOME: path.join(out, 'state'), FAKE_CLAUDE_PAUSE: pause } })
   let viz = null
   for (let i = 0; i < 40 && !viz; i++) {
     await sleep(250)
@@ -62,7 +74,7 @@ const BIND = 1.3
   // second of the page's own clock.
   async function rate () {
     return viz.evaluate(ms => new Promise(resolve => {
-      const read = () => { const s = window.vizState(); return { t: performance.now(), drawn: s.drawn, cap: s.cap, clock: s.panes[0].clock, milk: s.panes[0].milkTime } }
+      const read = () => { const s = window.vizState(); return { t: performance.now(), drawn: s.drawn, cap: s.cap, clock: s.panes[0].clock, milk: s.panes[0].milkTime, warp: s.panes[0].warp } }
       const a = read()
       let raw = 0
       const count = () => {
@@ -71,7 +83,7 @@ const BIND = 1.3
         const b = read()
         const secs = (b.t - a.t) / 1000
         const r = x => Math.round(x * 1000) / 1000
-        resolve({ cap: b.cap, secs: r(secs), raw: r(raw / secs), frames: b.drawn - a.drawn, fps: r((b.drawn - a.drawn) / secs), clock: r((b.clock - a.clock) / secs), milk: a.milk === null || b.milk === null ? null : r((b.milk - a.milk) / secs) })
+        resolve({ cap: b.cap, secs: r(secs), raw: r(raw / secs), frames: b.drawn - a.drawn, fps: r((b.drawn - a.drawn) / secs), clock: r((b.clock - a.clock) / secs), milk: a.milk === null || b.milk === null ? null : r((b.milk - a.milk) / secs), zoom: a.warp && b.warp ? r((b.warp.zoom - a.warp.zoom) / secs) : null, rot: a.warp && b.warp ? r((b.warp.rot - a.warp.rot) / secs) : null })
       }
       requestAnimationFrame(count)
     }), SPAN)
@@ -141,6 +153,13 @@ const BIND = 1.3
   await set('viz.fps', null)
   const back = await measure('drift', 3000, 'drift uncapped again')
   if (binds(back)) check(back.fps > BIND * CAP, `want more than ${BIND * CAP} frames a second uncapped again`, back)
+  // Drift's zoom a second, the log of the factor its warp applied, at 15
+  // against uncapped. Its turn has terms in sin(time), which a span of 4 s
+  // does not average out, so it is printed and not judged.
+  check(capped.zoom > 0 && free.zoom > 0, 'want Drift zooming', { free, capped })
+  const ratio = Math.round(capped.zoom / free.zoom * 1000) / 1000
+  if (binds(free) && binds(capped)) check(Math.abs(ratio - 1) <= ZOOM_TOL, `want Drift's zoom a second at 15 within ${ZOOM_TOL} of uncapped`, { free, capped, ratio })
+  console.log(binds(free) && binds(capped) ? `zoom a second at 15 over uncapped: ${ratio}` : `zoom a second at 15 over uncapped: ${ratio}, not judged: the cap does not bind`)
   const all = [free, capped, back]
   console.log(all.every(binds) ? `cap shown: ${free.fps} frames a second uncapped, ${capped.fps} at 15, ${back.fps} uncapped again` : `host at ${Math.min(...all.map(q => q.raw))} display frames a second: the cap does not bind in every run`)
 
