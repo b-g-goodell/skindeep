@@ -584,12 +584,12 @@
   // The sky on a cube of faces F pixels square, F / 2 pixels a radian at
   // a face's centre, a star drawn scale times its size in a pane's
   // pixels, over black: the light from infinity, which the trace reads
-  // along each ray's last direction. The two last built are kept, which
-  // panes of a size share.
+  // along each ray's last direction. F comes in steps of 64, and the
+  // four last built are kept, which panes of near sizes share.
   let SKY = null
   const cubes = []
   function cube (F, scale) {
-    for (const c of cubes) if (c.F === F && c.scale === scale) return c
+    for (const c of cubes) if (c.F === F) return c
     if (!SKY) SKY = sky(PITCH)
     const { stars, haze } = SKY
     const can = document.createElement('canvas')
@@ -629,7 +629,7 @@
     }
     const c = { F, scale, faces, lit: T3.skyTiles(faces, F), nt: Math.ceil(F / 4) }
     cubes.unshift(c)
-    if (cubes.length > 2) cubes.pop()
+    if (cubes.length > 4) cubes.pop()
     return c
   }
 
@@ -1581,7 +1581,7 @@
         tcx = V.cx * kt
         tcy = V.cy * kt
         tf = V.f * kt
-        const F = Math.min(CUBE, Math.round(2 * tf))
+        const F = Math.min(CUBE, Math.max(64, Math.round(2 * tf / 64) * 64))
         const cb = cube(F, F / (2 * V.f))
         sk = { F, faces: cb.faces, lit: cb.lit, nt: cb.nt, dim, m: [V.r[0], V.r[1], V.r[2], V.u[0], V.u[1], V.u[2], -V.e[0], -V.e[1], -V.e[2]] }
         drawWaves(w, h, dim, kt, tw, th)
