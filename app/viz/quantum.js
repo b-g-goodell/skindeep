@@ -74,6 +74,9 @@
   const DRAG_PX = 6
   // The soft measurement's window, in grid points.
   const POKE_R = 5
+  // The steps of DT a frame at most: the most a frame's clock can bring,
+  // 0.1 s at 32 a second, is 6.4.
+  const STEPS = 8
 
   // The bit reversal and the twiddles of an n-point FFT.
   function plan (n) {
@@ -648,8 +651,9 @@
         // makes breathe.
         if (q > 0.6 && wave.norm() < 0.3) wave.packet(NX / 2 + 14, NY / 2, 1 / Math.sqrt(2 * OMEGA), 1 / Math.sqrt(2 * OMEGA), 0, OMEGA * 14)
         clock += Math.min(0.1, dt) * (8 + 16 * Math.min(1, L.bass) + 8 * L.busy) * (1 - 0.4 * L.idle)
+        // At most what the 0.1 s bound on dt brings: 6.4 steps.
         let steps = 0
-        while (clock >= DT && steps < 4) {
+        while (clock >= DT && steps < STEPS) {
           wave.step()
           detect()
           wave.damp(mask)
@@ -657,13 +661,14 @@
           time += DT
           steps++
         }
-        if (steps === 4) clock = 0
+        if (steps === STEPS) clock = 0
         const n = wave.norm()
         if (n > 3) wave.scale(Math.sqrt(3 / n))
 
         let top = 1
+        const forget = Math.pow(0.9993, 60 * Math.min(0.1, dt))
         for (let y = 0; y < NY; y++) {
-          hist[y] *= 0.9993
+          hist[y] *= forget
           top = Math.max(top, hist[y])
         }
         const { re, im } = wave
@@ -831,7 +836,9 @@
       probe () {
         let cells = 0
         for (let i = 0; i < bar.length; i++) if (bar[i] > 0.5) cells++
-        return { presses, strokes, throws, pokes, catches, barrier: barTop, cells, seed, family }
+        let hits = 0
+        for (let y = 0; y < NY; y++) hits += hist[y]
+        return { presses, strokes, throws, pokes, catches, barrier: barTop, cells, seed, family, time, hits }
       }
     }
   }

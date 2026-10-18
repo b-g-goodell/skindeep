@@ -147,13 +147,41 @@ settings.
   one in a second, and a frame up to 2 ms early counts as on time, so
   that the jitter of the display's clock skips none. A loop more than a
   gap behind starts again from now.
-- The modes' clocks do not change. Every mode advances by the time
-  since the frame drawn before, as it did by the time since the
-  display's frame before: the synthesiser's levels and samples, the
-  Canvas2D modes' physics and fades, Superscope's steps of 1/60 s and
-  Dot plane's of 1/30 s, and butterchurn's clock, which reads the time between
-  the frames it renders. The page's bound of 0.1 s a frame, against a
-  stall, is above the gap at 15.
+- Every mode advances by the time since the frame drawn before, dt,
+  so each keeps its speed at any frame rate: the synthesiser's levels
+  and samples, and butterchurn's clock, which reads the time between
+  the frames it renders. The page bounds dt at 0.1 s, against a stall,
+  above the gap at 15. The cap first shipped with several Canvas2D
+  modes stepping once a frame drawn, which the commit that added the
+  cap said followed time, and they were made to follow it (2026-10-18,
+  the review of the cap):
+  - Dot plane turned 1.2 degrees a frame plotted, once a drawn frame
+    below 30 frames a second: 18 degrees a second at 15 against 36.
+    It now turns once a step of 1/30 s, with its heights.
+  - Scope's afterglow and Gravity's trails faded by an alpha a frame
+    (0.22, and 0.04 to 0.2): now 1 - (1 - a)^(60 dt), the same fade
+    each 1/60 s.
+  - Fern added its light a frame and faded it by time, so at 15 its
+    buffer held 2.8 times less: each frame's light is now scaled by
+    (1 - f) / (1 - f60), f the frame's fade and f60 the fade of 1/60
+    s, so a light held still fills the buffer alike at any rate.
+  - Quantum took at most 4 steps of its clock a frame and dropped the
+    rest, about 6 percent of its time at 15: now at most 8, above the
+    6.4 that the 0.1 s bound brings, the remainder carried. Its
+    histogram forgets 0.9993 of a frame of 1/60 s, now each 1/60 s.
+  - The analyzer's caps fell by a step of Euler's that ran faster at a
+    larger dt: now the exact fall from rest at 2.2 a second squared,
+    the part of the frame past the hold falling. Zoom out's surge now
+    adds its integral over the frame.
+  - Already by time: Superscope's fade, colours and equations step
+    1/60 s from an accumulator; the analyzer's bars sink by dt; Go and
+    Carbon redraw every frame from their clocks, and Carbon's
+    ensemble, cloud and flashes step by dt; Gravity and Gravity 3D
+    step their simulations by speed times dt in steps of H, their
+    flares and trails' places by that clock, Gravity 3D's flashes by
+    exp(-dt / 0.6), and Gravity 3D redraws every frame; Zoom out's zoom
+    and pulse, Fern's growth and fades, and Quantum's barrier fade go
+    by dt.
 - Butterchurn applies a preset's warp once a frame it renders, as
   MilkDrop does, so the presets' steps are scaled to the frame
   (`app/viz/presets.js`). The page sets k = 60 dt before each render,
@@ -176,6 +204,11 @@ settings.
   `decay` only in its default one.
 - It applies at once: each numeric frame to the window carries the
   cap (`c`), as it carries the text size.
+- `test/viz-speed.test.js` draws every Canvas2D mode on stub
+  canvases at 15 and at 60 frames a second over the same wall time and
+  compares the fade a second of each canvas that keeps its pixels, Dot
+  plane's turn, Quantum's simulated time and the light Fern's buffer
+  holds.
 - `test/viz-pace.test.js` replays 60 Hz and 144 Hz displays with and
   without jitter against each cap, and `scripts/checks/vizcaps.js`
   counts the frames the window draws at 15 and uncapped, reads the

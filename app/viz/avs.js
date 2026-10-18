@@ -259,7 +259,8 @@ window.VizCanvas = window.VizCanvas || {}
     const line = new Float32Array(GRID)
     let rotation = 0
     // AVS's rotation speed runs from -50 to 50, 16 by default, in fifths
-    // of a degree per frame. 6 turns the plane once in 10 s at 30 frames.
+    // of a degree per frame. 6 turns the plane once in 10 s at 30 frames:
+    // here a step of STEP, however many frames are drawn.
     const SPEED = 6
     const ANGLE = -20
     const STEP = 1 / 30
@@ -328,9 +329,6 @@ window.VizCanvas = window.VizCanvas || {}
           at += dir
         }
       }
-      rotation += SPEED / 5
-      if (rotation >= 360) rotation -= 360
-      if (rotation < 0) rotation += 360
     }
 
     return {
@@ -348,11 +346,19 @@ window.VizCanvas = window.VizCanvas || {}
         while (acc >= STEP) {
           acc -= STEP
           frame(synth.bands)
+          rotation += SPEED / 5
+          if (rotation >= 360) rotation -= 360
+          if (rotation < 0) rotation += 360
         }
         plot(w, h)
         bg.putImageData(img, 0, 0)
         g.imageSmoothingEnabled = false
         g.drawImage(buf, 0, 0, canvas.width, canvas.height)
+      },
+
+      // For the tests: the plane's turn, in degrees.
+      probe () {
+        return { rotation }
       }
     }
   }

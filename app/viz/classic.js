@@ -60,15 +60,20 @@ window.VizCanvas = window.VizCanvas || {}
         for (let b = 0; b < BARS; b++) {
           const v = level(synth, b)
           bars[b] = v >= bars[b] ? v : Math.max(v, bars[b] - dt * 1.4)
+          // A cap holds 0.4 s, then falls from rest at 2.2 a second
+          // squared, the part of dt past the hold falling, exactly.
           if (bars[b] >= peaks[b]) {
             peaks[b] = bars[b]
             fall[b] = 0
             hold[b] = 0.4
-          } else if (hold[b] > 0) {
-            hold[b] -= dt
           } else {
-            fall[b] += dt * 2.2
-            peaks[b] = Math.max(bars[b], peaks[b] - fall[b] * dt)
+            const held = Math.min(hold[b], dt)
+            const t = dt - held
+            hold[b] -= held
+            if (t > 0) {
+              peaks[b] = Math.max(bars[b], peaks[b] - fall[b] * t - 1.1 * t * t)
+              fall[b] += 2.2 * t
+            }
           }
         }
 

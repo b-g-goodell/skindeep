@@ -378,8 +378,8 @@
         const cy = h / 2
         view = { s, cx, cy }
         // Trails: long while busy, gone while idle, when time all but
-        // stops.
-        tg.fillStyle = `rgba(0, 0, 0, ${0.04 + 0.16 * L.idle})`
+        // stops. They fade by 0.04 to 0.2 each 1/60 s.
+        tg.fillStyle = `rgba(0, 0, 0, ${1 - Math.pow(1 - (0.04 + 0.16 * L.idle), 60 * dt)})`
         tg.fillRect(0, 0, w, h)
         const dim = 1 - 0.45 * L.idle
         for (const d of dust) {
