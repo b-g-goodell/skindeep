@@ -20,7 +20,7 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
 (issue #158) and for the gravitational waves of the Gravity modes
-(issue #163).
+(issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170).
 
 ## Context
 
@@ -91,7 +91,8 @@ butterchurn-presets is MIT for its conversion only.
     stars in close orbit spins a two-armed spiral of $h_+$ (see
     2026-10-16: gravitational waves). Gravity 3D: Gravity's bodies in
     three dimensions with black holes, spinning ones among them, before
-    distant stars they lens (see 2026-10-15: Gravity 3D), and their
+    distant stars, every pixel a ray traced past the holes (see
+    2026-10-15: Gravity 3D, and 2026-10-17: Gravity 3D's optics), and their
     waves, both polarizations, which carry energy away, so a tight pair
     inspirals and chirps until it merges (see 2026-10-16). Quantum: the
     Schroedinger equation by split-step Fourier on a 128 by 64 grid,
@@ -344,22 +345,21 @@ distant background of stars".
   between them where the pulls balance, L1, at 1.1 to 1.45 times its
   own angular speed: a stream that feeds the disc.
 - Drawing: the camera, 620 from the centre of mass with a half view
-  angle of 0.42 rad, turns about it. Bodies, grains and trails fall
-  into layers between the holes' depths, so a hole's shadow hides what
-  lies behind it, and bodies are sized and dimmed with distance. A
+  angle of 0.42 rad, turns about it. Bodies, grains and trails are
+  drawn flat on slices of depth and seen through the trace (see
+  2026-10-17: Gravity 3D's optics), and bodies are sized and dimmed
+  with distance. A
   trail is the places a body passed, kept every 1.5 units of time or 4
   of travel and projected each frame. Matter at $d$ from a hole heats
   as $\min(1, (2.3 r_s/d)^2)$, toward orange, white and then blue
   white, larger and brighter, a hot grain beamed by
   $(1 + 0.6 v_\parallel/c)^2$ toward the camera. Merger rings and the
   idle dimming are the Gravity mode's.
-- A hole is drawn as its shadow, black, of radius
+- A hole is not drawn. Its shadow, of radius
   $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$, the image of its photon
-  sphere at $1.5 r_s$, ringed by its photon ring over a soft glow. The
-  ring brightens as the hole swallows. A spinning hole's shadow is
-  flattened on its approaching side by $0.22 \chi \sin i$ and shifted
-  toward its receding side by $2a \sin i$, $i$ the angle between the
-  spin and the line of sight.
+  sphere at $1.5 r_s$, and its photon ring are what the trace makes of
+  the light near it (see 2026-10-17). A hole's flash, as it swallows,
+  brightens the hot matter about it.
 - Background: 3000 stars at infinity, a third of them in a band about
   a great circle, a galaxy's disc seen from inside, under 120 soft dots
   of its glow, warm toward one point. They are directions, turned with
@@ -367,15 +367,9 @@ distant background of stars".
   foreground's hues. Six bright ones lie on the circle that the line
   from the camera through the centre sweeps at the camera's first
   height, so a hole lines up with one now and then.
-- Lensing, per star on the CPU: the point-mass lens of Einstein angle
-  $\theta_E^2 = 2 r_s (D_s - D_l)/(D_l D_s)$, $2 r_s/D_l$ for a star at
-  infinity. A star at $\beta$ from a hole has its images at
-  $\theta_\pm = (\beta \pm \sqrt{\beta^2 + 4\theta_E^2})/2$, the outer
-  brightened by its magnification, the inner drawn above 2%. Within
-  $0.3 \theta_E$ both images are arcs, as a disc of radius
-  $0.05 \theta_E$ would make, and within $0.05 \theta_E$ an Einstein
-  ring. Dust behind a hole is lensed the same way, so the disc's far
-  side bends over the shadow. Bodies and trails are not.
+- Lensing: one rule for every pixel, the stars, the dust, the bodies,
+  their trails and the holes alike (see 2026-10-17: Gravity 3D's
+  optics).
 - Signal: a tool call adds a planet in its class's colour on a near
   circular orbit about the heaviest body, tilted up to 0.5 rad, outside
   a hole's disc. A prompt sends a comet from the edge, aimed to miss a
@@ -395,25 +389,16 @@ distant background of stars".
   circular orbit about the heaviest body in the plane of that body's
   spin, at least 3.3 $r_s$ out. `scripts/checks/vizpointer.js` drags
   and clicks it.
-- Frame rate: under swiftshader, three panes of a 720 by 460 window all
-  in one mode, each mode in turn for five rounds and counted as
-  `vizmodes.js` counts its sets, ran at a median of 46 frames per second
-  in Gravity 3D and 43.5 in Gravity. `vizmodes.js` itself gave 35.5 for
-  Gravity, Gravity 3D and Quantum together, 47 for Fern, Go and Zoom out
-  and 40 for three butterchurn presets. Each soft dot of glow is drawn
-  from a canvas of the CPU: one on the GPU, drawn onto the CPU's layer,
-  is read back at every draw, and that alone held three panes to about
-  15.
+- Frame rate: see 2026-10-17: Gravity 3D's optics. The sky's soft dots
+  of glow are drawn from a canvas of the CPU: one on the GPU, drawn
+  onto a canvas of the CPU, is read back at every draw, and that alone
+  held three panes to about 15.
 
 Rejected:
 
-- Lensing per pixel: a ray traced per pixel on the CPU is far too slow,
-  and on WebGL the mode would take one of the eight contexts.
-- Geodesics of the Kerr metric: the pseudo-Newtonian potential and the
-  Lense-Thirring term keep the known radii and the frame dragging at a
-  fraction of the cost.
-- Lensing the bodies and their trails: a trail's places bent near the
-  Einstein ring drew zigzags, and a body apart from its trail.
+- Geodesics of the Kerr metric for the dynamics: the pseudo-Newtonian
+  potential and the Lense-Thirring term keep the known radii and the
+  frame dragging at a fraction of the cost.
 
 ## 2026-10-15: each tab's visualization in the tab strip
 
@@ -1000,7 +985,7 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   compaction, a comet's pass, a merger.
 - Drawing, one look a mode, on a grid of cells 32 across the pane's
   shorter side and at least 8 pixels, blurred up to the pane, the
-  frame's opaque ground under everything else. Gravity: the sum over
+  frame's ground. Gravity: the sum over
   sources of $h_+$ in the plane, + in a cool blue, - in a warm amber.
   Gravity 3D: each source's field on the plane through it that faces
   the camera, in the camera's basis, the line of sight and the
@@ -1011,8 +996,10 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   faint far field darker than the pair's lobes. A cell reads
   $\ddot{I}$ as its mean over a cell and a half's light time on either
   side, nothing outside a source's samples, so a front or a burst
-  thinner than a cell is drawn ramped, not aliased into beads. The
-  lensing, the sky and the dust are as before.
+  thinner than a cell is drawn ramped, not aliased into beads. In
+  Gravity the ground is opaque, under everything else. In Gravity 3D
+  it lies at its sources' mean depth and is traced as everything else
+  is (see 2026-10-17: Gravity 3D's optics).
 - Probe: both modes report their sources and, for the pair of shortest
   period, its separation, period, turns and the sign changes of its
   $h_+$ 80 from it, along its axis in Gravity 3D and in its plane in
@@ -1062,3 +1049,162 @@ Rejected:
   falloff.
 - A ring buffer read at one point per sample: a burst one sample long
   drew as beads, one bright cell in two.
+
+## 2026-10-17: Gravity 3D's optics
+
+Owner, issue #170: "the smallest particles appear to be lensed
+correctly, but larger bodies disappear from view as they go around the
+blackhole, mixing realistic gravitational lensing with unrealistic
+gravitational lensing". On a first build that lensed the bodies by
+paths of their own: "if an image of a black hole is coming in from
+behind a black hole, that image will also be lensed. i don't
+understand how you are doing the optics without a generic lensing
+rule", and "audit and fix and just use good physics to start".
+
+The optics before (`app/viz/gravity3d.js` at 6ee641f) had no rule.
+Stars and dust were moved forward to the two images of the weak-field
+point-mass lens, $\theta_\pm = (\beta \pm \sqrt{\beta^2 + 4\theta_E^2})/2$,
+used down to the shadow, where the deflection is not $2 r_s/b$ and
+diverges at $b_c$. Near alignment a star was stroked as two arcs of a
+set half angle. Several holes were applied one after another, each
+with its own $\theta_E$ for the source's depth, rather than by the
+multi-plane recursion. Bodies, trails, flares and holes were not lensed
+at all. Each hole was a painted disc, glow and ring, shifted and
+flattened for spin, laid over the layer behind it, so a body or a hole
+behind it vanished under paint.
+
+- One rule, in `app/viz/trace.js`: each pixel is a ray traced backward
+  from the camera. It is straight but where it crosses a hole's lens
+  plane, the plane of the hole's depth across the camera's axis, in the
+  order it crosses them. There it turns toward the hole, in the plane
+  of its line and the hole, by the exact Schwarzschild deflection
+  $\hat\alpha(b)$, $b$ the impact parameter of its line. A ray with
+  $b \le b_c = \frac{3\sqrt{3}}{2} r_s$ is captured. For one hole on the
+  axis this is the lens equation of Virbhadra and Ellis
+  (astro-ph/9904193, eqs. 1 to 3),
+  $\tan\beta = \tan\theta - \frac{D_{ds}}{D_s}[\tan\theta + \tan(\hat\alpha - \theta)]$,
+  $\sin\theta = b/D_d$, which allows any $\hat\alpha$, loops included.
+  For several holes it is the multi-plane recursion (McCully et al.,
+  arXiv:1401.0197, eq. 16, after Schneider, Ehlers and Falco eq. 9.7a)
+  with the exact $\hat\alpha$: each hole bends the ray where the holes
+  before it sent it. A hole seen through a hole, arcs, Einstein rings,
+  inner images, the shadow and the photon ring all come of it, and
+  nothing of a hole is painted.
+- The deflection, tabulated once on load from the exact integral
+  $\hat\alpha + \pi = 2\int_0^{1/r_0} du \, [b^{-2} - u^2(1 - r_s u)]^{-1/2}$,
+  by adaptive Simpson in $x = u r_0 = 1 - t^2$, which removes the
+  endpoint's singularity. It is kept as
+  $g(u) = \hat\alpha + \ln(1 - u)$, $u = b_c/b$, at 4096 points: Bozza
+  (gr-qc/0208075, eqs. 47 to 50) shows
+  $\hat\alpha = -\ln(b/b_c - 1) + \ln[216(7 - 4\sqrt{3})] - \pi + O(b - b_c)$
+  for Schwarzschild, so $g$ is smooth up to $u = 1$, where it is his
+  $\bar{b} = -0.4002$.
+- The scene's sources are drawn flat, as before, on slices of depth:
+  the bodies, their trails, the dust and the flares. The slices part at
+  each hole's depth, and behind the nearest hole in eight more, even in
+  $\sum_h \sqrt{(z - z_h)/z}$ over the holes in front, so that the
+  Einstein radii within a slice differ little. Each slice is a plane at
+  its content's mean depth. The waves' picture (see 2026-10-16) is a
+  plane at its sources' mean depth that emits and hides nothing: it is
+  a diagram of the strain on the planes through its sources, so it is
+  bent as what else lies there is. The distant stars and the galaxy's
+  glow are a cube of directions, built at about the pane's density,
+  its faces in steps of 64 pixels so that panes of near sizes share
+  it, read along a ray's last direction.
+- A ray takes, front to back, the planes it crosses and, unless
+  captured, the sky. A colour is taken as found: specific intensity
+  is constant along a ray ($I_\nu/\nu^3$, Liouville, as James et al.,
+  arXiv:1502.03808, use it, with no frequency shift here), so a lensed
+  source is magnified by its area, not brightened. The Doppler beaming
+  of the disc's hot grains is their emission's, as before.
+- Spin is not in the optics: the light is Schwarzschild's for every
+  hole, and nothing paints a shift. A spinning hole's shadow bulges on
+  the side moving away and flattens on the side moving toward the
+  camera (Bardeen at Les Houches in 1972, as James et al., section
+  1.1, recount it), but
+  tracing Kerr geodesics per ray, as they do, is beyond the frame's
+  cost on a CPU. The spin moves matter, by the Lense-Thirring term,
+  and #173 will move the spin.
+- What the rule leaves out: it is a thin lens, exact for camera and
+  source far from the hole that bends the ray, so matter within a few
+  $b$ of a hole, the inner disc, is bent as if its light left the lens
+  plane. A slice is one plane, so its content is bent as at its mean
+  depth. Matter outside the view is not drawn, so its inner images,
+  which would fall inside the view, are missing.
+- Cost. The lens map is traced at nodes 6 pixels apart, and a cell
+  whose four corner rays met the same holes in the same order, none
+  turned back, all captured or none, takes its rays' crossings and
+  places on the sky bilinear from its corners. The light from far
+  behind is bent by $\theta_E^2/\theta$, which a line across $S$ pixels
+  misses by $S^2 r_s D^2/(2 f b^3)$ pixels, $f$ the focal length in
+  pixels, so a cell nearer a hole than the $b$ where that is one pixel,
+  or $1.5 b_c$, is traced pixel by pixel. The frame is traced at a
+  reduced scale and drawn up to the pane: at most 45000 pixels a pane,
+  or 135000 a window when a pane fills more of it. A split window's
+  three panes of 240 by 460 trace at 0.64, a lone pane of 1200 by 760
+  at 0.385. The sky's black tiles and the slices' empty tiles are
+  skipped.
+- Frame rate, under swiftshader on a host at a load of 20 to 22, the
+  tree of 6ee641f and this one in turn, twice each, by one script that
+  draws the mode alone at full activity, then runs one pane of a 1200
+  by 760 window and three panes of a 720 by 460 window, five rounds of
+  2 s each. A draw's median cost went from 5 and 4.9 ms to 13.3 and
+  12.8 at 400 by 380, from 11 and 11 to 24.7 and 24.9 at 1200 by 760,
+  and from 4.6 and 4.6 to 10.3 and 10.1 at 360 by 230. The frame rate
+  holds: one pane of 1200 by 760 ran at a median of 25 and 23 frames
+  per second before and 24 and 24 now, three panes of 240 by 460 at 23
+  and 22 before and 23.5 and 22 now, the rounds moving from 17 to 33.
+  Doubling the draw left the rate where it was.
+- Checked by `test/viz-trace.test.js`: $\hat\alpha$ against Keeton and
+  Petters' weak-deflection series (gr-qc/0511019, eqs. 24 and 25, six
+  terms) to $2 \times 10^{-5}$ at 50, 200 and 1000 $m$, against Iyer and
+  Petters' closed form (gr-qc/0611086, eq. 8) by Carlson's $R_F$ to
+  $2 \times 10^{-5}$ for $r_0$ from 3.2 to 30 $m$, and against Bozza's
+  limit to $2 \times 10^{-3}$ at $b/b_c - 1$ of $10^{-4}$ to $10^{-6}$,
+  with his figure that the limit is off by about 0.06% where
+  $\hat\alpha$ falls below $2\pi$ (0.04 to 0.08% here). The shadow's
+  edge falls at $\sin\theta = b_c/D$ to $10^{-9}$ rad, and a ray just
+  outside it turns by more than $2\pi$. One hole meets the
+  Virbhadra-Ellis equation to $10^{-5}$. A dot behind a hole in the
+  weak field draws a ring all round at
+  $\theta_E^2 = 2 r_s D_{ls}/(D_l D_s)$, its mean radius to 1%. Two
+  holes meet the recursion by hand to 1% of a bend of 15 or more,
+  where composing them at the source's depth is off by far more. A ray
+  turned back by one hole is bent by another it then meets, at the
+  impact parameter of its outgoing line. A uniform sky is seen
+  unchanged outside the shadow and black within. Each test was seen to
+  fail with its behaviour removed: the table replaced by $2 r_s/b$,
+  capture removed, the bend removed, each hole's $b$ taken from the
+  unbent ray.
+- `scripts/checks/vizlens.js`, in a full pane and a small one: a moon
+  thrown in the central hole's equator passes behind it, wholly within
+  the shadow, glow and all, so that a straight ray would hide it. The
+  mode draws that frame again without it and picks points where the
+  two whole frames differ, after everything nearer is drawn, and the
+  pane's canvas is read there against the control: the moon is seen.
+  In the full pane its outer image spreads across the line to the
+  hole more than 1.5 times as far as along it. A hole of 150 to 300 is
+  steered behind the central one and seen the same way, against a
+  control traced without it. With the bend removed the check fails:
+  "the body behind the hole is hidden".
+
+Rejected:
+
+- Lensing each class by a path of its own (the first build of #170:
+  analytic images for grains, a resampled sprite or a Jacobian for
+  bodies, a painted shadow over them): the image of a thing depended
+  on what it was, and a hole behind a hole was hidden under paint.
+- Turning the ray about the hole onto its outgoing asymptote: exact
+  for light that leaves the hole far behind, but off the lens equation
+  for matter a few $b$ behind it. For a hole of $r_s = 13.6$ at 620 and
+  a plane 120 behind it, a ray at $\theta_E$ met the plane 0.42
+  $\theta_E$ from where the Virbhadra-Ellis equation puts it.
+- The waves' picture as light at infinity, behind everything: the hole
+  pulled its far field into rings that filled the frame, far from
+  where the picture is drawn.
+- A ray per pixel at full scale: in Node, on the host at a load of 19,
+  the trace alone took 11 ms for a pane of 240 by 460 past one hole and
+  27 ms past three, and 98 and 218 ms at 1200 by 760, before any
+  sampling.
+- WebGL: the mode would take one of the eight contexts.
+- Kerr geodesics per ray: see the spin, above.
