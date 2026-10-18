@@ -297,5 +297,20 @@
       panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
+  // For the live checks alone: pane k's mode stages a scene and holds it
+  // still, or lets it go (gravity3d stage, unstage). Nothing else calls
+  // them, and a mode without them answers null.
+  const flat = k => {
+    const p = [...panes.values()][k]
+    return p && p.flat && p.flat.stage ? p.flat : null
+  }
+  window.vizStage = (k, spec) => {
+    const f = flat(k)
+    return f ? f.stage(spec) : null
+  }
+  window.vizUnstage = k => {
+    const f = flat(k)
+    return f ? (f.unstage(), true) : null
+  }
   requestAnimationFrame(loop)
 })()

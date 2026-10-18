@@ -83,7 +83,7 @@ const windowTexts = (win, parts) => win.evaluate(parts => {
     out[name] = []
     for (const el of document.querySelectorAll(sel)) {
       if (el.hidden || el.closest('[hidden]')) continue
-      for (const t of window.TextFit.texts(el)) out[name].push({ owner: name + ':' + (t.el.className || t.el.tagName), text: t.text, fontSize: t.fontSize, cutX: t.cutX, shownY: t.shownY, box: { x: t.box.x0, y: t.box.y0, width: t.box.x1 - t.box.x0, height: t.box.y1 - t.box.y0 } })
+      for (const t of window.TextFit.texts(el)) out[name].push({ owner: name + ':' + (t.el.className || t.el.tagName), text: t.text, fontSize: t.fontSize, cutX: t.cutX, elided: t.el.title === t.text && getComputedStyle(t.el).textOverflow === 'ellipsis', shownY: t.shownY, box: { x: t.box.x0, y: t.box.y0, width: t.box.x1 - t.box.x0, height: t.box.y1 - t.box.y0 } })
     }
   }
   return out
@@ -215,8 +215,10 @@ async function sizes (app, win, skin, tag, tabs, own, has) {
         if (b) check(Math.abs(t.fontSize / b.fontSize - f) < 0.01, `${at}: ${k} text "${t.text}" at ${(t.fontSize / b.fontSize).toFixed(3)} of its size, want ${f}`)
         // Whole in its width at the default, whole at every size, and
         // no more of its height cut, but in the menu, which scrolls, and
-        // a dashboard chart's title, which gives its value the room.
-        if (b && k !== 'menu' && !/d-title/.test(t.owner)) check(!(t.cutX && !b.cutX) && t.shownY >= b.shownY - 0.05, `${at}: ${k} text ${t.key} "${t.text}" is cut: ${t.shownY.toFixed(2)} of its height shown, ${b.shownY.toFixed(2)} at the default`)
+        // a dashboard chart's title, which gives its value the room. A
+        // text drawn with an ellipsis and whole in its tooltip, such as a
+        // dashboard folder, may be cut in its width.
+        if (b && k !== 'menu' && !/d-title/.test(t.owner)) check(!(t.cutX && !b.cutX && !t.elided) && t.shownY >= b.shownY - 0.05, `${at}: ${k} text ${t.key} "${t.text}" is cut: ${t.shownY.toFixed(2)} of its height shown, ${b.shownY.toFixed(2)} at the default`)
       }
       check(l.some(t => base.win[k].some(x => x.key === t.key)), `${at}: no ${k} text to compare`)
     }
