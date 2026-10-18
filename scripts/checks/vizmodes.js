@@ -38,8 +38,8 @@ fs.mkdirSync(out, { recursive: true })
 const NEW = MODES.slice(MODES.findIndex(m => m.id === 'dotplane') + 1).map(m => m.id)
 const PHASES = ['work', 'prompt', 'tool', 'idle', 'sound']
 
-function check (ok, msg) {
-  if (!ok) throw new Error(msg)
+function check (ok, msg, detail) {
+  if (!ok) throw new Error(detail === undefined ? msg : `${msg} ${JSON.stringify(detail)}`)
 }
 
 // Each pane's shown canvas: a PNG, and its mean colour over a 64 by 64
