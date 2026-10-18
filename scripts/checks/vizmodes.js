@@ -10,7 +10,10 @@
 // times, the sign of its wave at a point near it has changed four times
 // a turn, twice its orbital frequency, and three frames 0.5 s apart go
 // to OUT/<mode>-waves-full-<k>.png, a front leaving the pair from one
-// to the next (decision 0015, issue #163).
+// to the next (decision 0015, issue #163). At every read of Gravity 3D,
+// there and in its small pane below, its heaviest hole projects within
+// a pixel of the pane's centre and lies on the trace's axis, while the
+// companion turns and the bodies recentre (issue #171).
 // It reports the frame rate of three panes in butterchurn modes and in
 // the procedural modes, measured in turn, and asserts nothing of it,
 // since the host's load moves it. Then one pane
@@ -60,6 +63,16 @@ function changed (a, b) {
   return n / (a.length / 4)
 }
 const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
+
+// Gravity 3D's view's centre (issue #171): the heaviest hole within a
+// pixel of the pane's centre, and on the trace's axis.
+function centred (probe, where) {
+  const c = probe && probe.held
+  check(c, `${where}: no hole holds the view`, probe && probe.at)
+  const off = Math.hypot(c.x - c.cx, c.y - c.cy)
+  check(off < 1 && Math.hypot(c.X, c.Y) < 1e-6, `${where}: the hole is ${off} pixels from the pane's centre`, c)
+  return { ...c, off, recentred: probe.recentred }
+}
 
 ;(async () => {
   fs.rmSync(pause, { force: true })
@@ -126,11 +139,16 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
   for (const id of ['gravity', 'gravity3d']) {
     await assign(one, id)
     let pair = null
+    const held = []
     await until(async () => {
-      pair = (await state()).panes[0].probe.pair
+      const probe = (await state()).panes[0].probe
+      pair = probe.pair
+      // From its first traced frame.
+      if (id === 'gravity3d' && probe.trace) held.push(centred(probe, 'gravity3d full pane'))
       return pair && pair.turns >= 3
     }, `${id}: no tight pair turned three times`, 900)
     console.log(id, 'full pane pair', JSON.stringify(pair))
+    if (held.length) console.log(id, 'full pane centre', JSON.stringify({ reads: held.length, recentred: [held[0].recentred, held[held.length - 1].recentred], worst: Math.max(...held.map(c => c.off)), last: held[held.length - 1] }))
     check(Math.abs(pair.flips / pair.turns - 4) < 1, `${id}: ${pair.flips} sign changes of its wave in ${pair.turns} turns, not four a turn`)
     for (let k = 0; k < 3; k++) {
       if (k) await sleep(500)
@@ -180,8 +198,10 @@ const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
     const st = await state()
     return small.every(j => st.panes[j].probe && st.panes[j].probe.pair)
   }, 'a small gravity pane has no tight pair', 150)
+  const g3 = NEW.indexOf('gravity3d')
   for (let k = 0; k < 3; k++) {
     if (k) await sleep(500)
+    centred((await state()).panes[g3].probe, 'gravity3d small pane')
     const xs = await viz.evaluate(grab)
     for (const j of small) fs.writeFileSync(path.join(out, `${NEW[j]}-waves-small-${k}.png`), Buffer.from(xs[j].png.split(',')[1], 'base64'))
   }
