@@ -192,13 +192,14 @@
 
   // A plane of the scene: its sources drawn flat at depth z, seen from
   // the camera, as RGBA, w by h, not premultiplied, at (ox, oy) in the
-  // frame, and which tiles of TILE pixels hold anything, as sums over
+  // frame, k of its pixels to one of the frame's (1 but for an edge
+  // plane), and which tiles of TILE pixels hold anything, as sums over
   // the tiles above and left.
   const TILE = 8
   function plane (z, data, w, h, p, ox = 0, oy = 0) {
     const tw = Math.ceil(w / TILE)
     const th = Math.ceil(h / TILE)
-    if (!p || p.occ.length < tw * th || p.sum.length < (tw + 1) * (th + 1)) p = { z: 0, data: null, w: 0, h: 0, tw: 0, th: 0, ox: 0, oy: 0, edge: false, add: false, smooth: false, dil: null, occ: new Uint8Array(tw * th), sum: new Int32Array((tw + 1) * (th + 1)) }
+    if (!p || p.occ.length < tw * th || p.sum.length < (tw + 1) * (th + 1)) p = { z: 0, data: null, w: 0, h: 0, tw: 0, th: 0, ox: 0, oy: 0, edge: false, add: false, smooth: false, k: 1, dil: null, occ: new Uint8Array(tw * th), sum: new Int32Array((tw + 1) * (th + 1)) }
     p.z = z
     p.data = data
     p.w = w
@@ -207,6 +208,7 @@
     p.th = th
     p.ox = ox
     p.oy = oy
+    p.k = 1
     const occ = p.occ
     occ.fill(0)
     for (let y = 0; y < h; y++) {
@@ -266,8 +268,8 @@
   // hides nothing behind it, and one held at its edge (edge) is read at
   // its nearest pixel beyond it.
   function sample (p, sx, sy) {
-    let x = sx - 0.5 - p.ox
-    let y = sy - 0.5 - p.oy
+    let x = (sx - p.ox) * p.k - 0.5
+    let y = (sy - p.oy) * p.k - 0.5
     const w = p.w
     const h = p.h
     if (p.edge) {

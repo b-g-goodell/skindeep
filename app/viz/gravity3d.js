@@ -640,12 +640,10 @@
     const out = canvas.getContext('2d')
     const layer = document.createElement('canvas')
     const g = layer.getContext('2d', { willReadFrequently: true })
-    // The traced frame, at the trace's scale, and the waves' ground.
+    // The traced frame, at the trace's scale.
     const frame = document.createElement('canvas')
     const fx = frame.getContext('2d', { willReadFrequently: true })
     let fimg = null
-    const gcan = document.createElement('canvas')
-    const gcx = gcan.getContext('2d', { willReadFrequently: true })
     const since = {}
     const styles = new Map()
     let bodies = []
@@ -671,11 +669,10 @@
     // basis (right, up, toward the camera).
     const V = { cx: 0, cy: 0, f: 1, D: 620, r: [1, 0, 0], u: [0, 1, 0], e: [0, 0, 1] }
     const P = { x: 0, y: 0, d: 0, k: 0 }
-    // The waves, their grid of cells and the pair the probe watches.
+    // The waves, their grid of cells' colours and the pair the probe
+    // watches.
     const field = new W.Field(C)
     const watch = new W.Watch(field, true)
-    const grid = document.createElement('canvas')
-    const gg = grid.getContext('2d', { willReadFrequently: true })
     let img = null
     let hs = null
     let xs = null
@@ -1070,18 +1067,16 @@
     // the direction across it in that plane, which is the source's own
     // where its axis lies in the plane or along the line of sight, as
     // shown (waves.js) squared, its sign kept, h_+ in blue and amber, h_x
-    // in teal and rose, over black, blurred up at the trace's scale kt
-    // into gcan, tw by th: the frame's ground, a plane at the sources'
-    // mean depth that emits this light and hides nothing, which the
-    // trace bends as it bends what else lies at that depth.
-    function drawWaves (w, h, dim, kt, tw, th) {
+    // in teal and rose, over black: the frame's ground, a plane at the
+    // sources' mean depth that emits this light and hides nothing, which
+    // the trace bends as it bends what else lies at that depth, read
+    // bilinear from the grid itself at the trace's scale kt.
+    function drawWaves (w, h, dim, kt) {
       const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
       const gw = Math.ceil(w / cell) + 1
       const gh = Math.ceil(h / cell) + 1
-      if (grid.width !== gw || grid.height !== gh || !img) {
-        grid.width = gw
-        grid.height = gh
-        img = gg.createImageData(gw, gh)
+      if (!img || img.width !== gw || img.height !== gh) {
+        img = new ImageData(gw, gh)
         hs = new Float32Array(gw * gh)
         xs = new Float32Array(gw * gh)
         vs = new Float32Array(gw * gh)
@@ -1150,15 +1145,9 @@
           px[o + 3] = 255
         }
       }
-      gg.putImageData(img, 0, 0)
-      if (gcan.width !== tw || gcan.height !== th) {
-        gcan.width = tw
-        gcan.height = th
-      }
-      gcx.imageSmoothingEnabled = true
-      gcx.drawImage(grid, 0, 0, gw, gh, -cell * kt / 2, -cell * kt / 2, gw * cell * kt, gh * cell * kt)
-      ground = T3.plane(groundZ, gcx.getImageData(0, 0, tw, th).data, tw, th, ground)
+      ground = T3.plane(groundZ, img.data, gw, gh, ground, -cell * kt / 2, -cell * kt / 2)
       ground.edge = ground.add = ground.smooth = true
+      ground.k = 1 / (cell * kt)
     }
 
     // The slices the scene is drawn on, flat, near to far, and a slice's
@@ -1611,7 +1600,7 @@
         const F = Math.min(CUBE, Math.max(64, Math.round(2 * tf / 64) * 64))
         const cb = cube(F, F / (2 * V.f))
         sk = { F, faces: cb.faces, lit: cb.lit, nt: cb.nt, dim, m: [V.r[0], V.r[1], V.r[2], V.u[0], V.u[1], V.u[2], -V.e[0], -V.e[1], -V.e[2]] }
-        drawWaves(w, h, dim, kt, tw, th)
+        drawWaves(w, h, dim, kt)
         const sc = scene(kt, tw, th, dim, keep, null)
         if (!fimg || fimg.width !== tw || fimg.height !== th) fimg = fx.createImageData(tw, th)
         traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh, slices: sc.audit }
