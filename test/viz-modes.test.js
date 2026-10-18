@@ -205,6 +205,76 @@ test('quantum: the FFT inverts', () => {
   for (let i = 0; i < 16; i++) assert.ok(Math.abs(re[i] / 16 - r0[i]) < 1e-9)
 })
 
+test('quantum: the wall of a seed is the same twice, bounded, clear of the lanes, and walks the families', () => {
+  const { NX, NY, WALL_X0, WALL_X1, H_MAX, WELL_MAX, FAMILIES } = quantum
+  const seen = new Set()
+  for (let seed = 1; seed <= 24; seed++) {
+    const a = quantum.wallgen(seed)
+    const b = quantum.wallgen(seed)
+    assert.strictEqual(a.family, b.family)
+    assert.deepStrictEqual(Array.from(a.V), Array.from(b.V), `seed ${seed}: two walls`)
+    assert.ok(FAMILIES.includes(a.family), `seed ${seed}: family ${a.family}`)
+    seen.add(a.family)
+    let filled = 0
+    for (let y = 0; y < NY; y++) {
+      for (let x = 0; x < NX; x++) {
+        const v = a.V[y * NX + x]
+        assert.ok(v >= -WELL_MAX && v <= H_MAX, `seed ${seed}: V ${v} at ${x}, ${y}`)
+        if (x < WALL_X0 || x >= WALL_X1 || y < 6 || y >= NY - 6) assert.strictEqual(v, 0, `seed ${seed}: V ${v} in a lane at ${x}, ${y}`)
+        if (v !== 0) filled++
+      }
+    }
+    assert.ok(filled >= 20, `seed ${seed}: ${filled} cells`)
+  }
+  assert.strictEqual(seen.size, FAMILIES.length, `families ${[...seen]}`)
+  assert.notDeepStrictEqual(Array.from(quantum.wallgen(1).V), Array.from(quantum.wallgen(7).V), 'two seeds of one family give one wall')
+})
+
+test('quantum: the mean-field term keeps the norm and spreads a packet faster', () => {
+  const spread = g => {
+    const w = new quantum.Wave(64, 32, 0.5)
+    w.nonlinear(g, 0.02)
+    w.potential(Float64Array.from({ length: 64 * 32 }, (_, i) => 0.2 * Math.sin(i)))
+    w.packet(32, 16, 2, 2, 0.3, 0)
+    const n0 = w.norm()
+    for (let k = 0; k < 40; k++) w.step()
+    assert.ok(Math.abs(w.norm() - n0) < 1e-9, `g ${g}: norm ${n0} became ${w.norm()}`)
+    let m = 0
+    let v = 0
+    for (let i = 0; i < w.re.length; i++) {
+      const p = w.re[i] * w.re[i] + w.im[i] * w.im[i]
+      m += (i % 64) * p
+      v += (i % 64) * (i % 64) * p
+    }
+    return v / n0 - (m / n0) * (m / n0)
+  }
+  const free = spread(0)
+  const pushed = spread(25)
+  assert.ok(pushed > 1.5 * free, `variance ${pushed} with the term, ${free} without`)
+})
+
+test('quantum: a soft measurement keeps the norm, catches the packet under it and carves it elsewhere', () => {
+  const fresh = () => {
+    const w = new quantum.Wave(64, 32, 0.5)
+    w.packet(32, 16, 4, 4, 0.5, 0)
+    return w
+  }
+  const rho = (w, x, y) => w.re[y * 64 + x] ** 2 + w.im[y * 64 + x] ** 2
+  const caught = fresh()
+  const n0 = caught.norm()
+  assert.strictEqual(caught.poke(32, 16, 5, () => 0.3), true)
+  assert.ok(Math.abs(caught.norm() - n0) < 1e-9, `norm ${n0} became ${caught.norm()}`)
+  assert.ok(rho(caught, 32, 16) > 1.5 * rho(fresh(), 32, 16), 'the catch narrows the packet')
+  const missed = fresh()
+  assert.strictEqual(missed.poke(32, 16, 5, () => 0.99), false)
+  assert.ok(Math.abs(missed.norm() - n0) < 1e-9, `norm ${n0} became ${missed.norm()}`)
+  assert.ok(rho(missed, 32, 16) < 1e-12, `the miss leaves ${rho(missed, 32, 16)} at the centre`)
+  const far = fresh()
+  assert.strictEqual(far.poke(58, 4, 5, () => 0.01), false, 'nothing under a far click')
+  assert.ok(Math.abs(rho(far, 32, 16) - rho(fresh(), 32, 16)) < 1e-6, 'a far miss leaves the packet')
+  assert.strictEqual(new quantum.Wave(16, 8, 0.5).poke(4, 4, 2), null, 'no wave to measure')
+})
+
 test('gravity: an orbit keeps its energy, and a merger keeps mass and momentum', () => {
   const gravity = require('../app/viz/gravity')
   const body = (x, y, vx, vy, m) => ({ x, y, vx, vy, m, r: 1, ax: 0, ay: 0 })

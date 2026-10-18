@@ -4,8 +4,9 @@
 //   node scripts/checks/vizpointer.js OUT
 // One pane is shown in each mode in turn and clicked: the mode stays,
 // and the mode answers, by its probe or by a tone in the pane's signal.
-// A drag across the quantum pane paints a barrier along its path that
-// fades, a release throws a moon in gravity, a drag turns gravity3d's
+// A press held still on the quantum pane paints a barrier along the
+// drag that follows, which fades, an immediate drag throws a packet and
+// a click measures, a release throws a moon in gravity, a drag turns gravity3d's
 // camera and throws nothing, and a click in a pane of a split window
 // leaves every pane's mode as it was. No page or console error. Frames
 // go to OUT/quantum-*.png. Fakes only.
@@ -81,25 +82,44 @@ async function until (get, ok, ms, step = 100) {
     else check(tones > 0, `${m.id}: no tone for the click`)
   }
 
-  // Quantum: a drag across the middle third, along the grid's long side.
+  // Quantum: a press held still arms the brush, and the drag then paints
+  // across the middle third, along the grid's long side.
   let p = await show('quantum')
   const turn = p.h > p.w
   const at = k => turn ? [p.x + p.w / 2, p.y + p.h * (0.35 + 0.3 * k)] : [p.x + p.w * (0.35 + 0.3 * k), p.y + p.h / 2]
   const drawn = p.probe
   await viz.mouse.move(...at(0))
   await viz.mouse.down()
+  await sleep(400)
+  const armed = (await pane()).probe
   await viz.mouse.move(...at(1), { steps: 12 })
   const mid = (await pane()).probe
   await viz.mouse.up()
   const done = (await pane()).probe
   await viz.screenshot({ path: path.join(out, 'quantum-barrier.png') })
-  console.log('quantum drag', JSON.stringify({ drawn, mid, done }))
-  check(done.strokes === drawn.strokes + 1, 'want one stroke for the drag', done)
+  console.log('quantum held drag', JSON.stringify({ drawn, armed, mid, done }))
+  check(armed.strokes === drawn.strokes + 1 && armed.barrier > 2, 'want the brush armed by the hold', armed)
+  check(done.strokes === drawn.strokes + 1 && done.throws === drawn.throws && done.pokes === drawn.pokes, 'want one stroke and nothing else for the held drag', done)
   check(mid.cells > 0 && mid.barrier > 2, 'want a barrier while dragging', mid)
   // The middle third of the long side is about 40 of 128 points, and the
   // ridge is about two points wide.
   check(done.cells >= 40, 'want a barrier along the drag', done)
-  await sleep(5000)
+  // An immediate drag throws a packet and paints nothing.
+  await viz.mouse.move(...at(0.2))
+  await viz.mouse.down()
+  await viz.mouse.move(...at(0.7), { steps: 6 })
+  await viz.screenshot({ path: path.join(out, 'quantum-aim.png') })
+  await viz.mouse.up()
+  const thrown = (await pane()).probe
+  console.log('quantum drag', JSON.stringify(thrown))
+  check(thrown.throws === done.throws + 1 && thrown.strokes === done.strokes && thrown.pokes === done.pokes, 'want a throw for the drag', thrown)
+  // A click measures.
+  await viz.mouse.click(...at(0.5))
+  const poked = (await pane()).probe
+  console.log('quantum click', JSON.stringify(poked))
+  check(poked.pokes === thrown.pokes + 1 && poked.strokes === thrown.strokes && poked.throws === thrown.throws, 'want a measurement for the click', poked)
+  await viz.screenshot({ path: path.join(out, 'quantum-poked.png') })
+  await sleep(4000)
   const later = (await pane()).probe
   console.log('quantum after 5 s', JSON.stringify(later))
   check(later.barrier > 0 && later.barrier < 0.5 * done.barrier, 'want the barrier fading', later)
