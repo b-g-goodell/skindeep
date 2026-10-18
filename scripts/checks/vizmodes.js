@@ -26,6 +26,11 @@
 // Before the phases, Gravity's and Gravity 3D's small panes report their
 // tight pair and three frames 0.5 s apart go to
 // OUT/<mode>-waves-small-<k>.png.
+// Gravity 3D's Doppler shift (issue #172), in its full pane and its
+// small one: a staged hole of 900 with a disc of 420 grains seen 0.15
+// rad above its plane, the frame to OUT/gravity3d-doppler-<size>.png.
+// The side coming toward the camera is brighter and bluer, the side
+// going away dimmer and redder.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -63,6 +68,56 @@ function changed (a, b) {
   return n / (a.length / 4)
 }
 const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
+
+// Gravity 3D's Doppler shift (issue #172): pane k staged with a hole of
+// 900 at the centre, its spin along the vertical, and a disc of 420
+// grains, which turn counterclockwise seen from above, the camera 0.15
+// rad above their plane. A grain right of the hole on screen, at R
+// times the camera's right (-sin yaw, cos yaw, 0), moves along z x R,
+// (-cos yaw, -sin yaw, 0) R, away from the camera: the left side comes
+// toward it. In a box about the hole, 0.25 of the pane's shorter side
+// across and 0.1 up and down, each side's light, the sum of R + G + B,
+// and its colour, the sum of B over the sum of R, are read, less those
+// of the same scene staged without the disc, the control: the sky and
+// its lensed glow. The frame goes to OUT/gravity3d-doppler-<where>.png.
+// The scene is let go after.
+async function doppler (viz, k, where) {
+  const read = async disc => {
+    const ids = await viz.evaluate(([k, disc]) => window.vizStage(k, { yaw: 0.6, pitch: 0.15, m: 900, items: [], judge: {}, disc }), [k, disc])
+    check(ids, `${where}: the mode staged no scene`)
+    await sleep(1500)
+    return viz.evaluate(k => {
+      const p = window.vizState().panes[k]
+      const c = [...document.querySelectorAll('.pane')][k].querySelector('canvas:not([hidden])')
+      const held = p.probe && p.probe.held
+      if (!held) return null
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data
+      const m = Math.min(c.width, c.height)
+      const side = [{ light: 0, r: 0, b: 0 }, { light: 0, r: 0, b: 0 }]
+      for (let y = Math.max(0, Math.floor(held.y - 0.1 * m)); y < Math.min(c.height, held.y + 0.1 * m); y++) {
+        for (let x = Math.max(0, Math.floor(held.x - 0.25 * m)); x < Math.min(c.width, held.x + 0.25 * m); x++) {
+          const o = 4 * (y * c.width + x)
+          const s = side[x + 0.5 < held.x ? 0 : 1]
+          s.light += d[o] + d[o + 1] + d[o + 2]
+          s.r += d[o]
+          s.b += d[o + 2]
+        }
+      }
+      return { held, dust: p.probe.dust, side, png: c.toDataURL('image/png') }
+    }, k)
+  }
+  const f = await read(420)
+  check(f && f.dust === 420, `${where}: the staged disc was not drawn`, f && { dust: f.dust, held: f.held })
+  fs.writeFileSync(path.join(out, `gravity3d-doppler-${where}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
+  const c = await read(0)
+  check(c && c.dust === 0, `${where}: the control was not drawn`, c && { dust: c.dust, held: c.held })
+  const [come, go] = f.side.map((s, i) => ({ light: s.light - c.side[i].light, r: s.r - c.side[i].r, b: s.b - c.side[i].b }))
+  const r = { light: come.light / go.light, blue: (come.b / come.r) / (go.b / go.r), come, go }
+  console.log('gravity3d doppler', where, JSON.stringify(r, (k, v) => typeof v === 'number' ? Math.round(v * 1000) / 1000 : v))
+  check(go.light > 0 && r.light > 1.5, `${where}: the side coming toward the camera is not brighter`, r)
+  check(go.r > 0 && come.r > 0 && r.blue > 1.2, `${where}: the side coming toward the camera is not bluer`, r)
+  check(await viz.evaluate(k => window.vizUnstage(k), k), `${where}: the mode would not let the staged scene go`)
+}
 
 // Gravity 3D's view's centre (issue #171): the heaviest hole within a
 // pixel of the pane's centre, and on the trace's axis.
@@ -156,6 +211,7 @@ function centred (probe, where) {
       check(peak(x.grid) > 40, `${id}: a blank full pane`)
       fs.writeFileSync(path.join(out, `${id}-waves-full-${k}.png`), Buffer.from(x.png.split(',')[1], 'base64'))
     }
+    if (id === 'gravity3d') await doppler(viz, 0, 'full')
   }
   await vizWin(size0)
   await sleep(1000)
@@ -207,6 +263,7 @@ function centred (probe, where) {
   }
   const st = await state()
   console.log('small panes', JSON.stringify(small.map(j => [NEW[j], st.panes[j].w, st.panes[j].h, st.panes[j].probe.pair])))
+  await doppler(viz, g3, 'small')
   const shots = {}
   const take = async phase => {
     shots[phase] = await viz.evaluate(grab)
