@@ -1,0 +1,255 @@
+'use strict'
+// Gravity 3D's optics (decision 0015, issue #170): the exact
+// Schwarzschild deflection against published values, the shadow and the
+// Einstein ring as the trace draws them, the lens equation of one hole
+// and the multi-plane recursion of two, and the specific intensity kept
+// along a ray.
+const test = require('node:test')
+const assert = require('node:assert')
+const T = require('../app/viz/trace')
+
+const SEG = new Float64Array(T.STRIDE * T.MAXSEG)
+
+// Carlson's R_F, for the elliptic integrals of the first kind.
+function rf (x, y, z) {
+  for (let i = 0; i < 60; i++) {
+    const l = Math.sqrt(x * y) + Math.sqrt(y * z) + Math.sqrt(z * x)
+    x = (x + l) / 4
+    y = (y + l) / 4
+    z = (z + l) / 4
+  }
+  return 1 / Math.sqrt((x + y + z) / 3)
+}
+const K = k => rf(0, 1 - k * k, 1)
+const F = (psi, k) => Math.sin(psi) * rf(Math.cos(psi) ** 2, 1 - k * k * Math.sin(psi) ** 2, 1)
+
+// The deflection of a ray of impact parameter b about a hole of r_s.
+const alpha = (b, rs) => T.deflection(T.RING * rs / b)
+
+// Where the ray from the origin along unit d crosses the plane z = Z,
+// or null if it does not.
+function at (d, hs, nh, Z) {
+  const n = Math.abs(T.trace(0, 0, 0, d[0], d[1], d[2], hs, nh, SEG))
+  for (let s = 0; s < n; s++) {
+    const k = T.STRIDE * s
+    const z0 = SEG[k + 2]
+    const ez = SEG[k + 5]
+    const z1 = SEG[k + 6] === Infinity ? (ez > 0 ? Infinity : -Infinity) : z0 + SEG[k + 6] * ez
+    if ((ez > 0 && Z > z0 && Z <= z1) || (ez < 0 && Z < z0 && Z >= z1)) {
+      const t = (Z - z0) / ez
+      return [SEG[k] + t * SEG[k + 3], SEG[k + 1] + t * SEG[k + 4]]
+    }
+  }
+  return null
+}
+
+const unit = (x, y, z) => {
+  const l = Math.hypot(x, y, z)
+  return [x / l, y / l, z / l]
+}
+
+test('trace: the deflection matches the weak-field series of Keeton and Petters far out', () => {
+  // Keeton and Petters 2005, eqs. 24 and 25, m = r_s / 2.
+  const A = [4, 15 * Math.PI / 4, 128 / 3, 3465 * Math.PI / 64, 3584 / 5, 255255 * Math.PI / 256]
+  for (const bm of [50, 200, 1000]) {
+    const series = A.reduce((s, a, i) => s + a / bm ** (i + 1), 0)
+    const got = alpha(bm, 2)
+    assert.ok(Math.abs(got - series) / series < 2e-5, `b = ${bm} m: ${got} against ${series}`)
+  }
+  assert.ok(Math.abs(alpha(1e4, 2) - 4e-4) / 4e-4 < 1e-3, 'alpha tends to 2 r_s / b')
+})
+
+test('trace: the deflection matches the exact closed form of Iyer and Petters between', () => {
+  // Iyer and Petters 2007, eq. 8, m = 1: alpha = 4 sqrt(r_0 / Q) (K(k) - F(psi, k)) - pi.
+  for (const r0 of [3.2, 3.5, 4, 6, 10, 30]) {
+    const Q = Math.sqrt((r0 - 2) * (r0 + 6))
+    const k = Math.sqrt((Q - r0 + 6) / (2 * Q))
+    const psi = Math.asin(Math.sqrt((Q + 2 - r0) / (Q + 6 - r0)))
+    const want = 4 * Math.sqrt(r0 / Q) * (K(k) - F(psi, k)) - Math.PI
+    const b = r0 / Math.sqrt(1 - 2 / r0)
+    const got = alpha(b, 2)
+    assert.ok(Math.abs(got - want) < 2e-5 * Math.max(1, want), `r_0 = ${r0} m: ${got} against ${want}`)
+  }
+})
+
+test('trace: the deflection diverges at b_c as Bozza\'s strong-field limit', () => {
+  // Bozza 2002, eq. 50: alpha = -ln(b / b_c - 1) + ln(216 (7 - 4 sqrt 3)) - pi.
+  const bozza = x => -Math.log(x) + Math.log(216 * (7 - 4 * Math.sqrt(3))) - Math.PI
+  for (const x of [1e-4, 1e-5, 1e-6]) {
+    const got = T.deflection(1 / (1 + x))
+    assert.ok(Math.abs(got - bozza(x)) < 2e-3, `b / b_c - 1 = ${x}: ${got} against ${bozza(x)}`)
+  }
+  // Bozza: where alpha falls below 2 pi, u - u_m = 0.003264 in units of
+  // r_s, the limit is off the exact value by about 0.06 %.
+  const x = 0.003264 / T.RING
+  const got = T.deflection(1 / (1 + x))
+  assert.ok(Math.abs(got - 2 * Math.PI) < 0.01, `alpha ${got} there, near 2 pi`)
+  const off = Math.abs(bozza(x) - got) / got
+  assert.ok(off > 0.0004 && off < 0.0008, `the limit is off by ${off * 100} %`)
+})
+
+test('trace: the shadow is the capture of rays of b below sqrt(27) / 2 r_s', () => {
+  const rs = 10
+  const D = 600
+  const hs = new Float64Array([0, 0, D, T.RING * rs])
+  const captured = th => T.trace(0, 0, 0, Math.sin(th), 0, Math.cos(th), hs, 1, SEG) < 0
+  let lo = 0
+  let hi = 0.2
+  assert.ok(captured(lo) && !captured(hi))
+  for (let i = 0; i < 60; i++) {
+    const m = (lo + hi) / 2
+    if (captured(m)) lo = m
+    else hi = m
+  }
+  const want = Math.asin(Math.sqrt(27) / 2 * rs / D)
+  assert.ok(Math.abs(lo - want) < 1e-9, `the shadow's edge at ${lo} rad, want ${want}`)
+  // Just outside, the ray loops the hole: more than 2 pi.
+  const ev = []
+  T.trace(0, 0, 0, Math.sin(want * 1.00001), 0, Math.cos(want * 1.00001), hs, 1, SEG, ev)
+  assert.ok(ev[2] > 2 * Math.PI, `alpha ${ev[2]} at the edge`)
+})
+
+test('trace: one hole bends a ray by the lens equation of Virbhadra and Ellis', () => {
+  const rs = 13.6
+  const Dd = 620
+  const Ds = 900
+  const hs = new Float64Array([0, 0, Dd, T.RING * rs])
+  for (const th of [0.075, 0.09, 0.12, 0.3]) {
+    const p = at([Math.sin(th), 0, Math.cos(th)], hs, 1, Ds)
+    const a = alpha(Dd * Math.sin(th), rs)
+    // Eqs. 1 to 3: tan beta = tan theta - D_ds / D_s (tan theta + tan(alpha - theta)).
+    const want = Math.tan(th) - (Ds - Dd) / Ds * (Math.tan(th) + Math.tan(a - th))
+    assert.ok(Math.abs(p[0] / Ds - want) < 1e-5, `theta ${th}: tan beta ${p[0] / Ds} against ${want}`)
+  }
+})
+
+test('trace: a source right behind a hole is drawn as a ring at the Einstein radius', () => {
+  // The weak field: theta_E^2 = 2 r_s D_ls / (D_l D_s), far outside the shadow.
+  const rs = 0.01
+  const Dl = 620
+  const Ds = 2000
+  const W = 241
+  const f = 15000
+  const te = f * Math.sqrt(2 * rs * (Ds - Dl) / (Dl * Ds))
+  assert.ok(te > 8 * f * T.RING * rs / Dl, 'the ring far outside the shadow')
+  // A dot of radius 1.5 px seen unlensed at the centre of a plane at D_s.
+  const data = new Uint8ClampedArray(W * W * 4)
+  for (let y = 0; y < W; y++) {
+    for (let x = 0; x < W; x++) {
+      if ((x + 0.5 - W / 2) ** 2 + (y + 0.5 - W / 2) ** 2 > 2.25) continue
+      data.set([255, 255, 255, 255], 4 * (y * W + x))
+    }
+  }
+  const sc = { w: W, h: W, cx: W / 2, cy: W / 2, f, S: 6, hs: new Float64Array([0, 0, Dl, T.RING * rs]), nh: 1, bref: new Float64Array([Infinity]), planes: [T.plane(Ds, data, W, W)], sky: null }
+  const out = new Uint8ClampedArray(W * W * 4)
+  T.render(sc, out)
+  const deg = new Set()
+  let n = 0
+  let sum = 0
+  for (let y = 0; y < W; y++) {
+    for (let x = 0; x < W; x++) {
+      if (out[4 * (y * W + x)] < 64) continue
+      const dx = x + 0.5 - W / 2
+      const dy = y + 0.5 - W / 2
+      const r = Math.hypot(dx, dy)
+      n++
+      sum += r
+      deg.add(Math.floor((Math.atan2(dy, dx) + Math.PI) / (2 * Math.PI) * 36) % 36)
+      assert.ok(Math.abs(r - te) < 4, `a lit pixel at ${r} px, the ring at ${te}`)
+    }
+  }
+  assert.ok(n > 0, 'the source is not seen')
+  assert.ok(Math.abs(sum / n - te) / te < 0.01, `the ring's mean radius ${sum / n} px against ${te}`)
+  assert.strictEqual(deg.size, 36, 'a ring all round')
+})
+
+test('trace: two holes compose by the multi-plane recursion', () => {
+  // McCully et al. 2014, eq. 16, in the positions on each plane: the
+  // second hole bends the ray where the first sent it.
+  const hs = new Float64Array([10, 0, 500, T.RING * 0.4, -15, 25, 800, T.RING * 0.8])
+  const Ds = 1500
+  for (const [tx, ty] of [[0.05, 0.02], [0.03, 0.06], [0.06, -0.01]]) {
+    const d = unit(tx, ty, 1)
+    const got = at(d, hs, 2, Ds)
+    let p = [500 * d[0] / d[2], 500 * d[1] / d[2]]
+    let th = [d[0] / d[2], d[1] / d[2]]
+    let z = 500
+    for (let i = 0; i < 2; i++) {
+      if (i) {
+        p = [p[0] + (800 - z) * th[0], p[1] + (800 - z) * th[1]]
+        z = 800
+      }
+      const xi = [p[0] - hs[4 * i], p[1] - hs[4 * i + 1]]
+      const b = Math.hypot(xi[0], xi[1])
+      const a = T.deflection(hs[4 * i + 3] / b)
+      th = [th[0] - a * xi[0] / b, th[1] - a * xi[1] / b]
+    }
+    const want = [p[0] + (Ds - z) * th[0], p[1] + (Ds - z) * th[1]]
+    // The unlensed place, to show the bend is large against the test.
+    const free = [Ds * d[0] / d[2], Ds * d[1] / d[2]]
+    const bend = Math.hypot(want[0] - free[0], want[1] - free[1])
+    const err = Math.hypot(got[0] - want[0], got[1] - want[1])
+    assert.ok(bend > 15, `the bend ${bend}`)
+    assert.ok(err < 0.01 * bend, `ray ${tx}, ${ty}: off the recursion by ${err} of a bend of ${bend}`)
+  }
+})
+
+test('trace: a ray turned back by one hole is bent by a hole it then meets', () => {
+  // Past the photon sphere a ray turns by more than pi / 2 and comes back
+  // toward the camera, across the lens plane of a hole in front of the
+  // first, which it crossed once already on its way in.
+  const rs = 10
+  const hs = new Float64Array([0, 0, 600, T.RING * rs, 0, 0, 0, 0])
+  const th = Math.asin(T.RING * rs * 1.02 / 600)
+  const d = [Math.sin(th), 0, Math.cos(th)]
+  const ev = []
+  T.trace(0, 0, 0, d[0], d[1], d[2], hs, 1, SEG, ev)
+  assert.ok(ev[2] > Math.PI / 2 && ev[2] < 3 * Math.PI / 2, `alpha ${ev[2]} turns it back`)
+  // Its outgoing line from the first lens plane, and a second hole, of
+  // too little mass to bend the ray on its way in, put at depth 300, 20
+  // beside where that line crosses it.
+  const k0 = [600 * d[0] / d[2], 0, 600]
+  // The ray's offset from the hole at its closest point: q, across d.
+  const q = [Math.cos(th), 0, -Math.sin(th)]
+  const o = unit(Math.cos(ev[2]) * d[0] - Math.sin(ev[2]) * q[0], 0, Math.cos(ev[2]) * d[2] - Math.sin(ev[2]) * q[2])
+  const t = (300 - 600) / o[2]
+  const hx = k0[0] + t * o[0] + 20
+  hs.set([hx, 0, 300, T.RING * 1e-12], 4)
+  const n = T.trace(0, 0, 0, d[0], d[1], d[2], hs, 2, SEG, ev)
+  assert.strictEqual(n, 4, 'in, past the second hole, back from the first and past the second again')
+  assert.deepStrictEqual([ev[0], ev[3], ev[6]], [1, 0, 1], 'the second hole, the first, the second')
+  assert.ok(ev[8] > 0, 'the second hole bends it')
+  // There the second hole's b is the distance of the outgoing line from it.
+  const w = [hx - k0[0], 0, 300 - 600]
+  const along = w[0] * o[0] + w[2] * o[2]
+  const want = Math.hypot(w[0] - along * o[0], w[2] - along * o[2])
+  assert.ok(Math.abs(ev[7] - want) < 1e-3, `b ${ev[7]} against ${want}`)
+})
+
+test('trace: a uniform sky keeps its brightness wherever it is seen', () => {
+  // Specific intensity is constant along a ray: lensing moves light, and
+  // magnifies a source by its area, not its surface brightness. Only the
+  // shadow is dark.
+  const W = 121
+  const face = new Uint8ClampedArray(4 * 4 * 4)
+  for (let i = 0; i < face.length; i += 4) face.set([100, 150, 200, 255], i)
+  const faces = [0, 1, 2, 3, 4, 5].map(() => face)
+  const sky = { F: 4, faces, lit: T.skyTiles(faces, 4), nt: 1, dim: 1, m: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
+  const hs = new Float64Array([0, 0, 600, T.RING * 13.6])
+  const sc = { w: W, h: W, cx: W / 2, cy: W / 2, f: 200, S: 4, hs, nh: 1, bref: new Float64Array([60]), planes: [], sky }
+  const out = new Uint8ClampedArray(W * W * 4)
+  T.render(sc, out)
+  const R = 200 * Math.tan(Math.asin(T.RING * 13.6 / 600))
+  let dark = 0
+  for (let y = 0; y < W; y++) {
+    for (let x = 0; x < W; x++) {
+      const k = 4 * (y * W + x)
+      const r = Math.hypot(x + 0.5 - W / 2, y + 0.5 - W / 2)
+      if (r < R - 0.75) {
+        assert.deepStrictEqual([out[k], out[k + 1], out[k + 2]], [0, 0, 0], `the shadow at ${x}, ${y}`)
+        dark++
+      } else if (r > R + 0.75) assert.deepStrictEqual([out[k], out[k + 1], out[k + 2]], [100, 150, 200], `${x}, ${y}, ${r} px out`)
+    }
+  }
+  assert.ok(Math.abs(dark - Math.PI * R * R) < 2 * Math.PI * R, `the shadow's ${dark} pixels`)
+})
