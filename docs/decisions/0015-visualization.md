@@ -19,7 +19,8 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 2026-10-15 for each tab's visualization in the tab strip (maintainer:
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
-(issue #158) and for the gravitational waves of the Gravity modes
+(issue #158) and for its flashes and its slowed clocks (issues #164
+and #166), and for the gravitational waves of the Gravity modes
 (issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
 for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
@@ -609,9 +610,10 @@ ruling's starting point by `carbon-photon.md`.
   says "one site, 160 atoms: cloud of 1, fronts of all". The cloud, the
   source, the lit level and the arrow are one atom's, the fronts and the
   spectrum every atom's, the level diagram's bars the populations.
-- The event clock: every NIST rate divided by $10^6$, one factor, so the
-  ratios between levels stay true. A $2p3s$ level waits 2.7 to 2.9 ms on
-  screen, a $2p4p$ one 74 to 243 ms. Each atom jumps by Monte Carlo,
+- The event clock: every NIST rate divided by $5\times10^6$, one factor,
+  so the ratios between levels stay true (see 2026-10-16: Carbon's
+  flashes and its clocks, which slowed it from $10^6$). A $2p3s$ level
+  waits 13.6 to 14.4 ms on screen, a $2p4p$ one 0.37 to 1.22 s. Each atom jumps by Monte Carlo,
   Gillespie's method over each frame: its decay at $1/\tau$ competing
   with the field, a jump at a random time, instant, a quantum trajectory
   (the Monte Carlo wave-function method of Dalibard, Castin and Molmer,
@@ -619,14 +621,16 @@ ruling's starting point by `carbon-photon.md`.
   prints the real $\tau$ and the screen's.
 - The energy field: the session's activity, $0.45$ busy $+ 0.35$ output
   $+ 0.2$ token rate, nothing while idle, drives electron collisions at
-  up to 1.2 a second per atom into any radiating level above the
+  up to 0.24 a second per atom into any radiating level above the
   present one, by statistical weight $g$, as a hot discharge does, its
   Boltzmann factors flat. Weighted by $e^{-\Delta E/kT}$ at a cool
   discharge's temperature, the collisions would fill $^1D_2$, $^1S_0$ and
-  $^5S^o_2$, which radiate nothing on this clock. 1.2 a second stays below
-  the slowest allowed decay, $2p4p\,{}^3D$ at 4.1 a second, so the
-  visible lines still leave. At full activity the ensemble gave 311 to
-  373 photons a second and 117 to 184 fronts at once.
+  $^5S^o_2$, which radiate nothing on this clock. The rate is
+  $1.2\times10^6/E$ for an event clock of $E$, so it keeps its place
+  below the slowest allowed decay, $2p4p\,{}^3D$ at 0.82 a second on
+  screen, $3.4$ times faster, and the visible lines still leave. At
+  full activity the ensemble gave a mean of 70 photons a second and 154
+  fronts at once (scripts/checks/vizflash.js).
 - Under one factor the forbidden lines (462 nm, 873 nm, 981 to 985 nm,
   the far infrared) and the $^5S^o_2$ intercombination lines are never
   emitted: $^1D_2$ waits $3.4\times10^9$ s. The field lifts atoms out of
@@ -634,9 +638,9 @@ ruling's starting point by `carbon-photon.md`.
   rests in the ground configuration's terms, $^3P$, $^1D$ or $^1S$, and
   in $^3P$ on the $J$ its cascade reached (question 6). This replaces
   the earlier cap of 8 s on the forbidden waits.
-- The light clock: light at $c/10^{17}$, 2.998 nm a second, 56.65 bohr
-  a second on screen, so a front crosses a $2p4p$ cloud's diameter,
-  1.54 nm, in about half a second. The view is fixed at 24 bohr so every
+- The light clock: light at $c/(5\times10^{17})$, 0.5996 nm a second,
+  11.33 bohr a second on screen, so a front crosses a $2p4p$ cloud's
+  diameter, 1.54 nm, in about 2.6 s, and the view's radius in 2.1 s. The view is fixed at 24 bohr so every
   front keeps that pace: an excited atom fills it, the ground atom is its
   bright core. The pane states both clocks.
 - The cloud (question 4, revised): Monte Carlo stippling of $|\psi|^2$
@@ -645,17 +649,20 @@ ruling's starting point by `carbon-photon.md`.
   each point's $m$ by $n_m$ and its direction from $|Y_{lm}|^2$, its
   radius from the orbital's inverse-CDF table. $2s2p^3$ has no entry
   and is drawn round. 1.2 % of the points are drawn afresh each 60th of
-  a second, so the cloud seethes and keeps its shape. A point of
+  a second of wall time, a sampling on neither clock, so the cloud
+  seethes and keeps its shape. A point of
   $m \ne 0$ turns about $z$ at Madelung's $m/\rho^2$ in atomic units on
-  the light clock, $2.4189$ s on screen per atomic unit of time, at
-  most 3 rad/s near the axis, where the density of $m \ne 0$ vanishes.
+  the light clock, $12.09$ s on screen per atomic unit of time, at
+  most 0.6 rad/s near the axis, where the density of $m \ne 0$
+  vanishes: the clip is $3\times10^{17}/L$ rad/s, so it keeps its radius
+  for a light clock of $L$.
   A collision draws the atom's $M_L$ anew. A jump of component $q$ takes
   $M_L$ to $M_L - q$, $q$ drawn by the squared Clebsch-Gordan
   coefficient (see 2026-10-16: Carbon in a magnetic field, which
   replaces the uniform draw). The core is Bunge's, the outer electron the
   quantum-defect model, drawn in amber and labelled a model.
 - The jump, by `carbon-photon.md` section 4: the drawn atom's cloud
-  snaps to the lower level's, and for 0.4 s its transition density
+  snaps to the lower level's, and for 0.4 s of wall time its transition density
   $\psi_f^*\psi_i$, of the one electron the line moves, flashes as the
   source, mint where positive, pink where negative, labelled. A jump of
   two electrons, $2s^2 2p\,nl$ to or from $2s2p^3$, which only
@@ -719,7 +726,7 @@ ruling's starting point by `carbon-photon.md`.
 
 | Signal | Carbon |
 | --- | --- |
-| busy, output, token rate | the field: collisions at up to 1.2 a second per atom into any radiating level above, by $g$ |
+| busy, output, token rate | the field: collisions at up to 0.24 a second per atom into any radiating level above, by $g$ |
 | prompt | an electron collision lifts a quarter of the ensemble, the drawn atom among it, to a $2p4d$ or $2p5s$ level, by $g$: the longest cascades, the red lines and the 119 nm VUV |
 | stop | the same onto a $2p4p$ level: the blue, cyan, green and yellow lines, which no photon from the ground term can reach (even parity) |
 | tool call | a photon absorbed from the present level by 15 % of the ensemble, by the E1 rule: the lines up from it, sorted by the upper level's energy and cut in five bands, read, edit, shell, web and agent taking the first to the fifth, other any, within a band by $f_{ik}\lambda$, a lamp of flat spectral energy density |
@@ -765,7 +772,7 @@ builder, settled here, and the rest follows its text.
 - The precession: an atom's $M_L$ is taken about its own axis, a unit
   vector, which turns about $B$ at the Larmor rate $g_J\mu_B B/h$ of its
   present level, $\mu_B/h = 1.39962449171\times10^{10}$ Hz/T (CODATA
-  2022), divided by the event clock's $10^6$: 14.0 Hz on screen per mT
+  2022), divided by the event clock's $5\times10^6$: 2.80 Hz on screen per mT
   per unit $g_J$. The turn is right-handed about $B$, as
   $d\mathbf J/dt = \boldsymbol\Omega\times\mathbf J$ with
   $\boldsymbol\Omega = g_J\mu_B\mathbf B/\hbar$. The level's $g_J$
@@ -826,7 +833,7 @@ builder, settled here, and the rest follows its text.
   the drawn atom's rate go with the ensemble's caption above it.
 - The pane states the field ("B 0.30 mT at 60 deg to z, in the x-z
   plane"), the drawn atom's rate on screen and its real value ("turns
-  about B at 6.30 Hz on screen, 6.30 MHz real"), and its $g_J$ marked
+  about B at 1.26 Hz on screen, 6.30 MHz real"), and its $g_J$ marked
   measured or "LS: a model". With $B$ along $z$ it says that an $M$
   state about $B$ is stationary and nothing turns, with $B$ at 0 that
   nothing precesses, and at $J = 0$ that the level has no moment.
@@ -834,7 +841,7 @@ builder, settled here, and the rest follows its text.
   polarized along $z$ lifts every atom in the ground term ${}^3P$ by two
   photons to $2p4p\,{}^3P_2$ at one instant, each in $M_L = 0$ about $z$
   and its axis $z$: a model of the alignment such a pulse makes, at its
-  largest. ${}^3P_2$ is spin-allowed from the ground term, keeps 141 ms
+  largest. ${}^3P_2$ is spin-allowed from the ground term, keeps 703 ms
   on screen, about 1.5 Larmor turns at 0.5 mT, and has a visible line,
   477.2 nm, the filter's.
 - The beat (the issue's second question, how it is drawn): a detector
@@ -842,7 +849,7 @@ builder, settled here, and the rest follows its text.
   beat is deepest, drawn as a small square where $y$ meets the circle
   on which fronts are detected, and named. It counts the 477.2 nm line
   of $2p4p\,{}^3P_2$ through a filter, as a quantum-beat experiment
-  watches one line. Its rate is drawn as a trace of the last second
+  watches one line. Its rate is drawn as a trace of the last 5 s
   beside the dial, by detection time, a sample the light's travel to
   the circle after its emission: the expected rate from the ensemble's
   state, each atom on the line's upper level the line's $A$ on the event
@@ -853,15 +860,16 @@ builder, settled here, and the rest follows its text.
   over many pulses; the expected rate is what their count converges to
   over many pulses. After a pulse the aligned atoms turn in step and
   the rate beats at $2g_J\mu_B B/h$, twice the Larmor rate since every
-  pattern is even in $\Theta$: 21.0 Hz on screen at 0.5 mT. The trace
-  marks the pulse in violet and says "pulse: beat at 2f = 21.0 Hz";
-  without a pulse in the last second it says "no pulse: M incoherent,
+  pattern is even in $\Theta$: 4.20 Hz on screen at 0.5 mT. The trace
+  marks the pulse in violet and says "pulse: beat at 2f = 4.20 Hz";
+  without a pulse in the last 5 s it says "no pulse: M incoherent,
   no beat". The trace needs an atom 260 pixels wide and 200 tall at
   text size 1, and a smaller atom keeps the pulse button and the dial.
 - Checked by `scripts/checks/vizzeeman.js`, a suite job, on the fakes:
   the drawn atom's axis read over time with $B$ set at 90 degrees by a
   drag on the dial, the angle it turns about $B$ between readings at one
-  level against $2\pi g_J\mu_B B/h/10^6$ times the time between them,
+  level against $2\pi g_J\mu_B B/h/E$ times the time between them, $E$
+  the event clock's factor read from the mode,
   $g_J$ from the data file, over 40 pairs and at least two turns; with
   $B$ dragged onto $z$ and the drawn atom lifted since, its axis on $z$
   and the pane saying why; after a click on the pulse button, the
@@ -1391,3 +1399,124 @@ Rejected:
 - A click that drops a barrier, as before: the measurement is the
   interaction a wave function has and nothing else offers, and the
   brush keeps the barrier.
+
+## 2026-10-16: Carbon's flashes and its clocks
+
+Owner, 2026-10-16, issue #164: "the carbon atom visualization is almost
+strobe-like, too active", and issue #166: "the 3 flashes per second
+should accompany a slower speed of light/slowing down the simulation".
+#164 sets the bound, no region of the pane flashing more than three
+times in any one second (WCAG 2.2, success criterion 2.3.1), and #166
+the means: the two clocks slowed, each one factor, and nothing dimmed,
+thinned or hidden. Issue #169 calibrates the field afterwards, the
+dial's range kept.
+
+- The count: `scripts/flash.js`, from the WCAG 2.2 definition of the
+  general flash and red flash thresholds (w3.org/TR/WCAG22, read
+  2026-10-16). Each frame's pixels are averaged in cells of 4 pixels a
+  side, 0.1 degree at the definition's 1024 by 768, the finest pattern
+  its exception lets flash. A cell's transitions follow its relative
+  luminance between peaks and valleys (Note 2), 0.1 or more with the
+  darker below 0.80, so a slow fade counts. A red flash is a change of
+  more than 0.2 in u'v' to or from R/(R+G+B) >= 0.8 (Note 3). A field
+  of 341 by 256 pixels (Note 1), placed every 32 pixels, flashes when
+  the cells completing a flash in it concurrently cover 0.006 sr, a
+  quarter of it, 21 824 pixels. The Understanding page for 2.3.1 says
+  the combined area "becomes 341 x 256 CSS pixels", the whole field,
+  four times the normative quarter: the counter takes the quarter, the
+  stricter. The definition fixes no window for "concurrently", so the
+  count is read twice: within one frame, as written, and within 0.1 s,
+  about the eye's integration time (Bloch's law), which saturates at 10
+  a second. `test/flash.test.js` checks it on frames of known flashes.
+- The measurement: `scripts/checks/vizflash.js`, a suite job, draws
+  Carbon alone in the page frame by frame, fed through Synth's input,
+  at full activity (every level held at 1, as vizcarbon.js holds it,
+  and a tool call every 2 s), moderate (levels 0.5, a tool call every
+  4 s), idle and a single prompt on a quiet session, in a full pane of
+  1200 by 760 at 60 frames a second and in panes of 240 by 460 and 360
+  by 230 at 20, after a warm-up of three of the field's slowest times.
+  `--event 1e6 --light 1e17` replays d18161f's clocks, since every
+  constant that moves with them is derived from them.
+- Measured at d18161f's clocks: in every scene and pane, 0 general and
+  0 red flashes a second within one frame, the largest concurrent area
+  0.48 of the threshold. Within 0.1 s: 6 general and 7 red at full
+  activity, 6 and 3 moderate, 0 idle, 0 and 1 red after a prompt, and
+  0 in the small panes. So the literal bound was already met, and the strobe the
+  owner saw lies under it. Ablations at full activity, one part at a
+  time: without fronts the 0.1 s count falls from 7 to 0, and without
+  the field, the outer cloud, the seethe, the source's flash or the
+  camera's turn it stays at 5 to 8. The fronts in flight carry it.
+- The 0.1 s count against the factors, 12 s at full activity, two runs
+  each (the count is the extreme of rare events, and runs of one setting
+  differ by up to 6): equal factors 1, 2, 3 and 4 gave 8 and 8, 8 and 7,
+  9 and 4, 10 and 6, the fronts in flight held at 132 to 154 as #166's
+  arithmetic says. Events alone slowed 3, 4 or 6 times gave 3 and 4, 3,
+  1, the fronts in flight falling to 25 to 50. Light alone slowed 3
+  times, in an earlier scene with a prompt every 4/3 s, gave 10 against
+  5 at d18161f's clocks, the fronts in flight rising from 151 to 453.
+  The 0.1 s count
+  follows the fronts in flight, which only fewer fronts lower, and #166
+  forbids thinning them. It is reported by the check and asserts
+  nothing.
+- The factors: events NIST / $5\times10^6$, light $c/(5\times10^{17})$,
+  each five times slower, `EVENT` and `LIGHT` in `app/viz/carbon.js`.
+  The count does not fix them, so the rule is the region the owner
+  named in #169, the drawn atom's axis: a line with no arrowhead, it
+  looks the same after half a turn, so it repeats at $2f_L$, 12.6 a
+  second for $2p^2\,{}^3P_2$ at the dial's start, 0.30 mT, at $10^6$.
+  The smallest whole factor that brings that under three a second is 5:
+  2.52 a second, under the Nyquist rate of the split of three's 20
+  frames a second. Light is slowed by the same factor, as #166 designs,
+  so the fronts in flight and the picture's density stay as they were
+  and only the tempo falls. This rule is the one the lead must confirm.
+  At the dial's 2 mT the repeat is still 16.8 a second, which #169's
+  calibration settles.
+- After: 0 general and 0 red flashes a second within one frame in every
+  scene and pane, the largest concurrent area 0.29 of the threshold at
+  full activity. Within 0.1 s: 10 at full activity, 3 moderate, 0 idle,
+  after a prompt and in the small panes. A busy session shows 154
+  fronts and 70 photons a second, a moderate one 87 and 40, an idle one
+  none, and its frames are brighter. A single prompt reads as one burst:
+  nine tenths of its 48 photons within 2.1 s in a full pane, 2.7 s in a
+  small one, against 0.45 and 0.25 s at d18161f, and no quarter second
+  after that holds a tenth of them. The check holds the burst to 0.8 s
+  at $10^6$, scaled with the event clock: 4 s.
+- Rescaled with the clocks, each derived from `EVENT` or `LIGHT`, so
+  their relations hold by construction. The field's rate,
+  `FIELD_MAX` $= 1.2\times10^6/E$, 0.24 a second, 3.4 times below the
+  slowest allowed decay, $2p4p\,{}^3D$ at 0.82 a second. The Madelung
+  swirl's clip, `SPIN_MAX` $= 3\times10^{17}/L$, 0.6 rad/s, the swirl
+  itself on the light clock already. The detector's trace,
+  `TRACE_DT` $= 2\times10^{-9}E$ and `TRACE_T` $= 10^{-6}E$, 10 ms and
+  5 s, its store and its catch-up in `TRACE_T`, and the probe's beat
+  window $\pm$`TRACE_T`. The Larmor rates fall by 5 with the event
+  clock, 2.80 Hz on screen per mT per unit $g_J$, so an emitter turns
+  as many times a lifetime as before and the beat keeps as many
+  periods in the trace: the dial's range and start are kept, 0 to 2 mT
+  from 0.30 mT. `test/viz-carbon.test.js` pins the factors, the
+  lifetimes and the light on screen, the field below the slowest decay,
+  the clip, the trace and the Larmor rate on screen.
+- In wall time, kept: the source's flash, 0.4 s, a detection's square,
+  0.6 s, a line's flash in the spectrum, the camera's turn and the
+  cloud's seethe, a sampling on neither clock. Scaled with the clocks
+  they would linger and overlap five times as long. The session's
+  events arrive in wall time, so a prompt's cascade now spreads over
+  about 2 s.
+- `scripts/checks/vizzeeman.js` reads `EVENT` from the mode: the
+  precession against $g_J\mu_B B/h/E$, the beat's spectrum searched from
+  3 / 5 to 80 / 5 Hz, the wait for the trace's window 5 s.
+  `scripts/checks/vizcarbon.js` waits five times as long for its 60
+  fronts at full activity.
+
+Rejected:
+
+- Dimming the flashes, fewer fronts, a share of them drawn, or fades
+  and eased snaps in place of the steps, #164's candidates: #166, the
+  owner's later word, asks the bound of the clocks and not of what is
+  drawn.
+- Slowing the events alone: it lowered the 0.1 s count, by fewer fronts
+  in flight, but #166 asks both clocks slowed, and the light's factor
+  then has no measured floor.
+- A factor of 100, every photon counted as a flash: fronts would take
+  about 42 s to cross the view, and WCAG counts a flash only over its
+  area.

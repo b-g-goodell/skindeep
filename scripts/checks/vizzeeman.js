@@ -6,13 +6,14 @@
 // turns. The field is set by drags on the pane's dial, as a user sets it.
 // Precession: with B at 90 degrees to z, the drawn atom's axis is read
 // from the probe over time, and the angle it turns about B between two
-// readings at one level is held against 2 pi g_J mu_B B / h / 1e6 times
+// readings at one level is held against 2 pi g_J mu_B B / h / E times
 // the time between them, g_J from the data file, mu_B / h from CODATA
-// 2022, the event clock's factor 1e6. With B along z the axis stays on z
-// and the pane says why. Beat: a click on the pulse button, then the
-// rate at the detector after it, whose spectrum, its decay taken out,
-// peaks at twice the pulsed level's Larmor rate, far above the same
-// spectrum in the second before the pulse. Frames of the full pane and
+// 2022, E the event clock's factor from carbon.js. With B along z the
+// axis stays on z and the pane says why. Beat: a click on the pulse
+// button, then the rate at the detector over the trace's window after
+// it, whose spectrum, its decay taken out, peaks at twice the pulsed
+// level's Larmor rate, far above the same spectrum in the window before
+// the pulse. Frames of the full pane and
 // of a small one, 360 by 230, and no two texts overlap in any.
 // No page or console error. Frames go to OUT/zeeman-<phase>.png. Fakes
 // only.
@@ -26,7 +27,10 @@ const fake = path.join(__dirname, '..', 'fake', 'claude')
 fs.mkdirSync(out, { recursive: true })
 const errors = []
 const MU_B_H = 1.39962449171e10
-const EVENT = 1e6
+// The event clock's factor, and its slowing from 1e6 (issue #166), by
+// which the trace's window and the beat's frequency scale.
+const { EVENT, TRACE_T } = require('../../app/viz/carbon')
+const SLOW = EVENT / 1e6
 
 function check (ok, msg, seen) {
   if (!ok) throw new Error(seen === undefined ? msg : `${msg}, saw ${JSON.stringify(seen)}`)
@@ -150,11 +154,11 @@ function turned (a, b, u) {
   const levelsSeen = new Set()
   let prev = null
   const t0 = Date.now()
-  while (Date.now() - t0 < 30000 && (pairs < 40 || expected < 4 * Math.PI)) {
+  while (Date.now() - t0 < 30000 + 1000 * SLOW && (pairs < 40 || expected < 4 * Math.PI)) {
     const q = (await pane()).probe
     if (prev && q.level === prev.level && q.t0 === prev.t0 && q.now > prev.now) {
       const f = larmor(q.level, q.B.mT)
-      check(Math.abs(q.larmor - f) <= 1e-9 * Math.max(1, f), 'want the stated Larmor rate g_J mu_B B / h / 1e6', { level: q.level, stated: q.larmor, f })
+      check(Math.abs(q.larmor - f) <= 1e-9 * Math.max(1, f), 'want the stated Larmor rate g_J mu_B B / h / E', { level: q.level, stated: q.larmor, f })
       const want = 2 * Math.PI * f * (q.now - prev.now)
       if (Math.abs(want) < 0.8 * Math.PI) {
         const got = turned(prev.axis, q.axis, u)
@@ -211,10 +215,15 @@ function turned (a, b, u) {
   const pb = p.probe.pulseButton
   const pulses = p.probe.pulses
   await viz.mouse.click(p.x + pb.x + pb.w / 2, p.y + pb.y + pb.h / 2)
-  await sleep(1000)
+  // The window after the pulse is TRACE_T of the mode's clock, which
+  // falls behind wall time when frames are slow.
+  const t2 = Date.now()
+  let beat = (await pane()).probe
+  while (Date.now() - t2 < 4000 * SLOW && !(beat.beat && beat.now >= beat.beat.t + TRACE_T)) {
+    await sleep(200)
+    beat = (await pane()).probe
+  }
   await save(0, 'beat')
-  await sleep(400)
-  const beat = (await pane()).probe
   fs.writeFileSync(path.join(out, 'zeeman-beat.json'), JSON.stringify(beat.beat))
   check(beat.pulses === pulses + 1 && beat.beat, 'want the click to fire a pulse', { pulses: beat.pulses, beat: !!beat.beat })
   check(Math.abs(beat.beat.f2 - f2) < 1e-9 * f2, 'want the stated beat 2 f_L of 2p4p 3P2', { stated: beat.beat.f2, f2 })
@@ -249,13 +258,13 @@ function turned (a, b, u) {
     })
   }
   const grid = []
-  for (let f = 3; f <= 80; f += 0.05) grid.push(f)
+  for (let f = 3 / SLOW; f <= 80 / SLOW; f += 0.05 / SLOW) grid.push(f)
   const after = spectrum(beat.beat.after, grid)
   let k = 0
   for (let i = 1; i < grid.length; i++) if (after[i] > after[k]) k = i
   const before = beat.beat.before.length > 100 ? spectrum(beat.beat.before, [f2])[0] : 0
   const atF2 = spectrum(beat.beat.after, [f2])[0]
-  console.log(`beat: ${beat.beat.n} atoms pulsed at B ${B3.mT} mT, ${beat.dots} detections drawn, ${beat.beat.after.length} samples, spectrum peaks at ${grid[k].toFixed(2)} Hz against 2 f_L ${f2.toFixed(2)} Hz, amplitude there ${atF2.toPrecision(3)}, ${before.toPrecision(3)} in the second before`)
+  console.log(`beat: ${beat.beat.n} atoms pulsed at B ${B3.mT} mT, ${beat.dots} detections drawn, ${beat.beat.after.length} samples, spectrum peaks at ${grid[k].toFixed(2)} Hz against 2 f_L ${f2.toFixed(2)} Hz, amplitude there ${atF2.toPrecision(3)}, ${before.toPrecision(3)} in the window before`)
   check(beat.beat.n >= 40, 'want 40 atoms pulsed', beat.beat.n)
   check(beat.dots > 0, 'want detections drawn on the circle', beat.dots)
   check(Math.abs(grid[k] / f2 - 1) < 0.05, 'want the beat at 2 f_L', { peak: grid[k], f2 })

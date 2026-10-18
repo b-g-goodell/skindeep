@@ -33,9 +33,12 @@
 
   // The event clock: every NIST rate divided by EVENT, one factor, so
   // the ratios between levels stay true. The light clock: light at
-  // c / LIGHT. The ground term 3P is where a cascade rests.
-  const EVENT = 1e6
-  const LIGHT = 1e17
+  // c / LIGHT. Both slowed from 1e6 and 1e17, by the factors that keep
+  // every field of the pane under three flashes a second as
+  // scripts/checks/vizflash.js counts them (issues #164 and #166,
+  // decision 0015). The ground term 3P is where a cascade rests.
+  const EVENT = 5e6
+  const LIGHT = 5e17
   // The speed of light (exact, SI) and the atomic unit of time (CODATA
   // 2022), seconds.
   const C_LIGHT = 299792458
@@ -44,9 +47,10 @@
   // into any radiating level above the present one, by statistical
   // weight, at up to FIELD_MAX a second per atom at full activity, a few
   // times below the slowest allowed decay on the event clock (2p4p 3D,
-  // 4.1 a second), so the visible lines still leave.
+  // 4.1e6 / EVENT a second), so the visible lines still leave: 1.2 on an
+  // event clock of 1e6, scaled with EVENT.
   const N_ATOMS = 160
-  const FIELD_MAX = 1.2
+  const FIELD_MAX = 1.2e6 / EVENT
   // The ensemble's caption, longest first, for a pane's width.
   const ENSEMBLE = ['one site, ' + N_ATOMS + ' atoms: cloud of 1, fronts of all', N_ATOMS + ' atoms: cloud of 1, fronts of all', N_ATOMS + ' atoms, cloud of 1']
   // Boltzmann's constant over hc, cm^-1 per K (CODATA 2022), and the
@@ -54,18 +58,19 @@
   const K_CM = 0.6950348004
   const T_GAS = 300
   // Points per electron, core and outer, and the share drawn afresh
-  // each 60th of a second.
+  // each 60th of a second of wall time: a sampling, on neither clock.
   const PTS_CORE = 230
   const PTS_OUTER = 1300
   const SEETHE = 0.012
   // A Madelung angular velocity above this, radians a second on screen,
   // is clipped: m / rho^2 grows without bound near the axis, where the
-  // density of m != 0 vanishes.
-  const SPIN_MAX = 3
+  // density of m != 0 vanishes. 3 on a light clock of 1e17, scaled with
+  // LIGHT, so the clip keeps its radius.
+  const SPIN_MAX = 3e17 / LIGHT
   // The fronts: at most FRONTS in flight, the drawn amplitude 1 at R0
   // bohr for a 538 nm front in its pattern's brightest direction, the
   // trailing crests drawn behind a visible front, and the points and
-  // seconds of the source's flash.
+  // seconds of the source's flash, in wall time.
   const FRONTS = 500
   const R0 = 8
   const NU_REF = 1 / 538.18
@@ -74,23 +79,24 @@
   const SOURCE_T = 0.4
   // The view's radius, bohr: fixed, so every front keeps the light
   // clock's pace, about 1.6 times a 2p4p cloud's mean radius: a front
-  // crosses that cloud's diameter in about half a second.
+  // crosses that cloud's diameter in 0.5 LIGHT / 1e17 seconds.
   const VIEW = 24
   const MONO = '"DejaVu Sans Mono", monospace'
   // The field: the Bohr magneton over h, Hz a tesla (CODATA 2022), the
   // dial's largest field and the field at start, tesla, and its angle to
   // z at start, degrees. The pulse's level, the detector's share of the
   // sphere, and its trace: a sample every TRACE_DT of the event clock,
-  // TRACE_T of them shown. The detector counts one line of the pulsed
-  // level through a filter, its strongest visible line.
+  // TRACE_T of them shown, 2 ms and 1 s on an event clock of 1e6, scaled
+  // with EVENT. The detector counts one line of the pulsed level through
+  // a filter, its strongest visible line.
   const MU_B_H = 1.39962449171e10
   const B_MAX = 2e-3
   const B_START = 0.3e-3
   const DEG_START = 60
   const PULSE_LEVEL = '2p4p_3P_2'
   const DETECT = 0.05
-  const TRACE_DT = 0.002
-  const TRACE_T = 1
+  const TRACE_DT = 2e-9 * EVENT
+  const TRACE_T = 1e-6 * EVENT
 
   // Text outside ASCII, by code point.
   const U = (...c) => String.fromCharCode(...c)
@@ -1206,7 +1212,7 @@
     // count would show the beat only folded over many pulses; this is
     // what that count converges to.
     function sample (t1) {
-      if (t1 - trace.last > 2) trace.last = t1 - 2
+      if (t1 - trace.last > 2 * TRACE_T) trace.last = t1 - 2 * TRACE_T
       const live = []
       const ln = lines[filter]
       for (const a of atoms) {
@@ -1232,7 +1238,7 @@
         trace.r.push(r * DETECT)
         trace.last = t
       }
-      const keep = Math.ceil(3 / TRACE_DT)
+      const keep = Math.ceil(3 * TRACE_T / TRACE_DT)
       if (trace.t.length > keep + 200) {
         trace.t.splice(0, trace.t.length - keep)
         trace.r.splice(0, trace.r.length - keep)
@@ -2224,9 +2230,9 @@
       // The magnetic field B, the event clock's time, the drawn atom's
       // axis then and the time its axis was last set, its g_J and Larmor
       // rate, the dial's, pulse button's and trace's places, and after a
-      // pulse the rate at the detector a second before and after it, as
-      // [seconds from the pulse, rate] by emission time, with 2 f_L of the
-      // pulsed level.
+      // pulse the rate at the detector over TRACE_T before and after it,
+      // as [seconds from the pulse, rate] by emission time, with 2 f_L of
+      // the pulsed level.
       probe () {
         const lv = levels[atoms[0].lv]
         const r4 = v => Math.round(v * 1e4) / 1e4
@@ -2248,7 +2254,7 @@
           dial: R && R.dial ? { x: R.dial.x, y: R.dial.y, r: R.dial.r } : null,
           pulseButton: R ? R.pulse || null : null,
           trace: R ? R.trace || null : null,
-          beat: pulsed ? { t: pulsed.t, n: pulsed.n, level: PULSE_LEVEL, f2: 2 * Larmor.rate(levels[pulseLevel], mag), before: span(-1, 0), after: span(0, 1) } : null
+          beat: pulsed ? { t: pulsed.t, n: pulsed.n, level: PULSE_LEVEL, f2: 2 * Larmor.rate(levels[pulseLevel], mag), before: span(-TRACE_T, 0), after: span(0, TRACE_T) } : null
         }
         const r1 = v => Math.round(v * 10) / 10
         let lit = 0
@@ -2259,7 +2265,7 @@
     }
   }
 
-  const api = { Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
+  const api = { Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)

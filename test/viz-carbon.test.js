@@ -121,16 +121,43 @@ test('carbon: every cascade reaches the ground term by listed decays', () => {
 })
 
 test('carbon: the two clocks, NIST\'s rates by one factor and light by another', () => {
+  // The factors of issue #166: events NIST / 5e6, light c / 5e17, each
+  // five times slower than 1e6 and 1e17.
+  assert.strictEqual(C.EVENT, 5e6)
+  assert.strictEqual(C.LIGHT, 5e17)
   const at = id => D.levels.find(l => l.id === id)
   for (const id of ['2p4p_1P_1', '2p3s_1Po_1', '2s2p3_5So_2', '2p2_1D_2']) {
     assert.ok(Math.abs(C.tauScreen(at(id)) / (at(id).tau * C.EVENT) - 1) < 1e-12, id)
   }
+  // Lifetimes on screen: 2p3s 1Po1 13.6 ms, 2p4p 3D3 1.22 s.
+  assert.ok(Math.abs(C.tauScreen(at('2p3s_1Po_1')) - 0.01362) < 1e-5)
+  assert.ok(Math.abs(C.tauScreen(at('2p4p_3D_3')) - 1.2163) < 1e-4)
   // Ratios kept: a 2p4p level waits 25 to 90 times as long as a 2p3s one.
   const r = C.tauScreen(at('2p4p_3D_3')) / C.tauScreen(at('2p3s_3Po_2'))
   assert.ok(r > 80 && r < 90, `ratio ${r}`)
-  // c / 1e17 is 2.998 nm/s: 56.65 bohr a second.
-  assert.ok(Math.abs(C.Clock.light - 299792458 / 1e17 / 0.0529177210544e-9) < 1e-9)
-  assert.ok(Math.abs(C.Clock.light - 56.65) < 0.01)
+  // c / 5e17 is 0.5996 nm/s: 11.33 bohr a second.
+  assert.ok(Math.abs(C.Clock.light - 299792458 / C.LIGHT / 0.0529177210544e-9) < 1e-9)
+  assert.ok(Math.abs(C.Clock.light - 11.33) < 0.01)
+})
+
+test('carbon: what moves with the clocks keeps its relation to them', () => {
+  // The field stays below the slowest allowed decay, 2p4p 3D3 at 0.822 a
+  // second on screen: 1.2 x 243 ns x 1e6, its share of that rate, as at
+  // a clock of 1e6.
+  const radiating = D.levels.filter(l => l.tau && l.tau < 1e-6)
+  const slowest = radiating.reduce((a, b) => b.tau > a.tau ? b : a)
+  assert.strictEqual(slowest.id, '2p4p_3D_3')
+  assert.ok(Math.abs(C.FIELD_MAX - 0.24) < 1e-12)
+  assert.ok(Math.abs(C.FIELD_MAX * C.tauScreen(slowest) - 1.2 * slowest.tau * 1e6) < 1e-12)
+  assert.ok(C.FIELD_MAX < 1 / C.tauScreen(slowest) / 3, 'a few times below the slowest decay')
+  // The swirl's clip on the light clock: 3 rad/s at 1e17, so the same
+  // m / rho^2 in atomic units.
+  assert.ok(Math.abs(C.SPIN_MAX * C.Clock.au - 3 * 2.4188843265864) < 1e-9)
+  // The detector's trace on the event clock: 2 ms and 1 s at 1e6.
+  assert.ok(Math.abs(C.TRACE_DT / C.EVENT - 2e-9) < 1e-21)
+  assert.ok(Math.abs(C.TRACE_T / C.EVENT - 1e-6) < 1e-18)
+  // The dial's range and start are kept (issue #169).
+  assert.deepStrictEqual([C.B_MAX, C.B_START], [2e-3, 0.3e-3])
 })
 
 test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', () => {
@@ -148,7 +175,7 @@ test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', 
     jumps++
     lines.push(k)
   })
-  // tau on the event clock is 2.7 ms, so in 1 s every atom has left,
+  // tau on the event clock is 13.6 ms, so in 1 s every atom has left,
   // 92.35 % of them by 193.1 nm to 1D2, the rest to 1S0 and 3P, and
   // rests. The share is binomial: at N = 2000 its standard deviation is
   // 0.0059, so the bound of 0.03 is 5 of them and a correct ensemble
@@ -264,9 +291,13 @@ test('carbon: the Clebsch-Gordan weights leave an unaligned atom isotropic and a
 test('carbon: an axis turns about B at g_J mu_B B / h on the event clock, and stands along B', () => {
   const i = D.levels.findIndex(l => l.id === '2p2_3P_2')
   const b = { T: 1e-3, u: [1, 0, 0] }
-  // 1.5010469 x 13.996 GHz/T x 1 mT / 1e6: 21.01 turns a second.
+  // 1.5010469 x 13.996 GHz/T x 1 mT / 5e6: 4.202 turns a second.
   const f = C.Larmor.rate(D.levels[i], b)
-  assert.ok(Math.abs(f - 1.5010469 * 1.39962449171e10 * 1e-3 / 1e6) < 1e-9, `${f}`)
+  assert.ok(Math.abs(f - 1.5010469 * 1.39962449171e10 * 1e-3 / C.EVENT) < 1e-9, `${f}`)
+  assert.ok(Math.abs(f - 4.202) < 1e-3, `${f}`)
+  // At the dial's start, 0.30 mT: 1.261 turns a second on screen, the
+  // axis's look repeating at twice that, 2.52 a second.
+  assert.ok(Math.abs(2 * C.Larmor.rate(D.levels[i], { T: C.B_START, u: [1, 0, 0] }) - 2.521) < 1e-3)
   const a = { lv: i, n: [0, 0, 1], t0: 0 }
   const t = 0.01
   const n = C.Larmor.axis(a, t, b)
