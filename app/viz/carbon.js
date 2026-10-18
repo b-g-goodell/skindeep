@@ -84,14 +84,17 @@
   const MONO = '"DejaVu Sans Mono", monospace'
   // The field: the Bohr magneton over h, Hz a tesla (CODATA 2022), the
   // dial's largest field and the field at start, tesla, and its angle to
-  // z at start, degrees. The pulse's level, the detector's share of the
-  // sphere, and its trace: a sample every TRACE_DT of the event clock,
-  // TRACE_T of them shown, 2 ms and 1 s on an event clock of 1e6, scaled
-  // with EVENT. The detector counts one line of the pulsed level through
-  // a filter, its strongest visible line.
+  // z at start, degrees: at the start the drawn atom's axis, turning,
+  // flashes no cell of the pane more than three times a second at any
+  // g_J up to 2 (issue #169, decision 0015). The pulse's level, the
+  // detector's share of the sphere, and its trace: a sample every
+  // TRACE_DT of the event clock, TRACE_T of them shown, 2 ms and 1 s on
+  // an event clock of 1e6, scaled with EVENT. The detector counts one
+  // line of the pulsed level through a filter, its strongest visible
+  // line.
   const MU_B_H = 1.39962449171e10
   const B_MAX = 2e-3
-  const B_START = 0.3e-3
+  const B_START = 0.15e-3
   const DEG_START = 60
   const PULSE_LEVEL = '2p4p_3P_2'
   const DETECT = 0.05
