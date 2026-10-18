@@ -26,6 +26,9 @@
 // control traced without that hole: its image, the light it takes from
 // what lies behind it, shows outside the central shadow. Three frames
 // of each go to OUT/lens-<size>-<k>.png and OUT/lens-hole-full-<k>.png.
+// At every frame read, the probe's audit shows each class of matter,
+// dust, bodies, trails and flares, drawn whole on the slices of its
+// depths, the planes the trace bends, and each was drawn in the run.
 // No page or console error. Fakes only.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
@@ -51,7 +54,7 @@ function frame (hole) {
   const c = [...document.querySelectorAll('.pane canvas:not([hidden])')][0]
   const g = c.getContext('2d')
   const seen = l.pts.map(([x, y]) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3)))
-  return { lens: l, seen, png: c.toDataURL('image/png'), w: c.width, h: c.height }
+  return { lens: l, seen, png: c.toDataURL('image/png'), w: c.width, h: c.height, probe: p.probe }
 }
 
 // The points where the drawn frame differs from the control frame, drawn
@@ -59,6 +62,22 @@ function frame (hole) {
 // step that shows on a dark ground.
 function shown (f) {
   return f.lens.pts.filter((p, k) => Math.max(...f.lens.alt[k].map((v, i) => Math.abs(f.seen[k][i] - v))) >= 16).length
+}
+
+// Every frame the check reads: each class of matter, the dust, the
+// bodies, the trails' pieces and the flares, drew all it had, each piece
+// on the slice of its depth, so the trace bends each as it bends the
+// others at that depth. A class drawn on any other slice, or not at
+// all, is caught here. drew counts each class's pieces over the run.
+const drew = { dust: 0, bodies: 0, trails: 0, flares: 0 }
+function slices (probe, where) {
+  const a = probe && probe.trace && probe.trace.slices
+  check(a, `${where}: no slice audit`)
+  for (const k of Object.keys(drew)) {
+    const [n, off, want] = a[k]
+    check(off === 0 && n === want, `${where}: ${k} off the slices of their depths`, a)
+    drew[k] += n
+  }
 }
 
 // The camera's turn and height that put hole b behind hole a, the camera
@@ -119,6 +138,7 @@ function behind (a, b) {
     let last = null
     while (kept.length < 3 && Date.now() - t0 < 240000) {
       const f = await viz.evaluate(frame, false)
+      slices(f.probe, name)
       last = f.lens
       if (f.png) {
         kept.push(f)
@@ -155,6 +175,7 @@ function behind (a, b) {
     let lastHole = null
     while (holes.length < 3 && Date.now() - t1 < 180000) {
       const f = await viz.evaluate(frame, true)
+      slices(f.probe, 'hole full')
       lastHole = f.lens
       if (f.png) {
         holes.push(f)
@@ -191,6 +212,8 @@ function behind (a, b) {
     }
   }
 
+  console.log('drawn on their slices', JSON.stringify(drew))
+  for (const k of Object.keys(drew)) check(drew[k] > 0, `no ${k} drawn in the run`, drew)
   console.log('errors', JSON.stringify(errors))
   check(errors.length === 0, 'want no page or console error', errors)
   for (const tab of (await win.evaluate(() => window.skinned.tabs())).tabs) await win.evaluate(id => window.skinned.closeTab(id), tab.id)

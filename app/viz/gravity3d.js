@@ -1007,6 +1007,17 @@
       }
     }
 
+    // The count of pieces trails(b) makes.
+    function trailCount (b, keep) {
+      const tr = b.trail
+      const n = Math.min(tr.length / 3, Math.ceil(keep * tr.length / 3))
+      if (n < 2) return 0
+      const per = Math.ceil(n / 6)
+      let k = 0
+      for (let c = 0; c < 6; c++) if (Math.min(n - 1, c * per + per) > c * per) k++
+      return k
+    }
+
     function drawTrail (L, t) {
       const { b, i0, i1 } = t
       const tr = b.trail
@@ -1239,6 +1250,7 @@
         if (b.trail.length) {
           trails(b, dim, keep, (z, t) => {
             const M = at(z)
+            t.z = z
             M.trails.push(t)
             M.zs += z
             M.ws++
@@ -1254,13 +1266,27 @@
       for (const f of flares) {
         project(f.x, f.y, f.z)
         const L = at(P.d)
-        L.flares.push({ x: P.x, y: P.y, r: (f.r + (clock - f.t) * 3) * P.k, a: (1 - (clock - f.t) / 18) ** 2 })
+        L.flares.push({ x: P.x, y: P.y, z: P.d, r: (f.r + (clock - f.t) * 3) * P.k, a: (1 - (clock - f.t) / 18) ** 2 })
         L.zs += P.d
         L.ws++
+      }
+      // What each class drew, and of it what lies outside its slice's
+      // depths, and how many it had to draw: every grain, body, trail
+      // piece and flare is drawn on the slice of its depth, or the trace
+      // bends it wrongly.
+      const audit = { dust: [0, 0, dust.length], bodies: [0, 0, order.length - (order.includes(skip) ? 1 : 0)], trails: [0, 0, 0], flares: [0, 0, flares.length] }
+      for (const b of order) audit.trails[2] += b.trail.length ? trailCount(b, keep) : 0
+      const count = (cls, L, z) => {
+        audit[cls][0]++
+        if (z < L.lo || z >= L.hi) audit[cls][1]++
       }
       const planes = []
       for (let i = 0; i < ns; i++) {
         const L = pool[i]
+        for (const d of L.dust) count('dust', L, d.pd)
+        for (const b of L.bodies) count('bodies', L, b.pd)
+        for (const t of L.trails) count('trails', L, t.z)
+        for (const f of L.flares) count('flares', L, f.z)
         if (!L.ws) continue
         const c = L.g
         for (const t of L.trails) drawTrail(L, t)
@@ -1313,7 +1339,7 @@
         while (i < planes.length && planes[i].z < ground.z) i++
         planes.splice(i, 0, ground)
       }
-      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, bref, planes, sky: sk, holes: hb }
+      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, bref, planes, sky: sk, holes: hb, audit }
     }
 
     // The traced frame img, at scale kt, onto the canvas of c, scaled up
@@ -1588,7 +1614,7 @@
         drawWaves(w, h, dim, kt, tw, th)
         const sc = scene(kt, tw, th, dim, keep, null)
         if (!fimg || fimg.width !== tw || fimg.height !== th) fimg = fx.createImageData(tw, th)
-        traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh }
+        traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh, slices: sc.audit }
         present(g, fimg, kt)
         look(sc, kt, dim, keep)
         out.drawImage(layer, 0, 0)
@@ -1653,7 +1679,8 @@
       // drag, what the holes have swallowed, the bodies and the dust, the
       // waves' sources and the pair watched (waves.js), the last frame's
       // trace (its size, the pixels traced one by one, its planes and
-      // holes), the records of a body and a hole behind a hole (look),
+      // holes, and per class of matter [drawn, drawn outside its slice's
+      // depths, to draw]), the records of a body and a hole behind a hole (look),
       // the camera's turn and height, and the holes' places and masses.
       probe () {
         asked = performance.now()
