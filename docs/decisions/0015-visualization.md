@@ -1144,24 +1144,39 @@ behind it vanished under paint.
   misses by $S^2 r_s D^2/(2 f b^3)$ pixels, $f$ the focal length in
   pixels, so a cell nearer a hole than the $b$ where that is one pixel,
   or $1.5 b_c$, is traced pixel by pixel. The frame is traced at a
-  reduced scale and drawn up to the pane: at most 45000 pixels a pane,
-  or 135000 a window when a pane fills more of it. A split window's
-  three panes of 240 by 460 trace at 0.64, a lone pane of 1200 by 760
-  at 0.385. That costs the full pane its sharpness: a star of 1 pixel
-  is drawn at 0.4 and the frame scaled up, so its stars soften and its
-  small bodies blur, where the split panes keep most of theirs. The
-  sky's black tiles and the slices' empty tiles are skipped.
-- Frame rate, under swiftshader on a host at a load of 20 to 22, the
-  tree of 6ee641f and this one in turn, twice each, by one script that
-  draws the mode alone at full activity, then runs one pane of a 1200
-  by 760 window and three panes of a 720 by 460 window, five rounds of
-  2 s each. A draw's median cost went from 5 and 4.9 ms to 13.3 and
-  12.8 at 400 by 380, from 11 and 11 to 24.7 and 24.9 at 1200 by 760,
-  and from 4.6 and 4.6 to 10.3 and 10.1 at 360 by 230. The frame rate
-  holds: one pane of 1200 by 760 ran at a median of 25 and 23 frames
-  per second before and 24 and 24 now, three panes of 240 by 460 at 23
-  and 22 before and 23.5 and 22 now, the rounds moving from 17 to 33.
-  Doubling the draw left the rate where it was.
+  reduced scale and drawn up to the pane: at most 30000 pixels a pane,
+  or 90000 a window when a pane fills more of it. A split window's
+  three panes of 240 by 460 trace at 0.52, 126 by 240, and a lone pane
+  of 1200 by 760 at 0.314, 377 by 239. That costs the picture its
+  sharpness: a star or a grain of 1 pixel spreads over about 2 pixels
+  of a split pane and 3 of the full one, so the stars and the dust are
+  soft dots and the small bodies blur, the full pane most. The sky's
+  black tiles and the slices' empty tiles are skipped.
+- Frame rate, under swiftshader on this host. A profile of the draw put
+  its time in the trace: the smooth cells' fill, the planes' samples,
+  the sky's adds, the rays traced pixel by pixel near the holes and the
+  nodes' rays. Three cuts took time from the draw at the same scale: the
+  sky's lit tiles read before its add, the waves' ground read from their
+  grid instead of blurred onto a canvas and read back whole, and the
+  frame drawn straight to the pane instead of through a layer. What is
+  left is the trace's own cost per pixel, and the budget fell from 45000
+  and 135000 pixels to 30000 and 90000. The trees of 6ee641f, of b43be36
+  (the trace before the cuts) and of this one ran in turn, three rounds
+  each, each round started at a load under 14, by one script that draws
+  the mode alone at full activity, then runs one pane of a 1200 by 760
+  window and three panes of a 720 by 460 window, five times 2 s each,
+  once the lens record that its state queries start has lapsed: that
+  record is a second trace a frame, and an earlier run that timed it put
+  three panes now at 23.5 frames per second against 27 on 6ee641f. A
+  draw at 400 by 380 cost a median 4.3 to 4.8 ms on 6ee641f, 12.1 to
+  12.2 on b43be36, 10.3 to 11.1 after the cuts at the old budget and 8.4
+  to 8.8 now. Over 15 times 2 s each, three panes of 240 by 460 ran at a
+  median of 30.5 frames per second on 6ee641f, 26 on b43be36 and 25
+  after the cuts at the old budget, and in a second run at 28 on
+  6ee641f, 27.5 now and 28.5 at 20000 and 60000. One pane of 1200 by 760
+  ran at 29, 29.5 and 29.5 in the first run, and at 27.5, 29 and 27 in
+  the second. The times of 2 s moved from 13 to 39 frames per second,
+  and the rounds' loads ended between 12.7 and 20.4.
 - Checked by `test/viz-trace.test.js`: $\hat\alpha$ against Keeton and
   Petters' weak-deflection series (gr-qc/0511019, eqs. 24 and 25, six
   terms) to $2 \times 10^{-5}$ at 50, 200 and 1000 $m$, against Iyer and
@@ -1213,5 +1228,10 @@ Rejected:
   the trace alone took 11 ms for a pane of 240 by 460 past one hole and
   27 ms past three, and 98 and 218 ms at 1200 by 760, before any
   sampling.
+- Refining a cell near a hole at nodes 2 pixels apart, its bref
+  scaled as $S^{2/3}$, before tracing what is left pixel by pixel: in
+  Node, on the frame of a pane of 240 by 460, it cut the pixels traced one by one
+  from 2196 to 632, and the render's time went from 3.66 to 3.71 ms,
+  the new nodes' rays costing what the pixels' had.
 - WebGL: the mode would take one of the eight contexts.
 - Kerr geodesics per ray: see the spin, above.
