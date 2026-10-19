@@ -98,6 +98,31 @@ test('S3 a HUP-ignoring child is killed after the grace on close', { timeout: 60
   } finally { cleanup(s) }
 })
 
+// A wrapped tab (decision 0037): the wrapper's words exec'd around the
+// CLI's, the CLI's exit status through, the strip's command line the
+// CLI's, and a hangup to the CLI alone, never to its shell.
+test('S16 a wrap runs the launcher around the argv and signals the command it runs', { timeout: 10000 }, async () => {
+  const shell = argv => ['bash', '--norc', '-i', '-c', argv.map(a => `'${a}'`).join(' ')]
+  const program = 'process.on("SIGHUP", () => { console.log("hup"); process.exit(3) }); console.log("WRAPPED=" + process.env.WRAPPED); console.log("ready"); setInterval(() => {}, 1000)'
+  const { s, view } = make(['node', '-e', program], {
+    file: '/usr/bin/env',
+    wrap: argv => ['env', 'WRAPPED=1', ...shell(argv)],
+    pollMs: 100
+  })
+  try {
+    s.start(80, 24)
+    await until(() => view.text().includes('ready'))
+    assert.ok(view.text().includes('WRAPPED=1'), view.text())
+    await sleep(300)
+    // The strip names the command at the end of the wrapper chain.
+    const strip = view.strips().pop()
+    assert.ok(/^node -e /.test(strip.cmdline), strip.cmdline)
+    s.hangup()
+    assert.strictEqual(await s.ended, 3)
+    assert.ok(view.text().includes('hup'), view.text())
+  } finally { cleanup(s) }
+})
+
 // The window's tabs over one real Session: an app error is app/tabs.js's.
 function tabbed (s) {
   const told = []

@@ -3,7 +3,10 @@
 // reach of skin CSS. The agent, its profile and the folder, and the
 // command line the tab will run, shown and editable. Enter opens, Escape
 // cancels. While it is open the body has the class modal: the terminal
-// has no focus and the tab chords do nothing.
+// has no focus and the tab chords do nothing. With select-agent-config
+// installed a Config row offers its snapshots (decision 0037): in a
+// snapshot the line runs in the snapshot's shell, whose launchers set
+// the profile, so the Profile row is disabled.
 
 window.Chooser = (function () {
   const api = window.skinned
@@ -35,12 +38,22 @@ window.Chooser = (function () {
     f.error.hidden = !text
   }
 
+  const snapshot = () => (f.snapshot && state.snapshots && state.snapshots.find(s => s.id === f.snapshot.value)) || null
+
   // The variable the tab runs with, and Forget for a remembered profile.
+  // In a snapshot the profile is the snapshot shell's to set.
   function showProfile () {
     const a = current()
     const p = chosen()
-    f.env.textContent = p && p.isDefault ? `${a.variable} unset, the default profile` : `${a.variable}=${p ? p.shown : ''}`
-    f.forget.disabled = !(p && p.remembered)
+    const s = snapshot()
+    f.profile.disabled = !!s
+    f.other.disabled = !!s
+    if (s) f.env.textContent = `In the snapshot ${s.name}: ${a.variable} is set by its shell's launchers, and the snapshot's tree stands at the canonical paths`
+    else f.env.textContent = p && p.isDefault ? `${a.variable} unset, the default profile` : `${a.variable}=${p ? p.shown : ''}`
+    f.forget.disabled = !!s || !(p && p.remembered)
+    f.shell.textContent = s
+      ? 'The line runs in the snapshot\'s interactive shell, each word quoted: its launchers and aliases apply, ~ and $VAR do not expand.'
+      : 'No shell runs the line: quotes and backslashes work, ~ and $VAR do not.'
   }
 
   function fillProfiles (dir) {
@@ -89,7 +102,7 @@ window.Chooser = (function () {
   }
 
   async function submit () {
-    const r = await api.chooserOpen({ agent, profile: f.profile.value, folder: f.folder.value, line: f.line.value })
+    const r = await api.chooserOpen({ agent, profile: f.profile.value, folder: f.folder.value, line: f.line.value, snapshot: f.snapshot ? f.snapshot.value : '' })
     if (r && r.error) say(r.error)
     else close()
   }
@@ -120,7 +133,24 @@ window.Chooser = (function () {
     f.profile = el('select', 'profile')
     f.profile.addEventListener('change', showProfile)
     f.forget = button('Forget', forget, 'forget')
-    row(form, 'Profile', f.profile, button('Other profile...', otherProfile), f.forget)
+    f.other = button('Other profile...', otherProfile, 'other')
+    row(form, 'Profile', f.profile, f.other, f.forget)
+    // The snapshots of select-agent-config, when it is installed.
+    f.snapshot = null
+    if (state.snapshots) {
+      f.snapshot = el('select', 'snapshot')
+      const live = el('option', null, 'Live configuration')
+      live.value = ''
+      f.snapshot.appendChild(live)
+      for (const s of state.snapshots) {
+        const o = el('option', null, s.shown)
+        o.value = s.id
+        f.snapshot.appendChild(o)
+      }
+      f.snapshot.value = state.snapshots.some(s => s.id === state.snapshot) ? state.snapshot : ''
+      f.snapshot.addEventListener('change', showProfile)
+      row(form, 'Config', f.snapshot)
+    }
     f.env = el('div', 'hint env')
     form.appendChild(f.env)
     f.folder = el('input', 'folder')
@@ -131,7 +161,8 @@ window.Chooser = (function () {
     row(form, 'Command', f.line)
     f.dropped = el('div', 'hint dropped')
     form.appendChild(f.dropped)
-    form.appendChild(el('div', 'hint', 'No shell runs the line: quotes and backslashes work, ~ and $VAR do not.'))
+    f.shell = el('div', 'hint')
+    form.appendChild(f.shell)
     f.error = el('pre', 'error')
     form.appendChild(f.error)
     const buttons = el('div', 'buttons')

@@ -58,11 +58,12 @@ function keep (d) {
 }
 
 // Settings layers, lowest priority first, honouring --setting-sources.
-function layers ({ env, cwd, argv }) {
+// outside: the app's path of the user layer the CLI reads (decision 0037).
+function layers ({ env, cwd, argv, outside = p => p }) {
   const allowed = (argValue(argv, '--setting-sources') || 'user,project,local').split(',').map(s => s.trim())
   const proj = projectDir(cwd)
   const all = [
-    ['user', path.join(configDir(env), 'settings.json')],
+    ['user', outside(path.join(configDir(env), 'settings.json'))],
     ['project', path.join(proj, '.claude', 'settings.json')],
     ['local', path.join(proj, '.claude', 'settings.local.json')]
   ]
@@ -128,7 +129,7 @@ function write (store, settings) {
 // managed: the managed keys that silence what is injected.
 function prepare (opts) {
   const argv = opts.cmd.slice(1)
-  const ls = layers({ env: opts.env, cwd: opts.cwd, argv })
+  const ls = layers({ env: opts.env, cwd: opts.cwd, argv, outside: opts.outside })
   const ms = managedLayers(opts.managedDir || MANAGED_DIR)
   const compaction = inputs({ sources: [...ls, ...ms].map(l => l.data), argv, env: opts.env })
   const managed = managedKeys(ms)

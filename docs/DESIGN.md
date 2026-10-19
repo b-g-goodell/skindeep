@@ -24,6 +24,8 @@ quiet sounds of its place.
         |-- tabs.js       the window's tabs: order, the active one, the
         |                 app's end with the last tab's status
         |-- profiles.js   the config dirs New tab... offers, found, recorded
+        |-- snapshots.js  the select-agent-config snapshots New tab... offers,
+        |                 the shell form a tab runs through, the path map
         |-- argv.js       New tab...'s command line split into words
         |-- sessions.js   the live agent sessions of this user, from /proc,
         |                 and the transcript or rollout of each
@@ -128,5 +130,6 @@ own keys, pastes and mouse reports.
 | [0034](decisions/0034-checklist.md) | The agent's task list in a list widget |
 | [0035](decisions/0035-resizable-panels.md) | Resizable panels: a dragged boundary between the terminal and a panel |
 | [0036](decisions/0036-text-sizes.md) | Text sizes: every text the app draws follows a setting |
+| [0037](decisions/0037-snapshot-tabs.md) | New tab... in a select-agent-config snapshot |
 
 Channel facts: `docs/research/side-channels.md`.

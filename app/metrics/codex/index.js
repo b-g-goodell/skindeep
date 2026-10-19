@@ -25,10 +25,10 @@ class CodexAdapter {
   // clock: { now() }, the seam's (decision 0021). launched: the session's
   // start, for a session the app did not start (decision 0027), else the
   // time of prepare.
-  constructor (bus, { cmd, cwd, env, log, clock = { now: Date.now }, launched = null }) {
+  constructor (bus, { cmd, cwd, env, log, clock = { now: Date.now }, launched = null, outside = p => p }) {
     Object.assign(this, { cmd, cwd, log, clock, launched })
-    this.discovery = new Discovery({ env, argv: cmd.slice(1), cwd, launched: clock.now() })
-    this.names = new ThreadNames(env)
+    this.discovery = new Discovery({ env, argv: cmd.slice(1), cwd, launched: clock.now(), outside })
+    this.names = new ThreadNames(env, outside)
     this.title = null
     this.lastName = -Infinity
     this.file = null
@@ -147,7 +147,7 @@ function matches (base) {
 }
 
 function create (ctx) {
-  return new CodexAdapter(ctx.bus, { cmd: ctx.cmd, cwd: ctx.cwd, env: ctx.env, log: ctx.log, clock: ctx.clock, launched: ctx.launched === undefined ? null : ctx.launched })
+  return new CodexAdapter(ctx.bus, { cmd: ctx.cmd, cwd: ctx.cwd, env: ctx.env, log: ctx.log, clock: ctx.clock, launched: ctx.launched === undefined ? null : ctx.launched, outside: ctx.outside })
 }
 
 module.exports = { kind, matches, create, carry: require('./carry').carry, CodexAdapter }

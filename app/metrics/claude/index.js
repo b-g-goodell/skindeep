@@ -21,8 +21,9 @@ const plain = require('../plain')
 const { slug } = require('../../sessions')
 
 class ClaudeAdapter {
-  constructor (bus, { cmd, env, cwd, runDir, root, store, mode, node, python, log, managedDir }) {
-    Object.assign(this, { bus, cmd, env, cwd, runDir, root, store, mode, node, python, log, managedDir })
+  // outside: the app's path of a path the CLI names (decision 0037).
+  constructor (bus, { cmd, env, cwd, runDir, root, store, mode, node, python, log, managedDir, outside = p => p }) {
+    Object.assign(this, { bus, cmd, env, cwd, runDir, root, store, mode, node, python, log, managedDir, outside })
     this.src = null
     this.core = null
     this.tail = null
@@ -45,7 +46,7 @@ class ClaudeAdapter {
       s.close()
       return { args: [], notice: null }
     }
-    const r = settings.prepare({ cmd: this.cmd, env: this.env, cwd: this.cwd, root: this.root, store: this.store, mode: this.mode, node: this.node, python: this.python, managedDir: this.managedDir })
+    const r = settings.prepare({ cmd: this.cmd, env: this.env, cwd: this.cwd, root: this.root, store: this.store, mode: this.mode, node: this.node, python: this.python, managedDir: this.managedDir, outside: this.outside })
     // Managed settings silence what is injected: hooks that never fire
     // give no hook meters, as with nothing injected (decision 0010).
     const hooksOff = r.managed.includes('disableAllHooks') || r.managed.includes('allowManagedHooksOnly')
@@ -71,7 +72,7 @@ class ClaudeAdapter {
   feed (fn) {
     if (this.closed || !this.core) return
     fn(this.core)
-    const file = this.core.transcript
+    const file = this.core.transcript && this.outside(this.core.transcript)
     if (!file || (this.tail && this.tail.file === file)) return
     if (this.tail) this.tail.stop()
     this.tail = new Tail(file, (obj, replayed) => this.core.line(file, obj, replayed))
@@ -104,7 +105,8 @@ class ClaudeAdapter {
   // Each channel off (not injected), waiting or live.
   report () {
     const state = name => !this.armed[name] ? 'off' : this.seen[name] ? 'live' : 'waiting'
-    const transcript = (this.core && this.core.transcript) || null
+    // The file followed, at the path the app reads it.
+    const transcript = (this.core && this.core.transcript && this.outside(this.core.transcript)) || null
     return {
       session: (this.core && this.core.session) || null,
       title: (this.core && this.core.title) || null,
@@ -154,9 +156,9 @@ function subcommand (cmd) {
 // The transcript of the background session `claude attach ID` opens:
 // the session id and folder of <profile>/jobs/ID/state.json, every other
 // field dropped at once. Null when ID names no job, such as a name.
-function attachedTranscript (env, id) {
+function attachedTranscript (env, id, outside = p => p) {
   if (!/^[A-Za-z0-9-]+$/.test(id || '')) return null
-  const dir = settings.configDir(env)
+  const dir = outside(settings.configDir(env))
   let session, cwd
   try {
     const d = JSON.parse(fs.readFileSync(path.join(dir, 'jobs', id, 'state.json'), 'utf8'))
@@ -182,14 +184,14 @@ function create (ctx) {
   if (sub === 'attach') {
     const id = ctx.cmd[2]
     const find = () => {
-      const t = attachedTranscript(ctx.env, id)
+      const t = attachedTranscript(ctx.env, id, ctx.outside)
       return t && fs.existsSync(t.file) ? t : null
     }
     return claudeWatch.create({ bus: ctx.bus, find, argv: ctx.cmd, log: ctx.log })
   }
   if (sub) return plain.create(ctx)
   const python = resolveCommand('python3', ctx.env.PATH) || 'python3'
-  return new ClaudeAdapter(ctx.bus, { cmd: ctx.cmd, env: ctx.env, cwd: ctx.cwd, runDir: ctx.runDir, root: ctx.root, store: ctx.store, mode: ctx.options.statusline, node: nodeForRelay(ctx.env), python, log: ctx.log, managedDir: ctx.managedDir })
+  return new ClaudeAdapter(ctx.bus, { cmd: ctx.cmd, env: ctx.env, cwd: ctx.cwd, runDir: ctx.runDir, root: ctx.root, store: ctx.store, mode: ctx.options.statusline, node: nodeForRelay(ctx.env), python, log: ctx.log, managedDir: ctx.managedDir, outside: ctx.outside })
 }
 
 module.exports = { kind, matches, create, carry, subcommand, attachedTranscript, ClaudeAdapter }

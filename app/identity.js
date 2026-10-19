@@ -20,14 +20,16 @@ function configName (dir, dflt) {
 
 // The command's name, with the config dir's name when the session runs
 // on a non-default one: claude [work]. kind: the dispatched adapter
-// (app/metrics/agent.js), whose config dir variable is read.
-function label (cmd, env, kind) {
+// (app/metrics/agent.js), whose config dir variable is read. snapshot:
+// the name of the select-agent-config snapshot the tab runs in, in
+// braces (decision 0037): claude {empty}.
+function label (cmd, env, kind, snapshot = null) {
   const base = path.basename(cmd[0])
   const home = os.homedir()
   let name = null
   if (kind === 'claude') name = configName(env.CLAUDE_CONFIG_DIR, path.join(home, '.claude'))
   if (kind === 'codex') name = configName(env.CODEX_HOME, path.join(home, '.codex'))
-  return name ? `${base} [${name}]` : base
+  return [base, name && `[${name}]`, snapshot && `{${snapshot}}`].filter(Boolean).join(' ')
 }
 
 function title (lbl) {

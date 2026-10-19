@@ -134,12 +134,15 @@ class Agent {
   }
 }
 
-// ctx: { cmd, cwd, env, runDir, options, bus, log, clock, managedDir },
-// clock { now(), every(ms, fn) -> cancel } defaulting to the real one,
-// managedDir the managed settings' directory (tests only). Writes
-// nothing to the bus and starts no channel: prepare does.
+// ctx: { cmd, cwd, env, runDir, options, bus, log, clock, managedDir,
+// outside }, clock { now(), every(ms, fn) -> cancel } defaulting to the
+// real one, managedDir the managed settings' directory (tests only),
+// outside the function of a path the CLI names that gives the path the
+// app reads it at, the identity unless the tab runs in a snapshot
+// (decision 0037). Writes nothing to the bus and starts no channel:
+// prepare does.
 function open (ctx) {
-  ctx = Object.assign({ clock: REAL_CLOCK }, ctx)
+  ctx = Object.assign({ clock: REAL_CLOCK, outside: p => p }, ctx)
   const mod = provider(ctx.cmd)
   return new Agent(mod.kind, mod.create(ctx), generic.create(ctx), ctx)
 }

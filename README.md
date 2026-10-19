@@ -60,6 +60,12 @@ your machine, **Skins** for Open skin... and the skins, and
 A click on a title, or Left and Right, moves between them, and Escape
 closes them.
 
+**New tab...** opens a tab on another agent, profile or folder, with
+its command line shown, and, where `select-agent-config` is installed,
+inside one of its snapshots of the agent configuration, a fresh install
+or a fork of the live one, as [decision
+0037](docs/decisions/0037-snapshot-tabs.md) says.
+
 Ctrl+Shift+T opens a tab, Ctrl+Shift+W closes one and
 Ctrl+Tab moves between them, and you can drag a tab out to give it its
 own window, or right click it to rename it. Ctrl+Shift+C copies,

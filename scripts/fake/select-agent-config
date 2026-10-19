@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Fake select-agent-config for the live checks (decisions 0019, 0037).
+
+The store is the directory FAKE_SAC_STORE names: snapshots/<id>/meta.json
+with name, lineage, accounts and created, beside claude/ and tmp/.
+Without the variable, list prints nothing and every other command fails.
+
+    list          one row per snapshot, as the tool prints them
+    argv ID       the bwrap line of a snapshot: / bound, the snapshot's
+                  claude over ~/.claude, --chdir of the cwd, then
+                  bash --rcfile sac-rc.sh -i
+    shell ID -- WORDS
+                  exec that bwrap with -c of the joined words, the
+                  environment scrubbed and marked as the tool does
+
+ID may also be a name. As the tool, this process execs bwrap in place.
+"""
+import json
+import os
+import shlex
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+RC = os.path.join(HERE, "sac-rc.sh")
+STORE = os.environ.get("FAKE_SAC_STORE")
+SCRUB = ("CLAUDE", "CODEX_HOME")
+
+
+def snapshots():
+    if not STORE:
+        return []
+    root = os.path.join(STORE, "snapshots")
+    out = []
+    if not os.path.isdir(root):
+        return out
+    for id_ in sorted(os.listdir(root)):
+        p = os.path.join(root, id_, "meta.json")
+        if not os.path.exists(p):
+            continue
+        with open(p) as f:
+            m = json.load(f)
+        m["id"] = id_
+        out.append(m)
+    return out
+
+
+def find(key):
+    for s in snapshots():
+        if key in (s["id"], s.get("name")):
+            return s
+    sys.exit("no snapshot %s" % key)
+
+
+def snap_dir(s):
+    return os.path.join(STORE, "snapshots", s["id"])
+
+
+def bwrap_argv(s, cwd):
+    home = os.path.expanduser("~")
+    return ["bwrap", "--bind", "/", "/", "--dev-bind", "/dev", "/dev",
+            "--bind", os.path.join(snap_dir(s), "claude"), os.path.join(home, ".claude"),
+            "--die-with-parent", "--chdir", cwd, "bash", "--rcfile", RC, "-i"]
+
+
+def env_for(s):
+    env = {k: v for k, v in os.environ.items() if not k.startswith(SCRUB)}
+    env["SELECT_AGENT_CONFIG"] = s["name"]
+    env["SELECT_AGENT_CONFIG_ID"] = s["id"]
+    env["SELECT_AGENT_CONFIG_LINEAGE"] = s.get("lineage", "fresh")
+    env["SELECT_AGENT_CONFIG_ACCOUNTS"] = s.get("accounts", "sandbox")
+    env["TMPDIR"] = os.path.join(snap_dir(s), "tmp")
+    return env
+
+
+def main(argv):
+    if argv[:1] == ["list"]:
+        for s in snapshots():
+            print("\t".join([s["id"], s.get("lineage", "fresh"), s.get("accounts", "sandbox"),
+                             s.get("created", ""), s["name"]]))
+        return 0
+    if argv[:1] == ["argv"] and len(argv) == 2:
+        print(" ".join(shlex.quote(a) for a in bwrap_argv(find(argv[1]), os.getcwd())))
+        return 0
+    if argv[:1] == ["shell"] and len(argv) >= 2:
+        s = find(argv[1])
+        cmd = bwrap_argv(s, os.getcwd())
+        if argv[2:3] == ["--"]:
+            cmd += ["-c", " ".join(argv[3:])]
+        env = env_for(s)
+        os.makedirs(env["TMPDIR"], exist_ok=True)
+        os.execvpe(cmd[0], cmd, env)
+    sys.stderr.write(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

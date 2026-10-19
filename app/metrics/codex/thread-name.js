@@ -28,8 +28,9 @@ function threadName (text, id) {
 }
 
 class ThreadNames {
-  constructor (env) {
-    this.file = indexFile(env)
+  // outside: the app's path of the home the CLI names (decision 0037).
+  constructor (env, outside = p => p) {
+    this.file = outside(indexFile(env))
     this.stamp = null
     this.text = ''
   }

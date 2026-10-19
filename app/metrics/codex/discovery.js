@@ -124,8 +124,9 @@ function sessionCwd (argv, cwd) {
 class Discovery {
   // env: only CODEX_HOME is read. argv: the user's arguments after the
   // command. cwd: the app's cwd. launched: a time taken before spawn.
-  constructor ({ env, argv, cwd, launched }) {
-    this.given = path.join(env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions')
+  // outside: the app's path of the home the CLI names (decision 0037).
+  constructor ({ env, argv, cwd, launched, outside = p => p }) {
+    this.given = outside(path.join(env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'sessions'))
     this.home = null
     this.resolved = false
     this.argv = argv

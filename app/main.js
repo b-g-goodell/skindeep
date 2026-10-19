@@ -21,6 +21,8 @@ const { floorWidth, floorHeight } = require('./skins/scale')
 const settings = require('./settings')
 const pages = require('./pages')
 const profiles = require('./profiles')
+const snapshots = require('./snapshots')
+const proc = require('./metrics/proc')
 const { split } = require('./argv')
 // SKINNED_SKINS_DIR points the skin list elsewhere, for checks over fixtures.
 const skins = createRegistry({ shippedDir: process.env.SKINNED_SKINS_DIR || path.join(__dirname, '..', 'skins') })
@@ -171,15 +173,21 @@ function tabView (tab) {
 // environment unless New tab... set a profile (decision 0025), its agent
 // adapter beside Generic (decision 0021), its bus, and its own directory
 // under the runtime dir for the adapter's generated files (decision 0016).
-function makeTab (id, { cmd, cwd, env = process.env, file = resolved, note = null, monitor = null, dashboard = false }) {
+// snapshot: the select-agent-config snapshot the tab runs in (decision
+// 0037), { id, name, lineage, accounts, binds }, or null: the command
+// then runs through the tool, file is the tool's, and the adapters read
+// the snapshot's paths through its binds.
+function makeTab (id, { cmd, cwd, env = process.env, file = resolved, note = null, monitor = null, dashboard = false, snapshot = null }) {
   if (monitor) return makeMonitor(id, monitor)
   if (dashboard) return makeDashboard(id)
   const dir = path.join(runDir, `tab-${id}`)
   fs.mkdirSync(dir, { mode: 0o700 })
   const bus = new Bus({ log })
-  const agent = open({ cmd, cwd, env, runDir: dir, root: runtime.base(), store: runtime.settingsDir(), options: opts, bus, log })
-  const tab = { id, cmd, cwd, env, file, dir, bus, agent, label: identity.label(cmd, env, kindOf(cmd)) }
-  tab.session = new Session({ file, argv: cmd, cwd, env, label: tab.label, note, adapters: [agent], view: tabView(tab), tell: cli.tell, log, execError: path.join(dir, 'exec-error'), screen: () => screenOf(tab) })
+  const outside = snapshot ? p => snapshots.outside(p, snapshot.binds) : p => p
+  const wrap = snapshot ? argv => snapshots.wrap(snapshot.id, argv) : null
+  const agent = open({ cmd, cwd, env, runDir: dir, root: runtime.base(), store: runtime.settingsDir(), options: opts, bus, log, outside })
+  const tab = { id, cmd, cwd, env, file, snapshot, dir, bus, agent, label: identity.label(cmd, env, kindOf(cmd), snapshot && snapshot.name) }
+  tab.session = new Session({ file, argv: cmd, cwd, env, label: tab.label, note, adapters: [agent], view: tabView(tab), tell: cli.tell, log, execError: path.join(dir, 'exec-error'), screen: () => screenOf(tab), wrap })
   return tab
 }
 
@@ -211,7 +219,7 @@ function follow (tab) {
   const cmd = background.attachFor(tab.cmd, tab.session.lastScreen)
   if (!cmd) return null
   log(`tab ${tab.id}: claude refused to open a background session in place, opening it with: ${cmd.join(' ')}`)
-  return { cmd, cwd: tab.cwd, env: tab.env, file: tab.file }
+  return { cmd, cwd: tab.cwd, env: tab.env, file: tab.file, snapshot: tab.snapshot }
 }
 
 const tabs = new Tabs({ make: (id, spec) => makeTab(id, spec), tell: cli.tell, log, follow })
@@ -228,10 +236,12 @@ try {
   process.exit(cli.EXIT_APP)
 }
 
-// The live folder of a tab's CLI, else the folder it started in.
+// The live folder of a tab's CLI, at the end of its wrapper chain in a
+// snapshot (decision 0037), else the folder it started in.
 function liveCwd (tab) {
   try {
-    const d = fs.readlinkSync(`/proc/${tab.session.pid}/cwd`)
+    const pid = tab.snapshot ? proc.leaf(tab.session.pid) : tab.session.pid
+    const d = fs.readlinkSync(`/proc/${pid}/cwd`)
     if (fs.statSync(d).isDirectory()) return d
   } catch (e) {}
   return tab.cwd
@@ -452,7 +462,7 @@ function reopen () {
   const live = e.session && tabs.list.find(t => sessionOf(t) === e.session)
   if (live) return tabs.activate(live.id)
   try {
-    tabs.add({ cmd: sessionCmd(e.cmd, e.session, false), cwd: e.cwd, env: e.env, file: e.file })
+    tabs.add({ cmd: sessionCmd(e.cmd, e.session, false), cwd: e.cwd, env: e.env, file: e.file, snapshot: e.snapshot })
   } catch (err) {
     closed.push(e)
     log(`reopen: ${err.stack || err}`)
@@ -467,7 +477,7 @@ function duplicate () {
   if (!from) return
   const at = tabs.list.indexOf(from) + 1
   try {
-    const t = tabs.add({ cmd: sessionCmd(from.cmd, sessionOf(from), true), cwd: from.cwd, env: from.env, file: from.file })
+    const t = tabs.add({ cmd: sessionCmd(from.cmd, sessionOf(from), true), cwd: from.cwd, env: from.env, file: from.file, snapshot: from.snapshot })
     if (t) tabs.move(t.id, at)
   } catch (err) {
     log(`duplicate: ${err.stack || err}`)
@@ -511,7 +521,16 @@ function chooserState (fresh = true) {
   })
   const fromKind = from && kindOf(from.cmd)
   const at = tabs.active
-  return { agents, agent: profiles.AGENTS[fromKind] ? fromKind : 'claude', folder: identity.tildify(at ? liveCwd(at) : process.cwd()) }
+  // The snapshots the tool lists (decision 0037), null without the tool.
+  const tool = snapshots.tool(process.env)
+  const snaps = tool ? snapshots.list(process.env, log).map(s => ({ id: s.id, name: s.name, lineage: s.lineage, accounts: s.accounts, shown: snapshots.describe(s) })) : null
+  return {
+    agents,
+    agent: profiles.AGENTS[fromKind] ? fromKind : 'claude',
+    folder: identity.tildify(at ? liveCwd(at) : process.cwd()),
+    snapshots: snaps,
+    snapshot: from && from.snapshot ? from.snapshot.id : ''
+  }
 }
 
 // A folder as typed: ~ is the home directory, a relative one is the
@@ -525,28 +544,53 @@ function folderOf (typed) {
 
 const isDir = p => { try { return fs.statSync(p).isDirectory() } catch (e) { return false } }
 
+// The snapshot the chooser names, with its binds, or an error. The line
+// of a snapshot tab runs in the snapshot's shell, whose launchers set
+// the profile, so the window's environment is the tab's.
+function snapshotOf (id) {
+  const s = snapshots.list(process.env, log).find(s => s.id === id)
+  if (!s) return { error: `no snapshot ${id}: select-agent-config does not list it` }
+  const binds = snapshots.binds(id, process.env, log)
+  if (!binds) return { error: `select-agent-config gave no launch for the snapshot ${s.name}` }
+  return { snapshot: { id: s.id, name: s.name, lineage: s.lineage, accounts: s.accounts, binds } }
+}
+
 // Open what the chooser holds, or say why not. The profile is recorded
-// once a tab runs on it.
-function chooserOpen ({ agent, profile, folder, line }) {
+// once a tab runs on it. In a snapshot (decision 0037) the command runs
+// in the snapshot's shell, so it is not resolved here: a launcher of
+// that shell is no file on PATH.
+function chooserOpen ({ agent, profile, folder, line, snapshot = '' }) {
   if (!profiles.AGENTS[agent]) return { error: `no agent ${agent}` }
   const cwd = folderOf(folder)
   if (!isDir(cwd)) return { error: `no such folder: ${identity.tildify(cwd)}` }
-  if (typeof profile !== 'string' || !path.isAbsolute(profile)) return { error: 'choose a profile' }
-  const dflt = profile === profiles.defaultDir(agent)
-  if (!dflt && !isDir(profile)) return { error: `no such profile folder: ${identity.tildify(profile)}` }
   const r = split(line)
   if (r.error) return { error: `command line: ${r.error}` }
-  const env = profiles.envFor(process.env, agent, profile)
   const c = r.argv[0]
-  const file = cli.resolveCommand(c.includes('/') ? path.resolve(cwd, c) : c, env.PATH)
-  if (!file) return { error: `${c}: command not found` }
+  let spec
+  let record = false
+  if (snapshot) {
+    const s = snapshotOf(snapshot)
+    if (s.error) return s
+    const tool = snapshots.tool(process.env)
+    if (!tool) return { error: `${snapshots.TOOL}: command not found` }
+    spec = { cmd: r.argv, cwd, env: snapshots.scrub(process.env), file: tool, snapshot: s.snapshot }
+  } else {
+    if (typeof profile !== 'string' || !path.isAbsolute(profile)) return { error: 'choose a profile' }
+    const dflt = profile === profiles.defaultDir(agent)
+    if (!dflt && !isDir(profile)) return { error: `no such profile folder: ${identity.tildify(profile)}` }
+    const env = profiles.envFor(process.env, agent, profile)
+    const file = cli.resolveCommand(c.includes('/') ? path.resolve(cwd, c) : c, env.PATH)
+    if (!file) return { error: `${c}: command not found` }
+    spec = { cmd: r.argv, cwd, env, file }
+    record = !dflt
+  }
   try {
-    tabs.add({ cmd: r.argv, cwd, env, file })
+    tabs.add(spec)
   } catch (e) {
     log(`new tab: ${e.stack || e}`)
     return { error: `cannot open the tab: ${e.message}` }
   }
-  if (!dflt) try { profiles.record(profilesDir, agent, profile) } catch (e) { log(`profiles: ${e.message}`) }
+  if (record) try { profiles.record(profilesDir, agent, profile) } catch (e) { log(`profiles: ${e.message}`) }
   return { ok: true }
 }
 
@@ -648,7 +692,7 @@ tabs.on('empty', id => {
 tabs.on('gone', (tab, code, next) => {
   try { runtime.remove(tab.dir) } catch (e) { log(`tab dir: ${e.message}`) }
   if (next) return
-  if (!tabs.ending && !readOnly(tab)) closed.push({ cmd: tab.cmd, cwd: tab.cwd, env: tab.env, file: tab.file, session: sessionOf(tab) })
+  if (!tabs.ending && !readOnly(tab)) closed.push({ cmd: tab.cmd, cwd: tab.cwd, env: tab.env, file: tab.file, snapshot: tab.snapshot, session: sessionOf(tab) })
   if (!tab.closed && code !== 0 && tabs.list.length) {
     const why = tab.session.failure ? `cannot start ${tab.cmd[0]}: ${tab.session.failure}\n` : ''
     problem(`${tab.label} exited with status ${code}`, `${why}${tab.session.cmdline}\nin ${identity.tildify(tab.cwd)}`)
