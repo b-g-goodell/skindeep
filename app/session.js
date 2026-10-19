@@ -10,6 +10,7 @@ const path = require('path')
 const pty = require('node-pty')
 const cli = require('./cli')
 const identity = require('./identity')
+const proc = require('./metrics/proc')
 
 const DROPPED_ENV = ['CHROME_DESKTOP', 'FC_FONTATIONS', 'SKINNED_RUNTIME_DIR', 'SKINNED_SKIN', 'SKINNED_MUTE']
 
@@ -38,13 +39,18 @@ function childEnv (env) {
 // view: send(channel, payload) and onLoad(fn), as app/view.js. note: a
 // fixed text shown after the adapters' notice. execError: a file of the
 // tab's own directory where exec-clean.py writes why the exec failed.
+// wrap: null, or a function of the argv that returns the words exec'd in
+// its place, a launcher around the CLI (decision 0037): file is then the
+// launcher's, the strip follows the command at the end of the wrapper
+// chain, and a signal goes to every process of the tree, since the
+// wrapper's shell gives the CLI a process group of its own.
 // screen: resolves the text of the terminal's last screen, or null;
 // asked when the CLI exits by itself, its answer kept as lastScreen
 // before the end (decision 0030).
 class Session extends EventEmitter {
-  constructor ({ file, argv, cwd, env, label, note = null, adapters = [], view, tell, log, execError = null, screen = null, graceMs = 2000, pollMs = 2000 }) {
+  constructor ({ file, argv, cwd, env, label, note = null, adapters = [], view, tell, log, execError = null, screen = null, wrap = null, graceMs = 2000, pollMs = 2000 }) {
     super()
-    Object.assign(this, { file, argv, cwd, env, label, note, adapters, view, tell, log, execError, screen, graceMs, pollMs })
+    Object.assign(this, { file, argv, cwd, env, label, note, adapters, view, tell, log, execError, screen, wrap, graceMs, pollMs })
     this.lastScreen = null
     this.state = 'idle'
     this.pid = null
@@ -69,7 +75,7 @@ class Session extends EventEmitter {
   // notice follows the adapters' reports.
   pollStrip () {
     let changed = false
-    const now = identity.liveCmdline(this.pid)
+    const now = identity.liveCmdline(this.wrap ? proc.leaf(this.pid) : this.pid)
     if (now && now !== this.cmdline) {
       this.cmdline = now
       changed = true
@@ -116,13 +122,14 @@ class Session extends EventEmitter {
   spawn (cmd, cols, rows) {
     const py = cli.resolveCommand('python3', this.env.PATH)
     if (!py) throw new Error('python3 not found on PATH, the app needs it to start a command')
-    const args = ['-I', '-S', path.join(__dirname, 'exec-clean.py'), this.execError || '', this.file, ...cmd]
+    const words = this.wrap ? this.wrap(cmd) : cmd
+    const args = ['-I', '-S', path.join(__dirname, 'exec-clean.py'), this.execError || '', this.file, ...words]
     this.child = pty.spawn(py, args, { name: 'xterm-256color', cols, rows, cwd: this.cwd, env: childEnv(this.env), encoding: null })
     this.pid = this.child.pid
     this.state = 'running'
-    // The argv exec'd. /proc shows it once the exec has happened.
+    // The CLI's argv. /proc shows it once the exec has happened.
     this.cmdline = cmd.map(identity.quote).join(' ')
-    this.log(`spawn ${this.pid}: ${this.label}: ${this.file}: ${this.cmdline}`)
+    this.log(`spawn ${this.pid}: ${this.label}: ${this.file}: ${words.map(identity.quote).join(' ')}`)
     this.sendStrip()
     this.pollTimer = setInterval(() => this.pollStrip(), this.pollMs)
     for (const a of this.adapters) if (a.attach) a.attach(this.pid)
@@ -186,6 +193,17 @@ class Session extends EventEmitter {
   // It holds signals blocked until it has reset their dispositions.
   signal (sig) {
     if (!this.child) return
+    if (this.wrap) {
+      // A hangup goes to the CLI and what it runs, never to a wrapper: a
+      // shell that dies first takes the CLI down at once through the
+      // sandbox's die-with-parent, before the CLI can exit on its own
+      // terms. The wrappers end when the CLI has. The kill goes to all.
+      const all = proc.tree(this.pid)
+      let targets = sig === 'SIGKILL' ? all : all.filter(p => !proc.isWrapper(p))
+      if (!targets.length) targets = [all[all.length - 1]]
+      for (const p of targets.reverse()) try { process.kill(p, sig) } catch (e) {}
+      return
+    }
     try {
       process.kill(-this.pid, sig)
     } catch (e) {

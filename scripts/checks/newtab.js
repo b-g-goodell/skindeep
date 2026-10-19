@@ -192,4 +192,72 @@ async function codex () {
   check(seen.claude.includes('statusline:live') && seen.claude.includes('hooks:live'), 'want the claude tab\'s own channels live')
 }
 
-;({ profiles, codex })[what]().then(() => console.log('done')).catch(e => { console.error(e); process.exit(1) })
+// The process at the end of a tab's wrapper chain, as the strip finds it.
+const leafOf = pid => require('../../app/metrics/proc').leaf(pid)
+
+// A tab in a select-agent-config snapshot (decision 0037), on the fake
+// tool and the real bwrap: the Config row lists the store's snapshot,
+// the Profile row is disabled under it, the CLI runs with the tool's
+// environment and none of the window's profile, its channels go live
+// through the sandbox, the transcript it writes inside the snapshot is
+// found in the store through the binds, the statusline chains to the
+// snapshot's own settings, and a closed tab reopens in the snapshot.
+async function snapshot () {
+  const store = path.join(out, 'sac-store')
+  const snap = path.join(store, 'snapshots', 'snap1')
+  fs.mkdirSync(path.join(snap, 'claude'), { recursive: true })
+  fs.mkdirSync(path.join(snap, 'tmp'), { recursive: true })
+  fs.writeFileSync(path.join(snap, 'meta.json'), JSON.stringify({ name: 'Empty', lineage: 'fresh', accounts: 'sandbox', created: '2026-10-18T00:00:00-0600' }))
+  fs.writeFileSync(path.join(snap, 'claude', 'settings.json'), JSON.stringify({ statusLine: { type: 'command', command: 'echo snap-line' } }))
+  const { app, win } = await launch([claudeFake], { appArgs: ['--skin', 'deck', '--no-viz'], env: Object.assign({}, env, { FAKE_SAC_STORE: store }) })
+  await sleep(2500)
+  let c = await chooser(win)
+  const rows = await win.evaluate(() => [...document.querySelectorAll('#chooser .snapshot option')].map(o => [o.value, o.textContent]))
+  console.log('config row', JSON.stringify(rows))
+  check(rows.length === 2 && rows[0][0] === '' && rows[1][0] === 'snap1' && rows[1][1] === 'Empty  (fresh install, sandbox accounts)', 'want Live and the store\'s one snapshot in the Config row')
+  check(c.profile === lab && !(await win.evaluate(() => document.querySelector('#chooser .profile').disabled)), 'want the Profile row live under the live configuration')
+  await win.selectOption('#chooser .snapshot', 'snap1')
+  await sleep(200)
+  const under = await win.evaluate(() => ({ off: document.querySelector('#chooser .profile').disabled, env: document.querySelector('#chooser .env').textContent }))
+  console.log('under the snapshot', JSON.stringify(under))
+  check(under.off && under.env.startsWith('In the snapshot Empty:'), 'want the Profile row disabled under a snapshot and the hint naming it')
+  await shot(win, path.join(out, 'chooser-snapshot.png'))
+  await click(win, 'Open')
+  await sleep(6000)
+  let pr = await probe(app)
+  let t = pr.tabs[1]
+  check(pr.tabs.length === 2 && t.label === 'claude {Empty}' && t.active, `want an active tab claude {Empty}, saw ${JSON.stringify(pr.tabs.map(t => t.label))}`)
+  const leaf = leafOf(t.childPid)
+  const e = environ(leaf)
+  const argv = fs.readFileSync(`/proc/${leaf}/cmdline`, 'utf8').split('\0')
+  console.log('leaf', leaf, JSON.stringify(argv.slice(0, 2)), 'SELECT_AGENT_CONFIG', e.SELECT_AGENT_CONFIG, 'TMPDIR', e.TMPDIR)
+  check(path.basename(argv[0]) === 'claude' || path.basename(argv[1] || '') === 'claude', `want the fake claude at the end of the wrapper chain, saw ${JSON.stringify(argv.slice(0, 3))}`)
+  check(!('CLAUDE_CONFIG_DIR' in e) && e.SELECT_AGENT_CONFIG === 'Empty' && e.TMPDIR === path.join(snap, 'tmp'), 'want the tool\'s environment on the CLI and none of the window\'s profile')
+  const states = Object.fromEntries(t.following.channels.map(x => [x.name, x]))
+  console.log('channels', JSON.stringify(t.following.channels))
+  check(states.hooks.state === 'live' && states.statusline.state === 'live', 'want hooks and statusline live through the sandbox')
+  check(states.transcript.state === 'live' && states.transcript.target.startsWith(path.join(snap, 'claude', 'run', 'claude-skins-fake') + '/') && fs.existsSync(states.transcript.target), `want the transcript followed in the store through the binds, saw ${JSON.stringify(states.transcript)}`)
+  const line = JSON.parse(fs.readFileSync(argv[argv.indexOf('--settings') + 1], 'utf8')).statusLine.command
+  const chain = Buffer.from(line.split(' ').pop(), 'base64url').toString('utf8')
+  check(chain === 'echo snap-line', `want the relay chained to the snapshot's own statusline, saw ${JSON.stringify(chain)}`)
+  const strip = await win.evaluate(() => document.querySelector('#strip') ? document.querySelector('#strip').textContent : null)
+  console.log('strip', JSON.stringify(strip))
+  await shot(win, path.join(out, 'snapshot-tab.png'))
+
+  // The tab closes by a hangup to the CLI, and reopens in the snapshot.
+  await win.keyboard.press('Control+Shift+W')
+  await sleep(3000)
+  pr = await probe(app)
+  check(pr.tabs.length === 1, `want the snapshot tab closed, saw ${pr.tabs.length} tabs`)
+  check(!fs.existsSync(`/proc/${leaf}`) && !fs.existsSync(`/proc/${t.childPid}`), 'want the CLI and its wrappers gone after the close')
+  await openMenu(win)
+  await win.locator('#menu .item').filter({ hasText: /^Reopen closed tab/ }).click()
+  await sleep(6000)
+  pr = await probe(app)
+  t = pr.tabs[1]
+  check(t && t.label === 'claude {Empty}' && t.argv.includes('--resume'), `want the session reopened in the snapshot, saw ${JSON.stringify(t && [t.label, t.argv])}`)
+  check(environ(leafOf(t.childPid)).SELECT_AGENT_CONFIG === 'Empty', 'want the reopened CLI inside the snapshot')
+  await end(app)
+}
+
+;({ profiles, codex, snapshot })[what]().then(() => console.log('done')).catch(e => { console.error(e); process.exit(1) })
