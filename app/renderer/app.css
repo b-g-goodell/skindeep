@@ -25,9 +25,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
   font: calc(12px * var(--window-text, 1))/23px "DejaVu Sans Mono", monospace; user-select: none;
 }
 #tabs[hidden] { display: none; }
+/* max-width: 81px that the text size leaves alone (the padding, the viz,
+   the mark and the gaps), and room for the name and the close that
+   scales with it, 240px at the default. */
 #tabs .tab {
   display: flex; align-items: center; gap: 6px; padding: 0 4px 0 8px;
-  min-width: 60px; max-width: calc(240px * var(--window-text, 1)); flex: 0 1 auto; overflow: hidden; white-space: nowrap;
+  min-width: 60px; max-width: calc(81px + 159px * var(--window-text, 1)); flex: 0 1 auto; overflow: hidden; white-space: nowrap;
   border-right: 1px solid #262626; cursor: default;
 }
 #tabs .tab.active { background: #1e1e1e; color: #fff; }
