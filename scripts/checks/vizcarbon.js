@@ -17,7 +17,12 @@
 // one with a single ultraviolet front (165.7 nm) and one with a single
 // infrared front (909.7 nm), each sent from the site and caught 10 bohr
 // out, crossing the atom, and the mean change of the atom's pixels each
-// front's pass makes, which must be at least LIFT times today's. Then
+// front's pass makes, which must be at least GAIN times today's, the
+// random grain's at 43a4dd1 (issue #168). Today's infrared figure is
+// high though nothing showed: shifting random pixels changes nearly
+// every pixel of the band by the grain's own spread, while a shift of
+// the grid changes only its line pixels, about a third of the band, so
+// a grid quiet enough for the pane gains about 1.5 times there. Then
 // three panes of a 720 by 460 window all in one of those modes, five
 // rounds in turn, each set's median frame rate, as vizmodes.js counts
 // its sets, first on the fake session's own activity, then at full
@@ -37,6 +42,11 @@ const out = path.resolve(process.argv[2])
 const SLOW = require('../../app/viz/carbon').EVENT / 1e6
 // Light on screen, bohr a second.
 const LIGHT = require('../../app/viz/carbon').Clock.light
+// Today's mean change of the atom's pixels, levels of 255, with one
+// front 10 bohr out on the random grain, at 43a4dd1, and the least gain
+// over it each kind must show.
+const TODAY = { 'uv-1200x760': 0.0364, 'ir-1200x760': 0.2163, 'uv-360x230': 0.0477, 'ir-360x230': 0.1854 }
+const GAIN = { uv: 4, ir: 1.3 }
 const fake = path.join(__dirname, '..', 'fake', 'claude')
 fs.mkdirSync(out, { recursive: true })
 const errors = []
@@ -244,9 +254,10 @@ function check (ok, msg, seen) {
   }, [[[1200, 760], [360, 230]], 10 / LIGHT])
   for (const q of quiet) {
     fs.writeFileSync(path.join(out, `carbon-quiet-${q.name}.png`), Buffer.from(q.png.split(',')[1], 'base64'))
-    console.log('quiet', q.name, q.vac ? `${q.vac} nm` : '', `fronts ${q.fronts} uv ${q.uv} ir ${q.ir}`, 'mean change of the atom\'s pixels', q.warp)
-    if (!q.kind) check(q.fronts === 0 && q.warp === 0, `want no front in ${q.name}`, q)
-    else check(q.fronts === 1 && q[q.kind] === 1 && q.warp > 0, `want one ${q.kind} front changing the atom in ${q.name}`, { fronts: q.fronts, uv: q.uv, ir: q.ir, warp: q.warp })
+    const was = TODAY[q.name]
+    console.log('quiet', q.name, q.vac ? `${q.vac} nm` : '', `fronts ${q.fronts} uv ${q.uv} ir ${q.ir}`, 'mean change of the atom\'s pixels', q.warp, was ? `against ${was} at 43a4dd1, ${(q.warp / was).toFixed(2)} times` : '')
+    if (!q.kind) check(q.fronts === 0 && q.warp === 0, `want no front in ${q.name}`, { fronts: q.fronts, warp: q.warp })
+    else check(q.fronts === 1 && q[q.kind] === 1 && q.warp >= GAIN[q.kind] * was, `want one ${q.kind} front changing the atom ${GAIN[q.kind]} times as much as at 43a4dd1 in ${q.name}`, { fronts: q.fronts, uv: q.uv, ir: q.ir, warp: q.warp, was })
   }
 
   // Three panes, as vizmodes.js measures its sets.
