@@ -38,14 +38,21 @@ function parent (pid) {
 // The window's socket for the nearest ancestor with a link, else null.
 // A socket's path holds 107 bytes and ROOT may be longer: the link is
 // reached through a descriptor of ROOT/pids (decision 0016), left open
-// until the process exits.
+// until the process exits, and only when ROOT/pids is this uid's with
+// no group or other bits.
 function windowSocket () {
   if (!root) return null
   const dir = path.join(root, 'pids')
   let pid = process.ppid
   for (let i = 0; i < MAX_DEPTH && pid > 1; i++) {
     if (fs.existsSync(path.join(dir, String(pid)))) {
-      try { return `/proc/self/fd/${fs.openSync(dir, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY)}/${pid}` } catch (e) { return null }
+      try {
+        const fd = fs.openSync(dir, fs.constants.O_RDONLY | fs.constants.O_DIRECTORY)
+        const st = fs.fstatSync(fd)
+        return st.uid === process.getuid() && !(st.mode & 0o077) ? `/proc/self/fd/${fd}/${pid}` : null
+      } catch (e) {
+        return null
+      }
     }
     pid = parent(pid)
   }

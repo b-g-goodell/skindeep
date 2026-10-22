@@ -139,6 +139,17 @@ without spending tokens:
 - Electron runs with `--no-sandbox`, since Ubuntu blocks what Chromium's
   sandbox needs, but the app loads only local content and skins carry
   no code.
+- The app keeps its runtime files, among them the scripts its windows
+  load and the links its hooks report through, in
+  `$XDG_RUNTIME_DIR/claude-skins`, else in
+  `~/.local/state/claude-skins-run`. It refuses to start when another
+  user could have made that folder or could rename it away, but it
+  trusts a folder above it that your primary group may write, since on
+  most Linux systems that group is yours alone. Where several people
+  share one primary group, any of them who can write such a folder
+  could swap those files and run commands as you. On such a machine,
+  remove group write from every folder above the runtime folder, or
+  make sure `XDG_RUNTIME_DIR` is set, as a desktop login sets it.
 - Two Codex sessions started in one folder within 2 s may swap meters
   ([decision 0013](docs/decisions/0013-codex-channel.md)).
 - Claude Code's `/context` breakdown has no channel, so the context

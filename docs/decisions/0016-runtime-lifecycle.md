@@ -3,7 +3,8 @@
 Status: accepted 2026-10-11, revised 2026-10-12 for the Session, again
 2026-10-12 for tabs (decision 0023), and for the hook links, the kept
 settings and the last screen (decision 0030), 2026-10-13 for the launch's
-pages, and 2026-10-16 for the hook socket's path.
+pages, 2026-10-16 for the hook socket's path, and 2026-10-22 for the
+runtime root's fallback and ownership check.
 
 ## Context
 
@@ -14,10 +15,22 @@ Closing the window must end the session the way closing a terminal does.
 ## Decision
 
 - Runtime dir: `$XDG_RUNTIME_DIR/claude-skins/<pid>/` (else
-  `$TMPDIR/claude-skins-<uid>/<pid>/`), mode 0700, holding Electron's
+  `${XDG_STATE_HOME:-~/.local/state}/claude-skins-run/<pid>/`), mode
+  0700, holding Electron's
   userData and one dir per tab, `tab-<id>/`, mode 0700, for that tab's
   hook socket. A tab's dir is removed when the tab ends, the runtime dir
   on exit. At start, dirs whose pid is dead are removed.
+- The runtime root, the launch's dir and `pids/` are checked after they
+  are made, since `mkdir` applies no mode to a dir that exists: each is
+  a directory, not a link, of the app's uid, with no group or other
+  bits, and each ancestor of the root's real path is root's or the
+  uid's and sticky where others may write it, a group-writable one
+  allowed when its group is the uid's primary group, a user private
+  group. Otherwise the app refuses to start, and a tab's receiver
+  refuses to link, naming the path. The relays send nothing through a
+  `pids/` that is not the uid's with no group or other bits. Before
+  this check another local user could make the root first and swap a
+  preload or a hook link.
 - The launch's pages: at start every file of `app/renderer` and
   `app/viz`, and each `node_modules` file their pages name, about 1.1 MB,
   is read into memory and served as `shell://launch/<path>`. The two
@@ -82,6 +95,10 @@ the relays connected to, grows with the runtime dir as well.
 - An abstract socket, which has no path: any process of any user may
   connect to it or take its name first.
 - `/tmp`: shared by every user of the machine, where the runtime dir is
-  private to the user and emptied at logout. `$TMPDIR` or `/tmp` is the
-  fallback only without `XDG_RUNTIME_DIR`.
+  private to the user and emptied at logout.
+- `$TMPDIR` or `/tmp` as the fallback without `XDG_RUNTIME_DIR`, the
+  choice until 2026-10-22: another user who makes the root first denies
+  the app its start, and before the check above could take it over.
+- The fallback inside the log dir: `bin/skinned` makes that under the
+  caller's umask, often group-writable.
 - One shared userData: two instances would contend for its lock.

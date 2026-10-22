@@ -38,9 +38,14 @@ def window(root):
 
 
 # A socket's path holds 107 bytes and ROOT may be longer: the link is
-# reached through a descriptor of ROOT/pids (decision 0016).
+# reached through a descriptor of ROOT/pids (decision 0016), which must
+# be this uid's with no group or other bits, or nothing is sent.
 def post(root, pid, body):
     d = os.open(os.path.join(root, 'pids'), os.O_RDONLY | os.O_DIRECTORY)
+    st = os.fstat(d)
+    if st.st_uid != os.getuid() or st.st_mode & 0o077:
+        os.close(d)
+        return
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(TIMEOUT_S)
     try:

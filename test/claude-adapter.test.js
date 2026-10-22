@@ -33,7 +33,7 @@ async function setup (t, { userLine = null, deep = '' } = {}) {
   const dirs = {}
   for (const d of ['cfg', 'cwd', 'run', 'root']) {
     dirs[d] = path.join(root, d === 'run' || d === 'root' ? deep : '', d)
-    fs.mkdirSync(dirs[d], { recursive: true })
+    fs.mkdirSync(dirs[d], { recursive: true, mode: 0o700 })
   }
   fs.mkdirSync(path.join(dirs.cwd, '.git'))
   if (userLine) fs.writeFileSync(path.join(dirs.cfg, 'settings.json'), JSON.stringify({ statusLine: { type: 'command', command: userLine } }))
@@ -145,6 +145,25 @@ test('S4 a POST to an unknown route writes nothing', async t => {
   const m = s.bus.snapshot()
   assert.strictEqual(m['event.tool'], undefined)
   assert.strictEqual(m['tools.Read'], undefined)
+})
+
+// Another user who could write ROOT/pids could point a link at a socket
+// of their own: the relays send nothing through a pids dir that is not
+// this uid's alone, and the receiver will not link into one.
+test('S6 the relays send nothing through a ROOT/pids open to others, and the receiver refuses it', async t => {
+  const s = await setup(t)
+  const pids = path.join(s.dirs.root, 'pids')
+  fs.chmodSync(pids, 0o777)
+  const body = { hook_event_name: 'PreToolUse', tool_name: 'Read', tool_use_id: 't1', session_id: 'sess-1' }
+  const r = await relay.run(s.hook, body)
+  assert.deepStrictEqual([r.code, r.stdout, r.stderr], [0, '', ''])
+  const r2 = await relay.run(s.status, Object.assign(JSON.parse(fs.readFileSync(fx('statusline.json'), 'utf8')), { session_id: 'sess-1' }))
+  assert.deepStrictEqual([r2.code, r2.stdout], [0, ''])
+  await sleep(300)
+  const m = s.bus.snapshot()
+  assert.strictEqual(m['event.tool'], undefined, 'no hook reached the bus')
+  assert.strictEqual(m['context.window'], undefined, 'no statusline reached the bus')
+  await assert.rejects(server.start(s.dirs.run, s.dirs.root, () => {}, () => {}), e => e.message === `hooks links: ${pids}: mode 777, want 700`)
 })
 
 test('S5 a socket that cannot bind rejects with its path, never listens unseen', async t => {

@@ -36,7 +36,7 @@ log="$logdir/$(date +%Y%m%d-%H%M%S)-$$.log"
 if [ -n "$XDG_RUNTIME_DIR" ]; then
   rundir="$XDG_RUNTIME_DIR/claude-skins/$$"
 else
-  rundir="${TMPDIR:-/tmp}/claude-skins-$(id -u)/$$"
+  rundir="${XDG_STATE_HOME:-$HOME/.local/state}/claude-skins-run/$$"
 fi
 export SKINNED_RUNTIME_DIR="$rundir"
 

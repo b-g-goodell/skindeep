@@ -14,24 +14,32 @@
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
+const { owned } = require('../../runtime')
 
 const MAX_BODY = 64 * 1024
 // sun_path is 108 bytes on Linux, its last the terminating NUL.
 const SUN_PATH = 107
 
-// The directory of the links, ROOT/pids, mode 0700.
+// The directory of the links, ROOT/pids, mode 0700 and this uid's.
 function pidsDir (root) {
   const d = path.join(root, 'pids')
   fs.mkdirSync(d, { recursive: true, mode: 0o700 })
-  return d
+  return owned(d)
 }
 
 // dir: the tab's directory. Resolves { server, socket, link(pid),
 // close() }: link(pid) points ROOT/pids/<pid> at the socket, close()
 // removes the link and the socket and stops the server. Rejects with
-// the socket's path when it cannot bind.
+// the socket's path when it cannot bind, and with ROOT/pids's when it is
+// not this uid's alone.
 function start (dir, root, onHook, onStatusline) {
   const socket = path.join(dir, 'hooks.sock')
+  let pids
+  try {
+    pids = pidsDir(root)
+  } catch (e) {
+    return Promise.reject(new Error(`hooks links: ${e.message}`))
+  }
   const server = http.createServer((req, res) => {
     res.writeHead(204)
     res.end()
@@ -60,7 +68,7 @@ function start (dir, root, onHook, onStatusline) {
     server,
     socket,
     link (pid) {
-      const p = path.join(pidsDir(root), String(pid))
+      const p = path.join(pids, String(pid))
       try { fs.unlinkSync(p) } catch (e) {}
       fs.symlinkSync(socket, p)
       linked = p
