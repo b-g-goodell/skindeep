@@ -335,3 +335,61 @@ test('gravity3d: with no hole the view stands at the origin, the centre of mass'
   const [x, y] = onScreen(V, 0, 0, 0)
   assert.ok(x === 600 && y === 380)
 })
+
+// The Doppler shift (decision 0015, 2026-10-18).
+const close = (a, b, eps, what) => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a}, want ${b}`)
+
+test('gravity3d: the Doppler factor is 1 at rest and across the line at low speed, above 1 coming and below 1 going', () => {
+  const C = g.C
+  // n, the unit vector toward the camera, along +x.
+  assert.strictEqual(g.doppler(0, 0, 0, 1, 0, 0), 1)
+  close(g.doppler(0, 0.01 * C, 0, 1, 0, 0), 1, 1e-4, 'across the line at beta 0.01')
+  close(g.doppler(0, 0, -0.01 * C, 1, 0, 0), 1, 1e-4, 'across the line at beta 0.01')
+  assert.ok(g.doppler(0.3 * C, 0, 0, 1, 0, 0) > 1, 'coming toward the camera')
+  assert.ok(g.doppler(-0.3 * C, 0, 0, 1, 0, 0) < 1, 'going away')
+  // D = 1 / (gamma (1 - beta cos theta)) at beta = 0.6, gamma = 1.25.
+  const D = th => g.doppler(0.6 * C * Math.cos(th), 0.6 * C * Math.sin(th), 0, 1, 0, 0)
+  close(D(0), 2, 1e-12, 'theta 0')
+  close(D(Math.PI / 3), 8 / 7, 1e-12, 'theta 60 degrees')
+  close(D(Math.PI / 2), 0.8, 1e-12, 'theta 90 degrees')
+  close(D(Math.PI), 0.5, 1e-12, 'theta 180 degrees')
+  // Past the speed cap, the speed is taken as BETA C.
+  const b = g.BETA
+  close(g.doppler(3 * C, 0, 0, 1, 0, 0), Math.sqrt(1 - b * b) / (1 - b), 1e-9, 'at 3 C')
+})
+
+test('gravity3d: the colour rule turns a hue toward blue for D > 1 and toward red for D < 1, by lambda / D', () => {
+  // Unwrapped hue along the spectrum: red, below 0, up through 0 to
+  // violet, HUE_BLUE.
+  const un = h => h > g.HUE_BLUE ? h - 360 : h
+  for (let h = 0; h < 360; h += 15) close(g.shift(h, 1), h, 1e-9, `hue ${h} at D = 1`)
+  for (const h of [350, 0, 15, 30, 48, 120, 200, 215, 240]) {
+    const up = un(g.shift(h, 1.05))
+    const down = un(g.shift(h, 0.95))
+    assert.ok(up > un(h) && up <= g.HUE_BLUE, `hue ${h} at D 1.05 is ${up}`)
+    assert.ok(down < un(h) && down >= g.HUE_RED, `hue ${h} at D 0.95 is ${down}`)
+  }
+  // The purples move along their arc toward violet and toward red.
+  for (const h of [280, 300, 320, 340]) {
+    assert.ok(g.shift(h, 1.05) < h && g.shift(h, 1.05) >= g.HUE_BLUE, `hue ${h} at D 1.05 is ${g.shift(h, 1.05)}`)
+    assert.ok(g.shift(h, 0.95) > h && g.shift(h, 0.95) <= 360 + g.HUE_RED, `hue ${h} at D 0.95 is ${g.shift(h, 0.95)}`)
+  }
+  // The nominal wavelength of a hue is that of the spectral colour of
+  // that hue, and the shift divides it by D.
+  for (const l of [450, 470.5, 500, 549, 580, 611, 630]) close(g.wavelength(g.spectral(l)), l, 1e-6, `lambda ${l} nm`)
+  for (const [h, D] of [[30, 1.2], [120, 0.95], [200, 1.03], [0, 1.1], [215, 0.9]]) {
+    close(g.wavelength(un(g.shift(h, D))), g.wavelength(un(h)) / D, 1e-6, `lambda of hue ${h} at D ${D}`)
+  }
+  // Clamped at the range's ends.
+  close(g.shift(200, 5), g.HUE_BLUE, 1e-9, 'far bluer')
+  close(g.shift(30, 0.2), 360 + g.HUE_RED, 1e-9, 'far redder')
+  close(g.shift(300, 0.1), 360 + g.HUE_RED, 1e-9, 'a purple far redder')
+})
+
+test('gravity3d: the gravitational shift of light from rest at r is sqrt(1 - r_s / r), 0 within r_s', () => {
+  const h = { b: { x: 0, y: 0, z: 0 }, s: RS }
+  close(g.lapse([h], 4 * RS, 0, 0), Math.sqrt(0.75), 1e-12, 'at 4 r_s')
+  close(g.lapse([h, { b: { x: 8 * RS, y: 0, z: 0 }, s: RS }], 4 * RS, 0, 0), 0.75, 1e-12, 'between two holes at 4 r_s')
+  assert.strictEqual(g.lapse([h], 0.9 * RS, 0, 0), 0)
+  assert.strictEqual(g.lapse([], 1, 2, 3), 1)
+})

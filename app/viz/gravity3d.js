@@ -18,10 +18,15 @@
 // and the distant stars. The shadow, the photon ring, arcs, Einstein
 // rings, inner images and one hole seen through another all follow from
 // that one rule. The optics are Schwarzschild's: spin drags matter, as
-// above, but bends no light here. The bodies radiate gravitational waves
-// (waves.js) at c, which carry energy away: every pair feels the 2.5PN
-// radiation reaction, so a tight pair inspirals at Peters' rate, its
-// waves chirping, until it merges. The seed's companion is such a pair,
+// above, but bends no light here. What emits, the dust, the bodies and
+// their trails, is drawn shifted by its Doppler factor relative to the
+// view's centre, which carries the camera, and by the holes'
+// gravitational shift, in hue (shift) and by its cube in brightness.
+// The distant stars, the flares and the waves are not (emit). The
+// bodies radiate gravitational waves (waves.js) at c, which carry
+// energy away: every pair feels the 2.5PN radiation reaction, so a
+// tight pair inspirals at Peters' rate, its waves chirping, until it
+// merges. The seed's companion is such a pair,
 // a star and a small hole. The signal and the pointer: see react and
 // pointer.
 
@@ -69,9 +74,118 @@
   const PAIR_SEP = 16
   const PAIR_R = 175
 
+  // The Doppler shift (decision 0015, 2026-10-18): speeds at most BETA
+  // C, and the dust's shift in steps of QLN in ln g.
+  const BETA = 0.99
+  const QLN = 0.02
+
+  // The colour rule's spectrum: the CSS hue of each spectral colour from
+  // LAM_BLUE to LAM_RED nm, every DLAM, mixed with white into sRGB, by
+  // the multi-lobe fit of the CIE 1931 colour matching functions (Wyman,
+  // Sloan and Shirley 2013, JCGT 2(2), eq. 4). Its hue falls as lambda
+  // grows over this range, past 0 near 611 nm, so it is kept unwrapped,
+  // from HUE_BLUE down to HUE_RED, below 0.
+  const LAM_BLUE = 440
+  const LAM_RED = 640
+  const DLAM = 0.25
+  const SPEC = (() => {
+    const lobe = (x, m, t1, t2) => {
+      const t = x < m ? t1 : t2
+      return Math.exp(-0.5 * t * t * (x - m) * (x - m))
+    }
+    const enc = c => c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055
+    const n = Math.round((LAM_RED - LAM_BLUE) / DLAM)
+    const out = new Float64Array(n + 1)
+    for (let i = 0; i <= n; i++) {
+      const l = LAM_BLUE + i * DLAM
+      const X = 1.056 * lobe(l, 599.8, 0.0264, 0.0323) + 0.362 * lobe(l, 442.0, 0.0624, 0.0374) - 0.065 * lobe(l, 501.1, 0.0490, 0.0382)
+      const Y = 0.821 * lobe(l, 568.8, 0.0213, 0.0247) + 0.286 * lobe(l, 530.9, 0.0613, 0.0322)
+      const Z = 1.217 * lobe(l, 437.0, 0.0845, 0.0278) + 0.681 * lobe(l, 459.0, 0.0385, 0.0725)
+      // Linear sRGB (IEC 61966-2-1), white added until none is negative,
+      // which keeps the dominant wavelength, then encoded.
+      let r = 3.2406 * X - 1.5372 * Y - 0.4986 * Z
+      let g = -0.9689 * X + 1.8758 * Y + 0.0415 * Z
+      let b = 0.0557 * X - 0.2040 * Y + 1.0570 * Z
+      const w = Math.min(r, g, b, 0)
+      const top = Math.max(r, g, b) - w
+      r = enc((r - w) / top)
+      g = enc((g - w) / top)
+      b = enc((b - w) / top)
+      const mx = Math.max(r, g, b)
+      const d = mx - Math.min(r, g, b)
+      const h = 60 * (mx === r ? (g - b) / d : mx === g ? (b - r) / d + 2 : (r - g) / d + 4)
+      out[i] = h > 300 ? h - 360 : h
+    }
+    return out
+  })()
+  const HUE_BLUE = SPEC[0]
+  const HUE_RED = SPEC[SPEC.length - 1]
+
+  // The hue of light of wavelength l nm, unwrapped, l in the range.
+  function spectral (l) {
+    const x = (l - LAM_BLUE) / DLAM
+    const i = Math.min(SPEC.length - 2, Math.max(0, Math.floor(x)))
+    return SPEC[i] + (SPEC[i + 1] - SPEC[i]) * (x - i)
+  }
+
+  // The nominal wavelength of unwrapped hue u, from HUE_RED to HUE_BLUE:
+  // the spectral colour of that hue.
+  function wavelength (u) {
+    let lo = 0
+    let hi = SPEC.length - 1
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1
+      if (SPEC[m] > u) lo = m
+      else hi = m
+    }
+    return LAM_BLUE + DLAM * (lo + (SPEC[lo] - u) / (SPEC[lo] - SPEC[hi]))
+  }
+
   const rs = m => 2 * m / C2
   // Math.hypot is several times slower.
   const len = (x, y, z = 0) => Math.sqrt(x * x + y * y + z * z)
+
+  // The Doppler factor of an emitter moving at (vx, vy, vz) relative to
+  // the camera, (nx, ny, nz) the unit vector from it toward the camera:
+  // D = 1 / (gamma (1 - beta cos theta)), beta = v / C, at most BETA.
+  function doppler (vx, vy, vz, nx, ny, nz) {
+    let b2 = (vx * vx + vy * vy + vz * vz) / C2
+    let bn = (vx * nx + vy * ny + vz * nz) / C
+    if (b2 > BETA * BETA) {
+      bn *= BETA / Math.sqrt(b2)
+      b2 = BETA * BETA
+    }
+    return Math.sqrt(1 - b2) / (1 - bn)
+  }
+
+  // The gravitational shift of light from (x, y, z) to a distant camera:
+  // over the holes { b, s } (s = r_s), the product of sqrt(1 - r_s / r),
+  // 0 within r_s.
+  function lapse (holes, x, y, z) {
+    let g = 1
+    for (const o of holes) {
+      const r = len(x - o.b.x, y - o.b.y, z - o.b.z)
+      g *= r > o.s ? Math.sqrt(1 - o.s / r) : 0
+    }
+    return g
+  }
+
+  // The colour rule: the hue seen of an emitter of hue whose light is
+  // shifted by g, lambda_obs = lambda_em / g. A spectral hue has the
+  // nominal wavelength of the spectral colour of that hue (wavelength),
+  // shifted and clamped to LAM_BLUE and LAM_RED, the range's ends, and
+  // seen as that wavelength's hue (spectral): toward HUE_BLUE, violet,
+  // for g > 1, toward HUE_RED for g < 1. A purple, between HUE_BLUE and
+  // HUE_RED + 360, mixes the two ends: it moves along its own arc by
+  // the part ln g / ln(LAM_RED / LAM_BLUE) of it, toward the same ends.
+  function shift (hue, g) {
+    const h = ((hue % 360) + 360) % 360
+    const u = h > HUE_BLUE ? h - 360 : h
+    if (u >= HUE_RED) return (spectral(Math.max(LAM_BLUE, Math.min(LAM_RED, wavelength(u) / g))) + 360) % 360
+    const arc = 360 + HUE_RED - HUE_BLUE
+    const x = Math.max(0, Math.min(1, (360 + HUE_RED - h) / arc + Math.log(g) / Math.log(LAM_RED / LAM_BLUE)))
+    return (360 + HUE_RED - x * arc) % 360
+  }
 
   // The outer horizon of hole h: r_+ = M / C^2 + sqrt((M / C^2)^2 - a^2).
   function horizon (h) {
@@ -748,9 +862,28 @@
     const hv = [0, 0]
     const at = [0, 0, 0]
     const cf = [0, 0, 0]
+    // The frame's camera in the world, the velocity of the view's centre,
+    // which carries it, and the holes { b, s }, for the shift (emit).
+    const eye = [0, 0, 0]
+    const vo = [0, 0, 0]
+    let near = []
+
+    // The shift g of the light of what is at (x, y, z), moving at (vx,
+    // vy, vz) relative to the view's centre, seen from the camera: its
+    // Doppler factor times the holes' gravitational shift.
+    function emit (x, y, z, vx, vy, vz) {
+      let nx = eye[0] - x
+      let ny = eye[1] - y
+      let nz = eye[2] - z
+      const l = len(nx, ny, nz) || 1
+      nx /= l
+      ny /= l
+      nz /= l
+      return doppler(vx, vy, vz, nx, ny, nz) * lapse(near, x, y, z)
+    }
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
-      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0 }
+      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tv: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0, g: 1 }
       b.r = b.hole ? horizon(b) : radius(m, b.star)
       bodies.push(b)
       return b
@@ -781,7 +914,7 @@
     // A grain, every one of the same shape, which keeps the loops over
     // them fast.
     function grain (o) {
-      return Object.assign({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hue: 0, disc: false, gone: false, px: 0, py: 0, pd: 1, heat: 0, beam: 1 }, o)
+      return Object.assign({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hue: 0, disc: false, gone: false, px: 0, py: 0, pd: 1, heat: 0, g: 1, lum: 1 }, o)
     }
 
     // Grains on circular orbits about hole h, in its equator.
@@ -1066,7 +1199,10 @@
         if (i1 <= i0) continue
         const m = 3 * ((i0 + i1) >> 1)
         project(tr[m], tr[m + 1], tr[m + 2])
-        put(P.d, { b, i0, i1, a: (c + 1) / CH * 0.9 * dim, end: i1 === start + n - 1 })
+        // Shifted as the body's light was at the chunk's middle place.
+        const tv = b.tv
+        const g = tv.length === tr.length ? emit(tr[m], tr[m + 1], tr[m + 2], tv[m], tv[m + 1], tv[m + 2]) : b.g
+        put(P.d, { b, i0, i1, a: (c + 1) / CH * 0.9 * dim, end: i1 === start + n - 1, g })
       }
     }
 
@@ -1088,7 +1224,7 @@
       const c = L.g
       const lw = Math.max(1, Math.min(3, b.r * b.pk * 0.8))
       c.lineWidth = lw
-      c.strokeStyle = style(b.hue, b.comet ? 40 : 85, b.comet ? 80 : 60, t.a)
+      c.strokeStyle = style(shift(b.hue, t.g), b.comet ? 40 : 85, b.comet ? 80 : 60, Math.min(1, t.a * t.g * t.g * t.g))
       c.beginPath()
       for (let i = i0; i <= i1; i++) {
         project(tr[3 * i], tr[3 * i + 1], tr[3 * i + 2])
@@ -1111,17 +1247,22 @@
       const c = L.g
       const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * b.pd / V.D))
       const lit = dim * fog
+      // The beaming, g^3: in the glow's alpha, and in the disc's
+      // lightness up to 80%, past which its hue would wash to white.
+      const I = b.g * b.g * b.g
       const [r, R] = reach(b)
-      const [hue, sat, light] = hot(b.hue, b.star ? 100 : b.comet ? 40 : 80, b.star ? 90 : b.comet ? 85 : 62, b.heat)
+      const [h0, sat, light] = hot(b.hue, b.star ? 100 : b.comet ? 40 : 80, b.star ? 90 : b.comet ? 85 : 62, b.heat)
+      const hue = shift(h0, b.g)
       if (b.star || b.heat > 0.15) {
         const glow = c.createRadialGradient(b.px, b.py, r * 0.3, b.px, b.py, R)
-        glow.addColorStop(0, `hsla(${hue | 0}, 100%, 85%, ${lit})`)
-        glow.addColorStop(0.35, `hsla(${hue | 0}, 100%, 60%, ${0.35 * lit})`)
+        glow.addColorStop(0, `hsla(${hue | 0}, 100%, 85%, ${Math.min(1, lit * I)})`)
+        glow.addColorStop(0.35, `hsla(${hue | 0}, 100%, 60%, ${Math.min(1, 0.35 * lit * I)})`)
         glow.addColorStop(1, `hsla(${hue | 0}, 100%, 50%, 0)`)
         c.fillStyle = glow
         c.fillRect(b.px - R, b.py - R, 2 * R, 2 * R)
       }
-      c.fillStyle = `hsl(${hue | 0}, ${sat | 0}%, ${(light * lit) | 0}%)`
+      const l0 = light * lit
+      c.fillStyle = `hsl(${hue | 0}, ${sat | 0}%, ${Math.min(l0 * I, Math.max(l0, 80)) | 0}%)`
       c.beginPath()
       c.arc(b.px, b.py, r, 0, Math.PI * 2)
       c.fill()
@@ -1344,9 +1485,9 @@
           const heat = d.heat
           const [hue, sat, light] = hot(d.hue, 70, 75, Math.round(heat * 12) / 12)
           const fog = Math.max(0.5, Math.min(1.1, 1.3 - 0.5 * d.pd / V.D))
-          const a = (0.55 + 0.45 * heat) * dim * fog * (heat > 0.05 ? d.beam : 1)
+          const a = (0.55 + 0.45 * heat) * dim * fog * d.lum
           const s = 1.2 + 1.3 * heat
-          rect(L, style(hue, sat, light, 1), a, d.px, d.py, s, d.pd)
+          rect(L, style(shift(hue, d.g), sat, light, 1), a, d.px, d.py, s, d.pd)
           mark(L, d.px - s, d.py - s, d.px + s, d.py + s)
         }
         flush(L)
@@ -1606,16 +1747,21 @@
         bodies = bodies.filter(b => b.star || b.hole || len(b.x, b.y, b.z) < VIEW * 4)
         dust = dust.filter(d => !d.gone && len(d.x, d.y, d.z) < VIEW * 2 && bodies.every(b => b.hole || (b.x - d.x) ** 2 + (b.y - d.y) ** 2 + (b.z - d.z) ** 2 > b.r * b.r))
         if (bodies.length < 2 && !staged) seed()
+        const c0 = anchor(bodies) || { vx: 0, vy: 0, vz: 0 }
         for (const b of bodies) {
           b.flash *= Math.exp(-dt / 0.6)
-          // A place every 1.5 time units, or every 4 units of travel.
+          // A place every 1.5 time units, or every 4 units of travel,
+          // and the velocity there relative to the view's centre, which
+          // its light is shifted by.
           if (b.hole || b.star) continue
           const tr = b.trail
           const k = tr.length - 3
           if (k >= 0 && clock - b.tt < 1.5 && (b.x - tr[k]) ** 2 + (b.y - tr[k + 1]) ** 2 + (b.z - tr[k + 2]) ** 2 < 16) continue
           b.tt = clock
           tr.push(b.x, b.y, b.z)
+          b.tv.push(b.vx - c0.vx, b.vy - c0.vy, b.vz - c0.vz)
           if (tr.length > 3 * 64) tr.splice(0, 3)
+          if (b.tv.length > tr.length) b.tv.splice(0, b.tv.length - tr.length)
         }
 
         // The camera turns slowly by itself, unless the pointer turned
@@ -1632,6 +1778,14 @@
         // them.
         const holes = []
         for (const b of bodies) if (b.hole) holes.push({ b, s: rs(b.m) })
+        // The shift's frame: the view's centre's, which carries the
+        // camera (decision 0015, 2026-10-18).
+        const c1 = anchor(bodies)
+        for (let i = 0; i < 3; i++) eye[i] = V.o[i] + V.D * V.e[i]
+        vo[0] = c1 ? c1.vx : 0
+        vo[1] = c1 ? c1.vy : 0
+        vo[2] = c1 ? c1.vz : 0
+        near = holes
         for (const b of bodies) {
           project(b.x, b.y, b.z)
           b.pd = P.d
@@ -1639,6 +1793,7 @@
           b.px = P.x
           b.py = P.y
           b.heat = b.hole ? 0 : heatAt(holes.filter(o => o.b !== b), b.x, b.y, b.z)
+          b.g = b.hole ? 1 : emit(b.x, b.y, b.z, b.vx - vo[0], b.vy - vo[1], b.vz - vo[2])
         }
         for (const d of dust) {
           project(d.x, d.y, d.z)
@@ -1646,11 +1801,13 @@
           d.px = P.x
           d.py = P.y
           d.heat = heatAt(holes, d.x, d.y, d.z)
-          // Beaming: brighter where the grain comes toward the camera.
-          // A hole's flash brightens the hot matter about it.
+          // The shift, in steps of QLN in ln g, so grains of near shifts
+          // share a fill, and the beaming, g^3. A hole's flash brightens
+          // the hot matter about it.
+          const g = emit(d.x, d.y, d.z, d.vx - vo[0], d.vy - vo[1], d.vz - vo[2])
+          d.g = g > 0 ? Math.exp(QLN * Math.round(Math.log(g) / QLN)) : 0
           const o = hotHole
-          const vl = o && d.heat > 0.05 ? ((d.vx - o.vx) * V.e[0] + (d.vy - o.vy) * V.e[1] + (d.vz - o.vz) * V.e[2]) / C : 0
-          d.beam = Math.max(0.35, Math.min(2.2, (1 + 0.6 * vl) ** 2)) * (1 + (o ? 1.5 * o.flash * d.heat : 0))
+          d.lum = d.g * d.g * d.g * (1 + (o ? 1.5 * o.flash * d.heat : 0))
         }
         flares = flares.filter(f => clock - f.t < 18)
         // The trace's scale: the pixels traced bounded a pane, and a
@@ -1744,9 +1901,12 @@
       // toward its up, or X right and Y up, at rest, and a planet with trail
       // given a straight trail of that many places toward the right,
       // 4 apart. Every other body, grain, flare and wave is gone. judge
-      // names the items judged: { body, hole }, indices into items.
-      // Returns the items' numbers.
-      stage ({ yaw, pitch, m, items, judge }) {
+      // names the items judged: { body, hole }, indices into items. disc,
+      // if given, is a count of grains on circular orbits in the hole's
+      // equator, from 3.3 to 8 r_s, which turn counterclockwise seen
+      // from above, held still with their velocities. Returns the items'
+      // numbers.
+      stage ({ yaw, pitch, m, items, judge, disc: nd }) {
         staged = true
         cam.yaw = yaw
         cam.pitch = pitch
@@ -1756,6 +1916,7 @@
         flares = []
         field.reset()
         const c = body(0, 0, 0, 0, 0, 0, m, 0, 'hole')
+        if (nd) disc(c, nd, 3.3 * rs(m), 8 * rs(m), 30)
         const ids = items.map(it => {
           let X = it.X
           let Y = it.Y
@@ -1776,7 +1937,10 @@
             return 0
           }
           const b = body(p[0], p[1], p[2], 0, 0, 0, it.m, it.kind === 'hole' ? 0 : 55, it.kind)
-          for (let k = it.trail || 0; k > 0; k--) b.trail.push(p[0] + 4 * k * V.r[0], p[1] + 4 * k * V.r[1], p[2] + 4 * k * V.r[2])
+          for (let k = it.trail || 0; k > 0; k--) {
+            b.trail.push(p[0] + 4 * k * V.r[0], p[1] + 4 * k * V.r[1], p[2] + 4 * k * V.r[2])
+            b.tv.push(0, 0, 0)
+          }
           b.tt = clock
           return b.id
         })
@@ -1812,7 +1976,7 @@
     }
   }
 
-  const api = { step, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, C, CHI_MAX, PANE, quadrupole: W.quadrupole }
+  const api = { step, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, C, CHI_MAX, PANE, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)
