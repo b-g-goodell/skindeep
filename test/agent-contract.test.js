@@ -291,7 +291,7 @@ for (const kind of Object.keys(ADAPTERS)) {
 
 test('claude: with --settings given the hooks and statusline are off, and the notice says why', async t => {
   const h = await harness(t, 'claude')
-  const agent = open({ cmd: ['claude', '--settings', '/x.json'], cwd: h.dir, env: { PATH: process.env.PATH, CLAUDE_CONFIG_DIR: path.join(h.dir, 'cfg') }, runDir: path.join(h.dir, 'run'), options: { statusline: 'always' }, bus: new Bus(), log: () => {}, clock: fakeClock() })
+  const agent = open({ cmd: ['claude', '--settings', '/x.json'], cwd: h.dir, env: { PATH: process.env.PATH, CLAUDE_CONFIG_DIR: path.join(h.dir, 'cfg') }, runDir: path.join(h.dir, 'run'), root: path.join(h.dir, 'root'), options: { statusline: 'always' }, bus: new Bus(), log: () => {}, clock: fakeClock() })
   t.after(() => agent.close())
   await agent.prepare()
   const r = agent.report()
