@@ -8,7 +8,8 @@
 // with its source flashing, visible fronts, ultraviolet and infrared
 // fronts, and the spectrum after the run. Then every pane's signal is
 // held at full activity, by an override of Synth's step in the page,
-// and a frame with hundreds of fronts is captured. Then each of Carbon,
+// and a frame with hundreds of fronts is captured, and the one pane's
+// frame rate counted, three rounds of 2 s. Then each of Carbon,
 // Gravity and Quantum drawn alone on a 400 by 380 canvas at full
 // activity, fed through Synth's input: the median cost of a draw. Then
 // three panes of a 720 by 460 window all in one of those modes, five
@@ -162,6 +163,15 @@ function check (ok, msg, seen) {
   check(busy, 'want 60 fronts at once at full activity')
   await save(0, 'busy')
   console.log('frame busy', JSON.stringify(busy))
+  const rate = () => viz.evaluate(() => new Promise(resolve => {
+    let n = 0
+    const t0 = performance.now()
+    const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else resolve(n / 2) }
+    requestAnimationFrame(f)
+  }))
+  const one = []
+  for (let round = 0; round < 3; round++) one.push(await rate())
+  console.log('fps with one pane full activity carbon', one.join(' '), 'median', one.slice().sort((a, b) => a - b)[1])
 
   // Each mode drawn alone on a canvas of 400 by 380, its own signal at
   // full activity, 240 frames after 300 of warm-up: the median cost of a
@@ -220,12 +230,7 @@ function check (ok, msg, seen) {
         const ids = (await tabs()).map(t => t.id)
         for (let j = 0; j < 3; j++) await assign(ids[j], id)
         await sleep(1500)
-        runs[k].push(await viz.evaluate(() => new Promise(resolve => {
-          let n = 0
-          const t0 = performance.now()
-          const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else resolve(n / 2) }
-          requestAnimationFrame(f)
-        })))
+        runs[k].push(await rate())
         if (round === 0 && id === 'carbon') {
           await save(0, full ? 'split-full' : 'split')
           if (full) console.log('split pane at full activity', JSON.stringify((await state()).panes[0].probe))

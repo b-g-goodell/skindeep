@@ -20,7 +20,8 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
 (issue #158) and for its flashes and its slowed clocks (issues #164
-and #166), and for the gravitational waves of the Gravity modes
+and #166), and 2026-10-18 for its field's calibration (issue #169),
+and for the gravitational waves of the Gravity modes
 (issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
 for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
@@ -826,15 +827,16 @@ builder, settled here, and the rest follows its text.
   taken as $z$. Its distance from the centre over the radius, squared,
   is $B$'s share of 2 mT, in steps of 0.01 mT, so the low fields where a
   $2p4p$ emitter turns 1 to 5 times a lifetime take most of the dial.
-  $B$ starts at 0.30 mT at 60 degrees, so the mode precesses unasked.
+  $B$ starts at 0.15 mT at 60 degrees, so the mode precesses unasked
+  (0.30 mT until #169's calibration, 2026-10-18 below).
   $B$ lies in the $x$-$z$ plane: every excitation here is round about
   $z$, so $B$'s azimuth about $z$ changes nothing. The 3D view draws $B$
   as a violet axis through the atom with its arrow and name. A small
   pane keeps the dial and writes no text over its atom: the field and
   the drawn atom's rate go with the ensemble's caption above it.
-- The pane states the field ("B 0.30 mT at 60 deg to z, in the x-z
+- The pane states the field ("B 0.15 mT at 60 deg to z, in the x-z
   plane"), the drawn atom's rate on screen and its real value ("turns
-  about B at 1.26 Hz on screen, 6.30 MHz real"), and its $g_J$ marked
+  about B at 0.630 Hz on screen, 3.15 MHz real"), and its $g_J$ marked
   measured or "LS: a model". With $B$ along $z$ it says that an $M$
   state about $B$ is stationary and nothing turns, with $B$ at 0 that
   nothing precesses, and at $J = 0$ that the level has no moment.
@@ -1613,3 +1615,112 @@ Rejected:
   move every frame, and the culls would measure from the hole.
 - Easing the view across a merger, so the trails glide rather than
   move by the recoil: the hole would leave the centre for the glide.
+
+## 2026-10-18: Carbon's field, calibrated
+
+Owner, 2026-10-16, issue #169: "the drawn atom's own axis is what is
+flickering in such a confusing way from my pov, but reducing the
+magnitude of the magnetic field helped *A TON*. keep the min and max
+magnetic field values where they are though". The clocks are slowed
+five times (#166, above), so the axis's look, a line with no
+arrowhead, repeats on screen at $2f_L = 2g_J\mu_B B/h/E$, 8.40 a
+second per mT at $g_J$ 1.501 ($2p^2\,{}^3P_{1,2}$, the levels the atom
+rests in) and 11.21 at $g_J$ 2.002 ($2s2p^3\,{}^5S^o_2$, where a
+subagent's start leaves it, at rest for good, and $2p3p\,{}^3S_1$).
+
+- The count. The axis is 1.5 pixels wide, so no field of the WCAG
+  count can see it. `scripts/checks/vizflash.js` now draws it alone,
+  each frame its segment as the probe reports it (`axisLine`), in its
+  own stroke on black on a canvas of its own, and counts that canvas's
+  cells, each flashing as the line passes. It counts twice: the axis
+  whole, and its turning alone, a fresh count after each time the axis
+  is set anew, the most of the stretches kept. New scenes: full
+  activity at B_MAX in the full pane and the split of three, a pulse on
+  a quiet session at the start and at B_MAX, so the cloud that turns
+  with the pulsed level and its beat come under the field count, and a
+  subagent's start, which leaves the drawn atom in 5So2. The field,
+  B_MAX at the start's 60 degrees, and the pulse are set by the
+  renderer's pointer, as a press.
+- What the count found: a cell flashes faster than $2f_L$. The axis
+  lies on a cone of 60 degrees about $B$, so its line does not repeat
+  after half a turn, and with the camera turning (0.25 rad/s at
+  activity) the view leaves the cone and the line swings back and
+  forth over some cells. At 0.30 mT, $2f_L$ 2.52 a second, its turning
+  reads 4 a second.
+- The frame rates, `xvfb-run node scripts/checks/vizcarbon.js OUT`,
+  which now counts one pane's rate too, twice, load (1-minute
+  `/proc/loadavg`) 35.05 before and 19.37 after the first, 24.75 and
+  41.72 the second: one pane of 1200 by 760 at full activity 29, 30
+  and 30 frames a second, then 12.5, 14 and 15.5, and three panes of
+  720 by 460 in Carbon at full activity 25, 22, 32.5, 29.5 and 17.5,
+  median 25, then 16.5, 17.5, 9.5, 7 and 18.5, median 16.5.
+- Aliasing, the repeat against half the frame rate. At the start,
+  0.15 mT: 1.26 and 1.68 a second, under 3.5, half the slowest round's
+  7: none. At 2 mT: 16.81 and 22.42 a second, over 15, half the one
+  pane's best 30, and over 12.5, half the split's best median 25: the
+  axis aliases in both on this loaded host. In an unloaded pane at 60
+  frames a second both stay under 30 and neither aliases. The counter
+  shows it: at 2 mT the axis's cells read 12 to 17 a second at 60
+  frames a second against the 16.81 stated, and 7 or 8 at 20, the
+  alias.
+- The axis's turning alone, the most flashes of a cell in any one
+  second, `xvfb-run node scripts/checks/vizflash.js OUT --only
+  full,moderate,idle,beat,prompt,subagent,split-full --set
+  B_START=0.15e-3` and the like, loads 38.55 before and 87.35 after,
+  and the check as committed, `xvfb-run node scripts/checks/vizflash.js
+  OUT`, loads 33.95 to 64.04:
+
+  | start | idle | pulse | prompt | subagent, $g_J$ 2 | full | moderate | split |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 0.30 mT | 4 | 2 | 4 | 4 | 2 | 4 | 3 |
+  | 0.18 mT, two runs | 2, 2 | 2, 2 | 2, 2 | 3, 3 | 2, 2 | 2, 2 | 2, 2 |
+  | 0.15 mT | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+  | 0.15 mT, the check as committed, two runs | 2, 2 | 2, 2 | 2, 2 | 2, 2 | 2, 2 | 2, 2 | 2, 2 |
+
+  At $g_J$ 1.5 the turning reads 2 at $2f_L$ 1.51 and 4 at 2.52, at
+  $g_J$ 2 it reads 3 at 2.02. The count is the extreme of a few
+  thousand cells, so it moves by one between runs.
+- Resets and jumps (item 4 of #169). Every session event lifts the
+  drawn atom (`some` takes atom 0 always), and a lift sets its axis to
+  $z$ turned about $B$ by a random phase: at full activity 7 to 10
+  times in 12 s, the line jumping a median of 15 to 79 degrees on the
+  pane, by run and scene. A jump keeps the axis where it is and changes
+  only its rate, 0 to 9 times in 12 s. Once slow, the reset is what adds to the
+  confusion: counted with the axis whole, its leap adds about one flash
+  to a cell, and some run read 4 at every start tried from 0.12 to
+  0.30 mT (`--only full,idle,beat,prompt,split-full --set
+  B_START=0.25e-3` and the like, loads 6.90 to 87.35), the reading 4
+  even after a single prompt at 0.18 mT. No field removes it. A change
+  of rate shows in no count. A change to the reset, an eased turn to
+  the new axis or a reset only at a collision, is its own decision,
+  left to the owner. The axis whole is reported, its turning asserted.
+- The calibration. `B_START` = 0.15 mT, the start at which the turning
+  read 2 at both $g_J$, a count under the bound of three at $g_J$ 2,
+  which at 0.18 mT read 3. The dial's range is the owner's, 0 to 2 mT,
+  `B_MAX` kept, and its law is kept: the radius's share squared is
+  $B$'s share of 2 mT, so 0.15 mT sits at 0.27 of the radius, the band
+  where a $2p4p\,{}^3P_2$ emitter turns 1 to 5 times a lifetime, 0.34
+  to 1.69 mT, at 0.41 to 0.92, and aliasing in a split begins at 1.49
+  mT, 0.86 of the radius, at its median 25 frames a second, and at
+  0.98 mT, 0.70, at the second run's median 16.5. No measurement
+  singled out another law, the clocks scale rates and lifetimes
+  together so the reason for the square law holds, and both ends are
+  fixed.
+- The beat at the start: $2f_L$ of $2p4p\,{}^3P_2$ is 1.26 Hz against
+  its 0.70 s on screen, 0.89 periods a lifetime. Looked at, the trace
+  after a pulse shows a plateau, a fall and one shoulder: the beat is
+  barely legible, where at 0.18 mT it showed a peak, a dip and a second
+  bump. The calm start is taken over it, and turning the dial up shows
+  the beat. At 2 mT it is a comb of 16.8 Hz.
+- Asserted by `vizflash.js` at the start field, in every scene: no cell
+  of the axis's turning over 3 a second, the drawn atom turning for 2 s
+  in all, the pulse lifting the drawn atom, the subagent leaving it in
+  5So2, and B_MAX taken from the press. With `B_START` set back to 0.30
+  mT it fails. The axis whole and the scenes at B_MAX are reported. The
+  field count holds every scene at 0 general and 0 red flashes a second
+  within one frame, the pulse's turning cloud included. `vizzeeman.js`
+  reads `B_START` and `B_MAX` from the mode, and
+  `test/viz-carbon.test.js` pins 0.15 mT and the repeats at it.
+- Kept: the cloud, counted per cell, flickers far above three a second
+  from its seethe, in wall time, and its stipple's motion: idle, with
+  no fronts, a cell reads 5. #165 replaces the seethe.

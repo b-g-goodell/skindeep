@@ -156,8 +156,8 @@ test('carbon: what moves with the clocks keeps its relation to them', () => {
   // The detector's trace on the event clock: 2 ms and 1 s at 1e6.
   assert.ok(Math.abs(C.TRACE_DT / C.EVENT - 2e-9) < 1e-21)
   assert.ok(Math.abs(C.TRACE_T / C.EVENT - 1e-6) < 1e-18)
-  // The dial's range and start are kept (issue #169).
-  assert.deepStrictEqual([C.B_MAX, C.B_START], [2e-3, 0.3e-3])
+  // The dial's range is kept, its start calibrated (issue #169).
+  assert.deepStrictEqual([C.B_MAX, C.B_START], [2e-3, 0.15e-3])
 })
 
 test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', () => {
@@ -295,9 +295,12 @@ test('carbon: an axis turns about B at g_J mu_B B / h on the event clock, and st
   const f = C.Larmor.rate(D.levels[i], b)
   assert.ok(Math.abs(f - 1.5010469 * 1.39962449171e10 * 1e-3 / C.EVENT) < 1e-9, `${f}`)
   assert.ok(Math.abs(f - 4.202) < 1e-3, `${f}`)
-  // At the dial's start, 0.30 mT: 1.261 turns a second on screen, the
-  // axis's look repeating at twice that, 2.52 a second.
-  assert.ok(Math.abs(2 * C.Larmor.rate(D.levels[i], { T: C.B_START, u: [1, 0, 0] }) - 2.521) < 1e-3)
+  // At the dial's start, 0.15 mT: 0.630 turns a second on screen, the
+  // axis's look repeating at twice that, 1.26 a second, and 1.68 at
+  // g_J 2, 2s2p3 5So2's.
+  assert.ok(Math.abs(2 * C.Larmor.rate(D.levels[i], { T: C.B_START, u: [1, 0, 0] }) - 1.261) < 1e-3)
+  const q = D.levels.find(l => l.id === '2s2p3_5So_2')
+  assert.ok(Math.abs(2 * C.Larmor.rate(q, { T: C.B_START, u: [1, 0, 0] }) - 1.682) < 1e-3)
   const a = { lv: i, n: [0, 0, 1], t0: 0 }
   const t = 0.01
   const n = C.Larmor.axis(a, t, b)
