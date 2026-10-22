@@ -91,8 +91,9 @@ test('the probe follows Electron: false when it aborts, true when the sandbox st
 // namespace sandbox starts without root: the probe's true answer on the
 // real binary. Skipped where bwrap cannot make one.
 test('the probe is true for the real Electron where user namespaces work', t => {
-  const electron = require('electron')
   if (spawnSync('bwrap', ['--dev-bind', '/', '/', '--unshare-user', 'unshare', '-Ur', 'true']).status !== 0) return t.skip('bwrap cannot nest a user namespace here')
+  let electron
+  try { electron = require('electron') } catch (e) { return t.skip('Electron not downloaded') }
   const r = spawnSync('bwrap', ['--dev-bind', '/', '/', '--unshare-user', 'sh', '-c', `. "$0" && sandbox_starts "$1"`, lib, electron])
   assert.strictEqual(r.status, 0)
 })
