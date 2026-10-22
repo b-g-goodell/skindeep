@@ -355,12 +355,13 @@ distant background of stars".
   own angular speed: a stream that feeds the disc.
 - Drawing: the camera, 620 from the heaviest hole with a half view
   angle of 0.42 rad, turns about it (see 2026-10-18: Gravity 3D's
-  centre). Bodies, grains and trails are
+  centre). Bodies and grains are
   drawn flat on slices of depth and seen through the trace (see
   2026-10-17: Gravity 3D's optics), and bodies are sized and dimmed
   with distance. A
   trail is the places a body passed, kept every 1.5 units of time or 4
-  of travel and projected each frame. Matter at $d$ from a hole heats
+  of travel, drawn each frame as their images through the holes (see
+  2026-10-22: Gravity 3D's trails, one curve). Matter at $d$ from a hole heats
   as $\min(1, (2.3 r_s/d)^2)$, toward orange, white and then blue
   white, larger and brighter. What emits is shifted in colour and
   brightness by its motion and by the holes' potential (see
@@ -1118,7 +1119,9 @@ behind it vanished under paint.
   for Schwarzschild, so $g$ is smooth up to $u = 1$, where it is his
   $\bar{b} = -0.4002$.
 - The scene's sources are drawn flat, as before, on slices of depth:
-  the bodies, their trails, the dust and the flares. The slices part at
+  the bodies, the dust and the flares, and the trails' images on a
+  screen layer of each slice (see 2026-10-22: Gravity 3D's trails, one
+  curve). The slices part at
   each hole's depth, and behind the nearest hole in eight more, even in
   $\sum_h \sqrt{(z - z_h)/z}$ over the holes in front, so that the
   Einstein radii within a slice differ little. Each slice is a plane at
@@ -1764,3 +1767,112 @@ Rejected:
 - Each grain shifted relative to the hole that heats it most, as the
   old beaming was: every grain would have a frame of its own, and the
   bodies none.
+
+## 2026-10-22: Gravity 3D's trails, one curve
+
+Issue #182: "A trail draws as one continuous curve through its lensed
+places: no gap and no kink at the joint of two pieces, at any depth
+and lensing strength." The owner's screenshot showed trails near the
+hole split into dashes, and pieces of one trail that did not meet.
+
+Before (`app/viz/gravity3d.js` at 1587565), a trail was cut into six
+pieces, each drawn flat on the slice of its middle place and bent as
+that slice's plane at its mean depth. Staged with a hole of 900 and a
+trail of 64 places on a line from 40 to 360 behind it, 28 above its
+line, in a pane of 1200 by 760, the frame showed two faults, measured
+on the pixels that differ from the same scene without the trail by 4
+in a channel or more:
+
+- Pieces on two slices, bent by two Einstein radii, put their shared
+  place at two points on the screen: the outer image fell into two
+  pieces of 4110 and 1241 pixels, a gap on one side of the hole and,
+  on the other, two pieces side by side down one column. That was the
+  issue's suspected cause.
+- The inner image was a dotted ring of 6 pieces. The hole squeezes it
+  across, so a stroke a third of a traced pixel wide, read at one
+  point a pixel, was hit only every few pixels. No cut of the pieces
+  mends that.
+
+The rule now:
+
+- A trail is drawn where it is seen. Each place's images are found
+  forward (`trace.js`, `image`): the frame's point whose ray, traced by
+  the one rule of 2026-10-17, crosses the place's depth at the place,
+  by Newton's method on that map, its steps capped at 4 pixels and
+  halved until the ray comes nearer, to 0.05 traced pixels. The change
+  of the crossing with the image, J, is taken by differences.
+- The images are followed along the trail (`curve`): each place's from
+  the place before it, carried by J, and a piece between places halved
+  until neighbouring images lie within 3 traced pixels, at most six
+  times, so an image that swings round a hole is followed, not cut
+  across. A branch ends where its image is lost, in the shadow or
+  behind the camera, or where J passes 20, a stroke squeezed to a
+  twentieth. A place with fewer branches than images to look for
+  starts one: the weak field's outer image about each hole in front of
+  it, and its inner one, found by halving along the line through the
+  hole, while the weak field puts it at a twentieth or more. With one
+  hole that is both images, and with several, each hole's pair.
+- Each image is stroked lw / |adj(J) t| wide, lw the trail's width and
+  t its unbent direction there, at most 3 lw: the width the trace of
+  a stroke would show, so the inner image is thin and faint, not
+  bright. Runs of one width, in steps of a quarter of an octave, are
+  one path each, butt ended, so pieces and runs meet without overlap.
+  A fill of a ribbon was tried first: under a tenth of a pixel wide it
+  dropped out every 8 pixels, and a stroke under a pixel is drawn thin
+  and faint instead.
+- The strokes go on a screen layer of each slice, a plane flagged
+  `screen` that the trace reads at the ray's own pixel, already bent,
+  at the mean depth of the pieces on that slice. A ray captured or
+  turned back before that depth does not read it, and what lies nearer
+  hides it as it hides any plane: a body in front of a trail still
+  covers it. Each piece keeps its slice, its alpha by age and its
+  Doppler shift, and neighbouring pieces share the image at their
+  joint, so the curve is one.
+- A control of the lens record now draws the scene again without its
+  hole, so the trails' images in it are found without that hole too.
+
+Cost, by the script of 2026-10-17's draw times (gravity3d alone at
+full activity, the median of draws 300 to 540), 1587565 and this tree
+in turn, three rounds, the host at a load of 40.2 to 52.8: a draw of 400
+by 380 took 11.2, 11.6 and 11.8 ms at 1587565 against 14.0, 13.0 and
+14.7 now, at 1200 by 760 17.1, 17.4 and 17.0 against 21.9, 20.4 and
+21.5, and at 360 by 230 9.1, 9.6 and 9.2 against 12.2, 11.3 and 13.9.
+Of that, the images of five or six trails, 305 to 402 images a draw,
+took 0.9 to 1.7 ms, and in a fourth round, timed by parts, the screen
+layers' strokes and reads 0.4 to 0.6 ms and the trace 0.7 to 1.2 ms
+more, for its reads of the extra planes. A first build
+solved each image to 0.01 pixels and pieces to 2 pixels: it traced 2.3
+times the rays of this one on the staged trail.
+
+Checked by `test/viz-trace.test.js`: a point in front of the hole has
+its one image where a straight ray shows it, and behind the hole, off
+its line and near it, both images' rays meet it to 0.05 pixels, the
+outer beyond the weak field's Einstein radius on its side and the
+inner nearer the hole on the other. The staged trail, 28 and 14 above
+the hole's line, has an outer image along all of it and an inner one,
+neighbouring images 3 pixels apart or less, each meeting its place,
+and a curve that runs behind the camera has one image, unbroken
+across the traced frame, which ends past its edge. A dot on a screen
+plane behind the hole is drawn where it is, and the same dot on a
+plane is bent away. Each fails with its behaviour removed: image
+returning the unbent place, and the screen plane read as a plane.
+`scripts/checks/vizlens.js` stages that trail at 28 and 14 in the full
+pane and wants, of the pixels that differ from the scene without it
+by 4 or more, those above the hole one 8-connected piece with one run
+of pixels down each column, and those below one piece. This tree read
+one piece of 4179 and of 4158 pixels above, one run a column, and one
+piece of 1477 and of 1885 below. At 1587565 the first frame read two
+pieces and two runs above and six pieces below.
+
+Rejected:
+
+- Cutting a trail at the slices' bounds, each piece on the slice of
+  its depth: the shared place of two pieces is still bent as two
+  planes' depths, and the inner image is still read a point a pixel.
+- One screen layer for all the trails, nearer than everything: a
+  body in front of a trail would no longer hide it.
+- Strokes over the presented frame, after the trace: at the pane's
+  scale they are sharp, but nothing nearer would hide them, and the
+  shadow would not cut a trail behind the hole short of where its
+  image is lost.
+
