@@ -14,8 +14,9 @@
 // the frame is a ray traced backward from the camera (trace.js), bent
 // at each hole by the exact Schwarzschild deflection and captured within
 // sqrt(27) / 2 r_s, through the scene drawn flat on slices of depth, the
-// bodies, their trails, the dust and the flares, to the waves' ground
-// and the distant stars. The shadow, the photon ring, arcs, Einstein
+// bodies, the dust and the flares, and the trails drawn where that rule
+// shows them (trace.js curve), to the waves' ground and the distant
+// stars. The shadow, the photon ring, arcs, Einstein
 // rings, inner images and one hole seen through another all follow from
 // that one rule. The optics are Schwarzschild's: spin drags matter, as
 // above, but bends no light here. What emits, the dust, the bodies and
@@ -1184,8 +1185,8 @@
     let ground = null
 
     // A body's trail: its places, kept in the world as the camera moves,
-    // projected each frame, fading with age, in CH chunks, each on the
-    // slice of its middle place.
+    // fading with age, in CH chunks, each on the slice of its middle
+    // place, drawn there as its images (lensed).
     function trails (b, dim, keep, put) {
       const tr = b.trail
       const n = Math.min(tr.length / 3, Math.ceil(keep * tr.length / 3))
@@ -1217,23 +1218,95 @@
       return k
     }
 
+    // A trail's images through the holes (trace.js curve) on the trace's
+    // frame, scene sc: its places from the oldest kept to the body's
+    // own, in the camera's frame. Each image carries J, so a stroke of
+    // width lw across the unbent direction t is lw / |adj(J) t| wide
+    // there, at most 3 lw: thinner where a hole squeezes it, as a trace
+    // of it would show.
+    function lensed (b, keep, sc, lw) {
+      const tr = b.trail
+      const N = tr.length / 3
+      const n = Math.min(N, Math.ceil(keep * N))
+      if (n < 2) return null
+      const start = N - n
+      const pl = new Float64Array(3 * (n + 1))
+      for (let i = 0; i <= n; i++) {
+        const k = 3 * (start + i)
+        if (i < n) frameOf(V, tr[k], tr[k + 1], tr[k + 2], cf)
+        else frameOf(V, b.x, b.y, b.z, cf)
+        pl[3 * i] = cf[0]
+        pl[3 * i + 1] = cf[1]
+        pl[3 * i + 2] = cf[2]
+      }
+      const branches = T3.curve(sc, pl, n + 1)
+      for (const br of branches) {
+        for (let k = 0; k < br.length; k++) {
+          const p0 = br[Math.max(0, k - 1)]
+          const p1 = br[Math.min(br.length - 1, k + 1)]
+          const s1 = br[k]
+          let tx = p1.qx - p0.qx
+          let ty = p1.qy - p0.qy
+          const tl = Math.hypot(tx, ty) || 1
+          tx /= tl
+          ty /= tl
+          s1.w = Math.min(3 * lw, lw / (Math.hypot(s1.d * tx - s1.b * ty, s1.a * ty - s1.c * tx) || 1e-9))
+        }
+      }
+      return { start, n, branches }
+    }
+
+    // A trail's piece t on slice L, stroked along each of its images on
+    // the slice's screen layer, which the trace reads where it is seen:
+    // each run of images of one width, in steps of a quarter of an
+    // octave, a path of that width, butt ended, so neighbouring runs and
+    // pieces meet without overlap, and a stroke under a pixel is drawn
+    // thin and faint rather than broken.
+    const runs = new Map()
     function drawTrail (L, t) {
       paint('trails', L, t.z)
-      const { b, i0, i1 } = t
-      const tr = b.trail
-      const c = L.g
-      const lw = Math.max(1, Math.min(3, b.r * b.pk * 0.8))
-      c.lineWidth = lw
-      c.strokeStyle = style(shift(b.hue, t.g), b.comet ? 40 : 85, b.comet ? 80 : 60, Math.min(1, t.a * t.g * t.g * t.g))
-      c.beginPath()
-      for (let i = i0; i <= i1; i++) {
-        project(tr[3 * i], tr[3 * i + 1], tr[3 * i + 2])
-        if (i === i0) c.moveTo(P.x, P.y)
-        else c.lineTo(P.x, P.y)
-        mark(L, P.x - lw, P.y - lw, P.x + lw, P.y + lw)
+      const { b, im } = t
+      if (!im) return
+      const S = L.s
+      const c = S.g
+      const u0 = t.i0 - im.start
+      const u1 = t.end ? im.n : t.i1 - im.start
+      for (const v of runs.values()) v.length = 0
+      for (const br of im.branches) {
+        let k0 = 0
+        while (k0 < br.length && br[k0].u < u0) k0++
+        let k1 = br.length - 1
+        while (k1 >= 0 && br[k1].u > u1) k1--
+        let run = null
+        let q = NaN
+        for (let k = k0; k < k1; k++) {
+          const p = br[k]
+          const p1 = br[k + 1]
+          const qk = Math.round(4 * Math.log2((p.w + p1.w) / 2))
+          if (qk !== q) {
+            q = qk
+            if (!runs.has(q)) runs.set(q, [])
+            run = [p.x, p.y]
+            runs.get(q).push(run)
+            mark(S, p.x - 2, p.y - 2, p.x + 2, p.y + 2)
+          }
+          run.push(p1.x, p1.y)
+          mark(S, p1.x - 2, p1.y - 2, p1.x + 2, p1.y + 2)
+        }
       }
-      if (t.end) c.lineTo(b.px, b.py)
-      c.stroke()
+      c.strokeStyle = style(shift(b.hue, t.g), b.comet ? 40 : 85, b.comet ? 80 : 60, Math.min(1, t.a * t.g * t.g * t.g))
+      c.lineCap = 'butt'
+      c.lineJoin = 'round'
+      for (const [q, list] of runs) {
+        if (!list.length) continue
+        c.lineWidth = 2 ** (q / 4)
+        c.beginPath()
+        for (const r of list) {
+          c.moveTo(r[0], r[1])
+          for (let i = 2; i < r.length; i += 2) c.lineTo(r[i], r[i + 1])
+        }
+        c.stroke()
+      }
     }
 
     // The glow's and the disc's radius of body b on screen.
@@ -1399,34 +1472,57 @@
       return out.sort((a, b) => a - b)
     }
 
+    // A canvas the scene is drawn on, tw by th, cleared where it was
+    // drawn last, its box emptied.
+    const layer = () => ({ c: document.createElement('canvas'), g: null, box: [0, 0, 0, 0], last: null, plane: null })
+    function begin (L, tw, th) {
+      if (!L.g) L.g = L.c.getContext('2d', { willReadFrequently: true })
+      if (L.c.width !== tw || L.c.height !== th) {
+        L.c.width = tw
+        L.c.height = th
+        L.last = null
+      }
+      L.g.setTransform(1, 0, 0, 1, 0, 0)
+      if (L.last) L.g.clearRect(L.last[0], L.last[1], L.last[2], L.last[3])
+      L.last = null
+      L.box[0] = L.box[1] = Infinity
+      L.box[2] = L.box[3] = -Infinity
+    }
+
+    // Layer L's drawing within its box, at kt of the box's pixels to one
+    // of the trace's, as a plane at depth z, or null if it drew nothing.
+    function finish (L, kt, tw, th, z) {
+      const x0 = Math.max(0, Math.floor(L.box[0] * kt) - 1)
+      const y0 = Math.max(0, Math.floor(L.box[1] * kt) - 1)
+      const x1 = Math.min(tw, Math.ceil(L.box[2] * kt) + 1)
+      const y1 = Math.min(th, Math.ceil(L.box[3] * kt) + 1)
+      if (x1 <= x0 || y1 <= y0) return null
+      L.last = [x0, y0, x1 - x0, y1 - y0]
+      L.plane = T3.plane(z, L.g.getImageData(x0, y0, x1 - x0, y1 - y0).data, x1 - x0, y1 - y0, L.plane, x0, y0)
+      return L.plane
+    }
+
     // The scene for the trace at scale kt, tw by th: every body but skip,
-    // the trails, the dust and the flares drawn flat on the slice of their
-    // depth, each slice's drawing a plane at its content's mean depth,
-    // and the holes in the camera's frame.
+    // the dust and the flares drawn flat on the slice of their depth,
+    // each slice's drawing a plane at its content's mean depth, the
+    // trails' images on each slice's screen layer, a plane at the mean
+    // depth of its pieces, and the holes in the camera's frame, but skip
+    // if it is a hole.
     function scene (kt, tw, th, dim, keep, skip) {
       let far = 0
       for (const b of bodies) if (!b.hole) far = Math.max(far, b.pd)
       for (const d of dust) far = Math.max(far, d.pd)
       const bs = bounds(far + 1)
       const ns = bs.length + 1
-      while (pool.length < ns) pool.push({ c: document.createElement('canvas'), g: null, batch: new Map(), box: [0, 0, 0, 0], last: null, plane: null })
+      while (pool.length < ns) pool.push(Object.assign(layer(), { batch: new Map(), s: layer() }))
       for (let i = 0; i < ns; i++) {
         const L = pool[i]
-        if (!L.g) L.g = L.c.getContext('2d', { willReadFrequently: true })
-        if (L.c.width !== tw || L.c.height !== th) {
-          L.c.width = tw
-          L.c.height = th
-          L.last = null
-        }
-        L.g.setTransform(1, 0, 0, 1, 0, 0)
-        if (L.last) L.g.clearRect(L.last[0], L.last[1], L.last[2], L.last[3])
-        L.last = null
+        begin(L, tw, th)
+        begin(L.s, tw, th)
         L.g.setTransform(kt, 0, 0, kt, 0, 0)
-        L.g.lineCap = 'round'
-        L.box[0] = L.box[1] = Infinity
-        L.box[2] = L.box[3] = -Infinity
         L.zs = 0
         L.ws = 0
+        L.tz = 0
         L.lo = i ? bs[i - 1] : 0
         L.hi = i < bs.length ? bs[i] : Infinity
         L.dust = []
@@ -1439,6 +1535,23 @@
         while (i < bs.length && bs[i] <= z) i++
         return pool[i]
       }
+      // The holes, in the camera's frame, first: the trails' images are
+      // found through them.
+      const hb = bodies.filter(b => b.hole && b !== skip)
+      const hs = new Float64Array(4 * hb.length)
+      const bref = new Float64Array(hb.length)
+      hb.forEach((b, i) => {
+        frameOf(V, b.x, b.y, b.z, cf)
+        hs[4 * i] = cf[0]
+        hs[4 * i + 1] = cf[1]
+        hs[4 * i + 2] = cf[2]
+        hs[4 * i + 3] = RING * rs(b.m)
+        // Where a cell's linear map would be off by a pixel or more, the
+        // light from far behind bent by theta_E^2 / theta: the error of
+        // the line across S pixels is S^2 r_s D^2 / (2 f b^3).
+        bref[i] = Math.max(1.5 * hs[4 * i + 3], Math.cbrt(STEP * STEP * rs(b.m) * hs[4 * i + 2] ** 2 / (2 * tf)))
+      })
+      const lens = { cx: tcx, cy: tcy, f: tf, hs, nh: hb.length }
       const order = bodies.filter(b => !b.hole).sort((a, b) => b.pd - a.pd)
       for (const b of order) {
         const L = at(b.pd)
@@ -1446,12 +1559,13 @@
         L.zs += 20 * b.pd
         L.ws += 20
         if (b.trail.length) {
+          const im = lensed(b, keep, lens, Math.max(1, Math.min(3, b.r * b.pk * 0.8)) * kt)
           trails(b, dim, keep, (z, t) => {
             const M = at(z)
             t.z = z
+            t.im = im
             M.trails.push(t)
-            M.zs += z
-            M.ws++
+            M.tz += z
           })
         }
       }
@@ -1477,9 +1591,17 @@
       const planes = []
       for (let i = 0; i < ns; i++) {
         const L = pool[i]
+        if (L.trails.length) {
+          for (const t of L.trails) drawTrail(L, t)
+          const z = Math.min(L.hi - 1e-3, Math.max(L.lo + 1e-3, L.tz / L.trails.length))
+          const p = finish(L.s, 1, tw, th, z)
+          if (p) {
+            p.screen = true
+            planes.push(p)
+          }
+        }
         if (!L.ws) continue
         const c = L.g
-        for (const t of L.trails) drawTrail(L, t)
         c.globalCompositeOperation = 'lighter'
         for (const d of L.dust) {
           const heat = d.heat
@@ -1502,30 +1624,10 @@
           c.stroke()
           mark(L, f.x - f.r - 2, f.y - f.r - 2, f.x + f.r + 2, f.y + f.r + 2)
         }
-        const x0 = Math.max(0, Math.floor(L.box[0] * kt) - 1)
-        const y0 = Math.max(0, Math.floor(L.box[1] * kt) - 1)
-        const x1 = Math.min(tw, Math.ceil(L.box[2] * kt) + 1)
-        const y1 = Math.min(th, Math.ceil(L.box[3] * kt) + 1)
-        if (x1 <= x0 || y1 <= y0) continue
-        L.last = [x0, y0, x1 - x0, y1 - y0]
-        const z = Math.min(L.hi - 1e-3, Math.max(L.lo + 1e-3, L.zs / L.ws))
-        L.plane = T3.plane(z, L.g.getImageData(x0, y0, x1 - x0, y1 - y0).data, x1 - x0, y1 - y0, L.plane, x0, y0)
-        planes.push(L.plane)
+        const p = finish(L, kt, tw, th, Math.min(L.hi - 1e-3, Math.max(L.lo + 1e-3, L.zs / L.ws)))
+        if (p) planes.push(p)
       }
-      const hb = bodies.filter(b => b.hole)
-      const hs = new Float64Array(4 * hb.length)
-      const bref = new Float64Array(hb.length)
-      hb.forEach((b, i) => {
-        frameOf(V, b.x, b.y, b.z, cf)
-        hs[4 * i] = cf[0]
-        hs[4 * i + 1] = cf[1]
-        hs[4 * i + 2] = cf[2]
-        hs[4 * i + 3] = RING * rs(b.m)
-        // Where a cell's linear map would be off by a pixel or more, the
-        // light from far behind bent by theta_E^2 / theta: the error of
-        // the line across S pixels is S^2 r_s D^2 / (2 f b^3).
-        bref[i] = Math.max(1.5 * hs[4 * i + 3], Math.cbrt(STEP * STEP * rs(b.m) * hs[4 * i + 2] ** 2 / (2 * tf)))
-      })
+      planes.sort((a, b) => a.z - b.z)
       if (ground) {
         let i = 0
         while (i < planes.length && planes[i].z < ground.z) i++
@@ -1615,8 +1717,8 @@
         if (!fr) continue
         hole = { b: o2.b, i: o2.i, fr, r: o2.R, disc: o2.R, hidden: fr.dist + o2.R <= fr.o.R, others: on.filter(q => q !== fr.o && q !== o2) }
       }
-      // The hole's control reuses the frame's slices, and the body's
-      // redraws them without the body, so the hole goes first.
+      // Each control is the scene drawn again without its body or hole,
+      // the trails' images found without the hole.
       if (hole) seenHole = record(hole, true, sc, kt, dim, keep)
       if (body) seen = record(body, false, sc, kt, dim, keep)
     }
@@ -1629,18 +1731,7 @@
       if (!hidden) return rec
       const w = canvas.width
       const h = canvas.height
-      let csc = sc
-      if (isHole) {
-        const keepI = []
-        for (let i = 0; i < sc.nh; i++) if (i !== t.i) keepI.push(i)
-        const hs = new Float64Array(4 * keepI.length)
-        const bref = new Float64Array(keepI.length)
-        keepI.forEach((i, k) => {
-          for (let c = 0; c < 4; c++) hs[4 * k + c] = sc.hs[4 * i + c]
-          bref[k] = sc.bref[i]
-        })
-        csc = Object.assign({}, sc, { hs, nh: keepI.length, bref })
-      } else csc = scene(kt, sc.w, sc.h, dim, keep, t.b)
+      const csc = scene(kt, sc.w, sc.h, dim, keep, t.b)
       if (!cimg || cimg.width !== sc.w || cimg.height !== sc.h) cimg = cg.createImageData(sc.w, sc.h)
       T3.render(csc, cimg.data)
       if (ctl.width !== w || ctl.height !== h) {
