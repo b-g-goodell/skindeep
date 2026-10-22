@@ -148,3 +148,145 @@ test('bin/skinned keeps the sandbox where it starts', t => {
   assert.strictEqual(r.status, 0, r.stderr)
   assert.deepStrictEqual(r.args, [repo, '--', 'true'])
 })
+
+// The root steps of install.sh, sandbox_setuid and sandbox_apparmor, on
+// a fake dist and a fake sudo. The sudo records each call's arguments
+// and stdin, then runs the call as the user, through an install that
+// drops -o and -g, which need root. FAKE_SUDO=deny makes it refuse.
+const FAKE_SUDO = `#!/bin/sh
+[ "$FAKE_SUDO" = deny ] && exit 1
+[ "$1" = -n ] && shift
+[ "$*" = true ] && exit 0
+n=$(ls "$REC" | wc -l)
+printf '%s\\n' "$@" > "$REC/$n.argv"
+cat > "$REC/$n.stdin"
+"$@" < "$REC/$n.stdin"
+`
+const FAKE_INSTALL = `#!/bin/sh
+skip=
+for a; do
+  shift
+  [ -z "$skip" ] || { skip=; continue; }
+  case $a in -o|-g) skip=1; continue ;; esac
+  set -- "$@" "$a"
+done
+exec /usr/bin/install "$@"
+`
+
+function rootSteps (t) {
+  const d = tmp(t, 'root')
+  const dist = path.join(d, 'electron', 'dist')
+  const fake = path.join(d, 'fakebin')
+  const rec = path.join(d, 'rec')
+  for (const x of [dist, fake, rec]) fs.mkdirSync(x, { recursive: true })
+  fs.writeFileSync(path.join(dist, 'electron'), FAKE, { mode: 0o755 })
+  fs.writeFileSync(path.join(dist, 'version'), '44.9.3')
+  fs.writeFileSync(path.join(fake, 'sudo'), FAKE_SUDO, { mode: 0o755 })
+  fs.writeFileSync(path.join(fake, 'install'), FAKE_INSTALL, { mode: 0o755 })
+  const helperDir = path.join(d, 'root')
+  // run FUNCTION [ENV]: the function on this dist, with the test's
+  // helper directory, profile file and parsers.
+  const run = (fn, env = {}, parsers = path.join(d, 'parser')) => spawnSync('sh', ['-c',
+    `. "$0" && SANDBOX_HELPER_DIR="$1" SANDBOX_PROFILE_FILE="$2" SANDBOX_PARSERS="$3" && ${fn} "$4"`,
+    lib, helperDir, path.join(d, 'profile'), parsers, path.join(dist, 'electron')], {
+    encoding: 'utf8',
+    env: { PATH: `${fake}:${process.env.PATH}`, REC: rec, SANDBOX_TTY: '', ...env }
+  })
+  const calls = () => fs.readdirSync(rec).filter(f => f.endsWith('.argv')).sort().map(f => ({
+    argv: fs.readFileSync(path.join(rec, f), 'utf8').split('\n').slice(0, -1),
+    stdin: fs.readFileSync(path.join(rec, f.replace('.argv', '.stdin')))
+  }))
+  return { d, dist, helperDir, run, calls, helper: path.join(dist, 'chrome-sandbox'), dest: path.join(helperDir, 'electron-44.9.3', 'chrome-sandbox') }
+}
+
+test('the root-owned helper is named by the Electron version, which must be plain', t => {
+  const { dist, helperDir, run } = rootSteps(t)
+  assert.strictEqual(run('sandbox_helper').stdout, `${helperDir}/electron-44.9.3/chrome-sandbox\n`)
+  for (const v of ['../../../usr/bin', '44.9.3/x', '', '.', '44 9']) {
+    fs.writeFileSync(path.join(dist, 'version'), v)
+    const r = run('sandbox_helper')
+    assert.notStrictEqual(r.status, 0, v)
+    assert.strictEqual(r.stdout, '', v)
+  }
+})
+
+test('sandbox_env exports CHROME_DEVEL_SANDBOX only where the root-owned helper exists', t => {
+  const { dest, run } = rootSteps(t)
+  const show = 'sandbox_env "$4" && printf %s "${CHROME_DEVEL_SANDBOX-unset}" && :'
+  assert.strictEqual(run(show).stdout, 'unset')
+  fs.mkdirSync(path.dirname(dest), { recursive: true })
+  fs.writeFileSync(dest, 'x')
+  assert.strictEqual(run(show).stdout, dest)
+})
+
+test('the setuid step feeds the helper to one root shell, which installs a 4755 copy in its own directory', t => {
+  const { helper, dest, run, calls } = rootSteps(t)
+  const bytes = Buffer.from('\x7fELF helper bytes\n')
+  fs.writeFileSync(helper, bytes, { mode: 0o755 })
+  const r = run('sandbox_setuid')
+  assert.strictEqual(r.status, 0, r.stderr)
+  const c = calls()
+  assert.strictEqual(c.length, 1)
+  assert.deepStrictEqual(c[0].argv, ['sh', '-c', 'install -d -o root -g root -m 755 "${1%/*}" && install -o root -g root -m 4755 /dev/stdin "$1"', 'sh', dest])
+  assert.deepStrictEqual(c[0].stdin, bytes)
+  assert.deepStrictEqual(fs.readFileSync(dest), bytes)
+  assert.strictEqual(fs.statSync(dest).mode & 0o7777, 0o4755)
+  assert.ok(!fs.existsSync(helper), 'the helper beside Electron is removed')
+  // A later download puts the same helper back: no root, removed again.
+  fs.writeFileSync(helper, bytes, { mode: 0o755 })
+  assert.strictEqual(run('sandbox_setuid').status, 0)
+  assert.strictEqual(calls().length, 1)
+  assert.ok(!fs.existsSync(helper))
+})
+
+test('the setuid step refuses a symlinked helper, and root is never called', t => {
+  const { d, helper, run, calls } = rootSteps(t)
+  const victim = path.join(d, 'victim')
+  fs.writeFileSync(victim, 'victim', { mode: 0o755 })
+  fs.symlinkSync(victim, helper)
+  const r = run('sandbox_setuid')
+  assert.notStrictEqual(r.status, 0)
+  assert.match(r.stderr, /is a link or not a regular file, refused/)
+  assert.strictEqual(calls().length, 0)
+  assert.strictEqual(fs.statSync(victim).mode & 0o7777, 0o755)
+  assert.strictEqual(fs.readlinkSync(helper), victim)
+  fs.unlinkSync(helper)
+  fs.mkdirSync(helper)
+  assert.notStrictEqual(run('sandbox_setuid').status, 0, 'a directory is refused too')
+  assert.strictEqual(calls().length, 0)
+})
+
+test('without sudo the setuid step prints the one command for root, fed on stdin', t => {
+  const { helper, dest, run, calls } = rootSteps(t)
+  fs.writeFileSync(helper, 'h', { mode: 0o755 })
+  const r = run('sandbox_setuid', { FAKE_SUDO: 'deny' })
+  assert.notStrictEqual(r.status, 0)
+  assert.strictEqual(calls().length, 0)
+  assert.ok(r.stderr.includes(`  sudo sh -c 'install -d -o root -g root -m 755 "\${1%/*}" && install -o root -g root -m 4755 /dev/stdin "$1"' sh '${dest}' < '${helper}'\n`), r.stderr)
+  assert.ok(fs.existsSync(helper), 'the helper stays until root has its copy')
+})
+
+test('the AppArmor step feeds the profile to one root shell and runs the parser of a system path', t => {
+  const { d, dist, run, calls } = rootSteps(t)
+  const parser = path.join(d, 'parser')
+  fs.writeFileSync(parser, '#!/bin/sh\nprintf "%s\\n" "$@" > "$REC/parser"\n', { mode: 0o755 })
+  const r = run('sandbox_apparmor')
+  assert.strictEqual(r.status, 0, r.stderr)
+  const text = sh('sandbox_profile', path.join(dist, 'electron')).stdout
+  const c = calls()
+  assert.strictEqual(c.length, 1)
+  assert.deepStrictEqual(c[0].argv, ['sh', '-c', 'install -m 644 /dev/stdin "$1" && "$2" -r "$1"', 'sh', path.join(d, 'profile'), parser])
+  assert.strictEqual(c[0].stdin.toString(), text)
+  assert.strictEqual(fs.readFileSync(path.join(d, 'profile'), 'utf8'), text)
+  assert.strictEqual(fs.readFileSync(path.join(d, 'rec', 'parser'), 'utf8'), `-r\n${path.join(d, 'profile')}\n`)
+  assert.deepStrictEqual(fs.readdirSync(dist).sort(), ['electron', 'version'], 'nothing staged beside Electron')
+})
+
+test('the AppArmor step never takes apparmor_parser from PATH', t => {
+  const { d, run, calls } = rootSteps(t)
+  fs.writeFileSync(path.join(d, 'fakebin', 'apparmor_parser'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+  const r = run('sandbox_apparmor', {}, path.join(d, 'none'))
+  assert.notStrictEqual(r.status, 0)
+  assert.match(r.stderr, /apparmor_parser is missing/)
+  assert.strictEqual(calls().length, 0)
+})
