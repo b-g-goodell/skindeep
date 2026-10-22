@@ -336,6 +336,57 @@ test('trace: a curve\'s images are unbroken through any depth and lensing', () =
   for (let k = 1; k < br[0].length; k++) assert.ok(Math.hypot(br[0][k].x - br[0][k - 1].x, br[0][k].y - br[0][k - 1].y) <= 3)
 })
 
+test('trace: a curve\'s images behind two holes leave no bright image with an open end', () => {
+  // The live check's trail behind the hole of 900 with a second hole of
+  // 300, as a subagent adds one: beside it and behind, in front of it,
+  // and near its line. The second hole's shear turns the first one's
+  // point caustic into a small astroid, so images the weak field does
+  // not predict are born and lost in pairs at folds. Every end of a
+  // branch inside the curve is faint, |J| over 14, past the frame, on
+  // another branch, or met by another branch's end within 4 px and one
+  // place: no image is lost or begins while bright. Each image's ray
+  // meets its place.
+  const big = m => {
+    const s = m.a * m.a + m.b * m.b + m.c * m.c + m.d * m.d
+    const det = m.a * m.d - m.b * m.c
+    return Math.sqrt((s + Math.sqrt(Math.max(0, s * s - 4 * det * det))) / 2)
+  }
+  const on = (b, e) => {
+    if (e.u < b[0].u || e.u > b[b.length - 1].u) return false
+    let k = 0
+    while (k < b.length - 2 && b[k + 1].u <= e.u) k++
+    const p = b[k]
+    const q = b[k + 1] || p
+    const f = q.u > p.u ? (e.u - p.u) / (q.u - p.u) : 0
+    return Math.hypot(p.x + (q.x - p.x) * f - e.x, p.y + (q.y - p.y) * f - e.y) < 1.5
+  }
+  for (const [X, Y, dZ] of [[150, 20, 90], [120, -40, -100], [70, 8, 80]]) {
+    const sc = { ...LENS, hs: new Float64Array([0, 0, 620, LENS.hs[3], X, Y, 620 + dZ, T.RING * 2 * 300 / 11.5 ** 2]), nh: 2 }
+    for (const y of [28, 14, 6, 3, 1, 0.3]) {
+      const at = `second hole at ${X}, ${Y}, ${620 + dZ}, Y ${y}`
+      const pl = new Float64Array(3 * 64)
+      for (let i = 0; i < 64; i++) pl.set([-220 + 440 * i / 63, y, 660 + 320 * i / 63], 3 * i)
+      const br = T.curve(sc, pl, 64)
+      const ends = []
+      for (const b of br) {
+        if (b[0].u > 0) ends.push([b[0], b])
+        if (b[b.length - 1].u < 63) ends.push([b[b.length - 1], b])
+        for (const s of b) {
+          const i = Math.min(62, Math.floor(s.u))
+          const Z = pl[3 * i + 2] + (pl[3 * i + 5] - pl[3 * i + 2]) * (s.u - i)
+          assert.ok(T.seen(sc, s.x, s.y, Z) && Math.hypot(T.XY[0] - s.qx, T.XY[1] - s.qy) < 0.05, `${at}: the image at ${s.u} meets its place`)
+        }
+      }
+      for (const [e, b] of ends) {
+        if (big(e) > 14 || e.x < -5 || e.y < -5 || e.x > 382 || e.y > 244) continue
+        if (br.some(c => c !== b && on(c, e))) continue
+        const met = ends.some(([f, c]) => c !== b && Math.hypot(f.x - e.x, f.y - e.y) < 4 && Math.abs(f.u - e.u) < 1.01)
+        assert.ok(met, `${at}: an image ${e === b[0] ? 'begins' : 'is lost'} bright at ${e.u.toFixed(3)}, (${e.x.toFixed(1)}, ${e.y.toFixed(1)}), |J| ${big(e).toFixed(2)}`)
+      }
+    }
+  }
+})
+
 test('trace: a screen plane is read where it is drawn, a plane where its rays meet it', () => {
   // One dot drawn at the same place on a plane and on a screen plane, both
   // behind the hole: the plane's dot is bent away from where it is drawn,
