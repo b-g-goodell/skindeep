@@ -156,8 +156,8 @@ test('carbon: what moves with the clocks keeps its relation to them', () => {
   // The detector's trace on the event clock: 2 ms and 1 s at 1e6.
   assert.ok(Math.abs(C.TRACE_DT / C.EVENT - 2e-9) < 1e-21)
   assert.ok(Math.abs(C.TRACE_T / C.EVENT - 1e-6) < 1e-18)
-  // The dial's range and start are kept (issue #169).
-  assert.deepStrictEqual([C.B_MAX, C.B_START], [2e-3, 0.3e-3])
+  // The dial's range is kept, its start calibrated (issue #169).
+  assert.deepStrictEqual([C.B_MAX, C.B_START], [2e-3, 0.15e-3])
 })
 
 test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', () => {
@@ -295,9 +295,12 @@ test('carbon: an axis turns about B at g_J mu_B B / h on the event clock, and st
   const f = C.Larmor.rate(D.levels[i], b)
   assert.ok(Math.abs(f - 1.5010469 * 1.39962449171e10 * 1e-3 / C.EVENT) < 1e-9, `${f}`)
   assert.ok(Math.abs(f - 4.202) < 1e-3, `${f}`)
-  // At the dial's start, 0.30 mT: 1.261 turns a second on screen, the
-  // axis's look repeating at twice that, 2.52 a second.
-  assert.ok(Math.abs(2 * C.Larmor.rate(D.levels[i], { T: C.B_START, u: [1, 0, 0] }) - 2.521) < 1e-3)
+  // At the dial's start, 0.15 mT: 0.630 turns a second on screen, the
+  // axis's look repeating at twice that, 1.26 a second, and 1.68 at
+  // g_J 2, 2s2p3 5So2's.
+  assert.ok(Math.abs(2 * C.Larmor.rate(D.levels[i], { T: C.B_START, u: [1, 0, 0] }) - 1.261) < 1e-3)
+  const q = D.levels.find(l => l.id === '2s2p3_5So_2')
+  assert.ok(Math.abs(2 * C.Larmor.rate(q, { T: C.B_START, u: [1, 0, 0] }) - 1.682) < 1e-3)
   const a = { lv: i, n: [0, 0, 1], t0: 0 }
   const t = 0.01
   const n = C.Larmor.axis(a, t, b)
@@ -320,4 +323,122 @@ test('carbon: an axis turns about B at g_J mu_B B / h on the event clock, and st
       assert.ok(Math.abs(d - (r === c ? 1 : 0)) < 1e-12, 'orthonormal')
     }
   }
+})
+
+// The lines of issue #167's table: 2p4d 3Fo2 to 2p2 3P1, 119.4 nm, and
+// 2p4p 1P1 to 2p3s 1Po1, 538.2 nm, both in vacuum.
+const line119 = () => D.lines.find(l => D.levels[l.u].id === '2p4d_3Fo_2' && D.levels[l.l].id === '2p2_3P_1')
+const line538 = () => D.lines.find(l => D.levels[l.u].id === '2p4p_1P_1' && D.levels[l.l].id === '2p3s_1Po_1')
+
+test('carbon: a front is its edge and a trail of lambda / TRAIL, its period lambda / c on the light clock', () => {
+  const a = line119()
+  const b = line538()
+  assert.ok(Math.abs(a.vac - 119.43) < 0.01 && Math.abs(b.vac - 538.18) < 0.01, `${a.vac} ${b.vac}`)
+  // Issue #167's table: 2256 and 10170 bohr, 94 and 424 times the view's
+  // 24 bohr, periods 40 s and 180 s on a light clock of 1e17, so five
+  // times those at 5e17.
+  assert.ok(Math.abs(C.Front.lambda(a) - 2256) < 1, `${C.Front.lambda(a)}`)
+  assert.ok(Math.abs(C.Front.lambda(b) - 10170) < 1, `${C.Front.lambda(b)}`)
+  assert.strictEqual(Math.round(C.Front.lambda(a) / 24), 94)
+  assert.strictEqual(Math.round(C.Front.lambda(b) / 24), 424)
+  const slow = C.LIGHT / 1e17
+  assert.ok(Math.abs(C.Front.period(a) / slow / 40 - 1) < 0.01, `${C.Front.period(a)}`)
+  assert.ok(Math.abs(C.Front.period(b) / slow / 180 - 1) < 0.01, `${C.Front.period(b)}`)
+  assert.ok(Math.abs(C.Front.period(a) - 199.1) < 0.1 && Math.abs(C.Front.period(b) - 897.6) < 0.1)
+  assert.ok(Math.abs(C.Front.period(b) * C.Clock.light - C.Front.lambda(b)) < 1e-9)
+  // The trail: lambda / 1e4, 0.2256 and 1.017 bohr, in the true ratio
+  // of the wavelengths, 4.5.
+  assert.strictEqual(C.TRAIL, 1e4)
+  const fa = C.Front.make(0, a, 0, 0)
+  const fb = C.Front.make(0, b, 0, 0)
+  assert.ok(Math.abs(fa.trail - 0.2256) < 1e-4 && Math.abs(fb.trail - 1.0170) < 1e-4, `${fa.trail} ${fb.trail}`)
+  assert.ok(Math.abs(fb.trail / fa.trail - b.vac / a.vac) < 1e-12)
+  assert.ok(Math.abs(fb.trail / fa.trail - 4.507) < 1e-3)
+  // Every front is in the near zone: lambda / 2 pi is past the view by
+  // 15 times at the shortest line, and no crest is drawn.
+  const shortest = D.lines.reduce((x, y) => y.vac < x.vac ? y : x)
+  assert.ok(C.Front.lambda(shortest) / (2 * Math.PI) > 14 * 24)
+  assert.ok(!('gap' in fa))
+  const src = fs.readFileSync(require.resolve('../app/viz/carbon'), 'utf8')
+  assert.ok(!/crest spacing a symbol|CRESTS/.test(src))
+})
+
+// The invisible fronts' pass on a fake canvas of 200 by 200 pixels, the
+// site at its centre, 10 pixels a bohr: what it changes lies in the
+// band behind the edge and nothing ahead of it.
+function warped (ln, Rb) {
+  const W = 200
+  const data = new Uint8ClampedArray(W * W * 4)
+  let s = 7
+  for (let i = 0; i < data.length; i += 4) {
+    s = (s * 1103515245 + 12345) % 2147483648
+    const v = (s >> 16) & 255
+    data[i] = data[i + 1] = data[i + 2] = v
+    data[i + 3] = 255
+  }
+  const before = data.slice()
+  const g = { getImageData: () => ({ data }), putImageData () {} }
+  const fr = { cx: 100, cy: 100, k: 10, turn: (x, y, z) => ({ x, y: z, z: y }) }
+  const f = C.Front.make(0, ln, 1, 0, [0, 0, 1])
+  C.Warp.apply(g, [f], fr, { x: 0, y: 0, w: W, h: W }, Rb / C.Clock.light)
+  const radii = []
+  for (let y = 0; y < W; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4
+      if (data[i] !== before[i]) radii.push(Math.hypot(x - 100, y - 100))
+    }
+  }
+  return { f, radii, R: Rb * fr.k, w: C.Warp.width(f, fr.k) }
+}
+
+test('carbon: the ultraviolet and infrared passes act across the trail behind the edge, and the haze has no ripple', () => {
+  // 119.4 nm sharpens a band of 2.26 pixels at 10 pixels a bohr, 909.7
+  // nm (2p3p 3P2 to 2p3s 3Po2) shifts one of 17.2: lambda / 1e4 each.
+  const ir = D.lines.find(l => D.levels[l.u].id === '2p3p_3P_2' && D.levels[l.l].id === '2p3s_3Po_2')
+  for (const [ln, w] of [[line119(), 2.256], [ir, 17.19]]) {
+    const r = warped(ln, 6)
+    assert.ok(Math.abs(r.w - w) < 0.01, `band ${r.w}`)
+    assert.ok(r.radii.length > 20, `${ln.vac}: ${r.radii.length} pixels changed`)
+    const lo = Math.min(...r.radii)
+    const hi = Math.max(...r.radii)
+    assert.ok(hi < r.R + 1 && lo >= Math.ceil(r.R - r.w), `${ln.vac}: changed from ${lo} to ${hi}, edge ${r.R}, band ${r.w}`)
+  }
+  // The profiles: the sharpening falls from the edge inward, the shift
+  // is one lobe of one sign, HAZE at its peak, none outside the band.
+  const fu = C.Front.make(0, line119(), 0, 0)
+  const fi = C.Front.make(0, ir, 0, 0)
+  assert.strictEqual(C.Warp.profile(fu, 0), 1)
+  assert.strictEqual(C.Warp.profile(fi, 0.5), C.HAZE)
+  let signs = 0
+  let last = 0
+  for (let u = 0; u <= 1; u += 0.01) {
+    assert.ok(C.Warp.profile(fu, u + 0.01) <= C.Warp.profile(fu, u))
+    const p = C.Warp.profile(fi, u)
+    assert.ok(p >= 0)
+    if (p > 0 && last === 0) signs++
+    last = p
+  }
+  assert.strictEqual(signs, 1)
+  assert.strictEqual(C.Warp.profile(fi, -0.01), 0)
+  assert.strictEqual(C.Warp.profile(fu, 1.01), 0)
+  // The least band, BAND_MIN pixels, where lambda / TRAIL is thinner.
+  assert.strictEqual(C.Warp.width(fu, 1), C.BAND_MIN)
+})
+
+// Issue #168: the backdrop's grid is in bohr against the scale bar, its
+// spacing a whole part of the bar's length and GRID_PX pixels or more,
+// at the atom boxes of a full pane (about 12.7 pixels a bohr) and a
+// small one (about 2).
+test('carbon: the backdrop grid divides the scale bar and keeps its least spacing', () => {
+  for (const [k, w] of [[12.7, 625], [2.06, 140], [3, 230], [6, 300], [25, 900], [1, 60]]) {
+    const bar = C.barStep(k, w)
+    const grid = C.gridStep(k, w)
+    assert.ok(bar * k >= w * 0.1 || bar === 50, `bar ${bar} at ${k}, ${w}`)
+    assert.strictEqual(bar % grid, 0, `grid ${grid} in bar ${bar}`)
+    assert.ok(grid * k >= C.GRID_PX || grid === bar, `grid ${grid} at ${k}`)
+  }
+  assert.strictEqual(C.gridStep(12.7, 625), 1)
+  assert.strictEqual(C.barStep(12.7, 625), 5)
+  assert.strictEqual(C.gridStep(2.06, 140), 5)
+  assert.strictEqual(C.barStep(2.06, 140), 10)
 })

@@ -29,7 +29,7 @@ const errors = []
 const MU_B_H = 1.39962449171e10
 // The event clock's factor, and its slowing from 1e6 (issue #166), by
 // which the trace's window and the beat's frequency scale.
-const { EVENT, TRACE_T } = require('../../app/viz/carbon')
+const { EVENT, TRACE_T, B_START, B_MAX } = require('../../app/viz/carbon')
 const SLOW = EVENT / 1e6
 
 function check (ok, msg, seen) {
@@ -137,7 +137,7 @@ function turned (a, b, u) {
   await sleep(2500)
   let p = (await pane()).probe
   check(p.dial && p.pulseButton && p.trace, 'want the dial, the pulse button and the trace in a full pane', { dial: p.dial, pulse: p.pulseButton, trace: p.trace })
-  check(p.B.mT === 0.3 && p.B.deg === 60, 'want B 0.30 mT at 60 degrees at start', p.B)
+  check(Math.abs(p.B.mT - B_START * 1e3) < 1e-9 && p.B.deg === 60, `want B ${B_START * 1e3} mT at 60 degrees at start`, p.B)
   await save(0, 'start')
 
   // Precession: B at 90 degrees, small enough that a reading 0.15 s
@@ -272,7 +272,7 @@ function turned (a, b, u) {
 
   // A full pane again at the start's field, then a small one: four
   // panes of 360 by 230, all in Carbon.
-  await dial(Math.sqrt(0.3 / 2), 60)
+  await dial(Math.sqrt(B_START / B_MAX), 60)
   await sleep(1500)
   await save(0, 'full')
   await size(720, 460)
