@@ -20,9 +20,11 @@
 //
 // The plane (dim 2) keeps z at 0. Space (dim 3) uses all three. The
 // mode keeps the predators as plain objects in flock.predators and
-// steps the whole by step(dt), substeps of at most H, so the motion is
-// the same at any frame rate. Draws nothing and touches no DOM: loaded
-// by the viz page and by the tests.
+// steps the whole by step(dt), substeps of at most H or the mode's
+// substep, so the motion is the same at any frame rate. A large flock
+// takes a longer substep and searches for neighbours less often
+// (relist). Draws nothing and touches no DOM: loaded by the viz page
+// and by the tests.
 
 ;(function (root) {
   const H = 1 / 30
@@ -44,12 +46,18 @@
   // velocity the group drifts toward at rest, driftW its weight.
   // gather: the weight, at rest, of a steer to the centre of all the
   // prey, which grows with the distance from it past the radius of the
-  // whole group at rest, so groups split by an attack rejoin.
+  // whole group at rest, so groups split by an attack rejoin. gatherR:
+  // that radius, null for a group packed in the plane at sep.
   // bounds: null, or { x, y, z, r, w }: past r from the point a steer
   // back, of weight w. endurance: the seconds a prey runs hard before
   // it tires, Infinity for never, and tire: the share of its top speed
   // it has lost after twice that. It gets its wind back at half the
   // rate it lost it.
+  // substep: the longest substep, seconds. relist: the substeps between
+  // searches of the grid for each prey's neighbours, which keeps the
+  // same neighbours between and measures them again each substep, as
+  // a bird keeps track of its seven. level: in space, the weight of a
+  // steer to level flight, z the vertical, faded by fear.
   const DEFAULTS = {
     neighbours: { by: 'distance', r: 14 },
     sep: 5,
@@ -77,7 +85,11 @@
     gather: 0.4,
     bounds: null,
     endurance: Infinity,
-    tire: 0.4
+    tire: 0.4,
+    substep: H,
+    relist: 1,
+    level: 0,
+    gatherR: null
   }
 
   // A seeded generator in [0, 1): mulberry32, as quantum.js.
@@ -124,6 +136,15 @@
       this.odo = new Float64Array(this.cap)
       // Seconds of hard running, less the rest since.
       this.run = new Float32Array(this.cap)
+      // A steer the mode adds to each prey's as it stands, its length
+      // the weight. Kept until the mode changes it.
+      this.push = new Float64Array(n3)
+      // Under relist, each prey's neighbours kept between searches, how
+      // many, the substeps counted, and whether the indices moved.
+      this.kept = null
+      this.kn = null
+      this.tick = 0
+      this.moved = true
       this.ids = 0
       this.predators = []
       this.clock = 0
@@ -158,6 +179,8 @@
       this.wan[k] = Math.cos(a) * Math.cos(b)
       this.wan[k + 1] = Math.sin(a) * Math.cos(b)
       this.wan[k + 2] = Math.sin(b)
+      this.push[k] = this.push[k + 1] = this.push[k + 2] = 0
+      this.moved = true
       this.fear[i] = 0
       this.lone[i] = this.p.neighbours.r
       this.odo[i] = this.rnd() * 10
@@ -174,11 +197,13 @@
         if (q.target === i) q.target = -1
         else if (q.target === j) q.target = i
       }
+      this.moved = true
       if (i === j) return
       for (let c = 0; c < 3; c++) {
         this.pos[3 * i + c] = this.pos[3 * j + c]
         this.vel[3 * i + c] = this.vel[3 * j + c]
         this.wan[3 * i + c] = this.wan[3 * j + c]
+        this.push[3 * i + c] = this.push[3 * j + c]
       }
       this.fear[i] = this.fear[j]
       this.lone[i] = this.lone[j]
@@ -352,8 +377,9 @@
     step (dt) {
       const out = []
       let left = Math.max(0, dt)
+      const most = this.p.substep || H
       while (left > 1e-9) {
-        const h = Math.min(H, left)
+        const h = Math.min(most, left)
         this.sub(h, out)
         left -= h
       }
@@ -370,10 +396,17 @@
       const c = rule.cell || (rule.by === 'rank' ? rule.r / 3 : rule.r)
       const flat = this.dim === 2
       const qs = this.predators
-      this.hash(c)
+      const every = Math.max(1, Math.floor(p.relist) || 1)
+      const search = every === 1 || this.moved || this.tick % every === 0
+      if (every > 1 && !this.kept) {
+        this.kept = new Int32Array(this.cap * MAX_N)
+        this.kn = new Uint8Array(this.cap)
+      }
+      if (search) this.hash(c)
       const g0 = this.centre()
-      // The radius of a group of n at rest, packed at sep.
-      const R0 = 0.4 * p.sep * Math.sqrt(this.n)
+      // The radius of a group of n at rest, packed at sep in the plane,
+      // or the mode's.
+      const R0 = p.gatherR || 0.4 * p.sep * Math.sqrt(this.n)
       const ax = this.ax
       // A steer toward (x, y, z), its length capped at 1, of weight w.
       const add = (x, y, z, w) => {
@@ -392,7 +425,11 @@
         const vy = V[k + 1]
         const vz = V[k + 2]
         const sp = Math.hypot(vx, vy, vz)
-        const m = this.near(i, c)
+        const m = search ? this.near(i, c) : this.recall(i)
+        if (every > 1 && search) {
+          this.kn[i] = m
+          for (let a = 0; a < m; a++) this.kept[i * MAX_N + a] = this.nb[a]
+        }
         let sx = 0
         let sy = 0
         let sz = 0
@@ -511,6 +548,10 @@
         const drl = Math.max(1, Math.hypot(dr[0], dr[1], dr[2]))
         if (p.driftW) add((dr[0] - vx) / drl, (dr[1] - vy) / drl, (dr[2] - vz) / drl, p.driftW * (1 - f))
         if (u > 0) add(gx, gy, gz, p.gather * (1 - f) * u)
+        if (p.level && !flat) add(0, 0, -vz / Math.max(1, sp), p.level * (1 - f))
+        ax[0] += this.push[k]
+        ax[1] += this.push[k + 1]
+        ax[2] += flat ? 0 : this.push[k + 2]
         const b = p.bounds
         if (b) {
           const dx = b.x - P[k]
@@ -560,8 +601,24 @@
         this.odo[i] += v * h
         this.run[i] = v > 0.6 * p.flight ? this.run[i] + h : Math.max(0, this.run[i] - 0.5 * h)
       }
+      this.moved = false
+      this.tick++
       this.chase(h, out)
       this.clock += h
+    }
+
+    // Prey i's neighbours kept from the last search, into this.nb, their
+    // distances now into this.nd: returns how many.
+    recall (i) {
+      const P = this.pos
+      const k = 3 * i
+      const m = this.kn[i]
+      for (let a = 0; a < m; a++) {
+        const j = this.kept[i * MAX_N + a]
+        this.nb[a] = j
+        this.nd[a] = Math.hypot(P[3 * j] - P[k], P[3 * j + 1] - P[k + 1], P[3 * j + 2] - P[k + 2])
+      }
+      return m
     }
 
     // The predators' pursuit: each steers to where its target will be
