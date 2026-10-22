@@ -21,7 +21,8 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
 (issue #158) and for its flashes and its slowed clocks (issues #164
 and #166), and 2026-10-18 for its field's calibration (issue #169) and its
-photons at their true scale (issue #167), and for the gravitational waves of the Gravity modes
+photons at their true scale (issue #167), and 2026-10-22 for its
+invisible fronts on a grid (issue #168), and for the gravitational waves of the Gravity modes
 (issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
 for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
@@ -688,8 +689,10 @@ ruling's starting point by `carbon-photon.md`.
   lobe across it, heat haze. Both are one pass over the atom's pixels: every
   front adds to tables by integer radius and pattern kind, and a pixel
   takes its radius's tables times each kind's shape in its direction,
-  radii with no front skipped. A faint fixed grain lies under the atom
-  for them to act on, since on black they would show nothing.
+  radii with no front skipped. A faint grid in bohr lies under the atom
+  for them to act on, since on black they would show nothing (see
+  2026-10-22: Carbon's invisible fronts on a grid, which replaced the
+  random grain).
 - Detection: a front that reaches the pane's nearest edge collapses to
   one point, in a direction drawn from its pattern, and its line lights
   in the spectrum then, not at the jump. At most 500 fronts fly, and past
@@ -1842,3 +1845,97 @@ Rejected:
   change against #164's bound.
 - A trail on a law other than linear, $\lambda^{0.35}$ or a logarithm:
   it breaks the true ratio of the wavelengths.
+
+## 2026-10-22: Carbon's invisible fronts on a grid
+
+Owner, 2026-10-16, issue #168: "the sharpening front and the infrared
+shimmers are not very clear and are very subtle. we may need a better
+background than subtle noise." The random grain under the atom goes:
+sharpening noise of at most 24 of 255 and shifting random pixels by a
+pixel or two both read as more noise.
+
+- The backdrop. A Cartesian grid about the site, drawn once a resize
+  (`drawBackdrop`). A radial shift leaves a ring about the site a ring
+  and a spoke a spoke, so a polar grid would hide the haze. Its spacing
+  is the least of 1, 2, 5, 10, 20 or 50 bohr that divides the scale
+  bar's length and is `GRID_PX` = 10 pixels or more (`gridStep`), so the
+  bar spans whole cells: 1 bohr under a 5 bohr bar in a pane of 1200 by
+  760, 5 under 10 in one of 360 by 230. Its lines are Gaussian across,
+  $\sigma$ 0.7 pixel, at 22, 30, 50 of 255 over a floor of 4, 6, 10, and
+  from 0.55 of the atom box's half side out to the half side they fall
+  linearly to 0.4 of that, so the captions in the box's corners stand on
+  a dimmer grid. The dashed equator and meridian stay.
+- The ultraviolet sharpening. Per unit of the front's drawn amplitude it
+  takes 1.5 of the Laplacian and lifts the pixel by 4 (`SHARP`, `LIFT`),
+  against 0.5 and 0.35, across the trail as before. It moves a channel
+  by `SHARP_MAX` = 56 levels at most, which keeps a lifted grid line
+  under a relative luminance of 0.1, and above 64 that most falls
+  linearly to 0.15 of it at 172, so the cloud's dense points are crisped
+  and barely lifted. A front reads as a thin bright crisp ring.
+- The infrared haze. One lobe across the trail as before, peak shift
+  `HAZE` = 8 pixels per unit amplitude, against 4. The lobe $A\,4u(1-u)$
+  folds the picture where $A > w/4$, $w$ the band: a 909.7 nm front 10
+  bohr out in a full pane has $a = 0.62$, $A$ = 5.0 pixels and $w$ = 22,
+  a lens that bends each line it crosses without folding it. Closer to
+  the site, where $a$ is larger, and in every small pane, whose band is
+  3.5 pixels, it folds, a mirage. A front reads as a broad shell of bent
+  lines with no change of brightness, so the two kinds are told apart by
+  brightness and width: the ultraviolet ring bright and thin, the
+  infrared shell dim and broad.
+- The measure (`scripts/checks/vizcarbon.js`). Carbon alone on a quiet
+  canvas, its levels at 0, one front sent from the site by the
+  renderer's `send` hook and caught 10 bohr out. `Warp.apply` keeps the
+  mean change its pass makes to the atom box's pixels, levels of 255 a
+  channel, the frame with the front against without it. At 43a4dd1, the
+  grain, and at 9f6260d, the grid, 165.7 nm: 0.0364 and 0.1667 in a full
+  pane (4.6 times), 0.0477 and 0.3125 in a small one (6.6 times). 909.7
+  nm: 0.2163 and 0.3016 (1.39 times), 0.1854 and 0.2913 (1.57 times).
+  The infrared figure was high at 43a4dd1 though nothing showed:
+  shifting random pixels changes nearly every pixel of the band by the
+  grain's own spread, while a shift of the grid changes only its line
+  pixels, about a third of the band at a 1 bohr spacing, and a pixel
+  once however far its line moves. Only a denser or brighter grid raises
+  it, and both make the frame with no front a mesh that competes with
+  the cloud and the captions (sigma 0.8 and lines at 26, 36, 58 gave
+  1.86 and 1.99 times and were refused on sight). The check holds the
+  ultraviolet front to 3 times today's figure and the infrared one to
+  1.3.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`:
+  every scene 0 general and 0 red flashes a second within one frame, at
+  43a4dd1 and at 9f6260d. Before the cap the sharpening lifted every
+  line it crossed fivefold, and at full activity the count within 0.1 s
+  rose to 10, its saturation, over 14 863 cells flashing more than three
+  times a second. With the sharpening off it fell to 1, with the haze
+  off it stayed at 10. Within 0.1 s at 43a4dd1, three runs, full 6, 1
+  and 0, moderate 2, 0 and 0. At 9f6260d full 7 and 1, moderate 1 and 0,
+  the cells over three 4264 and 1504 against 2174 to 3284, so within the
+  spread of one setting's runs. The pulse's scenes stay at 10 and 10.
+  The frame's mean light at full activity 0.0679 against 0.0445.
+- The frame rate. Per draw alone at 400 by 380 at full activity, 7.3 ms
+  at 9f6260d against 10.7 at 43a4dd1, run back to back on a loaded
+  host (1-minute load 20 and 26): the grid is one image a resize. The
+  split of three, median of five rounds, Carbon 16 and 17.5 frames a
+  second against 19 and 20.5, Gravity 21 and 21.5 against 18.5 and 23,
+  rounds of one set ranging 9 to 39.5: within the host's noise.
+- The frames, looked at at 9f6260d. With no front, a full pane shows a
+  dim blue-grey grid, brightest about the cloud and dimmer under the
+  captions, the cloud the brightest thing in it. One 165.7 nm front is a
+  thin continuous grey ring with brighter beads where it crosses the
+  lines. One 909.7 nm front is a shell about 22 pixels deep in which the
+  lines kink outward. In a pane of 360 by 230 the grid is a 10 pixel
+  mesh, the ultraviolet ring a faint thin ring about the cloud, and the
+  infrared shell a ring of broken line pieces, faint: its band is 3.5
+  pixels. At full activity the grid carries many thin bright rings and
+  broad bent shells, the cloud still brightest.
+
+Rejected:
+
+- A polar grid about the site: a radial shift leaves its rings and
+  spokes in place.
+- A low-frequency pattern of features a few pixels wide: it raises the
+  measure by changes the eye does not resolve as a shift, as the grain
+  did.
+- A wider band floor for the invisible fronts in a small pane: the band
+  is the trail, $\lambda/10^4$, from #167.
+- A haze that changes brightness by the mapping's Jacobian: a lens keeps
+  an extended background's surface brightness.
