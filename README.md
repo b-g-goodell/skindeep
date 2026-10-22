@@ -170,7 +170,9 @@ without spending tokens:
 `npm test` runs the tests, `scripts/checks/` holds live checks that run
 under Xvfb, and `npm run checks -- OUT` runs every one of them that
 needs no real agent, `scripts/fuzz/` holds a fuzz harness, and `scripts/shots.js`
-retakes this page's screenshots with two real prompts. The design is in
+retakes this page's screenshots with two real prompts. The live checks
+start Electron with Chromium's sandbox, so they need `install.sh`'s
+root step, or `SKINNED_UNSAFE_NO_SANDBOX=1` to run without it. The design is in
 [docs/DESIGN.md](docs/DESIGN.md), how it was built, chapter by chapter,
 in the [dev diary](docs/diary/README.md), and [decision 0019](docs/decisions/0019-tests.md)
 says what the tests cover.
