@@ -32,8 +32,10 @@ done
 
 # Chromium's sandbox confines every page the app renders (decision
 # 0001). Where it cannot start, refuse rather than run without it,
-# unless the caller asked for that by name.
+# unless the caller asked for that by name. sandbox_env points Chromium
+# at the root-owned setuid helper, where install.sh made one.
 . "$repo/scripts/sandbox.sh"
+sandbox_env "$electron"
 if [ -z "$unsafe" ] && ! sandbox_starts "$electron"; then
   echo "skinned: Chromium's sandbox does not start for $electron" >&2
   echo "skinned: run $repo/install.sh once: it installs, with sudo, what the sandbox needs on this system" >&2

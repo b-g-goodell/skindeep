@@ -6,7 +6,7 @@
   "license": "MIT",
   "main": "app/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "sh -c '. scripts/sandbox.sh && sandbox_env node_modules/electron/dist/electron && exec electron .'",
     "test": "node --test test/*.test.js",
     "checks": "node scripts/checks/suite.js"
   },
