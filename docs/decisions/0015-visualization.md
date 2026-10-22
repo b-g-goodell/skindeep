@@ -1681,7 +1681,7 @@ water use it unchanged. `rnd` takes a seeded generator, mulberry32 as
   group's centre, the nearer ones first, `'edge'`, the nearest prey, or
   `'middle'`, the prey nearest the centre of the group, a dash that
   splits it. It reads the prey within its range, or within that range
-  of the nearest when none is. It pursues the target's place 
+  of the nearest when none is. It pursues the target's place
   $\min(1.5, d/v)$ seconds ahead at its top speed and steering limit,
   or heads to a goal point when it has none, and takes the target
   within its reach. One predator or a small group both use it.
@@ -1690,9 +1690,9 @@ water use it unchanged. `rnd` takes a seeded generator, mulberry32 as
 - `test/viz-flock.test.js`, seeded, by distance and by rank: 120 prey
   held 120 s with no predator stay one group, linked by steps under 14
   m, their spread within 1.5 times the start's, in the plane and in
-  space; every prey within a standing predator's sight is farther from
+  space. Every prey within a standing predator's sight is farther from
   it 3 s later, by more than 10 m on average, while with no predator
-  the same prey move under 2 m from the point on average; and a
+  the same prey move under 2 m from the point on average. A
   predator at 24 m/s picking each of the three targets is nearer it at
   every look until it takes it.
 
