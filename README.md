@@ -38,8 +38,8 @@ If something is missing, the script says how to get it and stops.
 Otherwise it downloads Electron (about 120 MB) and puts `claude-skins`,
 `codex-skins` and `skinned` in `~/.local/bin`, or in `BINDIR` if you
 set it. Where Chromium's sandbox cannot start yet, it asks for `sudo`
-once to make it start, or, with no terminal to ask on, prints the two
-commands to run as root. Run it again after each `git pull`, and `./uninstall.sh`
+once to make it start, or, with no terminal to ask on, prints the one
+command to run as root. Run it again after each `git pull`, and `./uninstall.sh`
 removes the commands, as [decision 0018](docs/decisions/0018-install.md)
 explains. Or tell your agent:
 
@@ -144,7 +144,8 @@ without spending tokens:
   decoders, so a shared skin is untrusted input. The sandbox needs root
   once: `install.sh` installs an AppArmor profile for the checkout's
   Electron where AppArmor restricts user namespaces, as on Ubuntu 23.10
-  and later, else makes `chrome-sandbox` setuid root. Until then
+  and later, else installs a root-owned setuid copy of `chrome-sandbox`
+  in `/usr/local/lib/claude-skins`. Until then
   `skinned` refuses to start. `skinned --unsafe-no-sandbox` or
   `SKINNED_UNSAFE_NO_SANDBOX=1` runs without the sandbox, and a bug in
   any page then runs with all your rights

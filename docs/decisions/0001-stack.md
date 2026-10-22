@@ -48,22 +48,44 @@ Node 22 loads in Electron without a rebuild.
   Ubuntu's profile for Chrome, loaded with `apparmor_parser -r`. AppArmor
   attaches it by the path the kernel resolved, so `<electron>` is the
   checkout's `node_modules/electron/dist/electron` through `readlink -f`.
-- Elsewhere, where the sandbox still fails: `chrome-sandbox` root-owned
-  4755. npm ci and each Electron download replace it, and the next
-  install's probe redoes the step.
+- Elsewhere, where the sandbox still fails: a setuid-root copy of
+  `chrome-sandbox`. Root never opens a path the user can write: the user
+  reads the helper and feeds it on stdin to one root shell, which runs
+  `install -o root -g root -m 4755 /dev/stdin` into
+  `/usr/local/lib/claude-skins/electron-<version>/chrome-sandbox`, a
+  directory root owns. Install then removes the helper beside Electron,
+  since Chromium takes the copy, by `CHROME_DEVEL_SANDBOX`, only where
+  no `chrome-sandbox` sits beside the binary and the user owns the
+  binary (witnessed on Electron 44.9.3: with the helper beside it the
+  variable is ignored, without it Chromium names the variable's path).
+  `bin/skinned`, `scripts/drive.js` and `npm start` set the variable by
+  `sandbox_env` of `scripts/sandbox.sh`. npm ci and each Electron
+  download put the helper back, and the next install's probe removes it
+  again, with no root while the copy equals it. A helper that is a link
+  or not a regular file is refused. Root is needed once per Electron
+  version.
+- The AppArmor profile reaches root the same way, its text on stdin,
+  and root runs `apparmor_parser` from `/usr/sbin` or `/sbin`, never
+  from the user's `PATH`.
 - `bin/skinned` runs the same probe before any window, and where it
   fails refuses with 125, naming `install.sh` and the unsafe option.
   `scripts/drive.js` refuses the same way, so a live check runs with the
   sandbox, or with `SKINNED_UNSAFE_NO_SANDBOX=1` on a machine where it
-  cannot start. `npm start` is plain `electron .`.
+  cannot start.
 - Costs. The profile lets whatever binary sits at that path, which the
   user can write, make user namespaces: for that path it lifts Ubuntu's
   restriction. One profile name serves the machine, so an install from a
   second checkout replaces the first's profile, and the first's launches
   are refused until its install runs again. The setuid helper is
-  Chromium's own, root only to make the namespaces. Uninstall leaves the
-  profile: `sudo apparmor_parser -R /etc/apparmor.d/skindeep-electron`
-  and removing the file undo it.
+  Chromium's own, root only to make the namespaces, but root trusts its
+  bytes at install time: root makes setuid whatever `chrome-sandbox`
+  sits in the user's `node_modules` when install runs, so code with the
+  user's rights that ran before then chooses them, and gains root by
+  that install. No path of the user's is swapped under root. A
+  checkout whose Electron another user owns gets no sandbox from the
+  copy. Uninstall leaves the profile and the copies: `sudo
+  apparmor_parser -R /etc/apparmor.d/skindeep-electron` and removing the
+  file, and `sudo rm -r /usr/local/lib/claude-skins`, undo them.
 
 ## Rejected
 

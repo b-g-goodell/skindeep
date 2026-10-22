@@ -35,10 +35,11 @@ and, with root, what Chromium's sandbox needs (decision 0001).
 - Last, it makes Chromium's sandbox start, as decision 0001 says: where
   `electron --version` aborts, the AppArmor profile
   `/etc/apparmor.d/skindeep-electron` where AppArmor restricts user
-  namespaces, else `chrome-sandbox` root-owned 4755, each by two
-  commands under `sudo`. It asks for a password only on a terminal.
-  Without one, or when sudo fails, it prints the two commands and exits
-  1. This is the one step that runs `sudo`: root is the step's whole
+  namespaces, else a root-owned 4755 copy of `chrome-sandbox` in
+  `/usr/local/lib/claude-skins`, each by one root shell under `sudo`
+  that reads its input on stdin. It asks for a password only on a
+  terminal. Without one, or when sudo fails, it prints that one command
+  and exits 1. This is the one step that runs `sudo`: root is the step's whole
   point, where a missing package is the user's to install.
 
 ## Why
