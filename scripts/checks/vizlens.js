@@ -36,10 +36,17 @@
 // Z 360, at a height Y of each of TRAILS above the hole's line, so its
 // pieces lie on several slices of depth and pass behind the hole, near
 // it. The pixels where that frame differs from a control without the
-// trail by 4 in a channel or more are the trail's images: above the
-// hole, its outer image, one 8-connected piece, one run of pixels down
-// each column, so no gap and no doubled piece where two pieces meet,
-// and below it its inner image, one piece, unbroken into dashes.
+// trail by 4 in a channel or more are the trail's images. At 28 and 14:
+// above the hole's row, its outer image, one 8-connected piece, one run
+// of pixels down each column, so no gap and no doubled piece where two
+// pieces meet, and below it its inner image, one piece, unbroken into
+// dashes. At 3 and 1, near the hole's line, where the images run round
+// the hole and the inner one's ends meet the hole's row beside the
+// straight arms, so a cut at the row splits whole curves: over the
+// frame, one or two pieces, the outer and the inner image, apart or
+// touching, a pixel in every bin of 5 degrees about the hole, so the
+// two arcs close round it with no gap, and one run down each column
+// above the row 8 pixels over the hole's, so no doubled arc.
 // Frames go to OUT/lens-<size>-<k>.png, OUT/lens-hole-full-<k>.png and
 // OUT/trail-<k>.png.
 // At every frame read, the probe's audit shows each class of matter,
@@ -79,8 +86,9 @@ const MOON_Z = 250
 const MOONS = [[0.12, 30], [0.25, 150], [0.36, 270]]
 const HOLE_Z = 280
 const HOLES = [[0.06, 0], [0.12, 120], [0.18, 240]]
-// The trail frames' heights.
-const TRAILS = [28, 14]
+// The trail frames: each height, and whether it passes near the hole's
+// line, where its images run round the hole.
+const TRAILS = [[28, false], [14, false], [3, true], [1, true]]
 
 // The probe's state when a staged frame is not judged.
 function state (probe, rec) {
@@ -120,9 +128,12 @@ function shown (f) {
 }
 
 // In the page: the pane's frame, kept (keep) or, against the frame kept,
-// the trail's images, where the two differ by 4 in a channel or more,
-// on each side of the hole at (hx, hy): their pixels, the 8-connected
-// pieces of 3 pixels or more, and the most runs of pixels down a column.
+// the trail's images, where the two differ by 4 in a channel or more.
+// On each side of the hole's row at (hx, hy): their pixels, the
+// 8-connected pieces of 3 pixels or more, and the most runs of pixels
+// down a column. Over the whole frame: the pieces, the bins of 5 degrees
+// about the hole holding no pixel, and the most runs down a column above
+// the row hy - 8.
 function trailImages ([keep, hx, hy]) {
   const c = [...document.querySelectorAll('.pane canvas:not([hidden])')][0]
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data
@@ -137,10 +148,9 @@ function trailImages ([keep, hx, hy]) {
   for (let i = 0; i < w * h; i++) {
     if (Math.max(Math.abs(a[4 * i] - d[4 * i]), Math.abs(a[4 * i + 1] - d[4 * i + 1]), Math.abs(a[4 * i + 2] - d[4 * i + 2])) >= 4) lit[i] = 1
   }
-  const side = up => {
-    const on = i => lit[i] && ((i / w | 0) + 0.5 < hy) === up
+  const pieces = on => {
     const seen = new Uint8Array(w * h)
-    const pieces = []
+    const list = []
     let pixels = 0
     for (let s = 0; s < w * h; s++) {
       if (!on(s) || seen[s]) continue
@@ -166,17 +176,31 @@ function trailImages ([keep, hx, hy]) {
         }
       }
       pixels += n
-      if (n >= 3) pieces.push(n)
+      if (n >= 3) list.push(n)
     }
-    let runs = 0
+    return { pixels, pieces: list.sort((p, q) => q - p) }
+  }
+  const runs = (on, y1) => {
+    let most = 0
     for (let x = 0; x < w; x++) {
       let r = 0
-      for (let y = 0; y < h; y++) if (on(y * w + x) && (y === 0 || !on((y - 1) * w + x))) r++
-      runs = Math.max(runs, r)
+      for (let y = 0; y < y1; y++) if (on(y * w + x) && (y === 0 || !on((y - 1) * w + x))) r++
+      most = Math.max(most, r)
     }
-    return { pixels, pieces: pieces.sort((p, q) => q - p), runs }
+    return most
   }
-  return { outer: side(true), inner: side(false) }
+  const side = up => {
+    const on = i => lit[i] && ((i / w | 0) + 0.5 < hy) === up
+    return { ...pieces(on), runs: runs(on, h) }
+  }
+  const on = i => lit[i]
+  const bins = new Uint8Array(72)
+  for (let i = 0; i < w * h; i++) {
+    if (lit[i]) bins[Math.floor((Math.atan2(hy - (i / w | 0) - 0.5, i % w + 0.5 - hx) * 180 / Math.PI + 360) % 360 / 5) % 72] = 1
+  }
+  const empty = []
+  for (let b = 0; b < 72; b++) if (!bins[b]) empty.push(5 * b)
+  return { outer: side(true), inner: side(false), whole: { ...pieces(on), empty, runs: runs(on, Math.floor(hy - 8)) } }
 }
 
 // Every frame the check reads: each class of matter, the dust, the
@@ -275,7 +299,7 @@ function slices (probe, where) {
   // The trail frames, in the full pane.
   await size([1200, 760])
   await sleep(1500)
-  for (const [k, Y] of TRAILS.entries()) {
+  for (const [k, [Y, near]] of TRAILS.entries()) {
     const where = `trail ${k}`
     const places = Array.from({ length: 64 }, (_, i) => [-220 + 440 * i / 63, Y, 40 + 320 * i / 63])
     const read = async (trail, keep) => {
@@ -292,8 +316,14 @@ function slices (probe, where) {
     fs.writeFileSync(path.join(out, `trail-${k}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
     const r = await read([], false)
     console.log(where, `Y ${Y}`, JSON.stringify(r))
-    check(r.outer.pixels > 200 && r.outer.pieces.length === 1 && r.outer.runs === 1, `${where}: the trail's outer image is broken or doubled`, r.outer)
-    check(r.inner.pixels > 50 && r.inner.pieces.length === 1, `${where}: the trail's inner image is broken`, r.inner)
+    if (near) {
+      check(r.whole.pixels > 400 && r.whole.pieces.length >= 1 && r.whole.pieces.length <= 2, `${where}: the trail's images are broken`, r.whole)
+      check(r.whole.empty.length === 0, `${where}: the trail's images leave a gap round the hole`, r.whole)
+      check(r.whole.runs === 1, `${where}: the trail's outer image is doubled`, r.whole)
+    } else {
+      check(r.outer.pixels > 200 && r.outer.pieces.length === 1 && r.outer.runs === 1, `${where}: the trail's outer image is broken or doubled`, r.outer)
+      check(r.inner.pixels > 50 && r.inner.pieces.length === 1, `${where}: the trail's inner image is broken`, r.inner)
+    }
   }
   check(await viz.evaluate(() => window.vizUnstage(0)), 'the mode would not let the staged scene go')
 
