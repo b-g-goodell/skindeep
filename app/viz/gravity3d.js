@@ -1288,10 +1288,10 @@
             if (!runs.has(q)) runs.set(q, [])
             run = [p.x, p.y]
             runs.get(q).push(run)
-            mark(S, p.x - 2, p.y - 2, p.x + 2, p.y + 2)
+            mark(S, p.x - p.w / 2 - 1, p.y - p.w / 2 - 1, p.x + p.w / 2 + 1, p.y + p.w / 2 + 1)
           }
           run.push(p1.x, p1.y)
-          mark(S, p1.x - 2, p1.y - 2, p1.x + 2, p1.y + 2)
+          mark(S, p1.x - p1.w / 2 - 1, p1.y - p1.w / 2 - 1, p1.x + p1.w / 2 + 1, p1.y + p1.w / 2 + 1)
         }
       }
       c.strokeStyle = style(shift(b.hue, t.g), b.comet ? 40 : 85, b.comet ? 80 : 60, Math.min(1, t.a * t.g * t.g * t.g))
