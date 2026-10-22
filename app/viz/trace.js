@@ -888,10 +888,13 @@
   // pieces. Each branch is an image followed along the curve, a list of
   // { u, x, y, a, b, c, d, qx, qy }: u the place, between places where a
   // piece is halved, (x, y) its image, a to d its J (image) and (qx, qy)
-  // where a straight ray would show it. A branch takes the image of the
-  // place before it, carried by its J, as the guess, and halves a piece,
-  // at most DEPTH times, until the guess and the image lie within JUMP
-  // pixels of the last, so it follows an image round a hole. It ends where the image is lost, in
+  // where a straight ray would show it. A branch guesses each image from
+  // the one before it: turned about the nearest hole as the place turns,
+  // and moved along the line through the hole by J. It halves a piece
+  // while the guess lies farther than JUMP pixels from the last image, as
+  // often as that asks, so it follows an image round a hole however near
+  // the hole's line the curve passes, and DEPTH times more where the image
+  // found lies farther than JUMP from the last. It ends where the image is lost, in
   // the shadow or behind the camera, or squeezed thinner than FAINT of
   // the curve, |J| above 1 / FAINT, where a trace would not show it. One
   // starts at a place with fewer branches than images to look for: the
@@ -902,6 +905,7 @@
   const DEPTH = 6
   const FAINT = 0.05
   const CP = new Float64Array(3)
+  const V = new Float64Array(2)
   function curve (sc, pl, n) {
     const where = u => {
       const i = Math.min(n - 2, Math.floor(u))
@@ -926,20 +930,72 @@
     const extend = (br, u1, depth) => {
       const s0 = br[br.length - 1]
       if (!where(u1)) return false
-      const dx = sc.cx + sc.f * CP[0] / CP[2] - s0.qx
-      const dy = sc.cy - sc.f * CP[1] / CP[2] - s0.qy
+      const Z = CP[2]
+      const q1x = sc.cx + sc.f * CP[0] / Z
+      const q1y = sc.cy - sc.f * CP[1] / Z
       const det = s0.a * s0.d - s0.b * s0.c
-      const gx = s0.x + (det ? (s0.d * dx - s0.b * dy) / det : dx)
-      const gy = s0.y + (det ? (s0.a * dy - s0.c * dx) / det : dy)
-      // A guess farther than JUMP is halved before it is solved.
-      const s1 = depth > 0 && Math.hypot(gx - s0.x, gy - s0.y) > JUMP ? null : solve(u1, gx, gy)
+      // J^-1 (x, y) into V.
+      const back = (x, y) => {
+        V[0] = det ? (s0.d * x - s0.b * y) / det : x
+        V[1] = det ? (s0.a * y - s0.c * x) / det : y
+      }
+      const um = (s0.u + u1) / 2
+      const halves = um > s0.u && um < u1
+      // The guess: about the hole in front of the place nearest the image
+      // in units of its Einstein radius, whose screen point, the place's
+      // and its images lie on one line, the image turned as the place
+      // turns and moved along that line by J. Where no hole is in front,
+      // and at the last halving, where a place crossing the hole's point
+      // turns by pi at once, the place's step carried by J.
+      let hb = -1
+      let hx = 0
+      let hy = 0
+      let least = Infinity
+      for (let h = 0; halves && h < sc.nh; h++) {
+        const Zh = sc.hs[4 * h + 2]
+        if (Zh <= 0 || Zh >= Z) continue
+        const px = sc.cx + sc.f * sc.hs[4 * h] / Zh
+        const py = sc.cy - sc.f * sc.hs[4 * h + 1] / Zh
+        const te = sc.f * Math.sqrt(2 * sc.hs[4 * h + 3] / RING * (Z - Zh) / (Zh * Z))
+        const e = Math.hypot(s0.x - px, s0.y - py) / te
+        if (e < least) {
+          least = e
+          hb = h
+          hx = px
+          hy = py
+        }
+      }
+      let gx, gy
+      if (hb < 0) {
+        back(q1x - s0.qx, q1y - s0.qy)
+        gx = s0.x + V[0]
+        gy = s0.y + V[1]
+      } else {
+        const ax = s0.qx - hx
+        const ay = s0.qy - hy
+        const bx = q1x - hx
+        const by = q1y - hy
+        const t = Math.atan2(ax * by - ay * bx, ax * bx + ay * by)
+        const co = Math.cos(t)
+        const si = Math.sin(t)
+        back(co * bx + si * by - ax, co * by - si * bx - ay)
+        const vx = s0.x - hx + V[0]
+        const vy = s0.y - hy + V[1]
+        gx = hx + co * vx - si * vy
+        gy = hy + si * vx + co * vy
+      }
+      // A guess farther than JUMP is halved before it is solved, as
+      // often as the arc asks: each half carries the image half as far.
+      const far = halves && Math.hypot(gx - s0.x, gy - s0.y) > JUMP
+      const s1 = far ? null : solve(u1, gx, gy)
       if (s1 && Math.hypot(s1.x - s0.x, s1.y - s0.y) <= JUMP) {
         br.push(s1)
         return true
       }
-      if (depth <= 0) return false
-      const um = (s0.u + u1) / 2
-      return extend(br, um, depth - 1) && extend(br, u1, depth - 1)
+      // A guess near the last image that misses is halved DEPTH times.
+      if (!halves || (!far && depth <= 0)) return false
+      const d = far ? depth : depth - 1
+      return extend(br, um, d) && extend(br, u1, d)
     }
     // The weak field's inner image is FAINT of the curve where its
     // radial magnification x^2 / (x^2 + 1) is, x its distance from the
