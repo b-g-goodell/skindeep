@@ -3,8 +3,8 @@
 # write three commands into BINDIR (default ~/.local/bin): claude-skins,
 # codex-skins and skinned. Outside this checkout it writes only those,
 # plus the download caches of npm (~/.npm) and Electron
-# (~/.cache/electron). Run again after a pull or a move. ./uninstall.sh
-# removes the commands.
+# (~/.cache/electron), and, with sudo, what Chromium's sandbox needs.
+# Run again after a pull or a move. ./uninstall.sh removes the commands.
 set -eu
 
 repo=$(cd "$(dirname "$0")" && pwd -P)
@@ -109,3 +109,57 @@ case ":$PATH:" in
   *":$bin:"*) ;;
   *) echo "install: $bin is not on PATH, add it to run the commands by name" >&2 ;;
 esac
+
+# Chromium's sandbox (decision 0001). bin/skinned refuses to start
+# Electron without it. It needs user namespaces, which AppArmor grants
+# only to profiled binaries where it restricts them, or else
+# chrome-sandbox setuid root. Either takes root once. The probe makes a
+# rerun a no-op, and redoes the setuid step after npm ci or an Electron
+# download has replaced chrome-sandbox.
+. "$repo/scripts/sandbox.sh"
+electron=$(readlink -f "$repo/node_modules/electron/dist/electron")
+if sandbox_starts "$electron"; then
+  echo "install: Chromium's sandbox starts"
+  exit 0
+fi
+
+# q ARG: ARG quoted for sh, for the commands this prints.
+q() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
+
+case $(sandbox_route) in
+  apparmor)
+    parser=$(PATH="$PATH:/usr/sbin:/sbin" command -v apparmor_parser) ||
+      fail "AppArmor restricts user namespaces here, but apparmor_parser is missing (package apparmor)"
+    profile="$repo/node_modules/.claude-skins-apparmor"
+    sandbox_profile "$electron" > "$profile" || fail "no AppArmor profile written"
+    old=$(sed -n 's/^profile [^ ]* "\(.*\)" flags=.*/\1/p' "$SANDBOX_PROFILE_FILE" 2>/dev/null) || old=
+    [ -z "$old" ] || [ "$old" = "$electron" ] ||
+      echo "install: this replaces the profile $SANDBOX_PROFILE for $old, whose launches will then be refused" >&2
+    echo "install: AppArmor restricts user namespaces here. With sudo, installing the profile $SANDBOX_PROFILE_FILE that grants them to $electron"
+    step1="install -m 644 $(q "$profile") $SANDBOX_PROFILE_FILE"
+    step2="$parser -r $SANDBOX_PROFILE_FILE"
+    ;;
+  setuid)
+    helper="$(dirname "$electron")/chrome-sandbox"
+    echo "install: Chromium needs its helper setuid root here. With sudo, setting $helper to root-owned 4755"
+    step1="chown root:root $(q "$helper")"
+    step2="chmod 4755 $(q "$helper")"
+    ;;
+esac
+
+# as_root CMD: CMD through sudo, asking for a password only on a
+# terminal, so an install with no terminal fails instead of hanging.
+as_root() {
+  if sudo -n true 2>/dev/null; then sudo -n sh -c "$1"
+  elif [ -t 0 ]; then sudo sh -c "$1"
+  else return 1
+  fi
+}
+if ! as_root "$step1" || ! as_root "$step2"; then
+  fail "the sandbox step needs root. Run, then run $repo/install.sh again:
+  sudo $step1
+  sudo $step2"
+fi
+sandbox_starts "$electron" ||
+  fail "Chromium's sandbox still does not start for $electron. skinned --unsafe-no-sandbox runs without it, and a bug in any page it renders then runs with all your rights"
+echo "install: Chromium's sandbox starts"
