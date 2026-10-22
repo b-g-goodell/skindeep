@@ -30,7 +30,7 @@ function tell (msg) {
 function parse (argv) {
   const sep = argv.indexOf('--')
   if (sep < 0 || sep === argv.length - 1) {
-    return { error: 'usage: skinned [--skin NAME|PATH] [--statusline=always|chain-only] [--no-viz] [--mute] -- CMD [ARGS...]\n  SKINNED_SKIN=NAME sets the default skin, SKINNED_MUTE=1 starts with skin sounds muted' }
+    return { error: 'usage: skinned [--skin NAME|PATH] [--statusline=always|chain-only] [--no-viz] [--mute] [--unsafe-no-sandbox] -- CMD [ARGS...]\n  SKINNED_SKIN=NAME sets the default skin, SKINNED_MUTE=1 starts with skin sounds muted, SKINNED_UNSAFE_NO_SANDBOX=1 runs without Chromium\'s sandbox' }
   }
   const own = argv.slice(0, sep)
   const opts = { skin: process.env.SKINNED_SKIN || null, statusline: 'always', viz: true, mute: process.env.SKINNED_MUTE === '1', cmd: argv.slice(sep + 1) }

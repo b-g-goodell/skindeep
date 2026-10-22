@@ -6,7 +6,7 @@
   "license": "MIT",
   "main": "app/main.js",
   "scripts": {
-    "start": "electron --no-sandbox .",
+    "start": "electron .",
     "test": "node --test test/*.test.js",
     "checks": "node scripts/checks/suite.js"
   },
