@@ -313,7 +313,8 @@ test('carbon: a cloud started from a wrong density relaxes to |psi|^2', () => {
 test('carbon: a jump carries every particle to the lower level\'s density, none made or lost', () => {
   // 2p4p 1P1 to 2p3s 1Po1, then on to the ground term before the first
   // move ends, at frames of a 60th of a second: every particle keeps its
-  // index and moves less than a bohr a frame, the 4p cloud of mean
+  // index and moves less than 2 bohr a frame, where a redraw would move
+  // the 4p cloud's tail, 30 bohr out, by tens of bohr: the cloud of mean
   // radius 14.6 bohr carried into 3s and then 2p, and after the moves
   // each slot holds its new orbital's density. The raised slot's
   // particles, in 2p, carry PTS_CORE / PTS_OUTER of a particle's ink.
@@ -342,7 +343,7 @@ test('carbon: a jump carries every particle to the lower level\'s density, none 
   frames(Math.round(70 * C.MORPH))
   assert.strictEqual(C.Cloud.moving(c, 5), 0)
   for (const k of cloudKs(c)) assert.ok(k.d <= k.bound, `in 2p: ${k.what}: KS ${k.d.toFixed(4)} over ${k.bound.toFixed(4)}`)
-  assert.ok(worst < 1, `a particle moved ${worst} bohr in a frame`)
+  assert.ok(worst < 2, `a particle moved ${worst} bohr in a frame`)
   for (let i = C.Cloud.SLOT_AT[5]; i < n; i++) assert.ok(Math.abs(c.w[i] - C.PTS_CORE / C.PTS_OUTER) < 1e-6 && !c.amber[i])
   assert.ok(c.pts.every(Number.isFinite))
 })

@@ -82,8 +82,10 @@
   const STEP = 0.3
   // A level change carries each particle from its quantile of the old
   // density to the same quantile of the new over MORPH seconds of wall
-  // time, eased.
-  const MORPH = 1
+  // time, eased: 30 frames at 60 a second, and within the 0.37 to 1.22 s
+  // a 2p4p level lives on the event clock, so a lifted cloud mostly
+  // reaches its level before it jumps.
+  const MORPH = 0.5
   // A particle is drawn at its path's exponential mean over SMOOTH
   // seconds of wall time: a step of Nelson's noise, 0.47 pixels a frame
   // in a full pane, would make every point twinkle, a seethe by other
