@@ -39,7 +39,9 @@ async function launch (cmd, opts = {}) {
     executablePath: require('electron'),
     args: [...(unsafe ? ['--no-sandbox'] : []), '--mute-audio', ...(opts.require ? ['-r', opts.require] : []), opts.root || root, ...(opts.appArgs || []), '--', ...cmd],
     cwd: opts.cwd || root,
-    env
+    env,
+    // Playwright adds --no-sandbox on Linux unless this is set.
+    chromiumSandbox: !unsafe
   })
   if (!given) app.on('close', () => fs.rmSync(state, { recursive: true, force: true }))
   const win = await app.firstWindow()
