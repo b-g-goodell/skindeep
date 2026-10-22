@@ -109,9 +109,9 @@ test('the panes tile the window, and a point maps back to its pane', () => {
 })
 
 test('the procedural modes follow the ten, each its own renderer file', () => {
-  assert.deepStrictEqual(MODES.map(m => m.id), ['drift', 'rings', 'plasma', 'stardust', 'whirlpool', 'scope', 'analyzer', 'fire', 'superscope', 'dotplane', 'fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon'])
+  assert.deepStrictEqual(MODES.map(m => m.id), ['drift', 'rings', 'plasma', 'stardust', 'whirlpool', 'scope', 'analyzer', 'fire', 'superscope', 'dotplane', 'fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon', 'savannah'])
   const html = fs.readFileSync(path.join(VIZ, 'index.html'), 'utf8')
-  for (const id of ['fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon']) assert.ok(html.includes(`<script src="${id}.js">`), `${id}.js not loaded`)
+  for (const id of ['fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon', 'savannah']) assert.ok(html.includes(`<script src="${id}.js">`), `${id}.js not loaded`)
 })
 
 // Go on a 5 by 5 board. at(x, y) is the point.

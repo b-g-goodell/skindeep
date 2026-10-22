@@ -4,8 +4,8 @@
 // use, the name the menu shows, and what draws it. milk: a butterchurn
 // preset of presets.js. canvas: a Canvas2D renderer that scope.js,
 // classic.js, avs.js or the procedural mode's own file (fern.js, go.js,
-// zoom.js, gravity.js, gravity3d.js, quantum.js, carbon.js) registers
-// under the id.
+// zoom.js, gravity.js, gravity3d.js, quantum.js, carbon.js,
+// savannah.js) registers under the id.
 // Loaded by the main process and by the viz page.
 
 ;(function (root) {
@@ -26,7 +26,8 @@
     { id: 'gravity', label: 'Gravity', kind: 'canvas' },
     { id: 'gravity3d', label: 'Gravity 3D', kind: 'canvas' },
     { id: 'quantum', label: 'Quantum', kind: 'canvas' },
-    { id: 'carbon', label: 'Carbon', kind: 'canvas' }
+    { id: 'carbon', label: 'Carbon', kind: 'canvas' },
+    { id: 'savannah', label: 'Savannah hunt', kind: 'canvas' }
   ]
   if (typeof module === 'object' && module.exports) module.exports = { MODES }
   else root.VizModes = MODES
