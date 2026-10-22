@@ -281,7 +281,7 @@
     // sparrowhawk low from the trees across the clearing, or a pair of
     // peregrines. at: a bird a falcon stoops on at once, from above it.
     function attack (k, at) {
-      if (!flock.n || flock.predators.length > 8) return null
+      if (!flock.n || flock.predators.length - (lure ? 1 : 0) > 8) return null
       const on = attacks.filter(a => a.members.some(hunting))
       if (on.length >= 2) for (const q of on[0].members) if (hunting(q)) phase(q, 'leave')
       const c = centre()
