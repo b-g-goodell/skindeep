@@ -14,7 +14,8 @@
 // long, no crest: lambda is 94 to 5x10^5 times the view, so the view is in
 // the near zone, in one phase. Ultraviolet fronts sharpen the picture and
 // infrared ones refract it as heat haze across the same trail, by one
-// pass over the atom's pixels (see Warp). One atom
+// pass over the atom's pixels (see Warp), on a faint grid in bohr under
+// the atom, built for them to act on (see drawBackdrop). One atom
 // of the ensemble is drawn: its cloud, Monte Carlo stippling of |psi|^2
 // for its M_L about the chosen axis z, flowing about the axis as
 // Madelung's probability current says for m != 0, the core from the
@@ -83,6 +84,24 @@
   const BAND_MIN = 1.6
   const SOURCE_PTS = 700
   const SOURCE_T = 0.4
+  // The backdrop under the atom (issue #168): a grid's least spacing in
+  // pixels, its lines' Gaussian half-width sigma in pixels, their peak
+  // and the floor between them, red, green and blue of 255, and the
+  // lines' share of that peak at the atom box's corners, where the
+  // captions stand: full to GRID_IN of the box's half side from the
+  // site, falling linearly to GRID_OUT at the half side and beyond.
+  const GRID_PX = 10
+  const GRID_SIGMA = 0.7
+  const GRID_INK = [22, 30, 50]
+  const GRID_FLOOR = [3, 4, 7]
+  const GRID_IN = 0.55
+  const GRID_OUT = 0.4
+  // The invisible fronts' strengths (issue #168): the sharpening's share
+  // of the Laplacian and its lift of the pixel, and the haze's peak
+  // shift, pixels, each per unit of the front's drawn amplitude.
+  const SHARP = 1.5
+  const LIFT = 4
+  const HAZE = 8
   // The view's radius, bohr: fixed, so every front keeps the light
   // clock's pace, about 1.6 times a 2p4p cloud's mean radius: a front
   // crosses that cloud's diameter in 0.5 LIGHT / 1e17 seconds.
@@ -925,10 +944,12 @@
   // Each acts across the front's trail, lambda / TRAIL behind its edge
   // and nothing ahead of it, at least BAND_MIN pixels wide, its strength
   // falling from the edge inward: Warp.profile. Ultraviolet fronts
-  // sharpen the picture and lift its contrast there. Infrared fronts
-  // refract it, shifting pixels along the radius by one smooth lobe
-  // across the trail, as a refracting shell does: no ripple, since in the
-  // view the field has no crest. Radii with no front are skipped.
+  // sharpen the picture and lift its contrast there, SHARP of the
+  // Laplacian and LIFT of the pixel. Infrared fronts refract it,
+  // shifting pixels along the radius by one smooth lobe across the trail,
+  // HAZE pixels at its peak per unit amplitude, as a refracting shell
+  // does: no ripple, since in the view the field has no crest. Radii with
+  // no front are skipped.
   const Warp = {
     tables: null,
     // The last pass's mean change of the box's pixels, levels of 255 a
@@ -941,7 +962,7 @@
     // pixels per unit amplitude. Zero outside the band.
     profile (f, u) {
       if (u < 0 || u > 1) return 0
-      return f.uv ? 1 - u : 16 * u * (1 - u)
+      return f.uv ? 1 - u : 4 * HAZE * u * (1 - u)
     },
     apply (g, fronts, fr, box, now) {
       Warp.change = 0
@@ -1035,7 +1056,7 @@
             for (let ch = 0; ch < 3; ch++) {
               const p = src[i + ch]
               const lap = 4 * p - src[i + ch - 4] - src[i + ch + 4] - src[i + ch - 4 * W] - src[i + ch + 4 * W]
-              d[i + ch] = d[i + ch] + s * (0.5 * lap + 0.35 * p)
+              d[i + ch] = d[i + ch] + s * (SHARP * lap + LIFT * p)
             }
           }
           sum += Math.abs(d[i] - src[i]) + Math.abs(d[i + 1] - src[i + 1]) + Math.abs(d[i + 2] - src[i + 2])
@@ -1090,6 +1111,21 @@
     return { c, g: c.getContext('2d', { willReadFrequently: true }) }
   }
 
+  // The atom's pixels a bohr, in an atom box a: the view's radius to its
+  // nearer side, 6 pixels in.
+  const kOf = a => Math.max(10, Math.min(a.w, a.h) / 2 - 6) / VIEW
+  // The scale bar's length, bohr, at k pixels a bohr in an atom w pixels
+  // wide: a tenth of the width or more.
+  const STEPS = [1, 2, 5, 10, 20, 50]
+  const barStep = (k, w) => STEPS.find(s => s * k >= w * 0.1) || 50
+  // The backdrop's grid spacing, bohr: the least of STEPS that divides the
+  // scale bar's length and is GRID_PX pixels or more, so the bar spans
+  // whole cells.
+  const gridStep = (k, w) => {
+    const bar = barStep(k, w)
+    return STEPS.find(s => bar % s === 0 && s * k >= GRID_PX) || bar
+  }
+
   const COLS = ['1even', '1odd', '3even', '3odd', '5odd']
   const COL_NAME = ['singlet', 'singlet' + ODD, 'triplet', 'triplet' + ODD, 'quintet' + ODD]
   const colOf = lv => COLS.indexOf(lv.term[0] + lv.parity)
@@ -1106,7 +1142,10 @@
     let layer = null
     let diagC = null
     let specC = null
-    let grain = null
+    let backdrop = null
+    // The invisible fronts' pass's mean change of this pane's atom, last
+    // frame: Warp is shared by every pane.
+    let warped = 0
     let R = null
     let ow = 0
     let oh = 0
@@ -1574,21 +1613,38 @@
       g.globalAlpha = 1
     }
 
-    // A faint fixed grain under the atom: the picture the invisible
-    // fronts sharpen and refract, which on black would show nothing.
-    function drawGrain () {
+    // The backdrop under the atom, the picture the invisible fronts
+    // sharpen and refract, which on black would show nothing (issue
+    // #168): a faint Cartesian grid about the site, its spacing in bohr
+    // a whole part of the scale bar's (gridStep), its lines soft, of
+    // Gaussian half-width GRID_SIGMA pixels, so a sharpening crisps and
+    // brightens them and a shift of a pixel or two bends them, as a
+    // lensing grid bends, dimmed toward the corners under the captions.
+    // Drawn once a resize.
+    function drawBackdrop () {
       const a = R.atom
-      grain = cpu(a.w, a.h)
-      const img = grain.g.createImageData(a.w, a.h)
+      backdrop = cpu(a.w, a.h)
+      const p = gridStep(kOf(a), a.w) * kOf(a)
+      const prof = (n, o) => Float32Array.from({ length: n }, (_, i) => {
+        const t = (i + 0.5 - o) / p
+        const e = (t - Math.round(t)) * p
+        return Math.exp(-e * e / (2 * GRID_SIGMA * GRID_SIGMA))
+      })
+      const fx = prof(a.w, a.w / 2)
+      const fy = prof(a.h, a.h / 2)
+      const img = backdrop.g.createImageData(a.w, a.h)
       const d = img.data
-      for (let i = 0; i < d.length; i += 4) {
-        const v = Math.random() < 0.25 ? 8 + 16 * Math.random() : 4 * Math.random()
-        d[i] = v * 0.8
-        d[i + 1] = v * 0.9
-        d[i + 2] = v * 1.2
-        d[i + 3] = 255
+      const half = Math.min(a.w, a.h) / 2
+      for (let y = 0; y < a.h; y++) {
+        for (let x = 0; x < a.w; x++) {
+          const u = Math.min(1, Math.max(0, (Math.hypot(x + 0.5 - a.w / 2, y + 0.5 - a.h / 2) / half - GRID_IN) / (1 - GRID_IN)))
+          const v = Math.max(fx[x], fy[y]) * (1 - (1 - GRID_OUT) * u)
+          const i = (y * a.w + x) * 4
+          for (let ch = 0; ch < 3; ch++) d[i + ch] = GRID_FLOOR[ch] + v * (GRID_INK[ch] - GRID_FLOOR[ch])
+          d[i + 3] = 255
+        }
       }
-      grain.g.putImageData(img, 0, 0)
+      backdrop.g.putImageData(img, 0, 0)
     }
 
     function resize (w, h) {
@@ -1598,7 +1654,7 @@
       said = []
       drawDiagram()
       drawSpectrum()
-      drawGrain()
+      drawBackdrop()
     }
 
     // Squares batched by fill and alpha, one path a batch: on a canvas
@@ -1656,7 +1712,7 @@
       const a = R.atom
       F.cx = a.x + a.w / 2
       F.cy = a.y + a.h / 2
-      F.k = Math.max(10, Math.min(a.w, a.h) / 2 - 6) / view
+      F.k = kOf(a)
       F.edge = Math.min(F.cx, F.cy, w - F.cx, h - F.cy)
       const cy = Math.cos(cam.yaw)
       const sy = Math.sin(cam.yaw)
@@ -1672,7 +1728,7 @@
       g.beginPath()
       g.rect(a.x, a.y, a.w, a.h)
       g.clip()
-      g.drawImage(grain.c, a.x, a.y)
+      g.drawImage(backdrop.c, a.x, a.y)
       // A faint equator and meridian, for depth.
       g.strokeStyle = '#1d2638'
       g.setLineDash([3, 5])
@@ -1716,6 +1772,7 @@
       flush(g)
       g.restore()
       Warp.apply(g, fronts, F, a, now)
+      warped = Warp.change
     }
 
     function labels (g) {
@@ -1840,7 +1897,7 @@
       g.fillStyle = '#c9d3e6'
       place(g, 'detector, y', [[det.x + 7, det.y + 4 * T], [det.x - 7 - 66 * T, det.y + 4 * T], [det.x - 30 * T, det.y - 7 * T]])
       // A scale bar, drawn only with its label.
-      const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
+      const step = barStep(F.k, a.w)
       const bx = a.x + 10
       const by = a.y + a.h - 6
       if (place(g, step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', [[bx, by - 4]])) g.fillRect(bx, by, step * F.k, 1)
@@ -2338,12 +2395,12 @@
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
         const by = b => fronts.filter(f => f.ln.band === b).length
-        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), warp: Math.round(Warp.change * 1e4) / 1e4, source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), warp: Math.round(warped * 1e4) / 1e4, source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
       }
     }
   }
 
-  const api = { TRAIL, BAND_MIN, Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
+  const api = { TRAIL, BAND_MIN, SHARP, LIFT, HAZE, GRID_PX, barStep, gridStep, Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
