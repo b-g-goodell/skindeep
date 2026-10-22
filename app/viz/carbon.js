@@ -931,6 +931,9 @@
   // view the field has no crest. Radii with no front are skipped.
   const Warp = {
     tables: null,
+    // The last pass's mean change of the box's pixels, levels of 255 a
+    // channel: the frame with its invisible fronts against without them.
+    change: 0,
     // The band's width in pixels at k pixels a bohr.
     width: (f, k) => Math.max(BAND_MIN, f.trail * k),
     // At u, the share of the band from the edge (0) inward (1): the
@@ -941,6 +944,7 @@
       return f.uv ? 1 - u : 16 * u * (1 - u)
     },
     apply (g, fronts, fr, box, now) {
+      Warp.change = 0
       const some = fronts.filter(f => !f.vis)
       if (!some.length || box.w < 4 || box.h < 4) return 0
       const rmax = Math.ceil(Math.hypot(box.w, box.h)) + 4
@@ -992,6 +996,7 @@
       const oy = fr.cy - box.y
       const S = T.S
       const Dp = T.Dp
+      let sum = 0
       for (let y = 1; y < H - 1; y++) {
         const dy = y - oy
         for (let x = 1; x < W - 1; x++) {
@@ -1033,8 +1038,10 @@
               d[i + ch] = d[i + ch] + s * (0.5 * lap + 0.35 * p)
             }
           }
+          sum += Math.abs(d[i] - src[i]) + Math.abs(d[i + 1] - src[i + 1]) + Math.abs(d[i + 2] - src[i + 2])
         }
       }
+      Warp.change = sum / (3 * W * H)
       g.putImageData(img, box.x, box.y)
       return used
     }
@@ -2281,6 +2288,16 @@
         } else if (inside(R.atom, x, y)) absorb(0, -1, 'click: a lamp')
       },
 
+      // For the live checks: one front of the line nearest nm in vacuum,
+      // component q about z, from the site now. Returns its line's
+      // vacuum wavelength.
+      send (nm, q = 0) {
+        let k = 0
+        lines.forEach((ln, j) => { if (Math.abs(ln.vac - nm) < Math.abs(lines[k].vac - nm)) k = j })
+        fronts.push(Front.make(k, lines[k], q, now))
+        return lines[k].vac
+      },
+
       // For the live checks: the clicks, the camera's turns, the
       // collisions, photons emitted and detected, the drawn atom's level
       // and M_L, the lines lit, the fronts in flight by kind, whether a
@@ -2291,7 +2308,8 @@
       // last set, its g_J and Larmor rate, the dial's, pulse button's
       // and trace's places, and after a pulse the rate at the detector
       // over TRACE_T before and after it, as [seconds from the pulse,
-      // rate] by emission time, with 2 f_L of the pulsed level.
+      // rate] by emission time, with 2 f_L of the pulsed level. The
+      // invisible fronts' mean change of the atom's pixels, last frame.
       probe () {
         const lv = levels[atoms[0].lv]
         const r4 = v => Math.round(v * 1e4) / 1e4
@@ -2320,7 +2338,7 @@
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
         const by = b => fronts.filter(f => f.ln.band === b).length
-        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), warp: Math.round(Warp.change * 1e4) / 1e4, source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
       }
     }
   }
