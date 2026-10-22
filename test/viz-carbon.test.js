@@ -404,11 +404,11 @@ test('carbon: the ultraviolet and infrared passes act across the trail behind th
     assert.ok(hi < r.R + 1 && lo >= Math.ceil(r.R - r.w), `${ln.vac}: changed from ${lo} to ${hi}, edge ${r.R}, band ${r.w}`)
   }
   // The profiles: the sharpening falls from the edge inward, the shift
-  // is one lobe of one sign, 4 at its peak, none outside the band.
+  // is one lobe of one sign, HAZE at its peak, none outside the band.
   const fu = C.Front.make(0, line119(), 0, 0)
   const fi = C.Front.make(0, ir, 0, 0)
   assert.strictEqual(C.Warp.profile(fu, 0), 1)
-  assert.strictEqual(C.Warp.profile(fi, 0.5), 4)
+  assert.strictEqual(C.Warp.profile(fi, 0.5), C.HAZE)
   let signs = 0
   let last = 0
   for (let u = 0; u <= 1; u += 0.01) {
@@ -423,4 +423,22 @@ test('carbon: the ultraviolet and infrared passes act across the trail behind th
   assert.strictEqual(C.Warp.profile(fu, 1.01), 0)
   // The least band, BAND_MIN pixels, where lambda / TRAIL is thinner.
   assert.strictEqual(C.Warp.width(fu, 1), C.BAND_MIN)
+})
+
+// Issue #168: the backdrop's grid is in bohr against the scale bar, its
+// spacing a whole part of the bar's length and GRID_PX pixels or more,
+// at the atom boxes of a full pane (about 12.7 pixels a bohr) and a
+// small one (about 2).
+test('carbon: the backdrop grid divides the scale bar and keeps its least spacing', () => {
+  for (const [k, w] of [[12.7, 625], [2.06, 140], [3, 230], [6, 300], [25, 900], [1, 60]]) {
+    const bar = C.barStep(k, w)
+    const grid = C.gridStep(k, w)
+    assert.ok(bar * k >= w * 0.1 || bar === 50, `bar ${bar} at ${k}, ${w}`)
+    assert.strictEqual(bar % grid, 0, `grid ${grid} in bar ${bar}`)
+    assert.ok(grid * k >= C.GRID_PX || grid === bar, `grid ${grid} at ${k}`)
+  }
+  assert.strictEqual(C.gridStep(12.7, 625), 1)
+  assert.strictEqual(C.barStep(12.7, 625), 5)
+  assert.strictEqual(C.gridStep(2.06, 140), 5)
+  assert.strictEqual(C.barStep(2.06, 140), 10)
 })
