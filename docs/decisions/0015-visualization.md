@@ -1906,9 +1906,9 @@ $d$ above 1 darkening.
 | drag | blows the clouds within 0.12 of the pane's width of it along, and they keep a little way on |
 | click | in the sky raises a cloud there, on the land drops clean water |
 
-- Cost, under swiftshader on this host, by the method of
-  `vizcarbon.js`, each mode alone at full activity, median and p90 ms
-  a draw, at load average 21 to 22: at 400 by 380 Sunset clouds 1.7
+- Cost, in an offscreen Electron page under xvfb on this host, by the
+  cost loop of `vizcarbon.js`, each mode alone at full activity, median
+  and p90 ms a draw, at load average 21 to 22: at 400 by 380 Sunset clouds 1.7
   and 2.5, Savannah hunt 2.6 and 3.2, and at 1200 by 760 Sunset clouds
   5.2 and 6.4, Savannah hunt 5.6 and 6.1. With idle rising over the
   run, so the sun sinks and every cloud is marched and repainted
@@ -1933,9 +1933,10 @@ Rejected:
 - A march for every pixel of the pane each frame: the clouds change
   slowly, so a march per cloud, at a sample every few pixels and only
   when the light or the cloud moves, does the same work far less often.
-- Drawing on the pane's own canvas, of the GPU: in the build, under
-  swiftshader, a draw returned in 0.1 ms, but with a read of one pixel
-  after it, which waits for the raster, it took 12 ms at 1200 by 760.
+- Drawing on the pane's own canvas, of the GPU: in the build, in the
+  same offscreen page, a draw returned in 0.1 ms, but with a read of
+  one pixel after it, which waits for the raster, it took 12 ms at 1200
+  by 760.
 - The paper multiplied over the whole pane every frame: 1.9 ms a frame
   at 1200 by 760. It is laid on the sky and the land when they are
   painted, and the clouds carry their own granulation.
