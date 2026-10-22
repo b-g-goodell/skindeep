@@ -16,12 +16,13 @@
 // infrared ones refract it as heat haze across the same trail, by one
 // pass over the atom's pixels (see Warp), on a faint grid in bohr under
 // the atom, built for them to act on (see drawBackdrop). One atom
-// of the ensemble is drawn: its cloud, Monte Carlo stippling of |psi|^2
-// for its M_L about the chosen axis z, flowing about the axis as
-// Madelung's probability current says for m != 0, the core from the
-// Bunge 1993 orbitals, the outer electron from the research's
-// quantum-defect model, labelled a model; its jumps snap the cloud and
-// flash the jump's transition density as the source. Beside it the level
+// of the ensemble is drawn: its cloud, particles of |psi|^2 for its M_L
+// about the chosen axis z that flow by Nelson's stochastic mechanics,
+// about the axis as Madelung's probability current says for m != 0,
+// the core from the Bunge 1993 orbitals, the outer electron from the
+// research's quantum-defect model, labelled a model; its jumps carry the
+// same particles to the lower level's density and flash the jump's
+// transition density on them as the source (see Cloud). Beside it the level
 // diagram, every level at its energy, the ensemble's populations, the
 // drawn atom's level lit and its last jump an arrow, the ground term's
 // fine structure in an inset. Along the bottom the spectrum. The two
@@ -61,11 +62,32 @@
   // gas's temperature for the ground term's thermal populations.
   const K_CM = 0.6950348004
   const T_GAS = 300
-  // Points per electron, core and outer, and the share drawn afresh
-  // each 60th of a second of wall time: a sampling, on neither clock.
+  // The cloud (issue #165): particles per electron slot, the five core
+  // slots and the slot that holds the outer electron in an excited
+  // level, which keeps its particles in every level.
   const PTS_CORE = 230
   const PTS_OUTER = 1300
-  const SEETHE = 0.012
+  // Nelson's process runs NELSON times as fast as the light clock: its
+  // time factor, current and osmotic velocity and noise alike.
+  const NELSON = 1
+  // The osmotic velocity (1/2) grad ln rho is clipped at U_MAX bohr per
+  // atomic unit of time: it grows without bound at a node of rho and on
+  // the axis for m != 0. The Metropolis step keeps rho exact under the
+  // clip. Carbon's 1s, the steepest orbital, reaches 6 at the nucleus.
+  const U_MAX = 10
+  // One step of the Metropolis-adjusted Langevin chain is at most
+  // (STEP <r>)^2 atomic units of time for an orbital of mean radius <r>,
+  // so a step is a fifth of the cloud and most proposals are taken.
+  const STEP = 0.2
+  // A level change carries each particle from its quantile of the old
+  // density to the same quantile of the new over MORPH seconds of wall
+  // time, eased.
+  const MORPH = 1
+  // A particle is drawn at its path's exponential mean over SMOOTH
+  // seconds of wall time: a step of Nelson's noise, 0.47 pixels a frame
+  // in a full pane, would make every point twinkle, a seethe by other
+  // means. The mean lags the path by 0.10 bohr an axis, rms.
+  const SMOOTH = 0.25
   // A Madelung angular velocity above this, radians a second on screen,
   // is clipped: m / rho^2 grows without bound near the axis, where the
   // density of m != 0 vanishes. 3 on a light clock of 1e17, scaled with
@@ -75,8 +97,9 @@
   // bohr for a 538 nm front in its pattern's brightest direction, the
   // factor by which a front's trail is shorter than its vacuum
   // wavelength (issue #167, decision 0015), the least width in pixels
-  // of the invisible fronts' band, the visible edge's stroke, and the
-  // points and seconds of the source's flash, in wall time.
+  // of the invisible fronts' band, the visible edge's stroke, the ink of
+  // the source's flash in points of full brightness, which the
+  // particles it rides on share, and its seconds, in wall time.
   const FRONTS = 500
   const R0 = 8
   const NU_REF = 1 / 538.18
@@ -393,42 +416,20 @@
     return best || [0, 0]
   }
 
-  // Points of the transition density psi_f* psi_i of a jump, its source
-  // (carbon-photon.md, sections 1 and 4): the radial part |P_f P_i| as a
-  // table, the angular part P_lf^|m|(cos theta) P_lt^|m'|(cos theta)
-  // cos(q phi), the real part at one instant, by rejection. Each point
-  // carries its sign. Tables are kept by the pair of orbitals.
-  const sources = new Map()
-  function source (mv, q, n, rand = Math.random) {
-    const key = mv.from + '|' + mv.to
-    let q0 = sources.get(key)
-    if (!q0) {
-      q0 = radialTable(r => Math.abs(radialP(mv.from, r) * radialP(mv.to, r)), Math.max(reach(mv.from), reach(mv.to)))
-      sources.set(key, q0)
-    }
+  // The sign of the transition density psi_f* psi_i of a jump, its
+  // source (carbon-photon.md, sections 1 and 4), at a point of the
+  // atom's frame: the radial part P_f P_i, the angular part
+  // P_lf^|m|(cos theta) P_lt^|m'|(cos theta) cos(q phi), the real part
+  // at one instant. The flash rides on the particles the jump moves,
+  // each in the colour of this sign where it stands (issue #165).
+  function sourceSign (mv, q) {
     const [m, mt] = mPair(mv.lf, mv.lt, q)
-    const ang = (c, ph) => legendre(mv.lf, Math.abs(m), c) * legendre(mv.lt, Math.abs(mt), c) * Math.cos(q * ph)
-    let top = 0
-    for (let i = 0; i <= 200; i++) top = Math.max(top, Math.abs(legendre(mv.lf, Math.abs(m), -1 + i / 100) * legendre(mv.lt, Math.abs(mt), -1 + i / 100)))
-    const pts = new Float32Array(4 * n)
-    for (let k = 0; k < n; k++) {
-      let c = 0
-      let ph = 0
-      let a = 0
-      for (let i = 0; i < 200; i++) {
-        c = 2 * rand() - 1
-        ph = 2 * Math.PI * rand()
-        a = ang(c, ph)
-        if (rand() * top <= Math.abs(a)) break
-      }
-      const r = drawR(q0, rand())
-      const s = Math.sqrt(1 - c * c)
-      pts[4 * k] = r * s * Math.cos(ph)
-      pts[4 * k + 1] = r * s * Math.sin(ph)
-      pts[4 * k + 2] = r * c
-      pts[4 * k + 3] = Math.sign(a * radialP(mv.from, r) * radialP(mv.to, r)) || 1
+    return (x, y, z) => {
+      const r = Math.hypot(x, y, z) || 1e-9
+      const c = z / r
+      const a = legendre(mv.lf, Math.abs(m), c) * legendre(mv.lt, Math.abs(mt), c) * Math.cos(q * Math.atan2(y, x))
+      return Math.sign(a * radialP(mv.from, r) * radialP(mv.to, r)) || 1
     }
-    return pts
   }
 
   // Unit vectors spread evenly on the sphere, by the Fibonacci lattice.
@@ -721,100 +722,409 @@
 
   // ---- The cloud ---------------------------------------------------------
 
-  // The largest of P_l^m(cos theta)^2, for rejection.
-  const tops = new Map()
-  function legTop (l, m) {
-    const key = l * 8 + m
-    let t = tops.get(key)
-    if (t === undefined) {
-      t = 0
-      for (let i = 0; i <= 400; i++) t = Math.max(t, legendre(l, m, -1 + i / 200) ** 2)
-      tops.set(key, t)
+  // The drawn atom's cloud (issue #165): particles that flow by Nelson's
+  // stochastic mechanics in the density rho = |psi|^2 of their electron,
+  // each a trajectory, none drawn afresh. A particle of an electron in
+  // the orbital R(r) Y_lm moves, in atomic units, by
+  //   dx = (v + u) dt + dW,  each axis of dW of variance hbar/m_e dt = dt,
+  // with the current velocity v = Im(grad psi / psi), m / rho_perp about
+  // z, Madelung's swirl, and the osmotic velocity u = (1/2) grad ln rho
+  // (Nelson, Phys. Rev. 150, 1079, 1966). Its stationary density is rho.
+  // A step is two exact parts: the swirl, a turn about z by an angle of
+  // rho_perp alone, which keeps any rho round about z, and the osmotic
+  // drift and the noise as one Metropolis-adjusted Langevin step
+  // (Roberts and Tweedie, Bernoulli 2, 341, 1996), whose acceptance
+  // keeps rho exact at any step and under the clip of u at U_MAX. The
+  // chain's rho is ln R^2 piecewise linear in r on the radial table's
+  // grid times ln P_l^m(c)^2 piecewise linear in c = cos theta.
+
+  // Six electron slots: 1s, 1s, 2s, 2s, 2p, and the slot of the electron
+  // a level raises. In 2s2.2p2 it is in 2p, in 2s.2p3 the second 2s slot
+  // is in 2p too, in 2s2.2p.nl it is the outer electron, the model's.
+  // That slot's PTS_OUTER particles stay in every level, each weighted
+  // PTS_CORE / PTS_OUTER while it is in a core orbital, so it carries
+  // one core electron's ink there, as the other slots do.
+  const SLOT_N = [PTS_CORE, PTS_CORE, PTS_CORE, PTS_CORE, PTS_CORE, PTS_OUTER]
+  const SLOT_AT = SLOT_N.reduce((a, n) => a.concat(a[a.length - 1] + n), [0])
+  const SLOTS = SLOT_N.length
+
+  // ln R(r)^2 of an orbital on the radial table's grid, r_k = rmax (k /
+  // n)^2, and each segment's slope, extended past rmax by the last.
+  const LN_N = 4096
+  const lnTables = new Map()
+  function lnTable (key) {
+    let t = lnTables.get(key)
+    if (!t) {
+      const rmax = reach(key)
+      const f = new Float64Array(LN_N + 1)
+      const d = new Float64Array(LN_N)
+      for (let k = 0; k <= LN_N; k++) {
+        const r = Math.max(1e-6, rmax * (k / LN_N) ** 2)
+        f[k] = Math.log(Math.max(1e-300, (radialP(key, r) / r) ** 2))
+      }
+      for (let k = 0; k < LN_N; k++) d[k] = (f[k + 1] - f[k]) / (rmax * (2 * k + 1) / (LN_N * LN_N))
+      t = { rmax, f, d }
+      lnTables.set(key, t)
     }
     return t
   }
 
-  // The electron density of a level's M_L component as points, in bohr:
-  // Monte Carlo stippling of |psi|^2. Each electron's radius from its
-  // orbital's table. A subshell with occupations draws each point's m by
-  // n_m and its direction from |Y_lm|^2, else uniformly. Cloud.make(lv,
-  // M) makes one, Cloud.step(c, dt) draws SEETHE of the points afresh
-  // each 60th of a second, so it seethes and keeps its shape, and turns
-  // each point of m != 0 about z at Madelung's m / rho^2 (atomic units)
-  // on the light clock, and Cloud.draw(c, fr, area, dim, rect, O) turns
-  // them by the atom's frame O and projects them, far points dimmer and
-  // smaller, the outer electron's in amber.
+  // ln P_l^m(c)^2 on a grid of c = cos theta, each segment's slope, and
+  // the cumulative share of P_l^m(c)^2 from c = -1. l = 0 is uniform.
+  const ANG_N = 1024
+  const angTables = new Map()
+  function angTable (l, m) {
+    const key = l * 8 + m
+    let t = angTables.get(key)
+    if (!t) {
+      const f = new Float64Array(ANG_N + 1)
+      const d = new Float64Array(ANG_N)
+      const cdf = new Float64Array(ANG_N + 1)
+      let prev = 0
+      for (let k = 0; k <= ANG_N; k++) {
+        const v = legendre(l, m, -1 + 2 * k / ANG_N) ** 2
+        f[k] = Math.log(Math.max(1e-300, v))
+        if (k) cdf[k] = cdf[k - 1] + (v + prev) / 2
+        prev = v
+      }
+      for (let k = 0; k < ANG_N; k++) d[k] = (f[k + 1] - f[k]) * ANG_N / 2
+      for (let k = 1; k <= ANG_N; k++) cdf[k] /= cdf[ANG_N]
+      t = { f, d, cdf }
+      angTables.set(key, t)
+    }
+    return t
+  }
+
+  // The share of the radial table below r, and the share of the angular
+  // table below c, and c at a share u: the inverses of drawR.
+  function shareR (q, r) {
+    const n = q.length - 1
+    if (r <= q[0]) return 0
+    if (r >= q[n]) return 1 - 1e-9
+    let lo = 0
+    let hi = n
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (q[mid] <= r) lo = mid
+      else hi = mid
+    }
+    return (lo + (q[hi] > q[lo] ? (r - q[lo]) / (q[hi] - q[lo]) : 0)) / n
+  }
+  function shareC (t, c) {
+    const x = Math.max(0, Math.min(ANG_N, (c + 1) * ANG_N / 2))
+    const k = Math.min(ANG_N - 1, Math.floor(x))
+    return t.cdf[k] + (x - k) * (t.cdf[k + 1] - t.cdf[k])
+  }
+  function drawC (t, u) {
+    const cdf = t.cdf
+    let lo = 0
+    let hi = ANG_N
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (cdf[mid] <= u) lo = mid
+      else hi = mid
+    }
+    const w = cdf[hi] - cdf[lo]
+    return -1 + 2 * (lo + (w > 0 ? (u - cdf[lo]) / w : 0.5)) / ANG_N
+  }
+
+  // A slot's orbital in a level: its key and l, the cumulative shares of
+  // its n_m from m = -l, or null for m = 0 and directions uniform (an s
+  // orbital, or a level the research's table leaves round), its weight,
+  // its tables, and its step's cap in atomic units of time.
+  function slotKind (key, occ, w) {
+    const outer = !!D.outer[key]
+    const l = outer ? D.outer[key].l : key === '2p' ? 1 : 0
+    let cum = null
+    if (l && occ) {
+      const tot = occ.reduce((a, b) => a + b, 0)
+      let s = 0
+      cum = occ.map(v => (s += v) / tot)
+    }
+    const meanR = outer ? D.outer[key].meanR : D.rhf.meanR[key]
+    return { key, l, cum, outer, w, q: table(key), ln: lnTable(key), hmax: (STEP * meanR) ** 2 }
+  }
+  // The m of a slot's particle at its fixed share u, and the angular
+  // table its density takes.
+  function mAt (k, u) {
+    if (!k.cum) return 0
+    for (let i = 0; i < k.cum.length; i++) if (u < k.cum[i]) return i - k.l
+    return k.l
+  }
+  const angOf = (k, m) => k.cum ? angTable(k.l, Math.abs(m)) : angTable(0, 0)
+
+  // The six slots' orbitals of level lv's component M_L = M, and whether
+  // the research's table leaves it round.
+  function roster (lv, M) {
+    const occ = occupations(lv, M)
+    const keys = lv.conf === '2s2.2p2'
+      ? ['1s', '1s', '2s', '2s', '2p', '2p']
+      : lv.conf === '2s.2p3' ? ['1s', '1s', '2s', '2p', '2p', '2p'] : ['1s', '1s', '2s', '2s', '2p', shells(lv)[3].key]
+    const kinds = keys.map((key, s) => {
+      const outer = !!D.outer[key]
+      return slotKind(key, occ && (outer ? occ.o : key === '2p' ? occ.p : null), s === SLOTS - 1 && !outer ? PTS_CORE / PTS_OUTER : 1)
+    })
+    return { kinds, round: !occ }
+  }
+
+  // ln rho at (x, y, z) for a particle of radial table R and angular
+  // table A, its gradient, clipped at 2 U_MAX, into g.
+  function lnRho (R, A, x, y, z, g) {
+    const r = Math.sqrt(x * x + y * y + z * z) || 1e-12
+    let kr = Math.floor(LN_N * Math.sqrt(r / R.rmax))
+    if (kr > LN_N - 1) kr = LN_N - 1
+    const dr = R.d[kr]
+    const fr = R.f[kr] + dr * (r - R.rmax * (kr / LN_N) * (kr / LN_N))
+    const c = z / r
+    let ka = Math.floor((c + 1) * ANG_N / 2)
+    if (ka < 0) ka = 0
+    else if (ka > ANG_N - 1) ka = ANG_N - 1
+    const da = A.d[ka]
+    const fa = A.f[ka] + da * (c + 1 - 2 * ka / ANG_N)
+    const a = (dr - da * c / r) / r
+    let gx = a * x
+    let gy = a * y
+    let gz = a * z + da / r
+    const gn = Math.sqrt(gx * gx + gy * gy + gz * gz)
+    if (gn > 2 * U_MAX) {
+      const s = 2 * U_MAX / gn
+      gx *= s
+      gy *= s
+      gz *= s
+    }
+    g[0] = gx
+    g[1] = gy
+    g[2] = gz
+    return fr + fa
+  }
+
+  // One Metropolis-adjusted Langevin step of h atomic units of time for
+  // the particle at p[o]: the proposal y = x + h u(x) + sqrt(h) xi, taken
+  // with the chance min(1, rho(y) q(x | y) / (rho(x) q(y | x))).
+  // ln rho and u at the particle are kept from its last step in c.ln and
+  // c.g, valid while c.ok is set: a step takes one new evaluation.
+  const G1 = new Float64Array(3)
+  function mala (c, i, R, A, h, rand) {
+    const p = c.pts
+    const o = 3 * i
+    const G0 = c.g
+    const x = p[o]
+    const y = p[o + 1]
+    const z = p[o + 2]
+    if (!c.ok[i]) {
+      c.ln[i] = lnRho(R, A, x, y, z, G1)
+      G0[o] = G1[0]
+      G0[o + 1] = G1[1]
+      G0[o + 2] = G1[2]
+      c.ok[i] = 1
+    }
+    const l0 = c.ln[i]
+    const s = Math.sqrt(h)
+    const a = Math.sqrt(-2 * Math.log(1 - rand()))
+    const b = 2 * Math.PI * rand()
+    const n0 = a * Math.cos(b)
+    const n1 = a * Math.sin(b)
+    const n2 = Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand())
+    const yx = x + 0.5 * h * G0[o] + s * n0
+    const yy = y + 0.5 * h * G0[o + 1] + s * n1
+    const yz = z + 0.5 * h * G0[o + 2] + s * n2
+    const l1 = lnRho(R, A, yx, yy, yz, G1)
+    const bx = x - yx - 0.5 * h * G1[0]
+    const by = y - yy - 0.5 * h * G1[1]
+    const bz = z - yz - 0.5 * h * G1[2]
+    const la = l1 - l0 - (bx * bx + by * by + bz * bz) / (2 * h) + (n0 * n0 + n1 * n1 + n2 * n2) / 2
+    if (la >= 0 || Math.log(rand()) < la) {
+      p[o] = yx
+      p[o + 1] = yy
+      p[o + 2] = yz
+      c.ln[i] = l1
+      G0[o] = G1[0]
+      G0[o + 1] = G1[1]
+      G0[o + 2] = G1[2]
+    }
+  }
+
+  // Cloud.make(lv, M) makes the cloud of level lv's component M_L = M,
+  // each particle at an independent draw from its electron's rho, its m
+  // by the subshell's n_m at a share it keeps for good. Cloud.step(c,
+  // dt) moves it dt seconds on screen: Nelson's process on the light
+  // clock times NELSON, in steps of at most each orbital's cap, and the
+  // morphs under way, and the drawn points c.q, each particle's path
+  // averaged over SMOOTH. Cloud.to(c, lv, M) sets a new level: every particle
+  // whose density changes is carried from its quantile of the old one,
+  // radius by the radial table and c by the angular table, its azimuth
+  // kept, to the same quantile of the new over MORPH seconds, and takes
+  // no Nelson step meanwhile. A particle moved again before it arrives
+  // keeps the quantiles of its first move. Every particle stays: none is
+  // made or lost. It returns the slots whose orbital changed.
+  // Cloud.draw(c, fr, area, dim, rect, O, flash) turns the drawn points
+  // by the atom's frame O and projects them, far points dimmer and smaller,
+  // the outer electron's in amber, and the flash's slots again in the
+  // colour of the source's sign where each particle stands.
   const Cloud = {
-    make (lv, M) {
-      const occ = occupations(lv, M)
-      const sh = shells(lv).map(e => Object.assign({}, e, {
-        l: e.outer ? e.l : e.key === '2p' ? 1 : 0,
-        occ: occ ? (e.outer ? occ.o : e.key === '2p' ? occ.p : null) : null
-      }))
-      const n = sh.reduce((s, e) => s + e.count * (e.outer ? PTS_OUTER : PTS_CORE), 0)
-      const c = { pts: new Float32Array(3 * n), m: new Int8Array(n), kinds: [], outerFrom: n, debt: 0, round: !occ }
-      let k = 0
-      for (const e of sh) {
-        const m = e.count * (e.outer ? PTS_OUTER : PTS_CORE)
-        if (e.outer) c.outerFrom = k
-        for (let j = 0; j < m; j++, k++) {
-          c.kinds.push(e)
-          Cloud.place(c, k)
+    N: SLOT_AT[SLOTS],
+    SLOT_AT,
+
+    make (lv, M, rand = Math.random) {
+      const n = SLOT_AT[SLOTS]
+      const ro = roster(lv, M)
+      const c = {
+        n,
+        t: 0,
+        kinds: ro.kinds,
+        round: ro.round,
+        pts: new Float32Array(3 * n),
+        m: new Int8Array(n),
+        um: new Float32Array(n),
+        w: new Float32Array(n),
+        amber: new Uint8Array(n),
+        mt: new Float64Array(n).fill(-1),
+        from: new Float32Array(2 * n),
+        to: new Float32Array(2 * n),
+        ph: new Float32Array(n),
+        uq: new Float32Array(2 * n),
+        w0: new Float32Array(n),
+        ln: new Float64Array(n),
+        g: new Float64Array(3 * n),
+        ok: new Uint8Array(n),
+        q: null
+      }
+      for (let s = 0; s < SLOTS; s++) {
+        const k = c.kinds[s]
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          c.um[i] = rand()
+          c.m[i] = mAt(k, c.um[i])
+          const r = drawR(k.q, rand())
+          const z = drawC(angOf(k, c.m[i]), rand())
+          const ph = 2 * Math.PI * rand()
+          const sn = Math.sqrt(Math.max(0, 1 - z * z))
+          c.pts[3 * i] = r * sn * Math.cos(ph)
+          c.pts[3 * i + 1] = r * sn * Math.sin(ph)
+          c.pts[3 * i + 2] = r * z
+          c.w[i] = k.w
+          c.amber[i] = k.outer ? 1 : 0
         }
       }
+      c.q = Float32Array.from(c.pts)
       return c
     },
 
-    place (c, k) {
-      const e = c.kinds[k]
-      const r = drawR(table(e.key), Math.random())
-      let z = 2 * Math.random() - 1
-      let m = 0
-      if (e.occ) {
-        m = pick(e.occ.map((_, i) => i), i => e.occ[i], Math.random()) - e.l
-        const top = legTop(e.l, Math.abs(m))
-        for (let i = 0; i < 200; i++) {
-          z = 2 * Math.random() - 1
-          if (Math.random() * top <= legendre(e.l, Math.abs(m), z) ** 2) break
+    to (c, lv, M) {
+      const ro = roster(lv, M)
+      const moved = []
+      const p = c.pts
+      for (let s = 0; s < SLOTS; s++) {
+        const a = c.kinds[s]
+        const b = ro.kinds[s]
+        if (a.key !== b.key) moved.push(s)
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          const m0 = c.m[i]
+          const m = mAt(b, c.um[i])
+          c.m[i] = m
+          if (a.key === b.key && angOf(a, m0) === angOf(b, m)) continue
+          const x = p[3 * i]
+          const y = p[3 * i + 1]
+          const z = p[3 * i + 2]
+          const r = Math.sqrt(x * x + y * y + z * z) || 1e-12
+          if (c.mt[i] < 0) {
+            c.uq[2 * i] = shareR(a.q, r)
+            c.uq[2 * i + 1] = shareC(angOf(a, m0), z / r)
+            c.ph[i] = Math.atan2(y, x)
+          }
+          c.from[2 * i] = r
+          c.from[2 * i + 1] = Math.acos(Math.max(-1, Math.min(1, z / r)))
+          c.to[2 * i] = drawR(b.q, c.uq[2 * i])
+          c.to[2 * i + 1] = Math.acos(drawC(angOf(b, m), c.uq[2 * i + 1]))
+          c.w0[i] = c.w[i]
+          c.mt[i] = c.t
+          c.ok[i] = 0
         }
       }
-      const ph = 2 * Math.PI * Math.random()
-      const s = Math.sqrt(1 - z * z)
-      c.pts[3 * k] = r * s * Math.cos(ph)
-      c.pts[3 * k + 1] = r * s * Math.sin(ph)
-      c.pts[3 * k + 2] = r * z
-      c.m[k] = m
+      c.kinds = ro.kinds
+      c.round = ro.round
+      return moved
     },
 
-    step (c, dt) {
-      const n = c.kinds.length
-      c.debt += n * SEETHE * dt * 60
-      for (; c.debt >= 1; c.debt--) Cloud.place(c, Math.floor(Math.random() * n))
-      const p = c.pts
-      for (let k = 0; k < n; k++) {
-        const m = c.m[k]
-        if (!m) continue
-        const x = p[3 * k]
-        const y = p[3 * k + 1]
-        const w = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, m / Math.max(1e-6, x * x + y * y) / Clock.au)) * dt
-        const cs = Math.cos(w)
-        const sn = Math.sin(w)
-        p[3 * k] = x * cs - y * sn
-        p[3 * k + 1] = x * sn + y * cs
+    step (c, dt, rand = Math.random) {
+      Cloud.flow(c, dt, rand)
+      // The drawn points: each path's mean, or the path itself while a
+      // morph carries it, so it arrives on time.
+      const a = 1 - Math.exp(-dt / SMOOTH)
+      for (let i = 0; i < c.n; i++) {
+        const b = c.mt[i] >= 0 ? 1 : a
+        for (let j = 3 * i; j < 3 * i + 3; j++) c.q[j] += (c.pts[j] - c.q[j]) * b
       }
     },
 
-    draw (c, fr, a, dim, rect, O = IDENTITY) {
+    // The particles' own motion, dt seconds on screen.
+    flow (c, dt, rand = Math.random) {
+      c.t += dt
       const p = c.pts
-      for (let i = 0; i < c.kinds.length; i++) {
-        const x = p[3 * i]
-        const y = p[3 * i + 1]
-        const z = p[3 * i + 2]
-        const v = fr.project(O[0] * x + O[1] * y + O[2] * z, O[3] * x + O[4] * y + O[5] * z, O[6] * x + O[7] * y + O[8] * z)
-        if (v.x < a.x || v.x >= a.x + a.w || v.y < a.y || v.y >= a.y + a.h) continue
-        const near = Math.max(0, Math.min(1, (v.s - 0.8) / 0.45))
-        const outer = i >= c.outerFrom
-        rect(outer ? '#ffcf7a' : '#a9c8ff', (outer ? 0.4 + 0.5 * near : 0.3 + 0.45 * near) * dim, v.x, v.y, 1 + 1.6 * near)
+      const h = NELSON * dt / Clock.au
+      for (let s = 0; s < SLOTS; s++) {
+        const k = c.kinds[s]
+        const nsub = Math.max(1, Math.ceil(h / k.hmax))
+        const hs = h / nsub
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          if (c.mt[i] >= 0) {
+            const u = Math.min(1, (c.t - c.mt[i]) / MORPH)
+            const e = u * u * (3 - 2 * u)
+            const r = c.from[2 * i] + (c.to[2 * i] - c.from[2 * i]) * e
+            const th = c.from[2 * i + 1] + (c.to[2 * i + 1] - c.from[2 * i + 1]) * e
+            const sn = r * Math.sin(th)
+            p[3 * i] = sn * Math.cos(c.ph[i])
+            p[3 * i + 1] = sn * Math.sin(c.ph[i])
+            p[3 * i + 2] = r * Math.cos(th)
+            c.w[i] = c.w0[i] + (k.w - c.w0[i]) * e
+            if (u >= 0.5) c.amber[i] = k.outer ? 1 : 0
+            if (u >= 1) c.mt[i] = -1
+            c.ok[i] = 0
+            continue
+          }
+          const m = c.m[i]
+          if (m) {
+            const x = p[3 * i]
+            const y = p[3 * i + 1]
+            const w = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, NELSON * m / Math.max(1e-6, x * x + y * y) / Clock.au)) * dt
+            const cs = Math.cos(w)
+            const sn = Math.sin(w)
+            p[3 * i] = x * cs - y * sn
+            p[3 * i + 1] = x * sn + y * cs
+            const gx = c.g[3 * i]
+            const gy = c.g[3 * i + 1]
+            c.g[3 * i] = gx * cs - gy * sn
+            c.g[3 * i + 1] = gx * sn + gy * cs
+          }
+          const A = angOf(k, m)
+          for (let j = 0; j < nsub; j++) mala(c, i, k.ln, A, hs, rand)
+        }
+      }
+    },
+
+    // The particles of slot s that are moving to a new level's density.
+    moving (c, s) {
+      let n = 0
+      for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) if (c.mt[i] >= 0) n++
+      return n
+    },
+
+    draw (c, fr, a, dim, rect, O = IDENTITY, flash = null) {
+      const p = c.q
+      for (let s = 0; s < SLOTS; s++) {
+        const lit = flash && flash.slots.includes(s)
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          const x = p[3 * i]
+          const y = p[3 * i + 1]
+          const z = p[3 * i + 2]
+          const v = fr.project(O[0] * x + O[1] * y + O[2] * z, O[3] * x + O[4] * y + O[5] * z, O[6] * x + O[7] * y + O[8] * z)
+          if (v.x < a.x || v.x >= a.x + a.w || v.y < a.y || v.y >= a.y + a.h) continue
+          const vx = v.x
+          const vy = v.y
+          const near = Math.max(0, Math.min(1, (v.s - 0.8) / 0.45))
+          const amber = c.amber[i]
+          rect(amber ? '#ffcf7a' : '#a9c8ff', (amber ? 0.4 + 0.5 * near : 0.3 + 0.45 * near) * dim * c.w[i], vx, vy, 1 + 1.6 * near)
+          if (lit) rect(flash.sign(x, y, z) > 0 ? '#7dffd0' : '#ff8ad8', (0.5 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * flash.a, vx, vy, 1.8)
+        }
       }
     }
   }
@@ -1204,13 +1514,14 @@
 
     // ---- The ensemble's state ----
 
-    // The drawn atom changed at time t: its cloud snaps to the new
-    // level's.
+    // The drawn atom changed at time t: its cloud's particles move to
+    // the new level's density. Returns the slots whose orbital changed.
     function redraw (why, t = now) {
       const a = atoms[0]
-      cl = Cloud.make(levels[a.lv], a.M)
+      const moved = Cloud.to(cl, levels[a.lv], a.M)
       entered = t
       if (why) cause = { text: why, t }
+      return moved
     }
 
     // Atom i's axis, and the drawn atom's frame, carried to time t at
@@ -1266,9 +1577,13 @@
       if (fronts.length > FRONTS) detect(fronts.shift(), null)
       if (i === 0) {
         const mv = mover(levels[ln.u], levels[ln.l])
-        src = { pts: mv ? source(mv, q, SOURCE_PTS) : null, t, k, q, O: a.O }
         last = { k, q, waited: t - entered, t }
-        redraw(null, t)
+        const moved = redraw(null, t)
+        // The flash rides on the slots the line moves: the one whose
+        // orbital changed, or within 2s2.2p2 the raised slot.
+        const slots = moved.length ? moved : [5]
+        const n = slots.reduce((s, j) => s + Cloud.SLOT_AT[j + 1] - Cloud.SLOT_AT[j], 0)
+        src = { sign: mv ? sourceSign(mv, q) : null, slots, ink: Math.min(1, SOURCE_PTS / n), t, k, q }
       }
     }
 
@@ -1754,17 +2069,9 @@
       g.globalCompositeOperation = 'lighter'
       // The drawn atom's cloud, dimmed while its jump's source flashes
       // over it, mint where psi_f* psi_i is positive, pink where negative.
-      const flashing = src && src.pts && now - src.t < SOURCE_T
-      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect, Larmor.frame(atoms[0], now, mag))
-      if (flashing) {
-        const s = 1 - (now - src.t) / SOURCE_T
-        const p = src.pts
-        const O = src.O
-        for (let i = 0; i < p.length; i += 4) {
-          const v = F.project(O[0] * p[i] + O[1] * p[i + 1] + O[2] * p[i + 2], O[3] * p[i] + O[4] * p[i + 1] + O[5] * p[i + 2], O[6] * p[i] + O[7] * p[i + 1] + O[8] * p[i + 2])
-          rect(p[i + 3] > 0 ? '#7dffd0' : '#ff8ad8', (0.5 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * s, v.x, v.y, 1.8)
-        }
-      }
+      const flashing = src && src.sign && now - src.t < SOURCE_T
+      const lit = flashing ? { slots: src.slots, sign: src.sign, a: (1 - (now - src.t) / SOURCE_T) * src.ink } : null
+      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect, Larmor.frame(atoms[0], now, mag), lit)
       const c = F.project(0, 0, 0)
       rect('#ffffff', 1, c.x, c.y, 2)
       flush(g)
@@ -1860,7 +2167,7 @@
       if (last && now - last.t < 3) {
         const ln = lines[last.k]
         rows.push(['#c9d3e6', 'its photon ' + DELTA + 'M=' + (last.q > 0 ? '+' : '') + last.q + ' ' + ln.type + ', ' + patternName(ln.type, last.q), visible(ln) ? ln.rgb : '#aab3c5'])
-        rows.push(['#8c97ad', src && src.pts ? 'source: ' + PSI + 'f*' + PSI + 'i, + mint, - pink' : 'source: a two-electron jump, not drawn'])
+        rows.push(['#8c97ad', src && src.sign ? 'source: ' + PSI + 'f*' + PSI + 'i, + mint, - pink' : 'source: a two-electron jump, not drawn'])
         // Its true lengths and period, in vacuum: no crest in the view.
         const vac = wlText(ln.vac) + ' vac = ' + Math.round(ln.vac / (size(levels[ln.u]) * D.bohrNm)) + TIMES + ' this atom'
         const many = Math.round(Front.lambda(ln) / view) + TIMES + ' the view'
@@ -2246,7 +2553,7 @@
       setField(tesla, tesla ? deg : mag.deg)
     }
 
-    redraw(null)
+    cl = Cloud.make(levels[atoms[0].lv], atoms[0].M)
 
     return {
       draw (synth, dt) {
@@ -2402,12 +2709,12 @@
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
         const by = b => fronts.filter(f => f.ln.band === b).length
-        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), warp: Math.round(warped * 1e4) / 1e4, source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), warp: Math.round(warped * 1e4) / 1e4, source: !!(src && src.sign && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
       }
     }
   }
 
-  const api = { TRAIL, BAND_MIN, SHARP, LIFT, HAZE, GRID_PX, barStep, gridStep, Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
+  const api = { TRAIL, BAND_MIN, SHARP, LIFT, HAZE, GRID_PX, barStep, gridStep, Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, sourceSign, sphere, roster, NELSON, U_MAX, MORPH, SMOOTH, PTS_CORE, PTS_OUTER, SOURCE_PTS, SOURCE_T, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
