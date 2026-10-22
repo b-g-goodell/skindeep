@@ -292,26 +292,34 @@ test('trace: a point\'s images, found forward, are where their rays meet it', ()
 })
 
 test('trace: a curve\'s images are unbroken through any depth and lensing', () => {
-  // The live check's trail: a line of 64 places from in front of the
-  // hole's depth to far behind it, passing above the hole's line, and the
-  // same line nearer the line. Each has an outer image along all of it
-  // and an inner one, each a chain of images 3 px apart or less, each
-  // image's ray meeting its place.
-  for (const Y of [28, 14]) {
-    const pl = new Float64Array(3 * 64)
-    for (let i = 0; i < 64; i++) pl.set([-220 + 440 * i / 63, Y, 660 + 320 * i / 63], 3 * i)
-    const br = T.curve(LENS, pl, 64)
-    assert.strictEqual(br.length, 2, `Y ${Y}: an outer and an inner image`)
-    const outer = br.find(b => b[0].u === 0)
-    assert.ok(outer && outer[outer.length - 1].u === 63, `Y ${Y}: the outer image along the whole line`)
-    for (const b of br) {
-      for (let k = 0; k < b.length; k++) {
-        const s = b[k]
-        if (k) assert.ok(Math.hypot(s.x - b[k - 1].x, s.y - b[k - 1].y) <= 3, `Y ${Y}: a step of ${Math.hypot(s.x - b[k - 1].x, s.y - b[k - 1].y)} px at ${s.u}`)
-        const i = Math.min(62, Math.floor(s.u))
-        const f = s.u - i
-        const Z = pl[3 * i + 2] + (pl[3 * i + 5] - pl[3 * i + 2]) * f
-        assert.ok(T.seen(LENS, s.x, s.y, Z) && Math.hypot(T.XY[0] - s.qx, T.XY[1] - s.qy) < 0.05, `Y ${Y}: the image at ${s.u} meets its place`)
+  // The live check's trail: a line of 64 places from 40 to 360 behind
+  // the hole, passing above the hole's line, and the same line nearer
+  // it, down to 0.3, where the images swing round the hole within a
+  // fraction of a piece: about 3 and 1 percent of the Einstein radius
+  // there. The same behind a hole of 3000 at 400, whose arcs are longer.
+  // Each has an outer image along all of it and an inner one, each a
+  // chain of images 3 px apart or less, each image's ray meeting its
+  // place.
+  const HEAVY = { ...LENS, hs: new Float64Array([0, 0, 400, T.RING * 2 * 3000 / 11.5 ** 2]) }
+  for (const [sc, Ys] of [[LENS, [28, 14, 3, 1, 0.3]], [HEAVY, [28, 3, 1, 0.3]]]) {
+    const Zh = sc.hs[2]
+    for (const Y of Ys) {
+      const at = `hole at ${Zh}, Y ${Y}`
+      const pl = new Float64Array(3 * 64)
+      for (let i = 0; i < 64; i++) pl.set([-220 + 440 * i / 63, Y, Zh + 40 + 320 * i / 63], 3 * i)
+      const br = T.curve(sc, pl, 64)
+      assert.strictEqual(br.length, 2, `${at}: an outer and an inner image, saw ${br.map(b => b[0].u + '-' + b[b.length - 1].u)}`)
+      const outer = br.find(b => b[0].u === 0)
+      assert.ok(outer && outer[outer.length - 1].u === 63, `${at}: the outer image along the whole line`)
+      for (const b of br) {
+        for (let k = 0; k < b.length; k++) {
+          const s = b[k]
+          if (k) assert.ok(Math.hypot(s.x - b[k - 1].x, s.y - b[k - 1].y) <= 3, `${at}: a step of ${Math.hypot(s.x - b[k - 1].x, s.y - b[k - 1].y)} px at ${s.u}`)
+          const i = Math.min(62, Math.floor(s.u))
+          const f = s.u - i
+          const Z = pl[3 * i + 2] + (pl[3 * i + 5] - pl[3 * i + 2]) * f
+          assert.ok(T.seen(sc, s.x, s.y, Z) && Math.hypot(T.XY[0] - s.qx, T.XY[1] - s.qy) < 0.05, `${at}: the image at ${s.u} meets its place`)
+        }
       }
     }
   }
