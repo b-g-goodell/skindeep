@@ -4,7 +4,8 @@ Status: accepted 2026-10-11, revised 2026-10-12 for the Session, again
 2026-10-12 for tabs (decision 0023), and for the hook links, the kept
 settings and the last screen (decision 0030), 2026-10-13 for the launch's
 pages, 2026-10-16 for the hook socket's path, and 2026-10-22 for the
-runtime root's fallback and ownership check.
+runtime root's fallback and ownership check, and for the private log
+with no argument values.
 
 ## Context
 
@@ -53,7 +54,19 @@ Closing the window must end the session the way closing a terminal does.
   session sent to the background outlives the window and starts again
   from them (decision 0030).
 - Log: `${XDG_STATE_HOME:-~/.local/state}/claude-skins/<stamp>-<pid>.log`,
-  Electron's stderr. The newest 10 are kept.
+  Electron's stderr. The newest 10 are kept. `bin/skinned` makes the
+  dir and the log under umask 077, the dir with `mkdir -m 700`, in a
+  subshell, so Electron and the CLI keep the caller's umask. It chmods
+  the dir to 700 at every launch: a dir an earlier launch made 0775
+  becomes private, and with it the older 0664 logs inside, which no
+  other user can then reach by path. A dir it cannot chmod, another
+  user's, refuses the launch with 125.
+- A command line reaches the log only in the form of
+  `identity.logged`: the program, each option's name and each value's
+  length, never a value, save the words the app put there itself, such
+  as its injected `--settings FILE` and the `claude attach ID` it runs.
+  An argument may carry a password, a key or a prompt, `/proc` shows it
+  only while the process runs, and logs get attached to bug reports.
 - One kill policy, `app/session.js`, for a close of a tab or of the main
   window, SIGINT, SIGTERM or SIGHUP to the app, and an internal error:
   SIGHUP to each child's process group (the recorded pid, a session
@@ -99,6 +112,12 @@ the relays connected to, grows with the runtime dir as well.
 - `$TMPDIR` or `/tmp` as the fallback without `XDG_RUNTIME_DIR`, the
   choice until 2026-10-22: another user who makes the root first denies
   the app its start, and before the check above could take it over.
-- The fallback inside the log dir: `bin/skinned` makes that under the
-  caller's umask, often group-writable.
+- The fallback inside the log dir, rejected while `bin/skinned` made
+  that dir under the caller's umask, often group-writable. It is 0700
+  since 2026-10-22, and the fallback stays beside it.
+- `umask 077` for all of `bin/skinned`: Electron and every CLI it runs
+  would inherit it, and a tab's shell would make 0600 files where a bare
+  terminal makes 0644 ones.
+- A chmod of each older log: the dir's mode already closes them, and
+  rotation removes them.
 - One shared userData: two instances would contend for its lock.
