@@ -77,8 +77,9 @@
   const U_MAX = 10
   // One step of the Metropolis-adjusted Langevin chain is at most
   // (STEP <r>)^2 atomic units of time for an orbital of mean radius <r>,
-  // so a step is a fifth of the cloud and most proposals are taken.
-  const STEP = 0.2
+  // so its noise is under a third of the cloud and 98 % of proposals are
+  // taken in 1s: one step a frame down to 13 frames a second.
+  const STEP = 0.3
   // A level change carries each particle from its quantile of the old
   // density to the same quantile of the new over MORPH seconds of wall
   // time, eased.
