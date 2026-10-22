@@ -332,6 +332,19 @@ test('P6 adapter arguments go after argv[0], before the user arguments', { timeo
   } finally { cleanup(s) }
 })
 
+test('P7 the spawn line logs the adapters\' words whole and no value of the user\'s', { timeout: 10000 }, async () => {
+  const a = recorder({ prepare: async () => ({ args: ['--settings', '/run/s.json'], notice: null }) })
+  const { s, logged } = make(['echo', '--key', 'hunter2', 'hunter3'], { adapters: [a] })
+  try {
+    s.start(80, 24)
+    assert.strictEqual(await s.ended, 0)
+    const line = logged.find(l => l.startsWith('spawn '))
+    assert.ok(line, logged.join('\n'))
+    assert.ok(!line.includes('hunter'), line)
+    assert.ok(line.endsWith(': echo --settings /run/s.json --key <7> <7>'), line)
+  } finally { cleanup(s) }
+})
+
 test('T1 at spawn the view receives the strip', { timeout: 10000 }, async () => {
   const identity = require('../app/identity')
   const a = recorder({ prepare: async () => ({ args: [], notice: 'meters limited: test' }) })

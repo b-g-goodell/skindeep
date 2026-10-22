@@ -54,7 +54,7 @@ class Monitor extends EventEmitter {
       'never types into it. Closing this tab ends the monitor, not the session.\r\n'))
     this.sendStrip()
     this.timer = setInterval(() => this.poll(), this.pollMs)
-    this.log(`monitor: watching ${pid}: ${this.cmdline}`)
+    this.log(`monitor: watching ${pid}: ${identity.logged(this.watched.argv)}`)
   }
 
   // The session's end ends the tab. The notice follows the reports.
