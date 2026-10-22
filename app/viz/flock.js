@@ -46,7 +46,10 @@
   // prey, which grows with the distance from it past the radius of the
   // whole group at rest, so groups split by an attack rejoin.
   // bounds: null, or { x, y, z, r, w }: past r from the point a steer
-  // back, of weight w.
+  // back, of weight w. endurance: the seconds a prey runs hard before
+  // it tires, Infinity for never, and tire: the share of its top speed
+  // it has lost after twice that. It gets its wind back at half the
+  // rate it lost it.
   const DEFAULTS = {
     neighbours: { by: 'distance', r: 14 },
     sep: 5,
@@ -72,7 +75,9 @@
     drift: [0, 0, 0],
     driftW: 0.25,
     gather: 0.4,
-    bounds: null
+    bounds: null,
+    endurance: Infinity,
+    tire: 0.4
   }
 
   // A seeded generator in [0, 1): mulberry32, as quantum.js.
@@ -117,6 +122,8 @@
       // and the distance it has run.
       this.id = new Uint32Array(this.cap)
       this.odo = new Float64Array(this.cap)
+      // Seconds of hard running, less the rest since.
+      this.run = new Float32Array(this.cap)
       this.ids = 0
       this.predators = []
       this.clock = 0
@@ -154,6 +161,7 @@
       this.fear[i] = 0
       this.lone[i] = this.p.neighbours.r
       this.odo[i] = this.rnd() * 10
+      this.run[i] = 0
       this.id[i] = this.ids++
       return i
     }
@@ -176,6 +184,7 @@
       this.lone[i] = this.lone[j]
       this.id[i] = this.id[j]
       this.odo[i] = this.odo[j]
+      this.run[i] = this.run[j]
     }
 
     // A predator made from o (see predator), added.
@@ -219,31 +228,43 @@
     // Predator q picks its target by how: 'straggler', the prey most
     // alone and farthest from the group's centre, nearer ones first,
     // 'edge', the nearest prey, or 'middle', the prey nearest the centre
-    // of the group within its range, at which it dashes through the
-    // group. Returns the index, -1 with no prey.
+    // of the group, at which it dashes through the group. It reads only
+    // the prey within its range, or all when none is. Returns the index,
+    // -1 with no prey.
     pick (q, how) {
       if (how) q.how = how
       q.target = -1
       if (!this.n) return -1
       const P = this.pos
       const dq = i => Math.hypot(P[3 * i] - q.x, P[3 * i + 1] - q.y, P[3 * i + 2] - q.z)
+      let range = q.range
+      if (range < Infinity) {
+        let near = Infinity
+        for (let i = 0; i < this.n; i++) near = Math.min(near, dq(i))
+        // None within its range: those within it of the nearest.
+        if (near > range) range += near
+      }
+      const out = i => range < Infinity && dq(i) > range
       let best = -1
       let score = -Infinity
       if (q.how === 'middle') {
-        const c = this.centre(q.x, q.y, q.z, q.range)
+        const c = this.centre(q.x, q.y, q.z, range)
         for (let i = 0; i < this.n; i++) {
+          if (out(i)) continue
           const s = -Math.hypot(P[3 * i] - c.x, P[3 * i + 1] - c.y, P[3 * i + 2] - c.z)
           if (s > score) [best, score] = [i, s]
         }
       } else if (q.how === 'straggler') {
-        const c = this.centre(q.x, q.y, q.z, q.range)
+        const c = this.centre(q.x, q.y, q.z, range)
         const r = this.p.neighbours.r
         for (let i = 0; i < this.n; i++) {
+          if (out(i)) continue
           const s = 1.5 * this.lone[i] / r * c.r + Math.hypot(P[3 * i] - c.x, P[3 * i + 1] - c.y, P[3 * i + 2] - c.z) - 0.35 * dq(i)
           if (s > score) [best, score] = [i, s]
         }
       } else {
         for (let i = 0; i < this.n; i++) {
+          if (out(i)) continue
           const s = -dq(i)
           if (s > score) [best, score] = [i, s]
         }
@@ -425,7 +446,8 @@
         const gz = g0.z - P[k + 2]
         const gd = Math.hypot(gx, gy, gz)
         const u = p.gather ? Math.max(0, Math.min(1, (gd - R0) / R0)) : 0
-        const top = Math.max(p.cruise + (p.flight - p.cruise) * f, p.cruise * (1 + 3 * u * u))
+        const spent = p.endurance < Infinity ? p.tire * Math.max(0, Math.min(1, this.run[i] / p.endurance - 1)) : 0
+        const top = Math.max((p.cruise + (p.flight - p.cruise) * f) * (1 - spent), p.cruise * (1 + 3 * u * u))
         if (f > 0 && sp > 1e-6 && sp < top) add(vx / sp, vy / sp, vz / sp, f * (top - sp) / top * 2)
         if (m) {
           const vs = Math.max(1, sp)
@@ -534,7 +556,9 @@
         P[k] += V[k] * h
         P[k + 1] += V[k + 1] * h
         P[k + 2] += V[k + 2] * h
-        this.odo[i] += Math.hypot(V[k], V[k + 1], V[k + 2]) * h
+        const v = Math.hypot(V[k], V[k + 1], V[k + 2])
+        this.odo[i] += v * h
+        this.run[i] = v > 0.6 * p.flight ? this.run[i] + h : Math.max(0, this.run[i] - 0.5 * h)
       }
       this.chase(h, out)
       this.clock += h
