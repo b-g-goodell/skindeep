@@ -93,14 +93,18 @@
   const GRID_PX = 10
   const GRID_SIGMA = 0.7
   const GRID_INK = [22, 30, 50]
-  const GRID_FLOOR = [3, 4, 7]
+  const GRID_FLOOR = [4, 6, 10]
   const GRID_IN = 0.55
   const GRID_OUT = 0.4
   // The invisible fronts' strengths (issue #168): the sharpening's share
   // of the Laplacian and its lift of the pixel, and the haze's peak
-  // shift, pixels, each per unit of the front's drawn amplitude.
+  // shift, pixels, each per unit of the front's drawn amplitude, and the
+  // most the sharpening may move a channel, levels of 255, which keeps a
+  // grid line's lift under a relative luminance of 0.1, so dozens of
+  // ultraviolet fronts in flight do not flash (issue #164).
   const SHARP = 1.5
   const LIFT = 4
+  const SHARP_MAX = 56
   const HAZE = 8
   // The view's radius, bohr: fixed, so every front keeps the light
   // clock's pace, about 1.6 times a 2p4p cloud's mean radius: a front
@@ -945,7 +949,7 @@
   // and nothing ahead of it, at least BAND_MIN pixels wide, its strength
   // falling from the edge inward: Warp.profile. Ultraviolet fronts
   // sharpen the picture and lift its contrast there, SHARP of the
-  // Laplacian and LIFT of the pixel. Infrared fronts refract it,
+  // Laplacian and LIFT of the pixel, by SHARP_MAX at most. Infrared fronts refract it,
   // shifting pixels along the radius by one smooth lobe across the trail,
   // HAZE pixels at its peak per unit amplitude, as a refracting shell
   // does: no ripple, since in the view the field has no crest. Radii with
@@ -1056,7 +1060,7 @@
             for (let ch = 0; ch < 3; ch++) {
               const p = src[i + ch]
               const lap = 4 * p - src[i + ch - 4] - src[i + ch + 4] - src[i + ch - 4 * W] - src[i + ch + 4 * W]
-              d[i + ch] = d[i + ch] + s * (SHARP * lap + LIFT * p)
+              d[i + ch] = d[i + ch] + Math.max(-SHARP_MAX, Math.min(SHARP_MAX, s * (SHARP * lap + LIFT * p)))
             }
           }
           sum += Math.abs(d[i] - src[i]) + Math.abs(d[i + 1] - src[i + 1]) + Math.abs(d[i + 2] - src[i + 2])
