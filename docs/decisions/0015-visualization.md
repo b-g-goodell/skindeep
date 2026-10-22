@@ -26,7 +26,9 @@ for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
 particles of various wavelengths interacting instead of just one
 particle of one wavelength, and procedurally generated walls of
-potential instead of always using the same 2 apertures").
+potential instead of always using the same 2 apertures"), and
+2026-10-22 for the Savannah hunt mode and the flocking core it shares
+with the flocking modes to come (issue #186).
 
 ## Context
 
@@ -63,7 +65,7 @@ butterchurn-presets is MIT for its conversion only.
   shell, web, agent, other), a sweep on prompt submit and on stop, a low
   drone while idle, brightness from `tokens.out_rate`. Every mode draws
   from it.
-- Modes: seventeen, listed once in `app/viz/modes.js`, which the main process
+- Modes: eighteen, listed once in `app/viz/modes.js`, which the main process
   and the page both load, in the order they cycle and the menu lists
   them:
   - Drift, Rings, Plasma, Star dust and Whirlpool: butterchurn presets
@@ -80,7 +82,8 @@ butterchurn-presets is MIT for its conversion only.
     ported from its BSD source with its license in the file: three
     examples of the Superscope's built-in list over a fade, and the Dot
     Plane in its default colours.
-  - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum and Carbon: the project's
+  - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum, Carbon and Savannah
+    hunt: the project's
     procedural modes, one file each, no image or video. Each reacts to
     its pane's events, a prompt, a tool call in its class's colour, a
     stop, a subagent, and calms at idle. Fern: a night garden of fronds,
@@ -110,7 +113,11 @@ butterchurn-presets is MIT for its conversion only.
     field from the session excites and that jumps by Monte Carlo at
     NIST's rates, one atom's cloud drawn in three dimensions, every
     jump's front crossing the pane, beside the level diagram and the
-    spectrum (see 2026-10-15: Carbon). With the sound output alone,
+    spectrum (see 2026-10-15: Carbon). Savannah hunt: a herd of
+    wildebeest and zebra on a dry plain, seen from a helicopter, run
+    down by a cheetah, a pride of lions or a pack of wild dogs, the herd
+    and the predators steered by the flocking core `app/viz/flock.js`
+    (see 2026-10-22: Savannah hunt). With the sound output alone,
     which brings no events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
@@ -158,6 +165,10 @@ butterchurn-presets is MIT for its conversion only.
     surprise.
   - Fern: a click curls the fronds near it, which unroll again, and
     gold spores rise from it.
+  - Savannah hunt: a drag moves the helicopter over the plain, and it
+    drifts back to the herd after the release. A click: a cheetah
+    breaks cover where it lands and sprints at the nearest animal (see
+    2026-10-22: Savannah hunt).
   - Every other mode, the five butterchurn presets, Scope, the two
     analyzers, Superscope and Dot plane, has no method of its own: a
     press adds a short tone to the pane's signal, its pitch on the
@@ -216,7 +227,7 @@ page reads it, and nothing of it needs to reach the main process. A
 click that stepped the mode would take the click from the modes. The
 pointer's tone, for the modes that only draw the signal, makes each of
 them answer with no code of its own, and it is kept out of the events
-so a procedural mode never takes it for one. A flyout keeps the drop-down short: seventeen more
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: eighteen more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -1613,3 +1624,159 @@ Rejected:
   move every frame, and the culls would measure from the hole.
 - Easing the view across a merger, so the trails glide rather than
   move by the recoil: the hole would leave the centre for the glide.
+
+## 2026-10-22: Savannah hunt
+
+Owner, 2026-10-22: "file 3 issues for new visualizers based on
+flocking behavior with individual and small groups of predators giong
+after large groups of prey". Issue #186 is the first of the three, a
+predator hunt on an open plain seen from a helicopter. #187
+(Murmuration) and #188 (Bait ball) are the others. The design is the
+builder's.
+
+### The flocking core
+
+`app/viz/flock.js` is a module of its own, loaded by the page before
+the flocking modes and by the tests, and it draws nothing. Its
+interface: `new Flock({ dim, cap, params, rnd })`, `add`, `remove`,
+`hunter(o)` for a predator, `pick(q, how)`, `centre()`, and
+`step(dt)`, which returns the prey taken. `dim` is 2 for a plane, where
+z stays 0, or 3 for space, so the Murmuration's sky and the Bait ball's
+water use it unchanged. `rnd` takes a seeded generator, mulberry32 as
+`quantum.js` has it.
+
+- Each prey steers by separation, alignment and cohesion with its
+  neighbours (Reynolds, "Flocks, Herds, and Schools", SIGGRAPH 1987),
+  each term a steer capped at length 1 and weighted, the sum scaled to
+  the steering limit and capped there. The neighbours are by distance,
+  every prey within $r$ up to 24, or by rank, the nearest $k$ within
+  $r$, which the Murmuration needs (Ballerini et al., PNAS 105, 2008).
+  Both are found on a hashed grid, rebuilt each step, the rank rule
+  searching ring by ring until no farther ring can hold a nearer prey.
+- Fear, in $[0, 1]$ for each prey, moves it from its resting rule to
+  its flight rule. A predator within sight, $55$ m for the herd, raises
+  it to $0.55 + 0.45\,t$, $t$ falling from 1 at the predator to 0 at
+  the sight's edge. A prey takes up $0.88$ of its most afraid
+  neighbour's fear at a rate of 4 a second, so alarm runs across the
+  herd ahead of the predator, and fear fades by $0.18$ a second. With
+  fear $f$ the top speed runs from the resting $0.8$ m/s to the
+  flight's $16$, the steering limit from 3 to 26 m/s$^2$, alignment is
+  weighted $1 + 3f$ and cohesion $1 + 2f$, the distance kept from a
+  neighbour shrinks to $1 - 0.45f$ of its $5$ m, and above $f = 0.2$ a
+  prey steers to a place behind its nearest neighbour ahead, within 45
+  degrees of its heading. So a herd that grazes loose bunches at a
+  threat and streams in file in flight.
+- Flight from every predator in sight: away from it, turned toward the
+  side of the predator's run by $0.7$, so a dash into the group splits
+  it and the halves flow past and close behind (the fountain effect of
+  fish schools).
+- At rest a slow random steer, a drift the mode sets, and a pull to the
+  centre of all the prey past the radius of the whole group at rest,
+  $0.4 \cdot sep \cdot \sqrt{n}$, so split groups trot back and rejoin.
+  A prey that runs hard tires after `endurance` seconds and has lost
+  `tire` of its top speed after twice that, which the herd sets to 20 s
+  and 0.4 and the core leaves off.
+- Each predator, a plain object the mode extends, picks a target by
+  `pick`: `'straggler'`, the prey most alone and farthest from the
+  group's centre, the nearer ones first, `'edge'`, the nearest prey, or
+  `'middle'`, the prey nearest the centre of the group, a dash that
+  splits it. It reads the prey within its range, or within that range
+  of the nearest when none is. It pursues the target's place
+  $\min(1.5, d/v)$ seconds ahead at its top speed and steering limit,
+  or heads to a goal point when it has none, and takes the target
+  within its reach. One predator or a small group both use it.
+- `step(dt)` advances in substeps of at most 1/30 s, so the motion is
+  the same at any frame rate.
+- `test/viz-flock.test.js`, seeded, by distance and by rank: 120 prey
+  held 120 s with no predator stay one group, linked by steps under 14
+  m, their spread within 1.5 times the start's, in the plane and in
+  space. Every prey within a standing predator's sight is farther from
+  it 3 s later, by more than 10 m on average, while with no predator
+  the same prey move under 2 m from the point on average. A
+  predator at 24 m/s picking each of the three targets is nearer it at
+  every look until it takes it.
+
+### The mode
+
+`app/viz/savannah.js`, a Canvas2D mode as the others are.
+
+- The camera looks down at 60 degrees through a long lens, as wildlife
+  crews film from helicopters, so the view is near orthographic: the
+  ground foreshortened by $\sin 60$, heights by $\cos 60$, north up. It
+  follows the herd and the hunters near it, eased over 1.6 s, and
+  scales to frame them over 2.5 s, from 0.5 to 10 pixels a metre. The
+  helicopter sways by a pixel or two.
+- The herd: 180 animals, a fifth of them zebra, the rest wildebeest in
+  two shades, each a body and a head, the head down at a grazing pace,
+  legs that swing with the distance run when the view is near enough,
+  and a long shadow. A grazing animal faces its own way, the core's
+  random steer, and a running one where it runs. A thinned herd is
+  made up by stragglers walking in from behind it while no predator
+  runs.
+- The ground: dry grass from a tile at 24 m and paler and darker
+  patches from a tile at 600 m, three families of winding game trails
+  repeated across the plain, acacias and bush from a seeded hash of 70
+  m cells, every shadow cast by a sun 15 degrees high, and dust kicked
+  up where the animals run faster than 7 m/s, drifting on the wind.
+  The grass, the trails and the trees' shadows are painted at the
+  view's scale on a canvas with a margin of a quarter of the pane's
+  larger side and blitted each frame, painted again only when the view
+  leaves it or the scale or the shadows change by 3 percent. The haze, the dusk and
+  the vignette are one overlay, painted again when the dusk changes.
+- The hunts, each predator a phase of its plan:
+  - A cheetah (29 m/s, 14 s of sprint) stalks a straggler at 5 m/s,
+    seen at 0.3 of the herd's sight, and sprints within 55 m or once
+    its target is afraid.
+  - A pride of three or four lions (19 m/s, 8 s) takes places around
+    the herd, at angles spread over 0.9 of the circle, and when all are
+    placed, or one is seen, charges: the first at the middle, the rest
+    at the edge.
+  - A pack of five or six wild dogs (18.5 m/s, 9 s) trots up openly at
+    8 m/s, then two run at a straggler while the rest follow at the
+    leaders' heels, and a leader spent hands its target to the freshest
+    dog behind it, for up to 75 s: the herd tires at 20 s and the pack
+    runs it down.
+  - A spent predator rests 12 s and leaves. A catch takes the animal
+    from the herd, leaves a carcass for 90 s, and keeps the hunt's
+    predators at it for 30 s. Two hunts run at most, a third starting
+    makes the oldest give up, and a hunt starts of its own every 60 to
+    90 s of the clock while the session works.
+
+| Signal | Savannah hunt |
+| --- | --- |
+| prompt | a hunt, in turn a cheetah, a pride of lions, a pack of wild dogs |
+| tool call | an animal startles, marked by a bracket in the class's colour, and its fear runs to its neighbours |
+| stop | every predator still closing in charges now |
+| subagent | one more predator joins the newest hunt, or a lone cheetah's hunt begins |
+| compaction | a stampede: the whole herd runs and its drift turns a quarter |
+| output event | an animal stots, kicking up dust |
+| bass | the herd's drift, 0.15 to 0.5 m/s, and with busy the clock, 0.8 to 1.2 times real time |
+| treble | the wind that carries the dust |
+| idle | the clock slows to a fifth, the sun sinks toward dusk and the shadows lengthen, every hunt rests |
+| drag | moves the helicopter over the plain, which drifts back to the herd |
+| click | a cheetah breaks cover there and sprints at the nearest animal |
+
+- Cost, under swiftshader on this host, by the method of
+  `vizcarbon.js`, each mode alone at full activity, median and p90 ms
+  a draw, at load average 44 to 49: at 400 by 380 Savannah hunt 3.3
+  and 5.7, Gravity 2.0, Quantum 3.0, Fern 2.9, Zoom out 5.3, Carbon
+  9.0, and at 1200 by 760 Savannah hunt 8.2 and 24.6, the p90 the
+  ground's repaints, Gravity 7.4, Quantum 7.5, Zoom out 21.6, Carbon
+  42.8. Painting the ground every frame cost 23 ms at 1200 by 760.
+  `vizmodes.js` ran three panes of Carbon, Savannah hunt and Fern at 5,
+  8, 8, 6.5 and 13 frames a second over its five rounds, median 8,
+  beside Fern, Go and Zoom out at median 8, Gravity, Gravity 3D and
+  Quantum at 6 and the butterchurn panes at 6.5, at load average 41 to
+  73, which sets the rate more than the mode.
+
+Rejected:
+
+- Perspective from the helicopter: the ground would need a projective
+  map, which Canvas2D cannot draw, and a long lens makes the view near
+  orthographic anyway.
+- A camera that turns with the run: the ground's canvas would be
+  painted again on every frame, at three times the cost.
+- A stop that ends the hunt: a session's turns are often seconds long,
+  so no hunt would reach its end.
+- Fear without a fade of its own, only from sight: the herd would calm
+  the moment a predator passed, and no alarm would run ahead of it.
