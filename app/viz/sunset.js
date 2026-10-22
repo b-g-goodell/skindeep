@@ -1057,10 +1057,10 @@
           gr.addColorStop(0.86, `rgba(92, 66, 96, ${0.22 * a})`)
           gr.addColorStop(1, 'rgba(92, 66, 96, 0)')
         } else {
-          gr.addColorStop(0, `hsla(${d.hue}, 75%, 56%, ${0.32 * a})`)
-          gr.addColorStop(0.7, `hsla(${d.hue}, 75%, 50%, ${0.5 * a})`)
-          gr.addColorStop(0.88, `hsla(${d.hue}, 75%, 38%, ${0.7 * a})`)
-          gr.addColorStop(1, `hsla(${d.hue}, 70%, 38%, 0)`)
+          gr.addColorStop(0, `hsla(${d.hue}, 65%, 48%, ${0.5 * a})`)
+          gr.addColorStop(0.55, `hsla(${d.hue}, 65%, 52%, ${0.34 * a})`)
+          gr.addColorStop(0.86, `hsla(${d.hue}, 65%, 42%, ${0.36 * a})`)
+          gr.addColorStop(1, `hsla(${d.hue}, 65%, 42%, 0)`)
         }
         // A bloom's edge is ragged, as wet paint pushes out unevenly.
         g.fillStyle = gr
