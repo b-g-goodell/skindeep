@@ -811,7 +811,8 @@
   // Into IM: the image, and J, the change of the crossing's place with
   // the image's, [x, y, J00, J01, J10, J11], J as found before the last
   // step, which is short. False if none is found from there.
-  const IMG_TOL = 0.05
+  const IMG_TOL = 0.002
+  const RIDGE = 0.05
   const IMG_H = 1e-3
   const IM = new Float64Array(6)
   function image (sc, qx, qy, z, sx, sy, step = 4) {
@@ -850,33 +851,51 @@
         IM[5] = d
         return true
       }
-      const det = a * d - b * c
-      if (!det) return false
-      let ux = -(d * rx - b * ry) / det
-      let uy = -(a * ry - c * rx) / det
-      const ul = Math.hypot(ux, uy)
-      if (ul > step) {
-        ux *= step / ul
-        uy *= step / ul
-      }
+      // Newton's step, and where no part of it brings the crossing nearer,
+      // as near a critical curve, where J is near singular, the step
+      // damped by RIDGE, (J^T J + RIDGE^2)^-1 J^T, which turns toward
+      // the well-conditioned direction.
       let ok = false
-      for (let k = 0; k < 12; k++) {
-        if (seen(sc, sx + ux, sy + uy, z)) {
-          const nx = XY[0] - qx
-          const ny = XY[1] - qy
-          const nr = Math.hypot(nx, ny)
-          if (nr < r) {
-            sx += ux
-            sy += uy
-            rx = nx
-            ry = ny
-            r = nr
-            ok = true
-            break
-          }
+      for (let damp = 0; damp < 2 && !ok; damp++) {
+        let ux, uy
+        if (!damp) {
+          const det = a * d - b * c
+          if (!det) continue
+          ux = -(d * rx - b * ry) / det
+          uy = -(a * ry - c * rx) / det
+        } else {
+          const p = a * a + c * c + RIDGE * RIDGE
+          const o = a * b + c * d
+          const t = b * b + d * d + RIDGE * RIDGE
+          const jx = a * rx + c * ry
+          const jy = b * rx + d * ry
+          const dm = p * t - o * o
+          ux = -(t * jx - o * jy) / dm
+          uy = -(p * jy - o * jx) / dm
         }
-        ux /= 2
-        uy /= 2
+        const ul = Math.hypot(ux, uy)
+        if (ul > step) {
+          ux *= step / ul
+          uy *= step / ul
+        }
+        for (let k = 0; k < 12; k++) {
+          if (seen(sc, sx + ux, sy + uy, z)) {
+            const nx = XY[0] - qx
+            const ny = XY[1] - qy
+            const nr = Math.hypot(nx, ny)
+            if (nr < r) {
+              sx += ux
+              sy += uy
+              rx = nx
+              ry = ny
+              r = nr
+              ok = true
+              break
+            }
+          }
+          ux /= 2
+          uy /= 2
+        }
       }
       if (!ok) return false
     }
@@ -894,20 +913,35 @@
   // while the guess lies farther than JUMP pixels from the last image, as
   // often as that asks, so it follows an image round a hole however near
   // the hole's line the curve passes, and DEPTH times more where the image
-  // found lies farther than JUMP from the last. It ends where the image is lost, in
+  // found lies farther than JUMP from the last, DEPTH + DEEP times from an
+  // image at a fold, where J's less singular value is under FOLD, since
+  // there the image runs as the root of the place's step, and J is
+  // inverted damped by RIDGE. It ends where the image is lost, in
   // the shadow or behind the camera, or squeezed thinner than FAINT of
-  // the curve, |J| above 1 / FAINT, where a trace would not show it. One
-  // starts at a place with fewer branches than images to look for: the
-  // unbent place, and about each hole in front of it the weak field's
-  // outer image and the inner one, looked for while the weak field puts
-  // it at FAINT or more.
+  // the curve, |J| above 1 / FAINT, where a trace would not show it, or
+  // at a fold, where it meets its twin and both are lost. One starts at
+  // a place with fewer branches than images to look for: the unbent
+  // place, and about each hole in front of it the weak field's outer
+  // image and the inner one, looked for while the weak field puts it at
+  // FAINT or more. Each is followed both ways along the curve from where
+  // it starts. Where several holes bend the curve, images the weak field
+  // does not predict are born and lost in pairs at folds, where J's less
+  // singular value falls to 0: where a branch starts or ends bright and
+  // there under FOLD, its twin is looked for at the branch's images
+  // before the fold, mirrored through the fold, and followed both ways,
+  // and its own ends the same, so no image lost or born bright at a fold
+  // is left without its twin.
   const JUMP = 3
   const DEPTH = 6
   const FAINT = 0.05
+  const FOLD = 0.3
+  const DEEP = 10
+  const BRANCHES = 32
   const CP = new Float64Array(3)
   const V = new Float64Array(2)
   function curve (sc, pl, n) {
     const where = u => {
+      if (u < 0 || u > n - 1) return false
       const i = Math.min(n - 2, Math.floor(u))
       const f = u - i
       for (let a = 0; a < 3; a++) CP[a] = pl[3 * i + a] + (pl[3 * i + 3 + a] - pl[3 * i + a]) * f
@@ -934,13 +968,21 @@
       const q1x = sc.cx + sc.f * CP[0] / Z
       const q1y = sc.cy - sc.f * CP[1] / Z
       const det = s0.a * s0.d - s0.b * s0.c
-      // J^-1 (x, y) into V.
+      // J^-1 (x, y) into V, damped by RIDGE, (J^T J + RIDGE^2)^-1 J^T, so
+      // near a critical curve, where J is near singular, a guess moves at
+      // most 1 / (2 RIDGE) pixels for each of the place's.
+      const p = s0.a * s0.a + s0.c * s0.c + RIDGE * RIDGE
+      const r = s0.a * s0.b + s0.c * s0.d
+      const t = s0.b * s0.b + s0.d * s0.d + RIDGE * RIDGE
+      const dm = p * t - r * r
       const back = (x, y) => {
-        V[0] = det ? (s0.d * x - s0.b * y) / det : x
-        V[1] = det ? (s0.a * y - s0.c * x) / det : y
+        const jx = s0.a * x + s0.c * y
+        const jy = s0.b * x + s0.d * y
+        V[0] = (t * jx - r * jy) / dm
+        V[1] = (p * jy - r * jx) / dm
       }
       const um = (s0.u + u1) / 2
-      const halves = um > s0.u && um < u1
+      const halves = (um - s0.u) * (u1 - um) > 0
       // The guess: about the hole in front of the place nearest the image
       // in units of its Einstein radius, whose screen point, the place's
       // and its images lie on one line, the image turned as the place
@@ -993,23 +1035,86 @@
         return true
       }
       // A guess near the last image that misses is halved DEPTH times.
-      if (!halves || (!far && depth <= 0)) return false
+      if (!halves || (!far && depth <= (Math.abs(det) / big(s0) < FOLD ? -DEEP : 0))) return false
       const d = far ? depth : depth - 1
       return extend(br, um, d) && extend(br, u1, d)
+    }
+    // Branches, each in order of u, and br's image at u into P, between
+    // its images by u, false where br does not reach u.
+    const done = []
+    const P = new Float64Array(2)
+    const point = (br, u) => {
+      if (u < br[0].u || u > br[br.length - 1].u) return false
+      let lo = 0
+      let hi = br.length - 1
+      while (hi - lo > 1) {
+        const m = (lo + hi) >> 1
+        if (br[m].u <= u) lo = m
+        else hi = m
+      }
+      const p = br[lo]
+      const q = br[hi]
+      const f = q.u > p.u ? (u - p.u) / (q.u - p.u) : 0
+      P[0] = p.x + (q.x - p.x) * f
+      P[1] = p.y + (q.y - p.y) * f
+      return true
+    }
+    const near = (u, x, y, d) => done.some(br => point(br, u) && Math.hypot(P[0] - x, P[1] - y) < d)
+    // A branch from image s, followed both ways till it is lost or meets
+    // a branch, and every twin it meets at a fold, and theirs.
+    const work = []
+    const run = (br, du) => {
+      for (let i = du > 0 ? Math.floor(br[0].u) + 1 : Math.ceil(br[0].u) - 1; i >= 0 && i < n; i += du) {
+        const k = br.length
+        const ok = extend(br, i, DEPTH)
+        for (let j = k; j < br.length; j++) {
+          if (!near(br[j].u, br[j].x, br[j].y, 0.5)) continue
+          br.length = j + 1
+          return
+        }
+        if (!ok) return
+      }
+    }
+    const grow = s => {
+      if (done.length >= BRANCHES) return
+      const up = [s]
+      run(up, 1)
+      const down = [s]
+      run(down, -1)
+      done.push(down.reverse().concat(up.slice(1)))
+      work.push(done[done.length - 1])
+      while (work.length) twins(work.pop())
+    }
+    // At each end of br inside the curve, bright and at a fold, its twin:
+    // near the fold the pair lies on a line through the fold point, one
+    // either side, so at a place a little way back from the end, 2^-12 to
+    // 2^-1 of a piece, nearest first, since the twin may live no longer,
+    // br's image there mirrored through the end is a guess for it, the
+    // first found of the other parity, sign det J, apart from br's image
+    // and on no branch.
+    const twins = br => {
+      for (const k0 of [0, br.length - 1]) {
+        const e = br[k0]
+        if (e.u <= 0 || e.u >= n - 1 || big(e) * FAINT > 1) continue
+        if (Math.abs(e.a * e.d - e.b * e.c) / big(e) > FOLD) continue
+        for (let j = 12; j >= 1; j--) {
+          const u = e.u + (k0 ? -1 : 1) * 2 ** -j
+          if (!point(br, u)) break
+          const b = solve(u, P[0], P[1])
+          if (!b) continue
+          const s = solve(u, 2 * e.x - b.x, 2 * e.y - b.y)
+          if (!s || (s.a * s.d - s.b * s.c) * (b.a * b.d - b.b * b.c) >= 0 || Math.hypot(s.x - b.x, s.y - b.y) < 1 || near(u, s.x, s.y, 1)) continue
+          grow(s)
+          break
+        }
+      }
     }
     // The weak field's inner image is FAINT of the curve where its
     // radial magnification x^2 / (x^2 + 1) is, x its distance from the
     // hole over the Einstein radius.
     const xin = Math.sqrt(FAINT / (1 - FAINT))
-    const live = []
-    const done = []
     const guess = []
     for (let i = 0; i < n; i++) {
-      for (let k = live.length - 1; k >= 0; k--) {
-        if (extend(live[k], i, DEPTH)) continue
-        done.push(live[k])
-        live.splice(k, 1)
-      }
       if (!where(i)) continue
       const Z = CP[2]
       const qx = sc.cx + sc.f * CP[0] / Z
@@ -1048,15 +1153,93 @@
         guess.push(hx - ex * hi, hy - ey * hi)
       }
       if (!guess.length) guess.push(qx, qy)
-      if (live.length >= guess.length / 2) continue
-      const near = (x, y, d) => live.some(br => br[br.length - 1].u === i && Math.hypot(br[br.length - 1].x - x, br[br.length - 1].y - y) < d)
+      let live = 0
+      for (const br of done) if (br[0].u <= i && br[br.length - 1].u >= i) live++
+      if (live >= guess.length / 2) continue
       for (let g = 0; g < guess.length; g += 2) {
-        if (near(guess[g], guess[g + 1], 3)) continue
+        if (near(i, guess[g], guess[g + 1], 3)) continue
         const s1 = solve(i, guess[g], guess[g + 1])
-        if (s1 && !near(s1.x, s1.y, 0.5)) live.push([s1])
+        if (s1 && !near(i, s1.x, s1.y, 0.5)) grow(s1)
       }
     }
-    return done.concat(live).filter(br => br.length > 1)
+    // The ends left at folds, bright, mended. Two branches lost, or born,
+    // together at a fold, apart by up to 2 JUMP where halving stopped
+    // short of it, are closed: one takes the other's end. Where the place
+    // passes a cusp of a caustic, or the point a close pair of holes
+    // focuses on, the image sweeps along the critical curve faster than
+    // halving follows, so a branch ends at a fold within 2^-6 of a piece
+    // of where another starts at one, farther along it: the two are made
+    // one through images between them, each found from the middle of its
+    // neighbours, JUMP or less apart, each nearer both ends than they lie
+    // to each other. An end with neither, and on no other branch, is
+    // looked past: an image of its parity a little beyond it, 2^-12 to
+    // 2^-4 of a piece, nearest first, found from it and on no branch, is
+    // followed both ways.
+    const fold = m => m.u > 0 && m.u < n - 1 && Math.abs(m.a * m.d - m.b * m.c) / big(m) < FOLD
+    const span = (p, q, depth) => {
+      const d = Math.hypot(q.x - p.x, q.y - p.y)
+      if (d <= JUMP) return []
+      if (depth <= 0) return null
+      const m = solve((p.u + q.u) / 2, (p.x + q.x) / 2, (p.y + q.y) / 2)
+      if (!m || Math.hypot(m.x - p.x, m.y - p.y) >= d || Math.hypot(m.x - q.x, m.y - q.y) >= d) return null
+      const a = span(p, m, depth - 1)
+      const b = a && span(m, q, depth - 1)
+      return b && a.concat([m], b)
+    }
+    const tip = (br, last) => last ? br[br.length - 1] : br[0]
+    const tried = new Set()
+    const mend = () => {
+      for (let k = 0; k < done.length; k++) {
+        for (const last of [true, false]) {
+          const A = done[k]
+          const e = tip(A, last)
+          if (!fold(e) || tried.has(e)) continue
+          tried.add(e)
+          let j = -1
+          let jd = Infinity
+          let jl = false
+          for (let i = 0; i < done.length; i++) {
+            for (const l of [true, false]) {
+              const f = tip(done[i], l)
+              const d = Math.hypot(f.x - e.x, f.y - e.y)
+              if (i === k || !fold(f) || Math.abs(f.u - e.u) > 1 / 64 || d >= jd) continue
+              j = i
+              jd = d
+              jl = l
+            }
+          }
+          if (j >= 0 && jl === last && jd <= 2 * JUMP) {
+            if (jd <= 0.1) continue
+            const f = tip(done[j], jl)
+            const mid = span(e, f, 4) || []
+            if (last) A.push(...mid, { ...f })
+            else A.unshift({ ...f }, ...mid.reverse())
+            continue
+          }
+          if (j >= 0 && jl !== last) {
+            const [p, q] = last ? [k, j] : [j, k]
+            const mid = span(done[p][done[p].length - 1], done[q][0], 10)
+            if (mid) {
+              done[p] = done[p].concat(mid, done[q])
+              done.splice(q, 1)
+              return true
+            }
+          }
+          if (done.some(br => br !== A && point(br, e.u) && Math.hypot(P[0] - e.x, P[1] - e.y) < 1.5)) continue
+          const pe = e.a * e.d - e.b * e.c
+          for (let t = 12; t >= 4 && done.length < BRANCHES; t--) {
+            const u = e.u + (last ? 1 : -1) * 2 ** -t
+            const s = solve(u, e.x, e.y)
+            if (!s || (s.a * s.d - s.b * s.c) * pe <= 0 || near(u, s.x, s.y, 1)) continue
+            grow(s)
+            return true
+          }
+        }
+      }
+      return false
+    }
+    for (let k = 0; k < BRANCHES && mend(); k++);
+    return done.filter(br => br.length > 1)
   }
 
   const api = { RING, BBAR, deflection, trace, STRIDE, MAXSEG, plane, render, skyTiles, seen, XY, image, IM, curve }
