@@ -1991,7 +1991,8 @@
       // Einstein radii of its depth at a degrees from the camera's right
       // toward its up, or X right and Y up, at rest, and a planet with trail
       // given a straight trail of that many places toward the right,
-      // 4 apart. Every other body, grain, flare and wave is gone. judge
+      // 4 apart, or, trail a list of [X, Y, Z], those places, oldest
+      // first. Every other body, grain, flare and wave is gone. judge
       // names the items judged: { body, hole }, indices into items. disc,
       // if given, is a count of grains on circular orbits in the hole's
       // equator, from 3.3 to 8 r_s, which turn counterclockwise seen
@@ -2028,9 +2029,16 @@
             return 0
           }
           const b = body(p[0], p[1], p[2], 0, 0, 0, it.m, it.kind === 'hole' ? 0 : 55, it.kind)
-          for (let k = it.trail || 0; k > 0; k--) {
-            b.trail.push(p[0] + 4 * k * V.r[0], p[1] + 4 * k * V.r[1], p[2] + 4 * k * V.r[2])
-            b.tv.push(0, 0, 0)
+          if (Array.isArray(it.trail)) {
+            for (const [tx, ty, tz] of it.trail) {
+              for (let i = 0; i < 3; i++) b.trail.push(tx * V.r[i] + ty * V.u[i] - tz * V.e[i])
+              b.tv.push(0, 0, 0)
+            }
+          } else {
+            for (let k = it.trail || 0; k > 0; k--) {
+              b.trail.push(p[0] + 4 * k * V.r[0], p[1] + 4 * k * V.r[1], p[2] + 4 * k * V.r[2])
+              b.tv.push(0, 0, 0)
+            }
           }
           b.tt = clock
           return b.id
