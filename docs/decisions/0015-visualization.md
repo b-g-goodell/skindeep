@@ -1900,17 +1900,23 @@ pixel or two both read as more noise.
   1.86 and 1.99 times and were refused on sight). The check holds the
   ultraviolet front to 3 times today's figure and the infrared one to
   1.3.
-- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`:
-  every scene 0 general and 0 red flashes a second within one frame, at
-  43a4dd1 and at 9f6260d. Before the cap the sharpening lifted every
-  line it crossed fivefold, and at full activity the count within 0.1 s
-  rose to 10, its saturation, over 14 863 cells flashing more than three
-  times a second. With the sharpening off it fell to 1, with the haze
-  off it stayed at 10. Within 0.1 s at 43a4dd1, three runs, full 6, 1
-  and 0, moderate 2, 0 and 0. At 9f6260d full 7 and 1, moderate 1 and 0,
-  the cells over three 4264 and 1504 against 2174 to 3284, so within the
-  spread of one setting's runs. The pulse's scenes stay at 10 and 10.
-  The frame's mean light at full activity 0.0679 against 0.0445.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`,
+  exit 0 at 43a4dd1 and at 7287dc6: every scene 0 general and 0 red
+  flashes a second within one frame. The count within 0.1 s, reported
+  and not asserted, in three runs of each (one whole, two of the full
+  and moderate scenes alone): full activity 0, 4 and 4 general at
+  43a4dd1 against 7, 2 and 6, moderate 0, 0 and 5 against 1, 0 and 6,
+  the cells flashing more than three times a second at full activity
+  2174, 3186 and 2699 against 4264, 3134 and 4796. So the count sits
+  within one setting's spread, up to 6 (2026-10-16 above), leaning a
+  little higher. The pulse's scenes stay at 10 and 10. The frame's mean
+  light at full activity 0.0445 against 0.0679, the grid's. While
+  tuning, unlogged and on code never committed: the sharpening
+  uncapped saturated the count at 10 over 14 863 cells (a920cb7's
+  message records it at its parent), with the sharpening off it fell to
+  1 and with the haze off it stayed at 10, and a cap of 56 levels for
+  every pixel left the moderate scene at 9, its heat map on the cloud,
+  hence the cap's fall above 64.
 - The frame rate. Per draw alone at 400 by 380 at full activity, 7.3 ms
   at 9f6260d against 10.7 at 43a4dd1, run back to back on a loaded
   host (1-minute load 20 and 26): the grid is one image a resize. The
