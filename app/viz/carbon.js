@@ -101,7 +101,9 @@
   // shift, pixels, each per unit of the front's drawn amplitude, and the
   // most the sharpening may move a channel, levels of 255, which keeps a
   // grid line's lift under a relative luminance of 0.1, so dozens of
-  // ultraviolet fronts in flight do not flash (issue #164).
+  // ultraviolet fronts in flight do not flash (issue #164). Over 64 the
+  // most falls linearly to 0.15 of it at 172 and above, so the cloud's
+  // dense points, which fill whole cells, are crisped and barely lifted.
   const SHARP = 1.5
   const LIFT = 4
   const SHARP_MAX = 56
@@ -1060,7 +1062,8 @@
             for (let ch = 0; ch < 3; ch++) {
               const p = src[i + ch]
               const lap = 4 * p - src[i + ch - 4] - src[i + ch + 4] - src[i + ch - 4 * W] - src[i + ch + 4 * W]
-              d[i + ch] = d[i + ch] + Math.max(-SHARP_MAX, Math.min(SHARP_MAX, s * (SHARP * lap + LIFT * p)))
+              const m = SHARP_MAX * Math.min(1, Math.max(0.15, (192 - p) / 128))
+              d[i + ch] = d[i + ch] + Math.max(-m, Math.min(m, s * (SHARP * lap + LIFT * p)))
             }
           }
           sum += Math.abs(d[i] - src[i]) + Math.abs(d[i + 1] - src[i + 1]) + Math.abs(d[i + 2] - src[i + 2])
