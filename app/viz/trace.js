@@ -13,6 +13,10 @@
 // recursion. It holds for source and camera far from the hole next to
 // the bend, and is an approximation for matter within a few b of it.
 //
+// The same rule, solved forward, finds where a point is seen: its
+// images, each the frame's point whose ray meets it (image), and a
+// curve's, followed along it as unbroken branches (curve).
+//
 // alpha(b) is tabulated once from the exact integral, as
 // g(u) = alpha + ln(1 - u), u = b_c / b, which is smooth on [0, 1]:
 // alpha diverges as -ln(b / b_c - 1) (Bozza 2002, a = 1).
@@ -194,12 +198,14 @@
   // the camera, as RGBA, w by h, not premultiplied, at (ox, oy) in the
   // frame, k of its pixels to one of the frame's (1 but for an edge
   // plane), and which tiles of TILE pixels hold anything, as sums over
-  // the tiles above and left.
+  // the tiles above and left. A screen plane holds what is drawn where
+  // it is seen, already bent (image): a ray that reaches its depth reads
+  // it at the ray's own pixel.
   const TILE = 8
   function plane (z, data, w, h, p, ox = 0, oy = 0) {
     const tw = Math.ceil(w / TILE)
     const th = Math.ceil(h / TILE)
-    if (!p || p.occ.length < tw * th || p.sum.length < (tw + 1) * (th + 1)) p = { z: 0, data: null, w: 0, h: 0, tw: 0, th: 0, ox: 0, oy: 0, edge: false, add: false, smooth: false, k: 1, dil: null, occ: new Uint8Array(tw * th), sum: new Int32Array((tw + 1) * (th + 1)) }
+    if (!p || p.occ.length < tw * th || p.sum.length < (tw + 1) * (th + 1)) p = { z: 0, data: null, w: 0, h: 0, tw: 0, th: 0, ox: 0, oy: 0, edge: false, add: false, smooth: false, screen: false, k: 1, dil: null, occ: new Uint8Array(tw * th), sum: new Int32Array((tw + 1) * (th + 1)) }
     p.z = z
     p.data = data
     p.w = w
@@ -426,10 +432,10 @@
   const SEG = new Float64Array(STRIDE * MAXSEG)
   const EV = []
 
-  // One ray from the camera along unit (dx, dy, dz): the planes it
-  // crosses, in the order it crosses them, then, unless it is
-  // captured, the sky along its last direction.
-  function ray (sc, dx, dy, dz) {
+  // One ray from the camera along unit (dx, dy, dz), of the frame's
+  // point (x, y): the planes it crosses, in the order it crosses them,
+  // then, unless it is captured, the sky along its last direction.
+  function ray (sc, dx, dy, dz, x, y) {
     R = Gc = B = 0
     T = 1
     let n = trace(0, 0, 0, dx, dy, dz, sc.hs, sc.nh, SEG)
@@ -454,14 +460,14 @@
           const p = ps[q]
           if (p.z <= oz) continue
           if (p.z > z1) break
-          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f)
+          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y)
         }
       } else {
         for (let q = np - 1; q >= 0; q--) {
           const p = ps[q]
           if (p.z >= oz) continue
           if (p.z < z1) break
-          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f)
+          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y)
         }
       }
     }
@@ -473,10 +479,10 @@
     return cap
   }
 
-  function cross (p, ox, oy, oz, ex, ey, ez, cx, cy, f) {
+  function cross (p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y) {
     const t = (p.z - oz) / ez
-    const sx = cx + f * (ox + t * ex) / p.z
-    const sy = cy - f * (oy + t * ey) / p.z
+    const sx = p.screen ? x : cx + f * (ox + t * ex) / p.z
+    const sy = p.screen ? y : cy - f * (oy + t * ey) / p.z
     if (p.edge) return sample(p, sx, sy)
     const tx = Math.floor((sx - p.ox) / TILE)
     const ty = Math.floor((sy - p.oy) / TILE)
@@ -563,8 +569,8 @@
           while (s < n - 1 && SEG[STRIDE * s + 2] + SEG[STRIDE * s + 6] * SEG[STRIDE * s + 5] < z) s++
           const k = STRIDE * s
           const t = (z - SEG[k + 2]) / SEG[k + 5]
-          px[q * NN + node] = cx + f * (SEG[k] + t * SEG[k + 3]) / z
-          py[q * NN + node] = cy - f * (SEG[k + 1] + t * SEG[k + 4]) / z
+          px[q * NN + node] = planes[q].screen ? i * S + 0.5 : cx + f * (SEG[k] + t * SEG[k + 3]) / z
+          py[q * NN + node] = planes[q].screen ? j * S + 0.5 : cy - f * (SEG[k + 1] + t * SEG[k + 4]) / z
           crossed++
           if (planes[q].smooth) {
             R = Gc = B = 0
@@ -612,7 +618,7 @@
               const l = Math.sqrt(dx * dx + dy * dy + 1)
               dx /= l
               dy /= l
-              ray(sc, dx, dy, 1 / l)
+              ray(sc, dx, dy, 1 / l, x + 0.5, y + 0.5)
               o32[y * w + x] = pack()
             }
           }
@@ -772,7 +778,232 @@
     return traced
   }
 
-  const api = { RING, BBAR, deflection, trace, STRIDE, MAXSEG, plane, render, skyTiles }
+  // The forward map, for what is drawn where it is seen: the frame's
+  // point (sx, sy) of scene sc ({ cx, cy, f, hs, nh }, as render takes
+  // it) to where its ray crosses depth z, as the place on the frame of
+  // that crossing seen along a straight line, into XY. False if
+  // the ray is captured or turned back before it reaches z. Unbent, it
+  // is the identity.
+  const XY = new Float64Array(2)
+  const SEEN = new Float64Array(STRIDE * MAXSEG)
+  function seen (sc, sx, sy, z) {
+    let dx = (sx - sc.cx) / sc.f
+    let dy = -(sy - sc.cy) / sc.f
+    const l = Math.sqrt(dx * dx + dy * dy + 1)
+    const n = Math.abs(trace(0, 0, 0, dx / l, dy / l, 1 / l, sc.hs, sc.nh, SEEN))
+    for (let s = 0; s < n; s++) {
+      const k = STRIDE * s
+      const ez = SEEN[k + 5]
+      if (ez === 0) continue
+      const t = (z - SEEN[k + 2]) / ez
+      if (t <= 0 || t > SEEN[k + 6]) continue
+      XY[0] = sc.cx + sc.f * (SEEN[k] + t * SEEN[k + 3]) / z
+      XY[1] = sc.cy - sc.f * (SEEN[k + 1] + t * SEEN[k + 4]) / z
+      return true
+    }
+    return false
+  }
+
+  // The image of a point at depth z that a straight ray would show at
+  // (qx, qy): the frame's point whose ray crosses it, within IMG_TOL
+  // pixels, found by Newton's method on seen from (sx, sy), each step at
+  // most step pixels and halved until it brings the crossing nearer.
+  // Into IM: the image, and J, the change of the crossing's place with
+  // the image's, [x, y, J00, J01, J10, J11], J as found before the last
+  // step, which is short. False if none is found from there.
+  const IMG_TOL = 0.05
+  const IMG_H = 1e-3
+  const IM = new Float64Array(6)
+  function image (sc, qx, qy, z, sx, sy, step = 4) {
+    if (!seen(sc, sx, sy, z)) return false
+    let rx = XY[0] - qx
+    let ry = XY[1] - qy
+    let r = Math.hypot(rx, ry)
+    let a = 0
+    let b = 0
+    let c = 0
+    let d = 0
+    for (let it = 0; it < 24; it++) {
+      if (it === 0 || r >= IMG_TOL) {
+        // J by differences, one way or the other where a side is lost.
+        let h = IMG_H
+        if (!seen(sc, sx + h, sy, z)) {
+          h = -h
+          if (!seen(sc, sx + h, sy, z)) return false
+        }
+        a = (XY[0] - qx - rx) / h
+        c = (XY[1] - qy - ry) / h
+        h = IMG_H
+        if (!seen(sc, sx, sy + h, z)) {
+          h = -h
+          if (!seen(sc, sx, sy + h, z)) return false
+        }
+        b = (XY[0] - qx - rx) / h
+        d = (XY[1] - qy - ry) / h
+      }
+      if (r < IMG_TOL) {
+        IM[0] = sx
+        IM[1] = sy
+        IM[2] = a
+        IM[3] = b
+        IM[4] = c
+        IM[5] = d
+        return true
+      }
+      const det = a * d - b * c
+      if (!det) return false
+      let ux = -(d * rx - b * ry) / det
+      let uy = -(a * ry - c * rx) / det
+      const ul = Math.hypot(ux, uy)
+      if (ul > step) {
+        ux *= step / ul
+        uy *= step / ul
+      }
+      let ok = false
+      for (let k = 0; k < 12; k++) {
+        if (seen(sc, sx + ux, sy + uy, z)) {
+          const nx = XY[0] - qx
+          const ny = XY[1] - qy
+          const nr = Math.hypot(nx, ny)
+          if (nr < r) {
+            sx += ux
+            sy += uy
+            rx = nx
+            ry = ny
+            r = nr
+            ok = true
+            break
+          }
+        }
+        ux /= 2
+        uy /= 2
+      }
+      if (!ok) return false
+    }
+    return false
+  }
+
+  // The images of a curve through the holes of scene sc: its n places,
+  // [X, Y, Z] each in the camera's frame in pl, joined by straight
+  // pieces. Each branch is an image followed along the curve, a list of
+  // { u, x, y, a, b, c, d, qx, qy }: u the place, between places where a
+  // piece is halved, (x, y) its image, a to d its J (image) and (qx, qy)
+  // where a straight ray would show it. A branch takes the image of the
+  // place before it, carried by its J, as the guess, and halves a piece,
+  // at most DEPTH times, until the guess and the image lie within JUMP
+  // pixels of the last, so it follows an image round a hole. It ends where the image is lost, in
+  // the shadow or behind the camera, or squeezed thinner than FAINT of
+  // the curve, |J| above 1 / FAINT, where a trace would not show it. One
+  // starts at a place with fewer branches than images to look for: the
+  // unbent place, and about each hole in front of it the weak field's
+  // outer image and the inner one, looked for while the weak field puts
+  // it at FAINT or more.
+  const JUMP = 3
+  const DEPTH = 6
+  const FAINT = 0.05
+  const CP = new Float64Array(3)
+  function curve (sc, pl, n) {
+    const where = u => {
+      const i = Math.min(n - 2, Math.floor(u))
+      const f = u - i
+      for (let a = 0; a < 3; a++) CP[a] = pl[3 * i + a] + (pl[3 * i + 3 + a] - pl[3 * i + a]) * f
+      return CP[2] >= 1
+    }
+    // |J|, its greater singular value.
+    const big = m => {
+      const s = m.a * m.a + m.b * m.b + m.c * m.c + m.d * m.d
+      const det = m.a * m.d - m.b * m.c
+      return Math.sqrt((s + Math.sqrt(Math.max(0, s * s - 4 * det * det))) / 2)
+    }
+    const solve = (u, sx, sy) => {
+      if (!where(u)) return null
+      const qx = sc.cx + sc.f * CP[0] / CP[2]
+      const qy = sc.cy - sc.f * CP[1] / CP[2]
+      if (!image(sc, qx, qy, CP[2], sx, sy)) return null
+      const m = { u, x: IM[0], y: IM[1], a: IM[2], b: IM[3], c: IM[4], d: IM[5], qx, qy }
+      return big(m) * FAINT > 1 ? null : m
+    }
+    const extend = (br, u1, depth) => {
+      const s0 = br[br.length - 1]
+      if (!where(u1)) return false
+      const dx = sc.cx + sc.f * CP[0] / CP[2] - s0.qx
+      const dy = sc.cy - sc.f * CP[1] / CP[2] - s0.qy
+      const det = s0.a * s0.d - s0.b * s0.c
+      const gx = s0.x + (det ? (s0.d * dx - s0.b * dy) / det : dx)
+      const gy = s0.y + (det ? (s0.a * dy - s0.c * dx) / det : dy)
+      // A guess farther than JUMP is halved before it is solved.
+      const s1 = depth > 0 && Math.hypot(gx - s0.x, gy - s0.y) > JUMP ? null : solve(u1, gx, gy)
+      if (s1 && Math.hypot(s1.x - s0.x, s1.y - s0.y) <= JUMP) {
+        br.push(s1)
+        return true
+      }
+      if (depth <= 0) return false
+      const um = (s0.u + u1) / 2
+      return extend(br, um, depth - 1) && extend(br, u1, depth - 1)
+    }
+    // The weak field's inner image is FAINT of the curve where its
+    // radial magnification x^2 / (x^2 + 1) is, x its distance from the
+    // hole over the Einstein radius.
+    const xin = Math.sqrt(FAINT / (1 - FAINT))
+    const live = []
+    const done = []
+    const guess = []
+    for (let i = 0; i < n; i++) {
+      for (let k = live.length - 1; k >= 0; k--) {
+        if (extend(live[k], i, DEPTH)) continue
+        done.push(live[k])
+        live.splice(k, 1)
+      }
+      if (!where(i)) continue
+      const Z = CP[2]
+      const qx = sc.cx + sc.f * CP[0] / Z
+      const qy = sc.cy - sc.f * CP[1] / Z
+      guess.length = 0
+      for (let h = 0; h < sc.nh; h++) {
+        const Zh = sc.hs[4 * h + 2]
+        if (Zh <= 0 || Zh >= Z) continue
+        const hx = sc.cx + sc.f * sc.hs[4 * h] / Zh
+        const hy = sc.cy - sc.f * sc.hs[4 * h + 1] / Zh
+        const te = sc.f * Math.sqrt(2 * sc.hs[4 * h + 3] / RING * (Z - Zh) / (Zh * Z))
+        const R = sc.f * sc.hs[4 * h + 3] / Zh
+        let ex = qx - hx
+        let ey = qy - hy
+        const beta = Math.hypot(ex, ey)
+        if (beta > 1e-9) {
+          ex /= beta
+          ey /= beta
+        } else {
+          ex = 1
+          ey = 0
+        }
+        const root = Math.sqrt(beta * beta + 4 * te * te)
+        guess.push(hx + ex * (beta + root) / 2, hy + ey * (beta + root) / 2)
+        if ((root - beta) / 2 < xin * te) continue
+        // The inner image, near the shadow, where the weak field is far
+        // out: on the line through the hole, where this hole alone bends
+        // a ray of the far side onto the place, by halving.
+        let lo = R
+        let hi = 2 * te
+        for (let it = 0; it < 16; it++) {
+          const r = (lo + hi) / 2
+          if (!seen(sc, hx - ex * r, hy - ey * r, Z) || (XY[0] - hx) * ex + (XY[1] - hy) * ey > beta) lo = r
+          else hi = r
+        }
+        guess.push(hx - ex * hi, hy - ey * hi)
+      }
+      if (!guess.length) guess.push(qx, qy)
+      if (live.length >= guess.length / 2) continue
+      const near = (x, y, d) => live.some(br => br[br.length - 1].u === i && Math.hypot(br[br.length - 1].x - x, br[br.length - 1].y - y) < d)
+      for (let g = 0; g < guess.length; g += 2) {
+        if (near(guess[g], guess[g + 1], 3)) continue
+        const s1 = solve(i, guess[g], guess[g + 1])
+        if (s1 && !near(s1.x, s1.y, 0.5)) live.push([s1])
+      }
+    }
+    return done.concat(live).filter(br => br.length > 1)
+  }
+
+  const api = { RING, BBAR, deflection, trace, STRIDE, MAXSEG, plane, render, skyTiles, seen, XY, image, IM, curve }
   if (typeof module === 'object' && module.exports) module.exports = api
   else root.VizTrace = api
 })(this)

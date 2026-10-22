@@ -2,8 +2,9 @@
 // Gravity 3D's optics (decision 0015, issue #170): the exact
 // Schwarzschild deflection against published values, the shadow and the
 // Einstein ring as the trace draws them, the lens equation of one hole
-// and the multi-plane recursion of two, and the specific intensity kept
-// along a ray.
+// and the multi-plane recursion of two, the specific intensity kept
+// along a ray, and a curve's images found forward, unbroken (issue
+// #182).
 const test = require('node:test')
 const assert = require('node:assert')
 const T = require('../app/viz/trace')
@@ -252,4 +253,113 @@ test('trace: a uniform sky keeps its brightness wherever it is seen', () => {
     }
   }
   assert.ok(Math.abs(dark - Math.PI * R * R) < 2 * Math.PI * R, `the shadow's ${dark} pixels`)
+})
+
+// The scene of Gravity 3D's pane of 1200 by 760 at its trace's scale, a
+// hole of 900 at depth 620, for the forward map.
+const KT = 377 / 1200
+const LENS = { cx: 600 * KT, cy: 380 * KT, f: 380 / Math.tan(0.42) * KT, hs: new Float64Array([0, 0, 620, T.RING * 2 * 900 / 11.5 ** 2]), nh: 1 }
+const unbent = (X, Y, Z) => [LENS.cx + LENS.f * X / Z, LENS.cy - LENS.f * Y / Z]
+
+test('trace: a point\'s images, found forward, are where their rays meet it', () => {
+  // In front of the hole, its one image is where a straight ray shows
+  // it. Behind it, off its line and near it, each image's ray crosses
+  // the point's depth at the point, the outer one beyond the weak
+  // field's Einstein radius on the point's side, the inner one nearer
+  // the hole on the other.
+  const [qx, qy] = unbent(40, 25, 500)
+  assert.ok(T.image(LENS, qx, qy, 500, qx + 3, qy - 2))
+  assert.ok(Math.hypot(T.IM[0] - qx, T.IM[1] - qy) < 0.05, 'in front: unbent')
+  const hx = LENS.cx
+  const hy = LENS.cy
+  for (const [X, Y, Z] of [[60, 30, 900], [6, 9, 820]]) {
+    const [px, py] = unbent(X, Y, Z)
+    const te = LENS.f * Math.sqrt(2 * (LENS.hs[3] / T.RING) * (Z - 620) / (620 * Z))
+    const beta = Math.hypot(px - hx, py - hy)
+    const ex = (px - hx) / beta
+    const ey = (py - hy) / beta
+    const found = []
+    for (const r of [(beta + Math.sqrt(beta * beta + 4 * te * te)) / 2, -0.8 * te]) {
+      assert.ok(T.image(LENS, px, py, Z, hx + ex * r, hy + ey * r), `an image of ${X}, ${Y}, ${Z} from ${r}`)
+      found.push([T.IM[0], T.IM[1]])
+      assert.ok(T.seen(LENS, T.IM[0], T.IM[1], Z))
+      assert.ok(Math.hypot(T.XY[0] - px, T.XY[1] - py) < 0.05, 'its ray meets the point')
+    }
+    const side = ([x, y]) => (x - hx) * ex + (y - hy) * ey
+    assert.ok(side(found[0]) > te, `the outer image beyond the Einstein radius ${te}`)
+    assert.ok(side(found[1]) < 0 && -side(found[1]) < side(found[0]), `the inner image at ${side(found[1])}, across the hole and nearer it`)
+  }
+})
+
+test('trace: a curve\'s images are unbroken through any depth and lensing', () => {
+  // The live check's trail: a line of 64 places from in front of the
+  // hole's depth to far behind it, passing above the hole's line, and the
+  // same line nearer the line. Each has an outer image along all of it
+  // and an inner one, each a chain of images 3 px apart or less, each
+  // image's ray meeting its place.
+  for (const Y of [28, 14]) {
+    const pl = new Float64Array(3 * 64)
+    for (let i = 0; i < 64; i++) pl.set([-220 + 440 * i / 63, Y, 660 + 320 * i / 63], 3 * i)
+    const br = T.curve(LENS, pl, 64)
+    assert.strictEqual(br.length, 2, `Y ${Y}: an outer and an inner image`)
+    const outer = br.find(b => b[0].u === 0)
+    assert.ok(outer && outer[outer.length - 1].u === 63, `Y ${Y}: the outer image along the whole line`)
+    for (const b of br) {
+      for (let k = 0; k < b.length; k++) {
+        const s = b[k]
+        if (k) assert.ok(Math.hypot(s.x - b[k - 1].x, s.y - b[k - 1].y) <= 3, `Y ${Y}: a step of ${Math.hypot(s.x - b[k - 1].x, s.y - b[k - 1].y)} px at ${s.u}`)
+        const i = Math.min(62, Math.floor(s.u))
+        const f = s.u - i
+        const Z = pl[3 * i + 2] + (pl[3 * i + 5] - pl[3 * i + 2]) * f
+        assert.ok(T.seen(LENS, s.x, s.y, Z) && Math.hypot(T.XY[0] - s.qx, T.XY[1] - s.qy) < 0.05, `Y ${Y}: the image at ${s.u} meets its place`)
+      }
+    }
+  }
+  // A curve that runs behind the camera has one image, unbroken across
+  // the trace's frame, 377 by 239, which ends past its edge, before the
+  // curve's depth falls below 1.
+  const pl = new Float64Array(3 * 32)
+  for (let i = 0; i < 32; i++) pl.set([60 - 200 * i / 31, -40 + 120 * i / 31, 600 - 700 * i / 31], 3 * i)
+  const br = T.curve(LENS, pl, 32)
+  assert.strictEqual(br.length, 1, 'one image')
+  const last = br[0][br[0].length - 1]
+  assert.ok(br[0][0].u === 0 && last.u < 31 * 599 / 700, `from the first place to ${last.u}, before the camera`)
+  assert.ok(last.x < 0 || last.y < 0 || last.x > 377 || last.y > 239, `it ends at ${last.x}, ${last.y}, past the frame's edge`)
+  for (let k = 1; k < br[0].length; k++) assert.ok(Math.hypot(br[0][k].x - br[0][k - 1].x, br[0][k].y - br[0][k - 1].y) <= 3)
+})
+
+test('trace: a screen plane is read where it is drawn, a plane where its rays meet it', () => {
+  // One dot drawn at the same place on a plane and on a screen plane, both
+  // behind the hole: the plane's dot is bent away from where it is drawn,
+  // the screen plane's stays.
+  const W = 121
+  const dot = new Uint8ClampedArray(W * W * 4)
+  const at = [80, 60]
+  for (let y = 0; y < W; y++) {
+    for (let x = 0; x < W; x++) if ((x + 0.5 - at[0]) ** 2 + (y + 0.5 - at[1]) ** 2 <= 4) dot.set([255, 255, 255, 255], 4 * (y * W + x))
+  }
+  const centre = (planes) => {
+    const sc = { w: W, h: W, cx: W / 2, cy: W / 2, f: 200, S: 6, hs: new Float64Array([0, 0, 600, T.RING * 13.6]), nh: 1, bref: new Float64Array([60]), planes, sky: null }
+    const out = new Uint8ClampedArray(W * W * 4)
+    T.render(sc, out)
+    let n = 0
+    let sx = 0
+    let sy = 0
+    for (let y = 0; y < W; y++) {
+      for (let x = 0; x < W; x++) {
+        const v = out[4 * (y * W + x)]
+        if (v < 64) continue
+        n++
+        sx += x + 0.5
+        sy += y + 0.5
+      }
+    }
+    return [sx / n, sy / n]
+  }
+  const screen = T.plane(900, dot, W, W)
+  screen.screen = true
+  const s = centre([screen])
+  assert.ok(Math.hypot(s[0] - at[0], s[1] - at[1]) < 0.3, `the screen plane's dot at ${s}`)
+  const p = centre([T.plane(900, dot, W, W)])
+  assert.ok(Math.hypot(p[0] - at[0], p[1] - at[1]) > 3, `the plane's dot bent, at ${p}`)
 })
