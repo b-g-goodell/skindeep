@@ -38,7 +38,7 @@
   // The clouds: the number the sky keeps, the most, their base's height
   // and depth range, metres.
   const KEEP = 11
-  const MOST = 22
+  const MOST = 18
   const BASE = 1900
   const ZMIN = 2600
   const ZMAX = 40000
@@ -245,6 +245,7 @@
     let press = null
     let first = true
     let forms = 0
+    let thins = 0
 
     // A new sunset: the sun's side, the wind's, the land's seed, the
     // clock's start somewhere in its first half.
@@ -849,7 +850,7 @@
         const seen = clouds.filter(c => !c.gone && c.sprite && onScreen(c))
         const c = seen.length ? seen[Math.floor(rnd() * seen.length)] : null
         const b = c ? bbox(c) : [0.2 * W, 0.2 * H, 0.8 * W, 0.6 * H]
-        const r = clamp(0.3 * Math.min(b[2] - b[0], b[3] - b[1]), 0.025 * W, 0.08 * W)
+        const r = clamp(0.3 * Math.min(b[2] - b[0], b[3] - b[1]), 0.04 * W, 0.08 * W)
         drops.push({ x: mix(b[0], b[2], 0.25 + 0.5 * rnd()), y: mix(b[1], b[3], 0.3 + 0.5 * rnd()), r, t: clock, hue: CLASS_HUE[e.cls] ?? 200, life: 7, seed: drops.length + 17 * (e.cls | 0) })
       } else if (e.kind === 4) {
         // The sun's rays break through.
@@ -896,7 +897,17 @@
         if (c.gone) c.fade -= h / 3
       }
       clouds = clouds.filter(c => c.fade > 0 && !(windSign > 0 ? bbox(c)[0] > W + 20 : bbox(c)[2] < -20))
-      // A thinned sky: a cloud forms in it every few seconds.
+      // A crowded sky: past the clouds it keeps, the oldest of a minute
+      // thins away every few seconds. A thinned sky: a cloud forms in
+      // it every few seconds.
+      const live = clouds.filter(c => !c.gone)
+      if (live.length > KEEP && clock > thins) {
+        const old = live.reduce((a, c) => c.born < a.born ? c : a)
+        if (clock - old.born > 60) {
+          old.gone = true
+          thins = clock + 3 + 3 * rnd()
+        }
+      }
       if (clouds.filter(c => !c.gone).length < KEEP && clock > forms) {
         const y = cy - (H * 0.03 + Math.pow(rnd(), 1.4) * cy * 0.85)
         clouds.push(at((0.05 + 0.9 * rnd()) * W, y, 1500 + 2500 * rnd(), { scale: 0.15 }))
@@ -1046,9 +1057,9 @@
           gr.addColorStop(0.86, `rgba(92, 66, 96, ${0.22 * a})`)
           gr.addColorStop(1, 'rgba(92, 66, 96, 0)')
         } else {
-          gr.addColorStop(0, `hsla(${d.hue}, 70%, 56%, ${0.24 * a})`)
-          gr.addColorStop(0.7, `hsla(${d.hue}, 70%, 50%, ${0.42 * a})`)
-          gr.addColorStop(0.88, `hsla(${d.hue}, 70%, 38%, ${0.6 * a})`)
+          gr.addColorStop(0, `hsla(${d.hue}, 75%, 56%, ${0.32 * a})`)
+          gr.addColorStop(0.7, `hsla(${d.hue}, 75%, 50%, ${0.5 * a})`)
+          gr.addColorStop(0.88, `hsla(${d.hue}, 75%, 38%, ${0.7 * a})`)
           gr.addColorStop(1, `hsla(${d.hue}, 70%, 38%, 0)`)
         }
         // A bloom's edge is ragged, as wet paint pushes out unevenly.
