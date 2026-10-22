@@ -1003,6 +1003,6 @@
     }
   }
 
-  if (typeof module === 'object' && module.exports) module.exports = { RULE, KIND, HOME, FLOCK, SPECKS, skyAt, world }
+  if (typeof module === 'object' && module.exports) module.exports = { RULE, KIND, HOME, FLOCK, SPECKS, skyAt, world, create }
   else (root.VizCanvas = root.VizCanvas || {}).murmuration = create
 })(this)

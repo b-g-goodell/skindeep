@@ -8,7 +8,8 @@
 const test = require('node:test')
 const assert = require('node:assert')
 const { Flock, rng } = require('../app/viz/flock')
-const { RULE, HOME, FLOCK, world } = require('../app/viz/murmuration')
+const core = require('../app/viz/flock')
+const { RULE, HOME, FLOCK, world, create } = require('../app/viz/murmuration')
 
 // The flock as the mode starts it: a disc over the clearing, flying.
 function flock (seed) {
@@ -41,7 +42,7 @@ test('murmuration: the flock holds together over the clearing with no falcon', (
   // its home, the session quiet enough that no falcon comes.
   const w = world(rng(7))
   const f = w.flock
-  const L = { bass: 0.5, treble: 0.5, busy: 0, idle: 0.3 }
+  const L = { bass: 0.5, treble: 0.5, busy: 0, idle: 0.5 }
   for (let t = 0; t < 60; t += 10) {
     for (let k = 0; k < 200; k++) w.advance(0.05, L)
     const g = groups(f, 6)
@@ -135,4 +136,67 @@ test('murmuration: a push about the vertical turns the birds it is set on', () =
   rest /= Math.floor(f.n / 2)
   assert.ok(pushed > 0.4, `pushed, turned ${pushed.toFixed(2)} rad left in 0.5 s`)
   assert.ok(pushed > rest + 0.2, `pushed ${pushed.toFixed(2)} rad, the rest ${rest.toFixed(2)}`)
+})
+
+// A canvas that draws nothing, and the mode on one with its flock,
+// caught as the mode makes it. The mode paints its forest on canvases
+// of its own, so the test lends it a document.
+function canvas (w, h) {
+  const g = new Proxy({}, {
+    get: (t, k) => (k in t ? t[k] : k === 'measureText' ? () => ({ width: 1 }) : () => ({ addColorStop () {} })),
+    set: (t, k, v) => { t[k] = v; return true }
+  })
+  return { width: w, height: h, style: {}, getContext: () => g }
+}
+
+function pane (w, h) {
+  const Flock = core.Flock
+  let f = null
+  core.Flock = class extends Flock { constructor (o) { super(o); f = this } }
+  try {
+    return { r: create(canvas(w, h)), f }
+  } finally {
+    core.Flock = Flock
+  }
+}
+
+test('murmuration: a drag\'s lure stays under the pointer while it rests', () => {
+  const doc = global.document
+  global.document = { createElement: () => canvas(300, 150) }
+  try {
+    const { r, f } = pane(800, 600)
+    const synth = { level: { bass: 0.5, treble: 0.5, busy: 0.5, idle: 0 }, since: () => [] }
+    for (let k = 0; k < 30; k++) r.draw(synth, 1 / 60)
+    const lure = () => f.predators.find(q => q.phase === 'lure')
+    const speed = q => Math.hypot(q.vx, q.vy, q.vz)
+    // A drag across the pane, a move a draw.
+    r.pointer('down', 400, 300, true)
+    let x = 400
+    for (let k = 0; k < 20; k++) {
+      x += 8
+      r.pointer('move', x, 300, true)
+      r.draw(synth, 1 / 60)
+    }
+    const q = lure()
+    assert.ok(q, 'no lure on the drag')
+    assert.ok(speed(q) > 0.5, `the dragged lure moves at ${speed(q).toFixed(2)} m/s`)
+    // Two moves within one draw: the lure goes to the second, at a
+    // velocity no larger than the step over a substep.
+    r.pointer('move', x + 8, 300, true)
+    const a = [q.x, q.y, q.z]
+    r.pointer('move', x + 16, 300, true)
+    const held = [q.x, q.y, q.z]
+    const step = dist(a, held)
+    assert.ok(speed(q) <= step / RULE.substep + 1e-9, `two moves in a draw: ${speed(q).toFixed(1)} m/s for ${step.toFixed(2)} m`)
+    // The pointer held still 2 s.
+    for (let k = 0; k < 120; k++) r.draw(synth, 1 / 60)
+    assert.strictEqual(lure(), q)
+    assert.ok(dist([q.x, q.y, q.z], held) < 1, `the lure ${dist([q.x, q.y, q.z], held).toFixed(1)} m from the held point after 2 s still`)
+    assert.ok(speed(q) < 0.5, `the resting lure moves at ${speed(q).toFixed(2)} m/s`)
+    r.pointer('up', x + 16, 300, false)
+    assert.strictEqual(lure(), undefined)
+  } finally {
+    if (doc === undefined) delete global.document
+    else global.document = doc
+  }
 })
