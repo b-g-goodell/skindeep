@@ -153,6 +153,7 @@
     const marks = []
     const carried = []
     let lure = null
+    let held = null
     let started = 0
     let kills = 0
     let rippled = 0
@@ -501,6 +502,17 @@
         q.goal = { x: HOME.x + Math.cos(a) * 600, y: HOME.y + Math.sin(a) * 600, z: q.z - 30 }
         carried.push(q)
       }
+      // The lure stays where the pointer holds it, and its velocity, which
+      // the birds read, falls away over some 0.2 s as the pointer rests.
+      if (lure) {
+        const e = Math.min(1, h / 0.2)
+        lure.x = held[0]
+        lure.y = held[1]
+        lure.z = held[2]
+        lure.vx -= lure.vx * e
+        lure.vy -= lure.vy * e
+        lure.vz -= lure.vz * e
+      }
       // Each bird's lift: up, tilted by its acceleration across its
       // heading, smoothed over 0.15 s.
       const V = flock.vel
@@ -550,10 +562,12 @@
       clock += h
     }
 
-    // The lure on the pointer: a hawk's shape the birds shy from, at
-    // (x, y, z) moving at (vx, vy, vz), until released.
+    // The lure on the pointer: a hawk's shape the birds shy from, held
+    // at (x, y, z) and moving at (vx, vy, vz) as the pointer moves, until
+    // released.
     function hold (x, y, z, vx, vy, vz) {
       if (!lure) lure = flock.hunter({ speed: 0, accel: 0, reach: 0, seen: 1.3, kind: 'hawk', phase: 'lure' })
+      held = [x, y, z]
       Object.assign(lure, { x, y, z, vx, vy, vz })
     }
 
@@ -561,6 +575,7 @@
       if (!lure) return
       flock.predators.splice(flock.predators.indexOf(lure), 1)
       lure = null
+      held = null
     }
 
     return {
@@ -956,7 +971,7 @@
           const c = centre()
           const D = Math.hypot(c.x, c.y, c.z - EYE)
           const [px, py, pz] = ray(x, y, D)
-          const k = Math.max(1e-3, W.clock - press.t)
+          const k = Math.max(RULE.substep, W.clock - press.t)
           const o = press.at || [px, py, pz]
           W.hold(px, py, pz, (px - o[0]) / k, (py - o[1]) / k, (pz - o[2]) / k)
           press.at = [px, py, pz]
