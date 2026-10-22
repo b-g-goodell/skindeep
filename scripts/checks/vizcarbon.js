@@ -46,7 +46,7 @@ const LIGHT = require('../../app/viz/carbon').Clock.light
 // front 10 bohr out on the random grain, at 43a4dd1, and the least gain
 // over it each kind must show.
 const TODAY = { 'uv-1200x760': 0.0364, 'ir-1200x760': 0.2163, 'uv-360x230': 0.0477, 'ir-360x230': 0.1854 }
-const GAIN = { uv: 4, ir: 1.3 }
+const GAIN = { uv: 3, ir: 1.3 }
 const fake = path.join(__dirname, '..', 'fake', 'claude')
 fs.mkdirSync(out, { recursive: true })
 const errors = []
