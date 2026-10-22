@@ -1801,11 +1801,19 @@ The rule now:
   by Newton's method on that map, its steps capped at 4 pixels and
   halved until the ray comes nearer, to 0.05 traced pixels. The change
   of the crossing with the image, J, is taken by differences.
-- The images are followed along the trail (`curve`): each place's from
-  the place before it, carried by J, and a piece between places halved
-  until neighbouring images lie within 3 traced pixels, at most six
-  times, so an image that swings round a hole is followed, not cut
-  across. A branch ends where its image is lost, in the shadow or
+- The images are followed along the trail (`curve`): each place's
+  guessed from the place before it, turned about the hole nearest it,
+  in units of its Einstein radius, as the place turns about that hole,
+  and moved along the line through the hole by J. For one hole the
+  image, the hole's point and the place's lie on one line, so the turn
+  is exact. A piece between places is halved while the guess lies
+  farther than 3 traced pixels from the last image, as often as that
+  asks, and six times more where the image found lies farther than
+  that, so an image that swings round a hole is followed, not cut
+  across, however near the hole's line the trail passes. A trail
+  through the line itself turns by pi at one point: at the last
+  halving the guess is the place's step carried by J, and its images
+  pass through the ring along the line. A branch ends where its image is lost, in the shadow or
   behind the camera, or where J passes 20, a stroke squeezed to a
   twentieth. A place with fewer branches than images to look for
   starts one: the weak field's outer image about each hole in front of
@@ -1832,37 +1840,55 @@ The rule now:
   hole, so the trails' images in it are found without that hole too.
 
 Cost, by the script of 2026-10-17's draw times (gravity3d alone at
-full activity, the median of draws 300 to 540), 1587565 and this tree
-in turn, three rounds, the host at a load of 40.2 to 52.8: a draw of 400
-by 380 took 11.2, 11.6 and 11.8 ms at 1587565 against 14.0, 13.0 and
-14.7 now, at 1200 by 760 17.1, 17.4 and 17.0 against 21.9, 20.4 and
-21.5, and at 360 by 230 9.1, 9.6 and 9.2 against 12.2, 11.3 and 13.9.
-Of that, the images of five or six trails, 305 to 402 images a draw,
-took 0.9 to 1.7 ms, and in a fourth round, timed by parts, the screen
-layers' strokes and reads 0.4 to 0.6 ms and the trace 0.7 to 1.2 ms
-more, for its reads of the extra planes. A first build
-solved each image to 0.01 pixels and pieces to 2 pixels: it traced 2.3
-times the rays of this one on the staged trail.
+full activity, the median of draws 300 to 540), 1587565, the first
+follower (dde46e4) and this tree in turn, three rounds, the host at a
+load of 29.5 to 43.5: a draw of 400 by 380 took 11.1, 9.8 and 11.5 ms
+at 1587565, 13.1, 12.8 and 15.2 with the first follower and 15.9, 14.9
+and 15.5 now, at 1200 by 760 17.7, 14.9 and 18.1, 21.7, 23.7 and 22.6,
+and 18.5, 20.9 and 20.2, and at 360 by 230 9.5, 8.4 and 8.9, 12.2,
+13.4 and 13.9, and 11.5, 12.1 and 13.9. The images of five to eight
+trails, 307 to 707 images a draw, took 0.7 to 2.7 ms now against 1.0
+to 2.8 with the first follower: the turn about the hole costs no
+more than the arcs it now draws. In a fourth round of the first
+build, timed by parts, the screen layers' strokes and reads took 0.4
+to 0.6 ms and the trace 0.7 to 1.2 ms more, for its reads of the
+extra planes. A build before that solved each image to 0.01 pixels
+and pieces to 2 pixels: it traced 2.3 times the rays of the first
+follower on the staged trail.
 
 Checked by `test/viz-trace.test.js`: a point in front of the hole has
 its one image where a straight ray shows it, and behind the hole, off
 its line and near it, both images' rays meet it to 0.05 pixels, the
 outer beyond the weak field's Einstein radius on its side and the
-inner nearer the hole on the other. The staged trail, 28 and 14 above
-the hole's line, has an outer image along all of it and an inner one,
-neighbouring images 3 pixels apart or less, each meeting its place,
-and a curve that runs behind the camera has one image, unbroken
-across the traced frame, which ends past its edge. A dot on a screen
-plane behind the hole is drawn where it is, and the same dot on a
-plane is bent away. Each fails with its behaviour removed: image
-returning the unbent place, and the screen plane read as a plane.
-`scripts/checks/vizlens.js` stages that trail at 28 and 14 in the full
-pane and wants, of the pixels that differ from the scene without it
-by 4 or more, those above the hole one 8-connected piece with one run
-of pixels down each column, and those below one piece. This tree read
-one piece of 4179 and of 4158 pixels above, one run a column, and one
-piece of 1477 and of 1885 below. At 1587565 the first frame read two
-pieces and two runs above and six pieces below.
+inner nearer the hole on the other. The staged trail, 28, 14, 3, 1 and
+0.3 above the line of the hole of 900, and 28, 3, 1 and 0.3 above that
+of a hole of 3000 at 400, has an outer image along all of it and an
+inner one, neighbouring images 3 pixels apart or less, each meeting
+its place, and a curve that runs behind the camera has one image,
+unbroken across the traced frame, which ends past its edge. A dot on
+a screen plane behind the hole is drawn where it is, and the same dot
+on a plane is bent away. Each fails with its behaviour removed: image
+returning the unbent place, the screen plane read as a plane, and the
+follower of the first build, which at 1 above the hole of 900 broke
+into four branches.
+
+`scripts/checks/vizlens.js` stages that trail at 28, 14, 3 and 1 in
+the full pane and takes the pixels that differ from the scene without
+it by 4 or more. At 28 and 14 it wants those above the hole's row one
+8-connected piece with one run of pixels down each column, and those
+below one piece. At 3 and 1 the inner image's ends reach the hole's
+row beside the straight arms, and a cut at the row splits whole
+curves: at 3, pieces of 4839, 22 and 8 above, the small ones the inner
+image's tips. There it wants, over the frame, one or two pieces, a
+pixel in every bin of 5 degrees about the hole, and one run down each
+column above the row 8 pixels over the hole's. This tree read one
+piece of 4176 and of 4146 pixels above at 28 and 14, one run a column,
+and one piece of 1469 and of 1878 below, and at 3 and 1 two pieces,
+4839 and 2424, and 5124 and 2619, no empty bin and one run. At 1587565
+the first frame read two pieces and two runs above and six pieces
+below. With the follower of the first build the frame at 1 read four
+pieces, 2312, 1652, 1033 and 431, and 38 empty bins, the arcs over
+and under the hole cut where the images swing round it.
 
 Rejected:
 
