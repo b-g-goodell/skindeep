@@ -20,8 +20,8 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
 (issue #158) and for its flashes and its slowed clocks (issues #164
-and #166), and 2026-10-18 for its field's calibration (issue #169),
-and for the gravitational waves of the Gravity modes
+and #166), and 2026-10-18 for its field's calibration (issue #169) and its
+photons at their true scale (issue #167), and for the gravitational waves of the Gravity modes
 (issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
 for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
@@ -680,12 +680,12 @@ ruling's starting point by `carbon-photon.md`.
   brightness and never cancel. Where two thin rings cross, the drawn
   brightness adds amplitudes, and crossings are brief.
 - Visible fronts (question 2, revised) in their hue, the limb of the
-  sphere and two crests behind it at a spacing that grows as
-  $\lambda^{0.35}$, a symbol: the pane prints, for example, "538.0 nm =
-  699 x this atom". Ultraviolet fronts sharpen the picture and lift its
-  contrast across a band as wide as their crest spacing. Infrared fronts
-  refract it, shifting pixels along the radius by a ripple of their
-  spacing, heat haze. Both are one pass over the atom's pixels: every
+  sphere as the packet's leading edge and a trail inside it,
+  $\lambda/10^4$ long, with no crest (see 2026-10-18: Carbon's photons
+  at their true scale, which replaced the symbolic crests). Ultraviolet
+  fronts sharpen the picture and lift its contrast across that trail.
+  Infrared fronts refract it, shifting pixels along the radius by one
+  lobe across it, heat haze. Both are one pass over the atom's pixels: every
   front adds to tables by integer radius and pattern kind, and a pixel
   takes its radius's tables times each kind's shape in its direction,
   radii with no front skipped. A faint fixed grain lies under the atom
@@ -1724,3 +1724,121 @@ subagent's start leaves it, at rest for good, and $2p3p\,{}^3S_1$).
 - Kept: the cloud, counted per cell, flickers far above three a second
   from its seethe, in wall time, and its stipple's motion: idle, with
   no fronts, a cell reads 5. #165 replaces the seethe.
+
+## 2026-10-18: Carbon's photons at their true scale
+
+Owner, 2026-10-16, issue #167: "no crests behind a ring indicating a
+photon, i would prefer some representation that more correclty and
+realisticially takes the wavelength into account." The crests behind a
+visible front, at a spacing of $4.5\,(\lambda/119\ \mathrm{nm})^{0.35}$
+pixels, go, and so does the readout's "crest spacing a symbol".
+
+- The near zone. Every length is the line's vacuum wavelength, the
+  light's at the atom (NIST's air wavelength stays on the spectrum's
+  axis and in the captions). On the light clock of $c/(5\times10^{17})$,
+  11.33 bohr a second, a period is $\lambda$ over that speed:
+
+  | Line | $\lambda$, vacuum | in bohr | over the view's 24 bohr | $\lambda/2\pi$, bohr | period on the light clock | trail, $\lambda/10^4$ |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | VUV, $2p4d\,{}^3F^o_2$ to $2p^2\,{}^3P_1$ | 119.43 nm | 2257 | 94 | 359 | 199 s | 0.226 bohr |
+  | $2p3s\,{}^3P^o_1$ to $2p^2\,{}^3P_1$ | 165.74 nm | 3132 | 130 | 498 | 276 s | 0.313 bohr |
+  | visible, $2p4p\,{}^1P_1$ to $2p3s\,{}^1P^o_1$ | 538.18 nm | 10170 | 424 | 1619 | 898 s | 1.017 bohr |
+  | near IR, $2p3p\,{}^3P_2$ to $2p3s\,{}^3P^o_2$ | 909.73 nm | 17191 | 716 | 2736 | 1517 s | 1.719 bohr |
+  | edge of the spectrum | 10 $\mu$m | 188973 | 7874 | 30076 | 4.6 h | 18.9 bohr |
+  | ground term, ${}^3P_1$ to ${}^3P_0$ | 609 $\mu$m | $1.15\times10^7$ | $4.8\times10^5$ | $1.8\times10^6$ | 282 h | 1151 bohr |
+
+  The periods are five times the issue's, which predate the light
+  clock's slowing (#166). A front is detected where it reaches the
+  pane's nearest edge: 24.5 bohr from the site in a pane of 1200 by
+  760, 33.7 in one of 360 by 230, 37.4 in one of 240 by 460 (the edge
+  over the atom's pixels a bohr). The shortest line, 118.88 nm, has
+  $\lambda/2\pi$ = 358 bohr. So every front lives and dies in the near
+  zone, $r \ll \lambda/2\pi$, where the field of the jump's oscillating
+  multipole is quasi-static and has one phase across the whole view: no
+  crest exists behind any front, at any zoom, and in the 2.2 to 3.3 s a
+  front is in flight its phase moves by at most $2\pi \times 3.3/198$,
+  a sixtieth of a turn.
+- The representation. A visible front is the packet's leading edge, the
+  limb as before, and a trail inside it, $\lambda/T$ long with
+  $T = 10^4$ (`TRAIL`), drawn in three bands of a third each at 0.42,
+  0.24 and 0.10 of the edge's brightness, fading inward. The trail's
+  length is a length standing for the wavelength, in the true ratio of
+  the lines' wavelengths (538.2 / 119.4 = 4.5) and in the view's bohr
+  against the scale bar by the factor $T$, which the pane prints:
+  "fronts: an edge and a trail $\lambda$ / 1e4 long, $\lambda$ in
+  vacuum", kept in a narrow atom, written over no atom in a small pane,
+  as the scale bar is not. Nothing is drawn ahead of the edge, where no
+  field has come, and nothing oscillates, so no oscillation runs off
+  the light clock. $T$ puts the 538 nm trail at 13 pixels in a pane of
+  1200 by 760, about the old two crests' 15, and the visible lines' at
+  11 to 19.
+- The readout. The drawn atom's photon now states "538.2 nm vac = 699
+  x this atom, 424 x the view: in phase across it" and "a period 15 min
+  on the light clock, no crest in view". The true comparison the pane
+  printed before stays, in vacuum.
+- The ultraviolet and infrared passes (item 4) are re-based on the same
+  trail: each acts behind the edge only, across $\lambda/T$ and at
+  least `BAND_MIN` = 1.6 pixels, the edge's stroke, so a 119 nm band in
+  a small pane does not fall under a pixel. The sharpening falls from
+  the edge inward as $1-u$, $u$ the share of the band. The haze's
+  ripple at the crest spacing, a spatial oscillation at a false
+  wavelength, becomes one lobe of displacement, $16u(1-u)$ pixels per
+  unit amplitude, 4 at its peak as the ripple's was: a refracting
+  shell. Before, both bands also reached a band's width ahead of the
+  edge. An infrared line past 2 $\mu$m has a trail over 3.8 bohr, and
+  one at 10 $\mu$m 18.9, most of the view, uncapped: its amplitude
+  $\sqrt{\nu/\nu_{538}}$ keeps it faint.
+- What #168 inherits: the grain under the atom, untouched. The
+  harmonic pass by integer radius, untouched. A band that is the trail,
+  $\lambda/10^4$ behind the edge and at least 1.6 pixels, and two
+  strengths to raise, the sharpening's contrast lift (0.5 of the
+  Laplacian and 0.35 of the pixel per unit amplitude) and the haze's
+  peak shift (4 pixels per unit amplitude). Lengths are in bohr, as its
+  item 4 asks.
+- Checked by `test/viz-carbon.test.js`: for the 119.4 and 538.2 nm
+  lines, the wavelengths in bohr against the issue's 2256 and 10170, 94
+  and 424 times the view, the periods against its 40 and 180 s times 5,
+  the trails and their ratio 4.507, no crest in the source, and the
+  invisible pass run on a fake canvas, whose changed pixels lie in the
+  band behind the edge, the haze one lobe of one sign. With the old
+  profiles restored the pass's test fails, a 119.4 nm front changing
+  pixels to 64 against its edge at 60.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`
+  at 3a54b9c, before, loads (1-minute `/proc/loadavg`) 31.07 to 66.16,
+  and after, 41.69 to 53.07: both pass, every scene 0 general and 0 red
+  flashes a second within one frame. Nothing is drawn across the view,
+  so no large-area change enters. The largest share of a quarter field
+  within a frame, before and after: full 0.281 and 0.183, moderate
+  0.389 and 0.146, a prompt 0.139 and 0.103, the split of three 0.172
+  and 0.061, the small pane 0.196 and 0.061, and in the pulse's scenes,
+  whose cloud turns, 0.557 and 0.587, 0.480 and 0.554 at B_MAX, full at
+  B_MAX 0.317 and 0.325. Within 0.1 s: full 5 and 0, moderate 3 and 0,
+  full at B_MAX 7 general and 8 red and 7 and 0, a prompt 6 red and 0,
+  the pulse's 10 and 10, the rest 0 and 0. A cell's most a second fell
+  in every scene but idle, the subagent's and the pulse at B_MAX, held
+  at 5, 8 and 16. The
+  fronts in flight held, 148 and 152 at full activity, the frame's mean
+  light 0.0459 and 0.0432.
+- The frames, looked at: a visible front in a pane of 1200 by 760 is a
+  thin limb in its hue with a soft band inside it, 16 to 19 pixels for
+  the red lines at 12.75 pixels a bohr, and in one of 360 by 230, at
+  2.06, a ring with a trail of 1.8 to 3 pixels about the cloud. The
+  ultraviolet fronts show as thin rings of crisper grain and the
+  infrared ones as broad shells of shifted grain, plain only in a
+  difference of two frames: as faint as before, which #168 takes up.
+
+Rejected:
+
+- A true-scale inset, the atom a point and the wave's crests at the
+  true $\lambda$: on the light clock a front is detected 25 to 38 bohr
+  out, 2 nm, so in an inset of a micrometre the packet is a dot for as
+  long as it flies. Crests show there only on a second clock, hundreds
+  of times faster, printed, and in a box over the cloud that a small
+  pane has no room for.
+- The near field drawn across the view at the line's frequency: at its
+  true period, 198 s to 282 h, nothing moves while a front flies. At a
+  multiple large enough to see, it is the made-up timing the owner
+  refused, and with dozens of fronts at one site a large-area luminance
+  change against #164's bound.
+- A trail on a law other than linear, $\lambda^{0.35}$ or a logarithm:
+  it breaks the true ratio of the wavelengths.

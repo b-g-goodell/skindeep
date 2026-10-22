@@ -10,8 +10,11 @@
 // clock, painted by one M component's radiation pattern, its amplitude
 // from h nu and 1/r, collapsing to one detected direction at the pane's
 // edge, which lights the spectrum. Visible fronts are drawn in their
-// hue, ultraviolet ones sharpen the picture and infrared ones refract it
-// as heat haze, by one pass over the atom's pixels (see Warp). One atom
+// hue, as the packet's leading edge and a trail behind it lambda / TRAIL
+// long, no crest: lambda is 94 to 5x10^5 times the view, so the view is in
+// the near zone, in one phase. Ultraviolet fronts sharpen the picture and
+// infrared ones refract it as heat haze across the same trail, by one
+// pass over the atom's pixels (see Warp). One atom
 // of the ensemble is drawn: its cloud, Monte Carlo stippling of |psi|^2
 // for its M_L about the chosen axis z, flowing about the axis as
 // Madelung's probability current says for m != 0, the core from the
@@ -69,12 +72,15 @@
   const SPIN_MAX = 3e17 / LIGHT
   // The fronts: at most FRONTS in flight, the drawn amplitude 1 at R0
   // bohr for a 538 nm front in its pattern's brightest direction, the
-  // trailing crests drawn behind a visible front, and the points and
-  // seconds of the source's flash, in wall time.
+  // factor by which a front's trail is shorter than its vacuum
+  // wavelength (issue #167, decision 0015), the least width in pixels
+  // of the invisible fronts' band, the visible edge's stroke, and the
+  // points and seconds of the source's flash, in wall time.
   const FRONTS = 500
   const R0 = 8
   const NU_REF = 1 / 538.18
-  const CRESTS = 3
+  const TRAIL = 1e4
+  const BAND_MIN = 1.6
   const SOURCE_PTS = 700
   const SOURCE_T = 0.4
   // The view's radius, bohr: fixed, so every front keeps the light
@@ -116,6 +122,7 @@
   const THETA = U(0x398)
   const DOTS = U(0x2026)
   const DEG = U(0xb0)
+  const LAM = U(0x3bb)
 
   // A level is in the ground term.
   const ground = l => l.conf === '2s2.2p2' && l.term === '3P'
@@ -802,23 +809,45 @@
 
   // One photon's front, from the site, on the light clock: line k,
   // component q about the unit axis n its atom had, born at t: it keeps
-  // that pattern as the atom turns on. Its amplitude follows the physics: intensity
-  // h nu times the pattern over r^2, drawn as its square root, so
-  // sqrt(nu / nu_538) sqrt(pattern) R0 / r, 1 at most. Its crests'
-  // spacing on screen grows as lambda^0.35, a symbol.
+  // that pattern as the atom turns on. Its amplitude follows the
+  // physics: intensity h nu times the pattern over r^2, drawn as its
+  // square root, so sqrt(nu / nu_538) sqrt(pattern) R0 / r, 1 at most.
+  // Its wavelength is the vacuum one, the light's at the atom: 94 to
+  // 5x10^5 times the view's radius. A front is detected 25 to 38 bohr
+  // from the site, by the pane, and lambda / 2 pi is 358 bohr at the
+  // shortest line, so every front lives in the near zone, where the
+  // field has one phase across the view and no crest. On the light clock
+  // its period is lambda / Clock.light, 198 s to 282 h. So a front is
+  // drawn as the packet's leading edge and a trail behind it, lambda /
+  // TRAIL long, the pane printing TRAIL: lengths in the true ratio of the
+  // lines' wavelengths, against the scale bar by that factor. Nothing is
+  // drawn ahead of the edge, where no field has come, and nothing
+  // oscillates.
   const Front = {
     make (k, ln, q, t, n = Z) {
-      return { k, ln, q, t, n, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, gap: 4.5 * Math.pow(wl(ln) / 119, 0.35) }
+      return { k, ln, q, t, n, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, trail: Front.trail(ln) }
     },
+
+    // The line's vacuum wavelength, bohr.
+    lambda: ln => ln.vac / D.bohrNm,
+    // Its trail, bohr: lambda / TRAIL.
+    trail: ln => Front.lambda(ln) / TRAIL,
+    // Its period on the light clock, seconds on screen.
+    period: ln => Front.lambda(ln) / Clock.light,
 
     // Its radius, bohr, at time now.
     radius: (f, now) => Clock.light * (now - f.t),
 
-    // The visible fronts, in their hue: each the limb of its sphere and
-    // of CRESTS - 1 crests behind it, as arcs whose brightness is the
-    // drawn amplitude in the arc's direction, cos(Theta) = cos(phi) ax +
+    // The trail's brightness, as a share of the edge's, in its three
+    // thirds from the edge inward.
+    FADE: [0.42, 0.24, 0.1],
+
+    // The visible fronts, in their hue: each the limb of its sphere, the
+    // edge, and its trail inside it in three bands of a third of its
+    // length each, fading inward, as arcs whose brightness is the drawn
+    // amplitude in the arc's direction, cos(Theta) = cos(phi) ax +
     // sin(phi) ay on the limb, [ax, ay] its axis on the screen. Arcs
-    // batched by colour and brightness.
+    // batched by colour, the trail's width and brightness.
     draw (g, fronts, fr, now) {
       const N = 36
       const bins = new Map()
@@ -826,21 +855,28 @@
         if (!f.vis) continue
         const Rb = Front.radius(f, now)
         const R = Rb * fr.k
+        if (R <= 1) continue
         const a0 = Math.min(1, f.amp * R0 / Math.max(Rb, 0.1))
         const v = fr.turn(f.n[0], f.n[1], f.n[2])
         const ax = v.x
         const ay = v.y
-        let list = bins.get(f.ln.rgb)
-        if (!list) bins.set(f.ln.rgb, list = [])
-        for (let w = 0; w < CRESTS; w++) {
-          const r = R - w * f.gap
-          if (r <= 1) break
-          const fade = a0 * Math.exp(-w / 1.2)
-          for (let j = 0; j < N; j++) {
-            const p0 = 2 * Math.PI * j / N
-            const p1 = 2 * Math.PI * (j + 1) / N
-            const b = Math.round(10 * fade * shape(f.kind, Math.cos((p0 + p1) / 2) * ax + Math.sin((p0 + p1) / 2) * ay))
+        // The trail's thirds, pixels, those inside the site dropped.
+        const L = Math.min(f.trail * fr.k, R)
+        const w3 = L / 3
+        const key = f.ln.rgb + '|' + Math.round(4 * w3)
+        let bin = bins.get(key)
+        if (!bin) bins.set(key, bin = { rgb: f.ln.rgb, w: w3, rings: [[], [], [], []] })
+        const radii = [R]
+        if (w3 >= 0.5) for (let s = 0; s < 3; s++) radii.push(R - (s + 0.5) * w3)
+        for (let j = 0; j < N; j++) {
+          const p0 = 2 * Math.PI * j / N
+          const p1 = 2 * Math.PI * (j + 1) / N
+          const e = a0 * shape(f.kind, Math.cos((p0 + p1) / 2) * ax + Math.sin((p0 + p1) / 2) * ay)
+          for (let s = 0; s < radii.length; s++) {
+            const b = Math.round(20 * e * (s ? Front.FADE[s - 1] : 1))
             if (b <= 0) continue
+            const r = radii[s]
+            const list = bin.rings[s]
             const path = list[b] || (list[b] = new Path2D())
             path.moveTo(fr.cx + r * Math.cos(p0), fr.cy - r * Math.sin(p0))
             path.arc(fr.cx, fr.cy, r, -p0, -p1, true)
@@ -848,13 +884,15 @@
         }
       }
       g.save()
-      g.lineWidth = 1.6
-      for (const [rgb, list] of bins) {
-        g.strokeStyle = rgb
-        list.forEach((path, b) => {
-          if (!path) return
-          g.globalAlpha = b / 10
-          g.stroke(path)
+      for (const bin of bins.values()) {
+        g.strokeStyle = bin.rgb
+        bin.rings.forEach((list, s) => {
+          g.lineWidth = s ? bin.w : BAND_MIN
+          list.forEach((path, b) => {
+            if (!path) return
+            g.globalAlpha = b / 20
+            g.stroke(path)
+          })
         })
       }
       g.restore()
@@ -884,12 +922,24 @@
   // harmonics, turned to its axis, to tables by integer radius, and a
   // pixel sums the tables at its radius against the harmonics of its own
   // angle. The cost does not grow with the number of axes.
-  // Ultraviolet fronts sharpen the picture and lift its contrast across a
-  // band as wide as the front's crest spacing. Infrared fronts refract
-  // it, shifting pixels along the radius by a ripple of that spacing, as
-  // heat haze does. Radii with no front are skipped.
+  // Each acts across the front's trail, lambda / TRAIL behind its edge
+  // and nothing ahead of it, at least BAND_MIN pixels wide, its strength
+  // falling from the edge inward: Warp.profile. Ultraviolet fronts
+  // sharpen the picture and lift its contrast there. Infrared fronts
+  // refract it, shifting pixels along the radius by one smooth lobe
+  // across the trail, as a refracting shell does: no ripple, since in the
+  // view the field has no crest. Radii with no front are skipped.
   const Warp = {
     tables: null,
+    // The band's width in pixels at k pixels a bohr.
+    width: (f, k) => Math.max(BAND_MIN, f.trail * k),
+    // At u, the share of the band from the edge (0) inward (1): the
+    // sharpening's share of the front's amplitude, and the shift's in
+    // pixels per unit amplitude. Zero outside the band.
+    profile (f, u) {
+      if (u < 0 || u > 1) return 0
+      return f.uv ? 1 - u : 16 * u * (1 - u)
+    },
     apply (g, fronts, fr, box, now) {
       const some = fronts.filter(f => !f.vis)
       if (!some.length || box.w < 4 || box.h < 4) return 0
@@ -908,9 +958,9 @@
         const Rb = Front.radius(f, now)
         const R = Rb * fr.k
         const a = Math.min(1.5, f.amp * R0 / Math.max(Rb, 0.1))
-        const w = f.uv ? 0.8 * f.gap : 1.5 * f.gap
-        const lo = Math.max(0, Math.floor(R - 2.5 * w))
-        const hi = Math.min(rmax - 1, Math.ceil(R + w))
+        const w = Warp.width(f, fr.k)
+        const lo = Math.max(0, Math.ceil(R - w))
+        const hi = Math.min(rmax - 1, Math.floor(R))
         if (hi < lo) continue
         used++
         // The front's harmonics about its axis on the screen.
@@ -925,9 +975,7 @@
         }
         const tab = f.uv ? T.S : T.Dp
         for (let r = lo; r <= hi; r++) {
-          const x = (r - R) / w
-          const env = Math.exp(-x * x)
-          const e = f.uv ? a * env : 4 * a * env * Math.sin(2 * Math.PI * (r - R) / f.gap)
+          const e = a * Warp.profile(f, (R - r) / w)
           for (let k = 0; k < H2; k++) tab[k][r] += e * c[k]
           T.on[r] = 1
         }
@@ -1742,19 +1790,24 @@
         const ln = lines[last.k]
         rows.push(['#c9d3e6', 'its photon ' + DELTA + 'M=' + (last.q > 0 ? '+' : '') + last.q + ' ' + ln.type + ', ' + patternName(ln.type, last.q), visible(ln) ? ln.rgb : '#aab3c5'])
         rows.push(['#8c97ad', src && src.pts ? 'source: ' + PSI + 'f*' + PSI + 'i, + mint, - pink' : 'source: a two-electron jump, not drawn'])
-        rows.push(['#8c97ad', wlText(wl(ln)) + ' = ' + Math.round(wl(ln) / (size(levels[ln.u]) * D.bohrNm)) + TIMES + ' this atom: crest spacing a symbol'])
+        // Its true lengths and period, in vacuum: no crest in the view.
+        const vac = wlText(ln.vac) + ' vac = ' + Math.round(ln.vac / (size(levels[ln.u]) * D.bohrNm)) + TIMES + ' this atom'
+        const many = Math.round(Front.lambda(ln) / view) + TIMES + ' the view'
+        rows.push(['#8c97ad', [vac + ', ' + many + ': in phase across it', vac + ', ' + many, vac]])
+        rows.push(['#8c97ad', ['a period ' + timeText(Front.period(ln)) + ' on the light clock, no crest in view', 'period ' + timeText(Front.period(ln)) + ' on the light clock']])
       }
       const rate = born.length
       const rest = [
         ['#7d89a1', ENSEMBLE[0]],
         ['#7d89a1', 'events: NIST rates / ' + sci(EVENT) + ', light: c / ' + sci(LIGHT) + ' = ' + Clock.light.toFixed(1) + ' ' + A0 + '/s'],
-        ['#7d89a1', 'field ' + Math.round(100 * field) + '%, ' + rate + ' photons/s, ' + fronts.length + ' fronts']
+        ['#7d89a1', 'field ' + Math.round(100 * field) + '%, ' + rate + ' photons/s, ' + fronts.length + ' fronts'],
+        ['#7d89a1', ['fronts: an edge and a trail ' + LAM + ' / ' + sci(TRAIL) + ' long, ' + LAM + ' in vacuum', 'fronts: edge, trail ' + LAM + ' / ' + sci(TRAIL), 'trail ' + LAM + ' / ' + sci(TRAIL)]]
       ]
       const fit = a.w - 14
       // A narrower atom keeps the level, its clock, its photon and the
       // rate. Each row, then the axis's name, then the scale bar, is
       // written where it overlaps no text before it, or left out.
-      const keep = a.w < 320 * T ? [rows[0], rows[1], ...fieldRows.slice(0, 2), ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
+      const keep = a.w < 320 * T ? [rows[0], rows[1], ...fieldRows.slice(0, 2), ...rows.filter(r => r[2]), rest[2], rest[3]] : rows.concat(rest)
       let j = 0
       for (const [col, t, swatch] of keep) {
         const y = a.y + (11 + 12 * j) * T
@@ -2272,7 +2325,7 @@
     }
   }
 
-  const api = { Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
+  const api = { TRAIL, BAND_MIN, Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
