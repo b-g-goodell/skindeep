@@ -40,6 +40,29 @@ function quote (arg) {
   return /^[A-Za-z0-9_@%+=:,./-]+$/.test(arg) ? arg : "'" + arg.replace(/'/g, "'\\''") + "'"
 }
 
+// A command line as the log keeps it: the program, each option's name,
+// and each value's length, never a value, since an argument may carry a
+// password, a key or a prompt and logs get attached to bug reports. own:
+// the indices of the words the app put there itself, kept whole, such as
+// its injected --settings FILE. A long option keeps its name and an
+// attached value's length (--key=<6>), a short one its letter (-p<6>).
+// Every word after -- is a value.
+const OPTION = /^--[A-Za-z0-9][A-Za-z0-9_.-]*$/
+function logged (cmd, own = []) {
+  const keep = new Set(own)
+  let operands = false
+  return cmd.map((w, i) => {
+    if (i === 0 || keep.has(i)) return quote(w)
+    if (operands) return `<${w.length}>`
+    if (w === '--') { operands = true; return w }
+    const eq = w.indexOf('=')
+    if (eq > 0 && OPTION.test(w.slice(0, eq))) return `${w.slice(0, eq)}=<${w.length - eq - 1}>`
+    if (OPTION.test(w)) return w
+    if (/^-[A-Za-z0-9]/.test(w)) return w.length === 2 ? w : `${w.slice(0, 2)}<${w.length - 2}>`
+    return `<${w.length}>`
+  }).join(' ')
+}
+
 // The child's argv as the kernel sees it, after any exec in a wrapper.
 function liveCmdline (pid) {
   try {
@@ -63,4 +86,4 @@ function shownCmdline (cmdline) {
   return cmdline.split(' ').map(w => w === home || w.startsWith(home + '/') ? '~' + w.slice(home.length) : w).join(' ')
 }
 
-module.exports = { APP, label, title, liveCmdline, tildify, shownCmdline, quote }
+module.exports = { APP, label, title, liveCmdline, tildify, shownCmdline, quote, logged }
