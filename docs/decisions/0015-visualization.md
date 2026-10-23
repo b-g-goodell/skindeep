@@ -28,8 +28,8 @@ particles of various wavelengths interacting instead of just one
 particle of one wavelength, and procedurally generated walls of
 potential instead of always using the same 2 apertures"), and
 2026-10-22 for the Savannah hunt mode and the flocking core it shares
-with the flocking modes to come (issue #186), and for the Sunset
-clouds mode (issue #189).
+with the flocking modes to come (issue #186), for the Murmuration
+mode (issue #187), and for the Sunset clouds mode (issue #189).
 
 ## Context
 
@@ -66,7 +66,7 @@ butterchurn-presets is MIT for its conversion only.
   shell, web, agent, other), a sweep on prompt submit and on stop, a low
   drone while idle, brightness from `tokens.out_rate`. Every mode draws
   from it.
-- Modes: nineteen, listed once in `app/viz/modes.js`, which the main process
+- Modes: twenty, listed once in `app/viz/modes.js`, which the main process
   and the page both load, in the order they cycle and the menu lists
   them:
   - Drift, Rings, Plasma, Star dust and Whirlpool: butterchurn presets
@@ -84,7 +84,7 @@ butterchurn-presets is MIT for its conversion only.
     examples of the Superscope's built-in list over a fade, and the Dot
     Plane in its default colours.
   - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum, Carbon, Savannah
-    hunt and Sunset clouds: the project's
+    hunt, Murmuration and Sunset clouds: the project's
     procedural modes, one file each, no image or video. Each reacts to
     its pane's events, a prompt, a tool call in its class's colour, a
     stop, a subagent, and calms at idle. Fern: a night garden of fronds,
@@ -118,8 +118,11 @@ butterchurn-presets is MIT for its conversion only.
     wildebeest and zebra on a dry plain, seen from a helicopter, run
     down by a cheetah, a pride of lions or a pack of wild dogs, the herd
     and the predators steered by the flocking core `app/viz/flock.js`
-    (see 2026-10-22: Savannah hunt). Sunset clouds: cumulus over the
-    plains of the US Southwest as the sun sets, in watercolour after
+    (see 2026-10-22: Savannah hunt). Murmuration: a murmuration of
+    starlings over a clearing in a forest, seen from the forest floor
+    looking up through the canopy, folding and turning as falcons dive
+    at it, by the same core in three dimensions (see 2026-10-22:
+    Murmuration). Sunset clouds: cumulus over the plains of the US Southwest as the sun sets, in watercolour after
     Georgia O'Keeffe, each cloud a volume lit through by the low sun
     (see 2026-10-22: Sunset clouds). With the sound output alone,
     which brings no events, a rise of its loudness counts as one.
@@ -173,6 +176,10 @@ butterchurn-presets is MIT for its conversion only.
     drifts back to the herd after the release. A click: a cheetah
     breaks cover where it lands and sprints at the nearest animal (see
     2026-10-22: Savannah hunt).
+  - Murmuration: a drag holds a hawk's lure under the pointer, at the
+    flock's distance, and the starlings shy from it, a hole following
+    the pointer through the flock. A click: a peregrine stoops on the
+    bird nearest it (see 2026-10-22: Murmuration).
   - Sunset clouds: a drag blows the clouds under it along, and they
     keep a little way on after the release. A click in the sky raises
     a cloud there, a click on the land drops clean water on it (see
@@ -235,7 +242,7 @@ page reads it, and nothing of it needs to reach the main process. A
 click that stepped the mode would take the click from the modes. The
 pointer's tone, for the modes that only draw the signal, makes each of
 them answer with no code of its own, and it is kept out of the events
-so a procedural mode never takes it for one. A flyout keeps the drop-down short: nineteen more
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: twenty more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -1649,9 +1656,11 @@ the flocking modes and by the tests, and it draws nothing. Its
 interface: `new Flock({ dim, cap, params, rnd })`, `add`, `remove`,
 `hunter(o)` for a predator, `pick(q, how)`, `centre()`, and
 `step(dt)`, which returns the prey taken. `dim` is 2 for a plane, where
-z stays 0, or 3 for space, so the Murmuration's sky and the Bait ball's
-water use it unchanged. `rnd` takes a seeded generator, mulberry32 as
-`quantum.js` has it.
+z stays 0, or 3 for space, for the Murmuration's sky and the Bait
+ball's water. `rnd` takes a seeded generator, mulberry32 as
+`quantum.js` has it. The parameters the Murmuration added are off by
+default, so a flock that sets none moves as before, bit for bit (see
+2026-10-22: Murmuration).
 
 - Each prey steers by separation, alignment and cohesion with its
   neighbours (Reynolds, "Flocks, Herds, and Schools", SIGGRAPH 1987),
@@ -1693,8 +1702,8 @@ water use it unchanged. `rnd` takes a seeded generator, mulberry32 as
   $\min(1.5, d/v)$ seconds ahead at its top speed and steering limit,
   or heads to a goal point when it has none, and takes the target
   within its reach. One predator or a small group both use it.
-- `step(dt)` advances in substeps of at most 1/30 s, so the motion is
-  the same at any frame rate.
+- `step(dt)` advances in substeps of at most 1/30 s, or the mode's
+  `substep`, so the motion is the same at any frame rate.
 - `test/viz-flock.test.js`, seeded, by distance and by rank: 120 prey
   held 120 s with no predator stay one group, linked by steps under 14
   m, their spread within 1.5 times the start's, in the plane and in
@@ -1788,6 +1797,154 @@ Rejected:
   so no hunt would reach its end.
 - Fear without a fade of its own, only from sight: the herd would calm
   the moment a predator passed, and no alarm would run ahead of it.
+
+## 2026-10-22: Murmuration
+
+Issue #187, the second of the owner's three flocking modes (see
+2026-10-22: Savannah hunt): a murmuration of starlings answering
+falcons, seen from the ground at a clearing in a forest. The design is
+the builder's.
+
+### The core in space
+
+`app/viz/flock.js` as #186 left it ran a flock of 500 in space by rank
+at about 78 ms a simulated second, 70 percent of it in the neighbour
+search, too slow for thousands of starlings. The Murmuration adds five
+parameters, each off by default, so a flock that sets none moves as
+before, bit for bit: a seeded run of the Savannah's rule in the plane
+and of the rank rule in the plane and in space gives the same hash of
+positions, velocities and fears at the core of #186 and at this one.
+
+- `substep`: the longest substep, 1/30 s unless the mode sets it.
+- `relist`: the substeps between searches for each prey's neighbours.
+  Between them a prey keeps the neighbours it found and measures them
+  again, as a starling keeps track of its seven. Any add or remove
+  forces a search, since indices move.
+- `level`: in space, a steer to level flight, faded by fear, so a
+  flock stays a thin sheet, as the real ones are.
+- `gatherR`: the radius past which the rejoin pull acts, which the core
+  sizes for a group packed in the plane.
+- `push`: a steer per prey that the mode sets and the core adds as it
+  stands, the length its weight, for a wave of turning the mode
+  drives.
+
+With `substep` 1/20 s and `relist` 3, the Murmuration's 600 birds cost
+about 27 ms a simulated second on this host.
+
+### The mode
+
+`app/viz/murmuration.js`, a Canvas2D mode on a CPU canvas. Its
+simulation, the flock, the waves, the attacks and the clock, is a
+`world` with no canvas, which the tests run too.
+
+- The camera stands on the forest floor at the clearing's edge, the eye
+  1.7 m up, and looks north, up at 36 degrees, through a lens of focal
+  length 0.6 times the pane's longer side. Two trees on each side lean
+  in toward the zenith from the pane's edges, 9 to 20 m away, their
+  crowns and the boughs of the trees overhead framing the top corners,
+  and the treeline across the clearing, 80 to 140 m away in two hazier
+  ranks, the bottom. The sky over the clearing fills the rest. The
+  forest is painted once per pane size: the treeline and the trunks on
+  one still layer, the canopy in a layer per side, cropped to what it
+  covers, which the wind sways by up to 0.2 percent of the pane's
+  longer side in a calm and 0.7 at full treble.
+- The sky follows the local hour, from ten colours of its zenith and
+  horizon through the day, a glow low at the right in the morning and
+  at the left in the evening. The night is held at a deep twilight, so
+  the birds still show.
+- The flock: 600 birds, each following its nearest seven by rank
+  within 12 m (Ballerini et al., PNAS 105, 2008), at 10 m/s, never
+  under 8, keeping 1.8 m, held level by `level` 0.6, over a home 78 m
+  ahead and 46 m up. Each bird is drawn as ten starlings at fixed
+  places about it in its own frame, 6000 specks. A speck is a stroke
+  along the bird's wings, its darkness the share of the wings' area
+  that faces the eye: the bird's lift, up in level flight and tilted
+  into a turn by its acceleration across its heading, smoothed over
+  0.15 s. Seen from below, a level bird shows its whole underside and a
+  banked one its edge, so a wave of turning crosses the flock as a
+  band of changed shade, and a sheet seen edge on darkens. A speck
+  under a pixel and a half is a dot as faint as the bird is small.
+- Waves of turning: a front from a bird, at 20 m/s, turns each bird it
+  reaches about an axis near the vertical, for the same time each, by
+  the core's push, so a front crosses the whole shape and folds it. The
+  front reaches a bird when it has run as far as the bird stood from
+  its start, wherever the bird flies meanwhile: a band that turned each
+  bird for as long as the front held it turned birds flying with the
+  front three times as far as birds flying against it, and the flock
+  split in two. The flock turns home by a wave from its leading edge
+  when its centre strays 12 m from home across the ground and flies
+  outward, at most every 4 s, and a gentle steer of every bird alike
+  holds its height. The core's bounds, 45 m about home, are only a
+  backstop.
+- The falcons, each a phase of its plan:
+  - A peregrine circles 70 m above the flock, then stoops on the bird
+    nearest it at 38 m/s, seen at 1.6 times the flock's sight of 12 m.
+    Within 25 m of its bird it slows to chase through the flock at 21
+    m/s, and the birds within sight open a hole about it, burst away
+    from it in a flash expansion, and the flock turns away from it in a
+    wave from its bird. Past its bird, or after 5 s, it climbs for
+    another pass, three at most, and leaves.
+  - A sparrowhawk dashes in low from the trees across the clearing at
+    a straggler at 17 m/s, for two passes.
+  - A pair of peregrines circles and stoops, one on the edge, one
+    through the middle, which splits the flock.
+  - A catch is carried off. Starlings fly in from the trees in parties
+    of three to six while no falcon dives, until the flock is whole.
+    Two attacks run at most, a third sending the oldest off, and an
+    attack starts of its own every 45 to 75 s of the clock while the
+    session works.
+
+| Signal | Murmuration |
+| --- | --- |
+| prompt | an attack, in turn a peregrine, a sparrowhawk, a pair of peregrines |
+| tool call | a wave of turning across the flock from a bird marked by a ring in the class's colour |
+| stop | every falcon circling or climbing stoops now |
+| subagent | one more falcon joins the newest attack, or a lone peregrine's begins |
+| compaction | the flock turns about, a wave from its leading edge |
+| output event | a ripple: a short turn among the birds within 14 m of one |
+| bass | with busy, the clock, 0.8 to 1.2 times real time |
+| treble | the wind that sways the canopy |
+| idle | the clock slows to a fifth, the flock settles 18 m lower toward the roost, the sky darkens toward dusk, the falcons leave and no attack starts |
+| drag | holds a hawk's lure under the pointer, at the flock's distance, and the starlings shy from it |
+| click | a peregrine stoops on the bird nearest the click |
+
+- `test/viz-murmuration.test.js`, seeded, under the mode's rule: the
+  mode's world, with no falcon, keeps its flock one group, linked by
+  steps under 6 m, but for three birds at most, within 35 m of home and
+  a spread under 30 m, for 60 s, wheeled by at least five of its waves.
+  Birds within a falcon's sight are farther from it 0.6 s later than
+  with no falcon, by more than 2 m on average. A falcon picking by
+  edge, middle or straggler is nearer its bird at every look until it
+  takes it. A push about the vertical on half the flock turns those
+  birds left.
+- Cost, each mode alone on a CPU canvas in an offscreen Electron page
+  under xvfb, at full activity, 240 draws of 1/60 s after 300 of
+  warm-up, as `vizcarbon.js` measures, median and p90 ms a draw, at
+  load average 11 to 12: at 400 by 380 Murmuration 4.1 and 5.6,
+  Savannah hunt 2.0 and 2.2, and at 1200 by 760 Murmuration 12.6 and
+  15.1, Savannah hunt 6.5 and 9.0, under Zoom out's 21.6 and Carbon's
+  42.8 of the Savannah's figures. `vizmodes.js` ran three panes of
+  Carbon, Savannah hunt and Murmuration at 7, 8, 9.5, 11.5 and 8 frames
+  a second over its five rounds, median 8, as Carbon, Savannah hunt and
+  Fern ran for #186, beside Fern, Go and Zoom out at median 25, Gravity,
+  Gravity 3D and Quantum at 22.5 and the butterchurn panes at 19.5, at
+  load average 27 to 29.
+
+Rejected:
+
+- Every starling simulated: at about 45 microseconds a bird a
+  simulated second under this rule, 6000 birds would take a quarter of
+  every second of the clock, before any drawing.
+- A wave of turning from the core's fear alone: fear speeds and
+  tightens a flock but turns no bird, so no band would cross it.
+- A stoop through the flock at full speed: at 38 m/s the falcon crossed
+  the flock before a hole showed in the captures, so it slows to chase
+  within 25 m.
+- Falcons at their true size: a peregrine 80 m off is a few pixels,
+  lost among the starlings, so a falcon is drawn at least 16 px across.
+- A camera that turns to follow the flock: the forest's layers, some
+  thousands of leaves, would be painted again on every move. The flock
+  turns home instead.
 
 ## 2026-10-22: Sunset clouds
 
