@@ -664,11 +664,15 @@
   function create (canvas) {
     const out = canvas.getContext('2d')
     const layer = document.createElement('canvas')
-    const g = layer.getContext('2d', { willReadFrequently: true })
+    const main = layer.getContext('2d', { willReadFrequently: true })
+    let g = main
     // The far half of the water, drawn at half the pane's size and
     // scaled up, so far fish are softer than near ones.
     const far = document.createElement('canvas')
     const gf = far.getContext('2d')
+    // The water behind it all, smooth, drawn at half size too.
+    const bk = document.createElement('canvas')
+    const gb = bk.getContext('2d')
     const tex = document.createElement('canvas')
     tex.width = tex.height = TEX
     const gt = tex.getContext('2d')
@@ -769,6 +773,8 @@
         layer.height = h
         far.width = Math.max(2, Math.ceil(w / 2))
         far.height = Math.max(2, Math.ceil(h / 2))
+        bk.width = far.width
+        bk.height = far.height
       }
       for (const e of synth.since(mark)) W.react(e)
       const L = synth.level
@@ -823,12 +829,19 @@
       // Snow turns with the gaze the other way.
       spin(turnA - oa, turnP - op, dt)
 
-      g.setTransform(1, 0, 0, 1, 0, 0)
+      g = gb
+      g.setTransform(bk.width / cw, 0, 0, bk.height / ch, 0, 0)
       g.globalCompositeOperation = 'source-over'
       g.globalAlpha = 1
       background(light)
       surface(light)
       shaftsDraw(light, turnA)
+      g = main
+      g.setTransform(1, 0, 0, 1, 0, 0)
+      g.globalCompositeOperation = 'source-over'
+      g.globalAlpha = 1
+      g.imageSmoothingEnabled = true
+      g.drawImage(bk, 0, 0, cw, ch)
 
       // The fish and the predators, far to near, in bands of distance,
       // the far ones on the half-sized layer.
