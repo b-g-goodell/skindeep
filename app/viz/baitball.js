@@ -229,7 +229,7 @@
 
     function hunter (k, p, a, o) {
       const K = KIND[k]
-      const q = flock.hunter(Object.assign({ x: p[0], y: p[1], z: p[2], speed: K.cruise, accel: K.accel, reach: K.reach, seen: 1, kind: k, attack: a, phase: 'circle', t0: clock, passes: 0, best: Infinity, wait: K.wait[0] + K.wait[1] * rnd(), ring: Math.atan2(p[1] - HOME.y, p[0] - HOME.x), dir: rnd() < 0.5 ? -1 : 1, beat: rnd() * TAU, sail: 0, ux: 0, uy: 1, uz: 0, picks: 0 }, o))
+      const q = flock.hunter(Object.assign({ x: p[0], y: p[1], z: p[2], speed: K.cruise, accel: K.accel, reach: K.reach, seen: 0.5, kind: k, attack: a, phase: 'circle', t0: clock, passes: 0, best: Infinity, wait: K.wait[0] + K.wait[1] * rnd(), ring: Math.atan2(p[1] - HOME.y, p[0] - HOME.x), dir: rnd() < 0.5 ? -1 : 1, beat: rnd() * TAU, sail: 0, ux: 0, uy: 1, uz: 0, picks: 0 }, o))
       a.members.push(q)
       return q
     }
@@ -317,7 +317,7 @@
       const x = c.x + 8 * (rnd() - 0.5)
       const y = c.y + 8 * (rnd() - 0.5)
       const a1 = rnd() * TAU
-      const q = hunter('gannet', [x, y, -0.2], a, { vx: 2 * Math.cos(a1), vy: 2 * Math.sin(a1), vz: -13, speed: 13, accel: 30, phase: 'plunge' })
+      const q = hunter('gannet', [x, y, -0.2], a, { vx: 2 * Math.cos(a1), vy: 2 * Math.sin(a1), vz: -13, speed: 13, accel: 30, seen: 1, phase: 'plunge' })
       q.range = 6
       flock.pick(q, 'edge')
       for (let k = 0; k < 16; k++) trail.push({ x: x + 0.5 * (rnd() - 0.5), y: y + 0.5 * (rnd() - 0.5), z: -0.2 - 1.2 * rnd(), t: clock, r: 0.004 + 0.01 * rnd() })
@@ -452,8 +452,8 @@
           const dy = c.y - P[j + 1]
           const dz = c.z - P[j + 2]
           const d = Math.hypot(dx, dy, dz)
-          if (d > 1.5) {
-            const w = 2 * pack * Math.min(1, (d - 1.5) / 3) / d
+          if (d > 1) {
+            const w = 2.5 * pack * Math.min(1, (d - 1) / 3) / d
             U[j] += dx * w
             U[j + 1] += dy * w
             U[j + 2] += dz * w
