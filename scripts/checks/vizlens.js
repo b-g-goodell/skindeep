@@ -46,7 +46,14 @@
 // frame, one or two pieces, the outer and the inner image, apart or
 // touching, a pixel in every bin of 5 degrees about the hole, so the
 // two arcs close round it with no gap, and one run down each column
-// above the row 8 pixels over the hole's, so no doubled arc.
+// above the row 8 pixels over the hole's, so no doubled arc. At 14, 6
+// and 1 with a second hole of 300 at X 70, Y 8, Z 80, as a subagent
+// adds one, whose shear turns the hole's point caustic into a small
+// astroid, so images are born and lost in pairs at folds: a pixel in
+// every bin of 5 degrees about the hole, and three pieces or fewer, the
+// outer arc, the inner one, and the second hole's own image of the
+// trail beside it. Two images of the trail lie in one column where a
+// fold turns one back, so runs are not counted there.
 // Frames go to OUT/lens-<size>-<k>.png, OUT/lens-hole-full-<k>.png and
 // OUT/trail-<k>.png.
 // At every frame read, the probe's audit shows each class of matter,
@@ -86,9 +93,11 @@ const MOON_Z = 250
 const MOONS = [[0.12, 30], [0.25, 150], [0.36, 270]]
 const HOLE_Z = 280
 const HOLES = [[0.06, 0], [0.12, 120], [0.18, 240]]
-// The trail frames: each height, and whether it passes near the hole's
-// line, where its images run round the hole.
-const TRAILS = [[28, false], [14, false], [3, true], [1, true]]
+// The trail frames: each height, how it is judged, far from the hole's
+// line, near it, where its images run round the hole, or with a second
+// hole, and the matter staged beside the trail.
+const HOLE2 = { kind: 'hole', m: 300, X: 70, Y: 8, Z: 80 }
+const TRAILS = [[28, 'far', []], [14, 'far', []], [3, 'near', []], [1, 'near', []], [14, 'two', [HOLE2]], [6, 'two', [HOLE2]], [1, 'two', [HOLE2]]]
 
 // The probe's state when a staged frame is not judged.
 function state (probe, rec) {
@@ -299,11 +308,11 @@ function slices (probe, where) {
   // The trail frames, in the full pane.
   await size([1200, 760])
   await sleep(1500)
-  for (const [k, [Y, near]] of TRAILS.entries()) {
+  for (const [k, [Y, judge, extra]] of TRAILS.entries()) {
     const where = `trail ${k}`
     const places = Array.from({ length: 64 }, (_, i) => [-220 + 440 * i / 63, Y, 40 + 320 * i / 63])
     const read = async (trail, keep) => {
-      const ids = await viz.evaluate(s => window.vizStage(0, s), { yaw: YAW, pitch: 0, m: M, items: [{ kind: 'planet', m: 2, X: 220, Y, Z: 360, trail }], judge: {} })
+      const ids = await viz.evaluate(s => window.vizStage(0, s), { yaw: YAW, pitch: 0, m: M, items: [{ kind: 'planet', m: 2, X: 220, Y, Z: 360, trail }, ...extra], judge: {} })
       check(ids && ids[0] > 0, `${where}: the mode staged no scene`, ids)
       await sleep(1500)
       const p = await pane()
@@ -315,8 +324,11 @@ function slices (probe, where) {
     const f = await read(places, true)
     fs.writeFileSync(path.join(out, `trail-${k}.png`), Buffer.from(f.png.split(',')[1], 'base64'))
     const r = await read([], false)
-    console.log(where, `Y ${Y}`, JSON.stringify(r))
-    if (near) {
+    console.log(where, `Y ${Y}`, judge, JSON.stringify(r))
+    if (judge === 'two') {
+      check(r.whole.pixels > 400 && r.whole.pieces.length >= 1 && r.whole.pieces.length <= 3, `${where}: the trail's images behind two holes are broken`, r.whole)
+      check(r.whole.empty.length === 0, `${where}: the trail's images behind two holes leave a gap round the hole`, r.whole)
+    } else if (judge === 'near') {
       check(r.whole.pixels > 400 && r.whole.pieces.length >= 1 && r.whole.pieces.length <= 2, `${where}: the trail's images are broken`, r.whole)
       check(r.whole.empty.length === 0, `${where}: the trail's images leave a gap round the hole`, r.whole)
       check(r.whole.runs === 1, `${where}: the trail's outer image is doubled`, r.whole)
