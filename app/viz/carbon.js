@@ -20,8 +20,8 @@
 // about the chosen axis z that flow by Nelson's stochastic mechanics,
 // about the axis as Madelung's probability current says for m != 0,
 // the core from the Bunge 1993 orbitals, the outer electron from the
-// research's quantum-defect model, labelled a model; its jumps carry the
-// same particles to the lower level's density and flash the jump's
+// research's quantum-defect model, labelled a model. Its jumps carry
+// the same particles to the lower level's density and flash the jump's
 // transition density on them as the source (see Cloud). Beside it the level
 // diagram, every level at its energy, the ensemble's populations, the
 // drawn atom's level lit and its last jump an arrow, the ground term's
