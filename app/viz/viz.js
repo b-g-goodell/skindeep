@@ -234,6 +234,25 @@
   window.addEventListener('mousedown', e => { if (e.button === 0) point('down', e) })
   window.addEventListener('mousemove', e => point(held && !(e.buttons & 1) ? 'up' : 'move', e))
   window.addEventListener('mouseup', e => { if (e.button === 0 && held) point('up', e) })
+  // The wheel, and a pinch on a touchpad, to the mode's pointer as a
+  // fourth kind, wheel, with down as for a move and its delta in steps:
+  // a notch of a mouse wheel, 100 pixels or 3 lines, is one, positive
+  // away from the user. Chromium sends a pinch as a wheel with ctrlKey
+  // and deltaY = -100 ln of the pinch's scale, so a pinch's steps are
+  // that over 100 ln WHEEL_ZOOM, and a mode that zooms by WHEEL_ZOOM a
+  // step follows the fingers. A mode without a pointer ignores it, and
+  // the page neither scrolls nor zooms.
+  const WHEEL_ZOOM = 1.2
+  window.addEventListener('wheel', e => {
+    e.preventDefault()
+    const all = [...panes.values()]
+    if (all.some(q => q.o === 1)) return
+    const p = held || all[VizLayout.at(e.clientX, e.clientY, all.length, window.innerWidth, window.innerHeight)]
+    if (!p || !p.flat || !p.flat.pointer) return
+    const d = e.deltaY * (e.deltaMode === 1 ? 1 / 3 : e.deltaMode === 2 ? 1 : 1 / 100)
+    const steps = e.ctrlKey && e.deltaMode === 0 ? e.deltaY / (100 * Math.log(WHEEL_ZOOM)) : d
+    if (steps) p.flat.pointer('wheel', e.clientX - p.x, e.clientY - p.y, held === p, steps)
+  }, { passive: false })
   window.vizFeed.onFrame(f => {
     const was = sound.src + ':' + sound.st
     sound = { src: f.src, st: f.st, s: f.s }
