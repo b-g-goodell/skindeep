@@ -2403,3 +2403,112 @@ Rejected:
 - A zoom range in the hole's own $r_s$: the zoom would move as the hole
   shrank or grew, where the issue wants it held until the wheel moves
   it.
+
+## 2026-10-26: the waves as smoke
+
+Issue #183: the owner wants to see the Gravity modes' waves drawn as
+smoke or gas, a medium the passing fronts stir, compress and thin,
+beside the colour field, which stays as it is. The issue left the
+medium and its law to the builder, settled here.
+
+- The setting. File, Settings, Gravitational waves: Default, the colour
+  field, or smoke, `viz.waves` in `settings.json`, null for the default.
+  The window sends it with every frame as `w`, 1 for smoke, and a mode
+  reads it through `env.waves()`, so a pick shows on the next frame.
+  Both modes compute the field, the gain and the strain as shown
+  exactly as before and branch only where the pixels are filled: the
+  colour field's code is unchanged and runs whenever smoke is not
+  chosen.
+- What the gas feels. The drawn plane holds the direction a wave
+  travels: Gravity's is the orbital plane, Gravity 3D's the plane
+  through each source that faces the camera. Of a wave's two
+  transverse directions one then lies in the plane, along the front,
+  and one leaves it, and with the basis of the polarizations above the
+  strain in the plane is $h_{\phi\phi} = -h_+$ along the front alone. A
+  sheet of gas in the plane changes its area by $1 - h_+/2$ and its
+  density by $1 + h_+/2$ to first order, and $h_\times$ tilts it out of
+  the plane and moves nothing in it. So the smoke shows $h_+$ alone, in
+  both modes, where Gravity 3D's colour field also shows $h_\times$.
+- The law. The gas's density is $1 + s$, $s$ the strain as shown
+  (`waves.js` shown) at the gain in use, the first-order response with
+  $s$ for $h_+/2$: a front at $\tanh(1)$ nearly doubles the gas and a
+  trough nearly empties it. It glows as its density squared, as a thin
+  hot gas does, its emission measure, so a front is three times the
+  rest's brightness and a trough near black. The fronts also carry it
+  along themselves by a flow that keeps its area, its stream function
+  3 cells squared times $s$: a stir along the front, the direction the
+  strain stretches it, of at most about two cells, where the shown
+  strain turns most steeply. The eased gain of Gravity 3D, the
+  antialiased turn and the label naming the exaggeration therefore
+  hold for the smoke as for the colour field.
+- The gas at rest. Value noise, three octaves, its place warped by two
+  more, in units of 3.5 cells, its density in 0.6 to 1, wisps over a
+  haze, drifting with the mode's clock, so it stands still while the
+  session is idle as the waves do. It is laid on the grid of cells, 32
+  across the pane's shorter side, so it looks alike in a full pane and
+  a small one, and in Gravity 3D at every zoom: the fronts' spacing
+  changes with the zoom, the wisps' does not.
+- Drawn on the grid of cells at four texels a cell, the strain and its
+  slope bilinear between the cells, grey with a cool tint over black,
+  at 0.16 of full brightness at rest in Gravity and 0.2 in Gravity 3D,
+  times the idle dimming. In Gravity it is the frame's ground, opaque,
+  under the trails, as the colour field is. In Gravity 3D it is the
+  same ground plane, at the sources' mean depth, read once a ray and
+  never in a hole's shadow (see 2026-10-26: Gravity 3D's ring, flood
+  and corners), but read at every traced pixel: the lens map's nodes,
+  6 traced pixels apart, lie farther apart than the wisps, and the
+  colour field keeps its reading at the nodes.
+- Seen and measured at 49972b0 in the viz page under swiftshader, each
+  mode drawn
+  alone on a canvas of its own at a fixed step of 1/30 s for 14 s, its
+  random numbers seeded so the colour field and the smoke run one
+  scene, the host's load 2 to 2.7: the seed's pair (weak) and three
+  subagent events (strong, Gravity 3D's gain falling to 456), in a
+  pane of 1200 by 760 and one of 300 by 380, and Gravity 3D wheeled to
+  90 and to 3300. The median draw went from 5.2 to 7.6 ms in Gravity's
+  full pane and from 1.8 to 4.2 in its small one, and in Gravity 3D's
+  from 14.9 to 20.5 and from 8.4 to 12.0, from 31.4 to 32.9 at 90 and
+  from 13.1 to 19.6 at 3300. Every frame past the first 4 s went
+  through the flash counter of `scripts/flash.js`: no field of 341 by
+  256 flashed more than once in any second, in either style. In the
+  frames the seed's pair's spiral shows in Gravity as dark thinned arms
+  between paler ones; in Gravity 3D a bright compressed ring stands
+  about the pair with a dark thinned lobe at it, and the strong field
+  compresses the gas into a bright mass where the colour field is
+  blue and empties it where it is amber, unflooded, both holes'
+  shadows black. Wheeled in, the gas is bent into rings about the
+  shadow that fills the pane; wheeled out, a darker thinned band rings
+  the small system in the haze.
+- Checked by `test/viz-waves.test.js`: with no strain every texel is
+  the gas at rest; a uniform strain of 0.6 or -0.6 draws it at 1.6 or
+  0.4 squared, unmoved; a strain rising along x draws it carried along
+  y by 3 times the slope. `test/settings.test.js`: the setting reads
+  back, colour by default, and the menu offers it.
+  `scripts/checks/vizmodes.js` picks smoke as the menu does after the
+  colour field's frames, in the full pane and the small ones, and wants
+  the page told, three frames 0.5 s apart to
+  OUT/<mode>-smoke-<full|small>-<k>.png, none blank and over half of
+  each one's lit cells grey, its channels within a quarter of the
+  brightest, then the colour field again with under half grey. At 2a1caaa
+  the smoke's frames read 0.82 to 1.00 grey and the colour field's after
+  them 0.007 to 0.076, in two runs.
+
+Rejected:
+
+- A fluid solved on the grid, density advected frame to frame: a
+  wave's push oscillates, so its net displacement is of second order
+  and the memory adds nothing the density read from the strain each
+  frame lacks, while the
+  resampling each frame smears the wisps within seconds, and a grid
+  in the pane's cells would have to be carried through every zoom,
+  turn, resize and split.
+- The gas displaced along the line from the source, as a sound wave
+  compresses it: the strain is transverse, and the earlier rejection
+  of the dust displaced by it stands.
+- Density $1 + s/2$, the first-order response at the label's gain,
+  glowing as itself, tried first: in the full pane the seed's pair's
+  spiral was lost in the wisps. The wisps at 6 cells and the haze at
+  0.2 to 0.45 of the densest, tried with it, covered the pane in grey
+  where the colour field is black.
+- Grains of gas drawn as points: Gravity 3D would trace each through
+  the lens, a cost the one ground plane does not have.
