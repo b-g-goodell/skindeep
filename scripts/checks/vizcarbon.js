@@ -8,9 +8,21 @@
 // with its source flashing, visible fronts, ultraviolet and infrared
 // fronts, and the spectrum after the run. Then every pane's signal is
 // held at full activity, by an override of Synth's step in the page,
-// and a frame with hundreds of fronts is captured. Then each of Carbon,
+// and a frame with hundreds of fronts is captured, and the one pane's
+// frame rate counted, three rounds of 2 s. Then each of Carbon,
 // Gravity and Quantum drawn alone on a 400 by 380 canvas at full
 // activity, fed through Synth's input: the median cost of a draw. Then
+// Carbon alone on a quiet canvas of 1200 by 760 and one of 360 by 230,
+// its levels held at 0 so no front is born: a frame with no front, then
+// one with a single ultraviolet front (165.7 nm) and one with a single
+// infrared front (909.7 nm), each sent from the site and caught 10 bohr
+// out, crossing the atom, and the mean change of the atom's pixels each
+// front's pass makes, which must be at least GAIN times today's, the
+// random grain's at 43a4dd1 (issue #168). Today's infrared figure is
+// high though nothing showed: shifting random pixels changes nearly
+// every pixel of the band by the grain's own spread, while a shift of
+// the grid changes only its line pixels, about a third of the band, so
+// a grid quiet enough for the pane gains about 1.5 times there. Then
 // three panes of a 720 by 460 window all in one of those modes, five
 // rounds in turn, each set's median frame rate, as vizmodes.js counts
 // its sets, first on the fake session's own activity, then at full
@@ -28,6 +40,13 @@ const out = path.resolve(process.argv[2])
 // The event clock's slowing from 1e6 (issue #166): the field fills the
 // ensemble that many times slower.
 const SLOW = require('../../app/viz/carbon').EVENT / 1e6
+// Light on screen, bohr a second.
+const LIGHT = require('../../app/viz/carbon').Clock.light
+// Today's mean change of the atom's pixels, levels of 255, with one
+// front 10 bohr out on the random grain, at 43a4dd1, and the least gain
+// over it each kind must show.
+const TODAY = { 'uv-1200x760': 0.0364, 'ir-1200x760': 0.2163, 'uv-360x230': 0.0477, 'ir-360x230': 0.1854 }
+const GAIN = { uv: 3, ir: 1.3 }
 const fake = path.join(__dirname, '..', 'fake', 'claude')
 fs.mkdirSync(out, { recursive: true })
 const errors = []
@@ -162,6 +181,15 @@ function check (ok, msg, seen) {
   check(busy, 'want 60 fronts at once at full activity')
   await save(0, 'busy')
   console.log('frame busy', JSON.stringify(busy))
+  const rate = () => viz.evaluate(() => new Promise(resolve => {
+    let n = 0
+    const t0 = performance.now()
+    const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else resolve(n / 2) }
+    requestAnimationFrame(f)
+  }))
+  const one = []
+  for (let round = 0; round < 3; round++) one.push(await rate())
+  console.log('fps with one pane full activity carbon', one.join(' '), 'median', one.slice().sort((a, b) => a - b)[1])
 
   // Each mode drawn alone on a canvas of 400 by 380, its own signal at
   // full activity, 240 frames after 300 of warm-up: the median cost of a
@@ -189,6 +217,48 @@ function check (ok, msg, seen) {
     return out
   })
   console.log('median ms a draw at full activity, alone at 400x380', JSON.stringify(cost))
+
+  // One invisible front at a time on a quiet canvas, 10 bohr out: the
+  // frame, and its pass's mean change of the atom's pixels.
+  const quiet = await viz.evaluate(([sizes, reach]) => {
+    const out = []
+    for (const [w, h] of sizes) {
+      const c = document.createElement('canvas')
+      c.width = w
+      c.height = h
+      const r = window.VizCanvas.carbon(c, { text: () => 1 })
+      const s = new window.Synth.Synth()
+      const step = n => {
+        for (let i = 0; i < n; i++) {
+          s.input({ n: [0, 0, 0, 0, 0, 0, 0], e: [] })
+          s.step(1 / 60, null)
+          Object.assign(s.level, { bass: 0, treble: 0, busy: 0, idle: 0 })
+          r.draw(s, 1 / 60)
+        }
+      }
+      const clear = () => {
+        for (let i = 0; i < 600 && r.probe().fronts; i++) step(1)
+      }
+      step(60)
+      clear()
+      out.push({ name: `none-${w}x${h}`, png: c.toDataURL('image/png'), probe: r.probe() })
+      for (const [kind, nm] of [['uv', 165.7], ['ir', 909.7]]) {
+        clear()
+        const vac = r.send(nm, 1)
+        step(Math.round(reach * 60))
+        const p = r.probe()
+        out.push({ name: `${kind}-${w}x${h}`, kind, vac, png: c.toDataURL('image/png'), probe: p })
+      }
+    }
+    return out.map(q => ({ name: q.name, kind: q.kind, vac: q.vac, png: q.png, fronts: q.probe.fronts, uv: q.probe.uv, ir: q.probe.ir, warp: q.probe.warp }))
+  }, [[[1200, 760], [360, 230]], 10 / LIGHT])
+  for (const q of quiet) {
+    fs.writeFileSync(path.join(out, `carbon-quiet-${q.name}.png`), Buffer.from(q.png.split(',')[1], 'base64'))
+    const was = TODAY[q.name]
+    console.log('quiet', q.name, q.vac ? `${q.vac} nm` : '', `fronts ${q.fronts} uv ${q.uv} ir ${q.ir}`, 'mean change of the atom\'s pixels', q.warp, was ? `against ${was} at 43a4dd1, ${(q.warp / was).toFixed(2)} times` : '')
+    if (!q.kind) check(q.fronts === 0 && q.warp === 0, `want no front in ${q.name}`, { fronts: q.fronts, warp: q.warp })
+    else check(q.fronts === 1 && q[q.kind] === 1 && q.warp >= GAIN[q.kind] * was, `want one ${q.kind} front changing the atom ${GAIN[q.kind]} times as much as at 43a4dd1 in ${q.name}`, { fronts: q.fronts, uv: q.uv, ir: q.ir, warp: q.warp, was })
+  }
 
   // Three panes, as vizmodes.js measures its sets.
   await size(720, 460)
@@ -220,12 +290,7 @@ function check (ok, msg, seen) {
         const ids = (await tabs()).map(t => t.id)
         for (let j = 0; j < 3; j++) await assign(ids[j], id)
         await sleep(1500)
-        runs[k].push(await viz.evaluate(() => new Promise(resolve => {
-          let n = 0
-          const t0 = performance.now()
-          const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else resolve(n / 2) }
-          requestAnimationFrame(f)
-        })))
+        runs[k].push(await rate())
         if (round === 0 && id === 'carbon') {
           await save(0, full ? 'split-full' : 'split')
           if (full) console.log('split pane at full activity', JSON.stringify((await state()).panes[0].probe))

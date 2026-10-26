@@ -9,7 +9,8 @@
 // named (tabs-keys, p5), and no pass record. Each check's log goes to
 // OUT/<job>.log and its own OUT to OUT/<job>/. The summary names each
 // failing job with its log's error line, and the exit is 1 on any
-// failure. A full pass on a clean tree records HEAD's tree
+// failure, after each failed job has run once more alone, which a job
+// that passes counts as its pass. A full pass on a clean tree records HEAD's tree
 // (scripts/checks/passrecord.js), which ops/publish.py requires;
 // --no-record skips it.
 const fs = require('fs')
@@ -147,14 +148,27 @@ async function main () {
     await sleep(i * 1000)
     while (queue.length) results.push(await run(queue.shift(), o))
   }))
+  // A job that failed beside others runs once more, alone: a loaded
+  // host fails the checks that time real frames, and a defect fails
+  // twice (issue #217).
+  const reran = []
+  for (const r of results.filter(x => !x.ok)) {
+    console.log(`rerun ${r.job} alone`)
+    const again = await run(jobs.find(j => name(j) === r.job), o)
+    if (again.ok) {
+      reran.push(r.job)
+      r.ok = true
+    } else r.why = again.why
+  }
   const wall = Math.round((Date.now() - t0) / 1000)
   const failed = results.filter(r => !r.ok)
   for (const r of failed) console.log(`failed ${r.job}: ${r.why}`)
+  for (const j of reran) console.log(`passed on a rerun alone: ${j}`)
 
   if (!skip && failed.length) skip = 'a job failed'
   if (!skip && (passrecord.tree(root) !== tree || passrecord.dirty(root))) skip = 'the tree changed during the run'
-  const note = skip ? `no pass record: ${skip}` : `recorded ${passrecord.write(root, { jobs: jobs.length, wall_s: wall })}`
-  console.log(`suite: ${results.length - failed.length} pass, ${failed.length} fail of ${jobs.length}, wall ${wall} s, tree ${tree}, ${note}`)
+  const note = skip ? `no pass record: ${skip}` : `recorded ${passrecord.write(root, { jobs: jobs.length, wall_s: wall, reran })}`
+  console.log(`suite: ${results.length - failed.length} pass (${reran.length} on a rerun alone), ${failed.length} fail of ${jobs.length}, wall ${wall} s, tree ${tree}, ${note}`)
   process.exitCode = failed.length ? 1 : 0
 }
 

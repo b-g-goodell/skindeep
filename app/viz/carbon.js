@@ -10,14 +10,19 @@
 // clock, painted by one M component's radiation pattern, its amplitude
 // from h nu and 1/r, collapsing to one detected direction at the pane's
 // edge, which lights the spectrum. Visible fronts are drawn in their
-// hue, ultraviolet ones sharpen the picture and infrared ones refract it
-// as heat haze, by one pass over the atom's pixels (see Warp). One atom
-// of the ensemble is drawn: its cloud, Monte Carlo stippling of |psi|^2
-// for its M_L about the chosen axis z, flowing about the axis as
-// Madelung's probability current says for m != 0, the core from the
-// Bunge 1993 orbitals, the outer electron from the research's
-// quantum-defect model, labelled a model; its jumps snap the cloud and
-// flash the jump's transition density as the source. Beside it the level
+// hue, as the packet's leading edge and a trail behind it lambda / TRAIL
+// long, no crest: lambda is 94 to 5x10^5 times the view, so the view is in
+// the near zone, in one phase. Ultraviolet fronts sharpen the picture and
+// infrared ones refract it as heat haze across the same trail, by one
+// pass over the atom's pixels (see Warp), on a faint grid in bohr under
+// the atom, built for them to act on (see drawBackdrop). One atom
+// of the ensemble is drawn: its cloud, particles of |psi|^2 for its M_L
+// about the chosen axis z that flow by Nelson's stochastic mechanics,
+// about the axis as Madelung's probability current says for m != 0,
+// the core from the Bunge 1993 orbitals, the outer electron from the
+// research's quantum-defect model, labelled a model. Its jumps carry
+// the same particles to the lower level's density and flash the jump's
+// transition density on them as the source (see Cloud). Beside it the level
 // diagram, every level at its energy, the ensemble's populations, the
 // drawn atom's level lit and its last jump an arrow, the ground term's
 // fine structure in an inset. Along the bottom the spectrum. The two
@@ -57,11 +62,35 @@
   // gas's temperature for the ground term's thermal populations.
   const K_CM = 0.6950348004
   const T_GAS = 300
-  // Points per electron, core and outer, and the share drawn afresh
-  // each 60th of a second of wall time: a sampling, on neither clock.
+  // The cloud (issue #165): particles per electron slot, the five core
+  // slots and the slot that holds the outer electron in an excited
+  // level, which keeps its particles in every level.
   const PTS_CORE = 230
   const PTS_OUTER = 1300
-  const SEETHE = 0.012
+  // Nelson's process runs NELSON times as fast as the light clock: its
+  // time factor, current and osmotic velocity and noise alike.
+  const NELSON = 1
+  // The osmotic velocity (1/2) grad ln rho is clipped at U_MAX bohr per
+  // atomic unit of time: it grows without bound at a node of rho and on
+  // the axis for m != 0. The Metropolis step keeps rho exact under the
+  // clip. Carbon's 1s, the steepest orbital, reaches 6 at the nucleus.
+  const U_MAX = 10
+  // One step of the Metropolis-adjusted Langevin chain is at most
+  // (STEP <r>)^2 atomic units of time for an orbital of mean radius <r>,
+  // so its noise is under a third of the cloud and 98 % of proposals are
+  // taken in 1s: one step a frame down to 13 frames a second.
+  const STEP = 0.3
+  // A level change carries each particle from its quantile of the old
+  // density to the same quantile of the new over MORPH seconds of wall
+  // time, eased: 30 frames at 60 a second, and within the 0.37 to 1.22 s
+  // a 2p4p level lives on the event clock, so a lifted cloud mostly
+  // reaches its level before it jumps.
+  const MORPH = 0.5
+  // A particle is drawn at its path's exponential mean over SMOOTH
+  // seconds of wall time: a step of Nelson's noise, 0.47 pixels a frame
+  // in a full pane, would make every point twinkle, a seethe by other
+  // means. The mean lags the path by 0.10 bohr an axis, rms.
+  const SMOOTH = 0.25
   // A Madelung angular velocity above this, radians a second on screen,
   // is clipped: m / rho^2 grows without bound near the axis, where the
   // density of m != 0 vanishes. 3 on a light clock of 1e17, scaled with
@@ -69,14 +98,42 @@
   const SPIN_MAX = 3e17 / LIGHT
   // The fronts: at most FRONTS in flight, the drawn amplitude 1 at R0
   // bohr for a 538 nm front in its pattern's brightest direction, the
-  // trailing crests drawn behind a visible front, and the points and
-  // seconds of the source's flash, in wall time.
+  // factor by which a front's trail is shorter than its vacuum
+  // wavelength (issue #167, decision 0015), the least width in pixels
+  // of the invisible fronts' band, the visible edge's stroke, the ink of
+  // the source's flash in points of full brightness, which the
+  // particles it rides on share, and its seconds, in wall time.
   const FRONTS = 500
   const R0 = 8
   const NU_REF = 1 / 538.18
-  const CRESTS = 3
+  const TRAIL = 1e4
+  const BAND_MIN = 1.6
   const SOURCE_PTS = 700
   const SOURCE_T = 0.4
+  // The backdrop under the atom (issue #168): a grid's least spacing in
+  // pixels, its lines' Gaussian half-width sigma in pixels, their peak
+  // and the floor between them, red, green and blue of 255, and the
+  // lines' share of that peak at the atom box's corners, where the
+  // captions stand: full to GRID_IN of the box's half side from the
+  // site, falling linearly to GRID_OUT at the half side and beyond.
+  const GRID_PX = 10
+  const GRID_SIGMA = 0.7
+  const GRID_INK = [22, 30, 50]
+  const GRID_FLOOR = [4, 6, 10]
+  const GRID_IN = 0.55
+  const GRID_OUT = 0.4
+  // The invisible fronts' strengths (issue #168): the sharpening's share
+  // of the Laplacian and its lift of the pixel, and the haze's peak
+  // shift, pixels, each per unit of the front's drawn amplitude, and the
+  // most the sharpening may move a channel, levels of 255, which keeps a
+  // grid line's lift under a relative luminance of 0.1, so dozens of
+  // ultraviolet fronts in flight do not flash (issue #164). Over 64 the
+  // most falls linearly to 0.15 of it at 172 and above, so the cloud's
+  // dense points, which fill whole cells, are crisped and barely lifted.
+  const SHARP = 1.5
+  const LIFT = 4
+  const SHARP_MAX = 56
+  const HAZE = 8
   // The view's radius, bohr: fixed, so every front keeps the light
   // clock's pace, about 1.6 times a 2p4p cloud's mean radius: a front
   // crosses that cloud's diameter in 0.5 LIGHT / 1e17 seconds.
@@ -84,14 +141,17 @@
   const MONO = '"DejaVu Sans Mono", monospace'
   // The field: the Bohr magneton over h, Hz a tesla (CODATA 2022), the
   // dial's largest field and the field at start, tesla, and its angle to
-  // z at start, degrees. The pulse's level, the detector's share of the
-  // sphere, and its trace: a sample every TRACE_DT of the event clock,
-  // TRACE_T of them shown, 2 ms and 1 s on an event clock of 1e6, scaled
-  // with EVENT. The detector counts one line of the pulsed level through
-  // a filter, its strongest visible line.
+  // z at start, degrees: at the start the drawn atom's axis, turning,
+  // flashes no cell of the pane more than three times a second at any
+  // g_J up to 2 (issue #169, decision 0015). The pulse's level, the
+  // detector's share of the sphere, and its trace: a sample every
+  // TRACE_DT of the event clock, TRACE_T of them shown, 2 ms and 1 s on
+  // an event clock of 1e6, scaled with EVENT. The detector counts one
+  // line of the pulsed level through a filter, its strongest visible
+  // line.
   const MU_B_H = 1.39962449171e10
   const B_MAX = 2e-3
-  const B_START = 0.3e-3
+  const B_START = 0.15e-3
   const DEG_START = 60
   const PULSE_LEVEL = '2p4p_3P_2'
   const DETECT = 0.05
@@ -113,6 +173,7 @@
   const THETA = U(0x398)
   const DOTS = U(0x2026)
   const DEG = U(0xb0)
+  const LAM = U(0x3bb)
 
   // A level is in the ground term.
   const ground = l => l.conf === '2s2.2p2' && l.term === '3P'
@@ -358,42 +419,20 @@
     return best || [0, 0]
   }
 
-  // Points of the transition density psi_f* psi_i of a jump, its source
-  // (carbon-photon.md, sections 1 and 4): the radial part |P_f P_i| as a
-  // table, the angular part P_lf^|m|(cos theta) P_lt^|m'|(cos theta)
-  // cos(q phi), the real part at one instant, by rejection. Each point
-  // carries its sign. Tables are kept by the pair of orbitals.
-  const sources = new Map()
-  function source (mv, q, n, rand = Math.random) {
-    const key = mv.from + '|' + mv.to
-    let q0 = sources.get(key)
-    if (!q0) {
-      q0 = radialTable(r => Math.abs(radialP(mv.from, r) * radialP(mv.to, r)), Math.max(reach(mv.from), reach(mv.to)))
-      sources.set(key, q0)
-    }
+  // The sign of the transition density psi_f* psi_i of a jump, its
+  // source (carbon-photon.md, sections 1 and 4), at a point of the
+  // atom's frame: the radial part P_f P_i, the angular part
+  // P_lf^|m|(cos theta) P_lt^|m'|(cos theta) cos(q phi), the real part
+  // at one instant. The flash rides on the particles the jump moves,
+  // each in the colour of this sign where it stands (issue #165).
+  function sourceSign (mv, q) {
     const [m, mt] = mPair(mv.lf, mv.lt, q)
-    const ang = (c, ph) => legendre(mv.lf, Math.abs(m), c) * legendre(mv.lt, Math.abs(mt), c) * Math.cos(q * ph)
-    let top = 0
-    for (let i = 0; i <= 200; i++) top = Math.max(top, Math.abs(legendre(mv.lf, Math.abs(m), -1 + i / 100) * legendre(mv.lt, Math.abs(mt), -1 + i / 100)))
-    const pts = new Float32Array(4 * n)
-    for (let k = 0; k < n; k++) {
-      let c = 0
-      let ph = 0
-      let a = 0
-      for (let i = 0; i < 200; i++) {
-        c = 2 * rand() - 1
-        ph = 2 * Math.PI * rand()
-        a = ang(c, ph)
-        if (rand() * top <= Math.abs(a)) break
-      }
-      const r = drawR(q0, rand())
-      const s = Math.sqrt(1 - c * c)
-      pts[4 * k] = r * s * Math.cos(ph)
-      pts[4 * k + 1] = r * s * Math.sin(ph)
-      pts[4 * k + 2] = r * c
-      pts[4 * k + 3] = Math.sign(a * radialP(mv.from, r) * radialP(mv.to, r)) || 1
+    return (x, y, z) => {
+      const r = Math.hypot(x, y, z) || 1e-9
+      const c = z / r
+      const a = legendre(mv.lf, Math.abs(m), c) * legendre(mv.lt, Math.abs(mt), c) * Math.cos(q * Math.atan2(y, x))
+      return Math.sign(a * radialP(mv.from, r) * radialP(mv.to, r)) || 1
     }
-    return pts
   }
 
   // Unit vectors spread evenly on the sphere, by the Fibonacci lattice.
@@ -686,100 +725,409 @@
 
   // ---- The cloud ---------------------------------------------------------
 
-  // The largest of P_l^m(cos theta)^2, for rejection.
-  const tops = new Map()
-  function legTop (l, m) {
-    const key = l * 8 + m
-    let t = tops.get(key)
-    if (t === undefined) {
-      t = 0
-      for (let i = 0; i <= 400; i++) t = Math.max(t, legendre(l, m, -1 + i / 200) ** 2)
-      tops.set(key, t)
+  // The drawn atom's cloud (issue #165): particles that flow by Nelson's
+  // stochastic mechanics in the density rho = |psi|^2 of their electron,
+  // each a trajectory, none drawn afresh. A particle of an electron in
+  // the orbital R(r) Y_lm moves, in atomic units, by
+  //   dx = (v + u) dt + dW,  each axis of dW of variance hbar/m_e dt = dt,
+  // with the current velocity v = Im(grad psi / psi), m / rho_perp about
+  // z, Madelung's swirl, and the osmotic velocity u = (1/2) grad ln rho
+  // (Nelson, Phys. Rev. 150, 1079, 1966). Its stationary density is rho.
+  // A step is two exact parts: the swirl, a turn about z by an angle of
+  // rho_perp alone, which keeps any rho round about z, and the osmotic
+  // drift and the noise as one Metropolis-adjusted Langevin step
+  // (Roberts and Tweedie, Bernoulli 2, 341, 1996), whose acceptance
+  // keeps rho exact at any step and under the clip of u at U_MAX. The
+  // chain's rho is ln R^2 piecewise linear in r on the radial table's
+  // grid times ln P_l^m(c)^2 piecewise linear in c = cos theta.
+
+  // Six electron slots: 1s, 1s, 2s, 2s, 2p, and the slot of the electron
+  // a level raises. In 2s2.2p2 it is in 2p, in 2s.2p3 the second 2s slot
+  // is in 2p too, in 2s2.2p.nl it is the outer electron, the model's.
+  // That slot's PTS_OUTER particles stay in every level, each weighted
+  // PTS_CORE / PTS_OUTER while it is in a core orbital, so it carries
+  // one core electron's ink there, as the other slots do.
+  const SLOT_N = [PTS_CORE, PTS_CORE, PTS_CORE, PTS_CORE, PTS_CORE, PTS_OUTER]
+  const SLOT_AT = SLOT_N.reduce((a, n) => a.concat(a[a.length - 1] + n), [0])
+  const SLOTS = SLOT_N.length
+
+  // ln R(r)^2 of an orbital on the radial table's grid, r_k = rmax (k /
+  // n)^2, and each segment's slope, extended past rmax by the last.
+  const LN_N = 4096
+  const lnTables = new Map()
+  function lnTable (key) {
+    let t = lnTables.get(key)
+    if (!t) {
+      const rmax = reach(key)
+      const f = new Float64Array(LN_N + 1)
+      const d = new Float64Array(LN_N)
+      for (let k = 0; k <= LN_N; k++) {
+        const r = Math.max(1e-6, rmax * (k / LN_N) ** 2)
+        f[k] = Math.log(Math.max(1e-300, (radialP(key, r) / r) ** 2))
+      }
+      for (let k = 0; k < LN_N; k++) d[k] = (f[k + 1] - f[k]) / (rmax * (2 * k + 1) / (LN_N * LN_N))
+      t = { rmax, f, d }
+      lnTables.set(key, t)
     }
     return t
   }
 
-  // The electron density of a level's M_L component as points, in bohr:
-  // Monte Carlo stippling of |psi|^2. Each electron's radius from its
-  // orbital's table. A subshell with occupations draws each point's m by
-  // n_m and its direction from |Y_lm|^2, else uniformly. Cloud.make(lv,
-  // M) makes one, Cloud.step(c, dt) draws SEETHE of the points afresh
-  // each 60th of a second, so it seethes and keeps its shape, and turns
-  // each point of m != 0 about z at Madelung's m / rho^2 (atomic units)
-  // on the light clock, and Cloud.draw(c, fr, area, dim, rect, O) turns
-  // them by the atom's frame O and projects them, far points dimmer and
-  // smaller, the outer electron's in amber.
+  // ln P_l^m(c)^2 on a grid of c = cos theta, each segment's slope, and
+  // the cumulative share of P_l^m(c)^2 from c = -1. l = 0 is uniform.
+  const ANG_N = 1024
+  const angTables = new Map()
+  function angTable (l, m) {
+    const key = l * 8 + m
+    let t = angTables.get(key)
+    if (!t) {
+      const f = new Float64Array(ANG_N + 1)
+      const d = new Float64Array(ANG_N)
+      const cdf = new Float64Array(ANG_N + 1)
+      let prev = 0
+      for (let k = 0; k <= ANG_N; k++) {
+        const v = legendre(l, m, -1 + 2 * k / ANG_N) ** 2
+        f[k] = Math.log(Math.max(1e-300, v))
+        if (k) cdf[k] = cdf[k - 1] + (v + prev) / 2
+        prev = v
+      }
+      for (let k = 0; k < ANG_N; k++) d[k] = (f[k + 1] - f[k]) * ANG_N / 2
+      for (let k = 1; k <= ANG_N; k++) cdf[k] /= cdf[ANG_N]
+      t = { f, d, cdf }
+      angTables.set(key, t)
+    }
+    return t
+  }
+
+  // The share of the radial table below r, and the share of the angular
+  // table below c, and c at a share u: the inverses of drawR.
+  function shareR (q, r) {
+    const n = q.length - 1
+    if (r <= q[0]) return 0
+    if (r >= q[n]) return 1 - 1e-9
+    let lo = 0
+    let hi = n
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (q[mid] <= r) lo = mid
+      else hi = mid
+    }
+    return (lo + (q[hi] > q[lo] ? (r - q[lo]) / (q[hi] - q[lo]) : 0)) / n
+  }
+  function shareC (t, c) {
+    const x = Math.max(0, Math.min(ANG_N, (c + 1) * ANG_N / 2))
+    const k = Math.min(ANG_N - 1, Math.floor(x))
+    return t.cdf[k] + (x - k) * (t.cdf[k + 1] - t.cdf[k])
+  }
+  function drawC (t, u) {
+    const cdf = t.cdf
+    let lo = 0
+    let hi = ANG_N
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (cdf[mid] <= u) lo = mid
+      else hi = mid
+    }
+    const w = cdf[hi] - cdf[lo]
+    return -1 + 2 * (lo + (w > 0 ? (u - cdf[lo]) / w : 0.5)) / ANG_N
+  }
+
+  // A slot's orbital in a level: its key and l, the cumulative shares of
+  // its n_m from m = -l, or null for m = 0 and directions uniform (an s
+  // orbital, or a level the research's table leaves round), its weight,
+  // its tables, and its step's cap in atomic units of time.
+  function slotKind (key, occ, w) {
+    const outer = !!D.outer[key]
+    const l = outer ? D.outer[key].l : key === '2p' ? 1 : 0
+    let cum = null
+    if (l && occ) {
+      const tot = occ.reduce((a, b) => a + b, 0)
+      let s = 0
+      cum = occ.map(v => (s += v) / tot)
+    }
+    const meanR = outer ? D.outer[key].meanR : D.rhf.meanR[key]
+    return { key, l, cum, outer, w, q: table(key), ln: lnTable(key), hmax: (STEP * meanR) ** 2 }
+  }
+  // The m of a slot's particle at its fixed share u, and the angular
+  // table its density takes.
+  function mAt (k, u) {
+    if (!k.cum) return 0
+    for (let i = 0; i < k.cum.length; i++) if (u < k.cum[i]) return i - k.l
+    return k.l
+  }
+  const angOf = (k, m) => k.cum ? angTable(k.l, Math.abs(m)) : angTable(0, 0)
+
+  // The six slots' orbitals of level lv's component M_L = M, and whether
+  // the research's table leaves it round.
+  function roster (lv, M) {
+    const occ = occupations(lv, M)
+    const keys = lv.conf === '2s2.2p2'
+      ? ['1s', '1s', '2s', '2s', '2p', '2p']
+      : lv.conf === '2s.2p3' ? ['1s', '1s', '2s', '2p', '2p', '2p'] : ['1s', '1s', '2s', '2s', '2p', shells(lv)[3].key]
+    const kinds = keys.map((key, s) => {
+      const outer = !!D.outer[key]
+      return slotKind(key, occ && (outer ? occ.o : key === '2p' ? occ.p : null), s === SLOTS - 1 && !outer ? PTS_CORE / PTS_OUTER : 1)
+    })
+    return { kinds, round: !occ }
+  }
+
+  // ln rho at (x, y, z) for a particle of radial table R and angular
+  // table A, its gradient, clipped at 2 U_MAX, into g.
+  function lnRho (R, A, x, y, z, g) {
+    const r = Math.sqrt(x * x + y * y + z * z) || 1e-12
+    let kr = Math.floor(LN_N * Math.sqrt(r / R.rmax))
+    if (kr > LN_N - 1) kr = LN_N - 1
+    const dr = R.d[kr]
+    const fr = R.f[kr] + dr * (r - R.rmax * (kr / LN_N) * (kr / LN_N))
+    const c = z / r
+    let ka = Math.floor((c + 1) * ANG_N / 2)
+    if (ka < 0) ka = 0
+    else if (ka > ANG_N - 1) ka = ANG_N - 1
+    const da = A.d[ka]
+    const fa = A.f[ka] + da * (c + 1 - 2 * ka / ANG_N)
+    const a = (dr - da * c / r) / r
+    let gx = a * x
+    let gy = a * y
+    let gz = a * z + da / r
+    const gn = Math.sqrt(gx * gx + gy * gy + gz * gz)
+    if (gn > 2 * U_MAX) {
+      const s = 2 * U_MAX / gn
+      gx *= s
+      gy *= s
+      gz *= s
+    }
+    g[0] = gx
+    g[1] = gy
+    g[2] = gz
+    return fr + fa
+  }
+
+  // One Metropolis-adjusted Langevin step of h atomic units of time for
+  // the particle at p[o]: the proposal y = x + h u(x) + sqrt(h) xi, taken
+  // with the chance min(1, rho(y) q(x | y) / (rho(x) q(y | x))).
+  // ln rho and u at the particle are kept from its last step in c.ln and
+  // c.g, valid while c.ok is set: a step takes one new evaluation.
+  const G1 = new Float64Array(3)
+  function mala (c, i, R, A, h, rand) {
+    const p = c.pts
+    const o = 3 * i
+    const G0 = c.g
+    const x = p[o]
+    const y = p[o + 1]
+    const z = p[o + 2]
+    if (!c.ok[i]) {
+      c.ln[i] = lnRho(R, A, x, y, z, G1)
+      G0[o] = G1[0]
+      G0[o + 1] = G1[1]
+      G0[o + 2] = G1[2]
+      c.ok[i] = 1
+    }
+    const l0 = c.ln[i]
+    const s = Math.sqrt(h)
+    const a = Math.sqrt(-2 * Math.log(1 - rand()))
+    const b = 2 * Math.PI * rand()
+    const n0 = a * Math.cos(b)
+    const n1 = a * Math.sin(b)
+    const n2 = Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand())
+    const yx = x + 0.5 * h * G0[o] + s * n0
+    const yy = y + 0.5 * h * G0[o + 1] + s * n1
+    const yz = z + 0.5 * h * G0[o + 2] + s * n2
+    const l1 = lnRho(R, A, yx, yy, yz, G1)
+    const bx = x - yx - 0.5 * h * G1[0]
+    const by = y - yy - 0.5 * h * G1[1]
+    const bz = z - yz - 0.5 * h * G1[2]
+    const la = l1 - l0 - (bx * bx + by * by + bz * bz) / (2 * h) + (n0 * n0 + n1 * n1 + n2 * n2) / 2
+    if (la >= 0 || Math.log(rand()) < la) {
+      p[o] = yx
+      p[o + 1] = yy
+      p[o + 2] = yz
+      c.ln[i] = l1
+      G0[o] = G1[0]
+      G0[o + 1] = G1[1]
+      G0[o + 2] = G1[2]
+    }
+  }
+
+  // Cloud.make(lv, M) makes the cloud of level lv's component M_L = M,
+  // each particle at an independent draw from its electron's rho, its m
+  // by the subshell's n_m at a share it keeps for good. Cloud.step(c,
+  // dt) moves it dt seconds on screen: Nelson's process on the light
+  // clock times NELSON, in steps of at most each orbital's cap, and the
+  // morphs under way, and the drawn points c.q, each particle's path
+  // averaged over SMOOTH. Cloud.to(c, lv, M) sets a new level: every particle
+  // whose density changes is carried from its quantile of the old one,
+  // radius by the radial table and c by the angular table, its azimuth
+  // kept, to the same quantile of the new over MORPH seconds, and takes
+  // no Nelson step meanwhile. A particle moved again before it arrives
+  // keeps the quantiles of its first move. Every particle stays: none is
+  // made or lost. It returns the slots whose orbital changed.
+  // Cloud.draw(c, fr, area, dim, rect, O, flash) turns the drawn points
+  // by the atom's frame O and projects them, far points dimmer and smaller,
+  // the outer electron's in amber, and the flash's slots again in the
+  // colour of the source's sign where each particle stands.
   const Cloud = {
-    make (lv, M) {
-      const occ = occupations(lv, M)
-      const sh = shells(lv).map(e => Object.assign({}, e, {
-        l: e.outer ? e.l : e.key === '2p' ? 1 : 0,
-        occ: occ ? (e.outer ? occ.o : e.key === '2p' ? occ.p : null) : null
-      }))
-      const n = sh.reduce((s, e) => s + e.count * (e.outer ? PTS_OUTER : PTS_CORE), 0)
-      const c = { pts: new Float32Array(3 * n), m: new Int8Array(n), kinds: [], outerFrom: n, debt: 0, round: !occ }
-      let k = 0
-      for (const e of sh) {
-        const m = e.count * (e.outer ? PTS_OUTER : PTS_CORE)
-        if (e.outer) c.outerFrom = k
-        for (let j = 0; j < m; j++, k++) {
-          c.kinds.push(e)
-          Cloud.place(c, k)
+    N: SLOT_AT[SLOTS],
+    SLOT_AT,
+
+    make (lv, M, rand = Math.random) {
+      const n = SLOT_AT[SLOTS]
+      const ro = roster(lv, M)
+      const c = {
+        n,
+        t: 0,
+        kinds: ro.kinds,
+        round: ro.round,
+        pts: new Float32Array(3 * n),
+        m: new Int8Array(n),
+        um: new Float32Array(n),
+        w: new Float32Array(n),
+        amber: new Uint8Array(n),
+        mt: new Float64Array(n).fill(-1),
+        from: new Float32Array(2 * n),
+        to: new Float32Array(2 * n),
+        ph: new Float32Array(n),
+        uq: new Float32Array(2 * n),
+        w0: new Float32Array(n),
+        ln: new Float64Array(n),
+        g: new Float64Array(3 * n),
+        ok: new Uint8Array(n),
+        q: null
+      }
+      for (let s = 0; s < SLOTS; s++) {
+        const k = c.kinds[s]
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          c.um[i] = rand()
+          c.m[i] = mAt(k, c.um[i])
+          const r = drawR(k.q, rand())
+          const z = drawC(angOf(k, c.m[i]), rand())
+          const ph = 2 * Math.PI * rand()
+          const sn = Math.sqrt(Math.max(0, 1 - z * z))
+          c.pts[3 * i] = r * sn * Math.cos(ph)
+          c.pts[3 * i + 1] = r * sn * Math.sin(ph)
+          c.pts[3 * i + 2] = r * z
+          c.w[i] = k.w
+          c.amber[i] = k.outer ? 1 : 0
         }
       }
+      c.q = Float32Array.from(c.pts)
       return c
     },
 
-    place (c, k) {
-      const e = c.kinds[k]
-      const r = drawR(table(e.key), Math.random())
-      let z = 2 * Math.random() - 1
-      let m = 0
-      if (e.occ) {
-        m = pick(e.occ.map((_, i) => i), i => e.occ[i], Math.random()) - e.l
-        const top = legTop(e.l, Math.abs(m))
-        for (let i = 0; i < 200; i++) {
-          z = 2 * Math.random() - 1
-          if (Math.random() * top <= legendre(e.l, Math.abs(m), z) ** 2) break
+    to (c, lv, M) {
+      const ro = roster(lv, M)
+      const moved = []
+      const p = c.pts
+      for (let s = 0; s < SLOTS; s++) {
+        const a = c.kinds[s]
+        const b = ro.kinds[s]
+        if (a.key !== b.key) moved.push(s)
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          const m0 = c.m[i]
+          const m = mAt(b, c.um[i])
+          c.m[i] = m
+          if (a.key === b.key && angOf(a, m0) === angOf(b, m)) continue
+          const x = p[3 * i]
+          const y = p[3 * i + 1]
+          const z = p[3 * i + 2]
+          const r = Math.sqrt(x * x + y * y + z * z) || 1e-12
+          if (c.mt[i] < 0) {
+            c.uq[2 * i] = shareR(a.q, r)
+            c.uq[2 * i + 1] = shareC(angOf(a, m0), z / r)
+            c.ph[i] = Math.atan2(y, x)
+          }
+          c.from[2 * i] = r
+          c.from[2 * i + 1] = Math.acos(Math.max(-1, Math.min(1, z / r)))
+          c.to[2 * i] = drawR(b.q, c.uq[2 * i])
+          c.to[2 * i + 1] = Math.acos(drawC(angOf(b, m), c.uq[2 * i + 1]))
+          c.w0[i] = c.w[i]
+          c.mt[i] = c.t
+          c.ok[i] = 0
         }
       }
-      const ph = 2 * Math.PI * Math.random()
-      const s = Math.sqrt(1 - z * z)
-      c.pts[3 * k] = r * s * Math.cos(ph)
-      c.pts[3 * k + 1] = r * s * Math.sin(ph)
-      c.pts[3 * k + 2] = r * z
-      c.m[k] = m
+      c.kinds = ro.kinds
+      c.round = ro.round
+      return moved
     },
 
-    step (c, dt) {
-      const n = c.kinds.length
-      c.debt += n * SEETHE * dt * 60
-      for (; c.debt >= 1; c.debt--) Cloud.place(c, Math.floor(Math.random() * n))
-      const p = c.pts
-      for (let k = 0; k < n; k++) {
-        const m = c.m[k]
-        if (!m) continue
-        const x = p[3 * k]
-        const y = p[3 * k + 1]
-        const w = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, m / Math.max(1e-6, x * x + y * y) / Clock.au)) * dt
-        const cs = Math.cos(w)
-        const sn = Math.sin(w)
-        p[3 * k] = x * cs - y * sn
-        p[3 * k + 1] = x * sn + y * cs
+    step (c, dt, rand = Math.random) {
+      Cloud.flow(c, dt, rand)
+      // The drawn points: each path's mean, or the path itself while a
+      // morph carries it, so it arrives on time.
+      const a = 1 - Math.exp(-dt / SMOOTH)
+      for (let i = 0; i < c.n; i++) {
+        const b = c.mt[i] >= 0 ? 1 : a
+        for (let j = 3 * i; j < 3 * i + 3; j++) c.q[j] += (c.pts[j] - c.q[j]) * b
       }
     },
 
-    draw (c, fr, a, dim, rect, O = IDENTITY) {
+    // The particles' own motion, dt seconds on screen.
+    flow (c, dt, rand = Math.random) {
+      c.t += dt
       const p = c.pts
-      for (let i = 0; i < c.kinds.length; i++) {
-        const x = p[3 * i]
-        const y = p[3 * i + 1]
-        const z = p[3 * i + 2]
-        const v = fr.project(O[0] * x + O[1] * y + O[2] * z, O[3] * x + O[4] * y + O[5] * z, O[6] * x + O[7] * y + O[8] * z)
-        if (v.x < a.x || v.x >= a.x + a.w || v.y < a.y || v.y >= a.y + a.h) continue
-        const near = Math.max(0, Math.min(1, (v.s - 0.8) / 0.45))
-        const outer = i >= c.outerFrom
-        rect(outer ? '#ffcf7a' : '#a9c8ff', (outer ? 0.4 + 0.5 * near : 0.3 + 0.45 * near) * dim, v.x, v.y, 1 + 1.6 * near)
+      const h = NELSON * dt / Clock.au
+      for (let s = 0; s < SLOTS; s++) {
+        const k = c.kinds[s]
+        const nsub = Math.max(1, Math.ceil(h / k.hmax))
+        const hs = h / nsub
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          if (c.mt[i] >= 0) {
+            const u = Math.min(1, (c.t - c.mt[i]) / MORPH)
+            const e = u * u * (3 - 2 * u)
+            const r = c.from[2 * i] + (c.to[2 * i] - c.from[2 * i]) * e
+            const th = c.from[2 * i + 1] + (c.to[2 * i + 1] - c.from[2 * i + 1]) * e
+            const sn = r * Math.sin(th)
+            p[3 * i] = sn * Math.cos(c.ph[i])
+            p[3 * i + 1] = sn * Math.sin(c.ph[i])
+            p[3 * i + 2] = r * Math.cos(th)
+            c.w[i] = c.w0[i] + (k.w - c.w0[i]) * e
+            if (u >= 0.5) c.amber[i] = k.outer ? 1 : 0
+            if (u >= 1) c.mt[i] = -1
+            c.ok[i] = 0
+            continue
+          }
+          const m = c.m[i]
+          if (m) {
+            const x = p[3 * i]
+            const y = p[3 * i + 1]
+            const w = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, NELSON * m / Math.max(1e-6, x * x + y * y) / Clock.au)) * dt
+            const cs = Math.cos(w)
+            const sn = Math.sin(w)
+            p[3 * i] = x * cs - y * sn
+            p[3 * i + 1] = x * sn + y * cs
+            const gx = c.g[3 * i]
+            const gy = c.g[3 * i + 1]
+            c.g[3 * i] = gx * cs - gy * sn
+            c.g[3 * i + 1] = gx * sn + gy * cs
+          }
+          const A = angOf(k, m)
+          for (let j = 0; j < nsub; j++) mala(c, i, k.ln, A, hs, rand)
+        }
+      }
+    },
+
+    // The particles of slot s that are moving to a new level's density.
+    moving (c, s) {
+      let n = 0
+      for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) if (c.mt[i] >= 0) n++
+      return n
+    },
+
+    draw (c, fr, a, dim, rect, O = IDENTITY, flash = null) {
+      const p = c.q
+      for (let s = 0; s < SLOTS; s++) {
+        const lit = flash && flash.slots.includes(s)
+        for (let i = SLOT_AT[s]; i < SLOT_AT[s + 1]; i++) {
+          const x = p[3 * i]
+          const y = p[3 * i + 1]
+          const z = p[3 * i + 2]
+          const v = fr.project(O[0] * x + O[1] * y + O[2] * z, O[3] * x + O[4] * y + O[5] * z, O[6] * x + O[7] * y + O[8] * z)
+          if (v.x < a.x || v.x >= a.x + a.w || v.y < a.y || v.y >= a.y + a.h) continue
+          const vx = v.x
+          const vy = v.y
+          const near = Math.max(0, Math.min(1, (v.s - 0.8) / 0.45))
+          const amber = c.amber[i]
+          rect(amber ? '#ffcf7a' : '#a9c8ff', (amber ? 0.4 + 0.5 * near : 0.3 + 0.45 * near) * dim * c.w[i], vx, vy, 1 + 1.6 * near)
+          if (lit) rect(flash.sign(x, y, z) > 0 ? '#7dffd0' : '#ff8ad8', (0.5 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * flash.a, vx, vy, 1.8)
+        }
       }
     }
   }
@@ -799,23 +1147,45 @@
 
   // One photon's front, from the site, on the light clock: line k,
   // component q about the unit axis n its atom had, born at t: it keeps
-  // that pattern as the atom turns on. Its amplitude follows the physics: intensity
-  // h nu times the pattern over r^2, drawn as its square root, so
-  // sqrt(nu / nu_538) sqrt(pattern) R0 / r, 1 at most. Its crests'
-  // spacing on screen grows as lambda^0.35, a symbol.
+  // that pattern as the atom turns on. Its amplitude follows the
+  // physics: intensity h nu times the pattern over r^2, drawn as its
+  // square root, so sqrt(nu / nu_538) sqrt(pattern) R0 / r, 1 at most.
+  // Its wavelength is the vacuum one, the light's at the atom: 94 to
+  // 5x10^5 times the view's radius. A front is detected 25 to 38 bohr
+  // from the site, by the pane, and lambda / 2 pi is 358 bohr at the
+  // shortest line, so every front lives in the near zone, where the
+  // field has one phase across the view and no crest. On the light clock
+  // its period is lambda / Clock.light, 198 s to 282 h. So a front is
+  // drawn as the packet's leading edge and a trail behind it, lambda /
+  // TRAIL long, the pane printing TRAIL: lengths in the true ratio of the
+  // lines' wavelengths, against the scale bar by that factor. Nothing is
+  // drawn ahead of the edge, where no field has come, and nothing
+  // oscillates.
   const Front = {
     make (k, ln, q, t, n = Z) {
-      return { k, ln, q, t, n, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, gap: 4.5 * Math.pow(wl(ln) / 119, 0.35) }
+      return { k, ln, q, t, n, kind: kindOf(ln.type, q), amp: Math.sqrt((1 / wl(ln)) / NU_REF), vis: visible(ln), uv: wl(ln) < 380, trail: Front.trail(ln) }
     },
+
+    // The line's vacuum wavelength, bohr.
+    lambda: ln => ln.vac / D.bohrNm,
+    // Its trail, bohr: lambda / TRAIL.
+    trail: ln => Front.lambda(ln) / TRAIL,
+    // Its period on the light clock, seconds on screen.
+    period: ln => Front.lambda(ln) / Clock.light,
 
     // Its radius, bohr, at time now.
     radius: (f, now) => Clock.light * (now - f.t),
 
-    // The visible fronts, in their hue: each the limb of its sphere and
-    // of CRESTS - 1 crests behind it, as arcs whose brightness is the
-    // drawn amplitude in the arc's direction, cos(Theta) = cos(phi) ax +
+    // The trail's brightness, as a share of the edge's, in its three
+    // thirds from the edge inward.
+    FADE: [0.42, 0.24, 0.1],
+
+    // The visible fronts, in their hue: each the limb of its sphere, the
+    // edge, and its trail inside it in three bands of a third of its
+    // length each, fading inward, as arcs whose brightness is the drawn
+    // amplitude in the arc's direction, cos(Theta) = cos(phi) ax +
     // sin(phi) ay on the limb, [ax, ay] its axis on the screen. Arcs
-    // batched by colour and brightness.
+    // batched by colour, the trail's width and brightness.
     draw (g, fronts, fr, now) {
       const N = 36
       const bins = new Map()
@@ -823,21 +1193,28 @@
         if (!f.vis) continue
         const Rb = Front.radius(f, now)
         const R = Rb * fr.k
+        if (R <= 1) continue
         const a0 = Math.min(1, f.amp * R0 / Math.max(Rb, 0.1))
         const v = fr.turn(f.n[0], f.n[1], f.n[2])
         const ax = v.x
         const ay = v.y
-        let list = bins.get(f.ln.rgb)
-        if (!list) bins.set(f.ln.rgb, list = [])
-        for (let w = 0; w < CRESTS; w++) {
-          const r = R - w * f.gap
-          if (r <= 1) break
-          const fade = a0 * Math.exp(-w / 1.2)
-          for (let j = 0; j < N; j++) {
-            const p0 = 2 * Math.PI * j / N
-            const p1 = 2 * Math.PI * (j + 1) / N
-            const b = Math.round(10 * fade * shape(f.kind, Math.cos((p0 + p1) / 2) * ax + Math.sin((p0 + p1) / 2) * ay))
+        // The trail's thirds, pixels, those inside the site dropped.
+        const L = Math.min(f.trail * fr.k, R)
+        const w3 = L / 3
+        const key = f.ln.rgb + '|' + Math.round(4 * w3)
+        let bin = bins.get(key)
+        if (!bin) bins.set(key, bin = { rgb: f.ln.rgb, w: w3, rings: [[], [], [], []] })
+        const radii = [R]
+        if (w3 >= 0.5) for (let s = 0; s < 3; s++) radii.push(R - (s + 0.5) * w3)
+        for (let j = 0; j < N; j++) {
+          const p0 = 2 * Math.PI * j / N
+          const p1 = 2 * Math.PI * (j + 1) / N
+          const e = a0 * shape(f.kind, Math.cos((p0 + p1) / 2) * ax + Math.sin((p0 + p1) / 2) * ay)
+          for (let s = 0; s < radii.length; s++) {
+            const b = Math.round(20 * e * (s ? Front.FADE[s - 1] : 1))
             if (b <= 0) continue
+            const r = radii[s]
+            const list = bin.rings[s]
             const path = list[b] || (list[b] = new Path2D())
             path.moveTo(fr.cx + r * Math.cos(p0), fr.cy - r * Math.sin(p0))
             path.arc(fr.cx, fr.cy, r, -p0, -p1, true)
@@ -845,13 +1222,15 @@
         }
       }
       g.save()
-      g.lineWidth = 1.6
-      for (const [rgb, list] of bins) {
-        g.strokeStyle = rgb
-        list.forEach((path, b) => {
-          if (!path) return
-          g.globalAlpha = b / 10
-          g.stroke(path)
+      for (const bin of bins.values()) {
+        g.strokeStyle = bin.rgb
+        bin.rings.forEach((list, s) => {
+          g.lineWidth = s ? bin.w : BAND_MIN
+          list.forEach((path, b) => {
+            if (!path) return
+            g.globalAlpha = b / 20
+            g.stroke(path)
+          })
         })
       }
       g.restore()
@@ -881,13 +1260,31 @@
   // harmonics, turned to its axis, to tables by integer radius, and a
   // pixel sums the tables at its radius against the harmonics of its own
   // angle. The cost does not grow with the number of axes.
-  // Ultraviolet fronts sharpen the picture and lift its contrast across a
-  // band as wide as the front's crest spacing. Infrared fronts refract
-  // it, shifting pixels along the radius by a ripple of that spacing, as
-  // heat haze does. Radii with no front are skipped.
+  // Each acts across the front's trail, lambda / TRAIL behind its edge
+  // and nothing ahead of it, at least BAND_MIN pixels wide, its strength
+  // falling from the edge inward: Warp.profile. Ultraviolet fronts
+  // sharpen the picture and lift its contrast there, SHARP of the
+  // Laplacian and LIFT of the pixel, by SHARP_MAX at most. Infrared fronts refract it,
+  // shifting pixels along the radius by one smooth lobe across the trail,
+  // HAZE pixels at its peak per unit amplitude, as a refracting shell
+  // does: no ripple, since in the view the field has no crest. Radii with
+  // no front are skipped.
   const Warp = {
     tables: null,
+    // The last pass's mean change of the box's pixels, levels of 255 a
+    // channel: the frame with its invisible fronts against without them.
+    change: 0,
+    // The band's width in pixels at k pixels a bohr.
+    width: (f, k) => Math.max(BAND_MIN, f.trail * k),
+    // At u, the share of the band from the edge (0) inward (1): the
+    // sharpening's share of the front's amplitude, and the shift's in
+    // pixels per unit amplitude. Zero outside the band.
+    profile (f, u) {
+      if (u < 0 || u > 1) return 0
+      return f.uv ? 1 - u : 4 * HAZE * u * (1 - u)
+    },
     apply (g, fronts, fr, box, now) {
+      Warp.change = 0
       const some = fronts.filter(f => !f.vis)
       if (!some.length || box.w < 4 || box.h < 4) return 0
       const rmax = Math.ceil(Math.hypot(box.w, box.h)) + 4
@@ -905,9 +1302,9 @@
         const Rb = Front.radius(f, now)
         const R = Rb * fr.k
         const a = Math.min(1.5, f.amp * R0 / Math.max(Rb, 0.1))
-        const w = f.uv ? 0.8 * f.gap : 1.5 * f.gap
-        const lo = Math.max(0, Math.floor(R - 2.5 * w))
-        const hi = Math.min(rmax - 1, Math.ceil(R + w))
+        const w = Warp.width(f, fr.k)
+        const lo = Math.max(0, Math.ceil(R - w))
+        const hi = Math.min(rmax - 1, Math.floor(R))
         if (hi < lo) continue
         used++
         // The front's harmonics about its axis on the screen.
@@ -922,9 +1319,7 @@
         }
         const tab = f.uv ? T.S : T.Dp
         for (let r = lo; r <= hi; r++) {
-          const x = (r - R) / w
-          const env = Math.exp(-x * x)
-          const e = f.uv ? a * env : 4 * a * env * Math.sin(2 * Math.PI * (r - R) / f.gap)
+          const e = a * Warp.profile(f, (R - r) / w)
           for (let k = 0; k < H2; k++) tab[k][r] += e * c[k]
           T.on[r] = 1
         }
@@ -941,6 +1336,7 @@
       const oy = fr.cy - box.y
       const S = T.S
       const Dp = T.Dp
+      let sum = 0
       for (let y = 1; y < H - 1; y++) {
         const dy = y - oy
         for (let x = 1; x < W - 1; x++) {
@@ -979,11 +1375,14 @@
             for (let ch = 0; ch < 3; ch++) {
               const p = src[i + ch]
               const lap = 4 * p - src[i + ch - 4] - src[i + ch + 4] - src[i + ch - 4 * W] - src[i + ch + 4 * W]
-              d[i + ch] = d[i + ch] + s * (0.5 * lap + 0.35 * p)
+              const m = SHARP_MAX * Math.min(1, Math.max(0.15, (192 - p) / 128))
+              d[i + ch] = d[i + ch] + Math.max(-m, Math.min(m, s * (SHARP * lap + LIFT * p)))
             }
           }
+          sum += Math.abs(d[i] - src[i]) + Math.abs(d[i + 1] - src[i + 1]) + Math.abs(d[i + 2] - src[i + 2])
         }
       }
+      Warp.change = sum / (3 * W * H)
       g.putImageData(img, box.x, box.y)
       return used
     }
@@ -1032,6 +1431,21 @@
     return { c, g: c.getContext('2d', { willReadFrequently: true }) }
   }
 
+  // The atom's pixels a bohr, in an atom box a: the view's radius to its
+  // nearer side, 6 pixels in.
+  const kOf = a => Math.max(10, Math.min(a.w, a.h) / 2 - 6) / VIEW
+  // The scale bar's length, bohr, at k pixels a bohr in an atom w pixels
+  // wide: a tenth of the width or more.
+  const STEPS = [1, 2, 5, 10, 20, 50]
+  const barStep = (k, w) => STEPS.find(s => s * k >= w * 0.1) || 50
+  // The backdrop's grid spacing, bohr: the least of STEPS that divides the
+  // scale bar's length and is GRID_PX pixels or more, so the bar spans
+  // whole cells.
+  const gridStep = (k, w) => {
+    const bar = barStep(k, w)
+    return STEPS.find(s => bar % s === 0 && s * k >= GRID_PX) || bar
+  }
+
   const COLS = ['1even', '1odd', '3even', '3odd', '5odd']
   const COL_NAME = ['singlet', 'singlet' + ODD, 'triplet', 'triplet' + ODD, 'quintet' + ODD]
   const colOf = lv => COLS.indexOf(lv.term[0] + lv.parity)
@@ -1048,7 +1462,10 @@
     let layer = null
     let diagC = null
     let specC = null
-    let grain = null
+    let backdrop = null
+    // The invisible fronts' pass's mean change of this pane's atom, last
+    // frame: Warp is shared by every pane.
+    let warped = 0
     let R = null
     let ow = 0
     let oh = 0
@@ -1070,6 +1487,8 @@
     let dots = []
     let src = null
     let cl = null
+    // The drawn atom's axis as last drawn, [x0, y0, x1, y1] on the pane.
+    let axisLine = null
     const view = VIEW
     let field = 0
     const born = []
@@ -1098,13 +1517,14 @@
 
     // ---- The ensemble's state ----
 
-    // The drawn atom changed at time t: its cloud snaps to the new
-    // level's.
+    // The drawn atom changed at time t: its cloud's particles move to
+    // the new level's density. Returns the slots whose orbital changed.
     function redraw (why, t = now) {
       const a = atoms[0]
-      cl = Cloud.make(levels[a.lv], a.M)
+      const moved = Cloud.to(cl, levels[a.lv], a.M)
       entered = t
       if (why) cause = { text: why, t }
+      return moved
     }
 
     // Atom i's axis, and the drawn atom's frame, carried to time t at
@@ -1160,9 +1580,13 @@
       if (fronts.length > FRONTS) detect(fronts.shift(), null)
       if (i === 0) {
         const mv = mover(levels[ln.u], levels[ln.l])
-        src = { pts: mv ? source(mv, q, SOURCE_PTS) : null, t, k, q, O: a.O }
         last = { k, q, waited: t - entered, t }
-        redraw(null, t)
+        const moved = redraw(null, t)
+        // The flash rides on the slots the line moves: the one whose
+        // orbital changed, or within 2s2.2p2 the raised slot.
+        const slots = moved.length ? moved : [5]
+        const n = slots.reduce((s, j) => s + Cloud.SLOT_AT[j + 1] - Cloud.SLOT_AT[j], 0)
+        src = { sign: mv ? sourceSign(mv, q) : null, slots, ink: Math.min(1, SOURCE_PTS / n), t, k, q }
       }
     }
 
@@ -1514,21 +1938,38 @@
       g.globalAlpha = 1
     }
 
-    // A faint fixed grain under the atom: the picture the invisible
-    // fronts sharpen and refract, which on black would show nothing.
-    function drawGrain () {
+    // The backdrop under the atom, the picture the invisible fronts
+    // sharpen and refract, which on black would show nothing (issue
+    // #168): a faint Cartesian grid about the site, its spacing in bohr
+    // a whole part of the scale bar's (gridStep), its lines soft, of
+    // Gaussian half-width GRID_SIGMA pixels, so a sharpening crisps and
+    // brightens them and a shift of a pixel or two bends them, as a
+    // lensing grid bends, dimmed toward the corners under the captions.
+    // Drawn once a resize.
+    function drawBackdrop () {
       const a = R.atom
-      grain = cpu(a.w, a.h)
-      const img = grain.g.createImageData(a.w, a.h)
+      backdrop = cpu(a.w, a.h)
+      const p = gridStep(kOf(a), a.w) * kOf(a)
+      const prof = (n, o) => Float32Array.from({ length: n }, (_, i) => {
+        const t = (i + 0.5 - o) / p
+        const e = (t - Math.round(t)) * p
+        return Math.exp(-e * e / (2 * GRID_SIGMA * GRID_SIGMA))
+      })
+      const fx = prof(a.w, a.w / 2)
+      const fy = prof(a.h, a.h / 2)
+      const img = backdrop.g.createImageData(a.w, a.h)
       const d = img.data
-      for (let i = 0; i < d.length; i += 4) {
-        const v = Math.random() < 0.25 ? 8 + 16 * Math.random() : 4 * Math.random()
-        d[i] = v * 0.8
-        d[i + 1] = v * 0.9
-        d[i + 2] = v * 1.2
-        d[i + 3] = 255
+      const half = Math.min(a.w, a.h) / 2
+      for (let y = 0; y < a.h; y++) {
+        for (let x = 0; x < a.w; x++) {
+          const u = Math.min(1, Math.max(0, (Math.hypot(x + 0.5 - a.w / 2, y + 0.5 - a.h / 2) / half - GRID_IN) / (1 - GRID_IN)))
+          const v = Math.max(fx[x], fy[y]) * (1 - (1 - GRID_OUT) * u)
+          const i = (y * a.w + x) * 4
+          for (let ch = 0; ch < 3; ch++) d[i + ch] = GRID_FLOOR[ch] + v * (GRID_INK[ch] - GRID_FLOOR[ch])
+          d[i + 3] = 255
+        }
       }
-      grain.g.putImageData(img, 0, 0)
+      backdrop.g.putImageData(img, 0, 0)
     }
 
     function resize (w, h) {
@@ -1538,7 +1979,7 @@
       said = []
       drawDiagram()
       drawSpectrum()
-      drawGrain()
+      drawBackdrop()
     }
 
     // Squares batched by fill and alpha, one path a batch: on a canvas
@@ -1596,7 +2037,7 @@
       const a = R.atom
       F.cx = a.x + a.w / 2
       F.cy = a.y + a.h / 2
-      F.k = Math.max(10, Math.min(a.w, a.h) / 2 - 6) / view
+      F.k = kOf(a)
       F.edge = Math.min(F.cx, F.cy, w - F.cx, h - F.cy)
       const cy = Math.cos(cam.yaw)
       const sy = Math.sin(cam.yaw)
@@ -1612,7 +2053,7 @@
       g.beginPath()
       g.rect(a.x, a.y, a.w, a.h)
       g.clip()
-      g.drawImage(grain.c, a.x, a.y)
+      g.drawImage(backdrop.c, a.x, a.y)
       // A faint equator and meridian, for depth.
       g.strokeStyle = '#1d2638'
       g.setLineDash([3, 5])
@@ -1631,17 +2072,9 @@
       g.globalCompositeOperation = 'lighter'
       // The drawn atom's cloud, dimmed while its jump's source flashes
       // over it, mint where psi_f* psi_i is positive, pink where negative.
-      const flashing = src && src.pts && now - src.t < SOURCE_T
-      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect, Larmor.frame(atoms[0], now, mag))
-      if (flashing) {
-        const s = 1 - (now - src.t) / SOURCE_T
-        const p = src.pts
-        const O = src.O
-        for (let i = 0; i < p.length; i += 4) {
-          const v = F.project(O[0] * p[i] + O[1] * p[i + 1] + O[2] * p[i + 2], O[3] * p[i] + O[4] * p[i + 1] + O[5] * p[i + 2], O[6] * p[i] + O[7] * p[i + 1] + O[8] * p[i + 2])
-          rect(p[i + 3] > 0 ? '#7dffd0' : '#ff8ad8', (0.5 + 0.4 * Math.max(0, Math.min(1, v.s - 0.8))) * s, v.x, v.y, 1.8)
-        }
-      }
+      const flashing = src && src.sign && now - src.t < SOURCE_T
+      const lit = flashing ? { slots: src.slots, sign: src.sign, a: (1 - (now - src.t) / SOURCE_T) * src.ink } : null
+      Cloud.draw(cl, F, a, flashing ? 0.45 * dim : dim, rect, Larmor.frame(atoms[0], now, mag), lit)
       const c = F.project(0, 0, 0)
       rect('#ffffff', 1, c.x, c.y, 2)
       flush(g)
@@ -1656,6 +2089,7 @@
       flush(g)
       g.restore()
       Warp.apply(g, fronts, F, a, now)
+      warped = Warp.change
     }
 
     function labels (g) {
@@ -1707,6 +2141,7 @@
       const nx = q0.x
       const ny = q0.y
       const q1 = F.project(n[0] * e, n[1] * e, n[2] * e)
+      axisLine = [nx, ny, q1.x, q1.y]
       g.strokeStyle = 'rgba(111, 227, 255, 0.8)'
       g.lineWidth = 1.5
       g.beginPath()
@@ -1735,20 +2170,25 @@
       if (last && now - last.t < 3) {
         const ln = lines[last.k]
         rows.push(['#c9d3e6', 'its photon ' + DELTA + 'M=' + (last.q > 0 ? '+' : '') + last.q + ' ' + ln.type + ', ' + patternName(ln.type, last.q), visible(ln) ? ln.rgb : '#aab3c5'])
-        rows.push(['#8c97ad', src && src.pts ? 'source: ' + PSI + 'f*' + PSI + 'i, + mint, - pink' : 'source: a two-electron jump, not drawn'])
-        rows.push(['#8c97ad', wlText(wl(ln)) + ' = ' + Math.round(wl(ln) / (size(levels[ln.u]) * D.bohrNm)) + TIMES + ' this atom: crest spacing a symbol'])
+        rows.push(['#8c97ad', src && src.sign ? 'source: ' + PSI + 'f*' + PSI + 'i, + mint, - pink' : 'source: a two-electron jump, not drawn'])
+        // Its true lengths and period, in vacuum: no crest in the view.
+        const vac = wlText(ln.vac) + ' vac = ' + Math.round(ln.vac / (size(levels[ln.u]) * D.bohrNm)) + TIMES + ' this atom'
+        const many = Math.round(Front.lambda(ln) / view) + TIMES + ' the view'
+        rows.push(['#8c97ad', [vac + ', ' + many + ': in phase across it', vac + ', ' + many, vac]])
+        rows.push(['#8c97ad', ['a period ' + timeText(Front.period(ln)) + ' on the light clock, no crest in view', 'period ' + timeText(Front.period(ln)) + ' on the light clock']])
       }
       const rate = born.length
       const rest = [
         ['#7d89a1', ENSEMBLE[0]],
         ['#7d89a1', 'events: NIST rates / ' + sci(EVENT) + ', light: c / ' + sci(LIGHT) + ' = ' + Clock.light.toFixed(1) + ' ' + A0 + '/s'],
-        ['#7d89a1', 'field ' + Math.round(100 * field) + '%, ' + rate + ' photons/s, ' + fronts.length + ' fronts']
+        ['#7d89a1', 'field ' + Math.round(100 * field) + '%, ' + rate + ' photons/s, ' + fronts.length + ' fronts'],
+        ['#7d89a1', ['fronts: an edge and a trail ' + LAM + ' / ' + sci(TRAIL) + ' long, ' + LAM + ' in vacuum', 'fronts: edge, trail ' + LAM + ' / ' + sci(TRAIL), 'trail ' + LAM + ' / ' + sci(TRAIL)]]
       ]
       const fit = a.w - 14
       // A narrower atom keeps the level, its clock, its photon and the
       // rate. Each row, then the axis's name, then the scale bar, is
       // written where it overlaps no text before it, or left out.
-      const keep = a.w < 320 * T ? [rows[0], rows[1], ...fieldRows.slice(0, 2), ...rows.filter(r => r[2]), rest[2]] : rows.concat(rest)
+      const keep = a.w < 320 * T ? [rows[0], rows[1], ...fieldRows.slice(0, 2), ...rows.filter(r => r[2]), rest[2], rest[3]] : rows.concat(rest)
       let j = 0
       for (const [col, t, swatch] of keep) {
         const y = a.y + (11 + 12 * j) * T
@@ -1774,7 +2214,7 @@
       g.fillStyle = '#c9d3e6'
       place(g, 'detector, y', [[det.x + 7, det.y + 4 * T], [det.x - 7 - 66 * T, det.y + 4 * T], [det.x - 30 * T, det.y - 7 * T]])
       // A scale bar, drawn only with its label.
-      const step = [1, 2, 5, 10, 20, 50].find(s => s * F.k >= a.w * 0.1) || 50
+      const step = barStep(F.k, a.w)
       const bx = a.x + 10
       const by = a.y + a.h - 6
       if (place(g, step + ' ' + A0 + ' = ' + (step * D.bohrNm).toFixed(2) + ' nm', [[bx, by - 4]])) g.fillRect(bx, by, step * F.k, 1)
@@ -2116,7 +2556,7 @@
       setField(tesla, tesla ? deg : mag.deg)
     }
 
-    redraw(null)
+    cl = Cloud.make(levels[atoms[0].lv], atoms[0].M)
 
     return {
       draw (synth, dt) {
@@ -2222,17 +2662,28 @@
         } else if (inside(R.atom, x, y)) absorb(0, -1, 'click: a lamp')
       },
 
+      // For the live checks: one front of the line nearest nm in vacuum,
+      // component q about z, from the site now. Returns its line's
+      // vacuum wavelength.
+      send (nm, q = 0) {
+        let k = 0
+        lines.forEach((ln, j) => { if (Math.abs(ln.vac - nm) < Math.abs(lines[k].vac - nm)) k = j })
+        fronts.push(Front.make(k, lines[k], q, now))
+        return lines[k].vac
+      },
+
       // For the live checks: the clicks, the camera's turns, the
       // collisions, photons emitted and detected, the drawn atom's level
       // and M_L, the lines lit, the fronts in flight by kind, whether a
       // source flashes, the field, the photons of the last second, and the
       // ink box of every text drawn, for the check of overlapping text.
       // The magnetic field B, the event clock's time, the drawn atom's
-      // axis then and the time its axis was last set, its g_J and Larmor
-      // rate, the dial's, pulse button's and trace's places, and after a
-      // pulse the rate at the detector over TRACE_T before and after it,
-      // as [seconds from the pulse, rate] by emission time, with 2 f_L of
-      // the pulsed level.
+      // axis then and as last drawn on the pane, the time its axis was
+      // last set, its g_J and Larmor rate, the dial's, pulse button's
+      // and trace's places, and after a pulse the rate at the detector
+      // over TRACE_T before and after it, as [seconds from the pulse,
+      // rate] by emission time, with 2 f_L of the pulsed level. The
+      // invisible fronts' mean change of the atom's pixels, last frame.
       probe () {
         const lv = levels[atoms[0].lv]
         const r4 = v => Math.round(v * 1e4) / 1e4
@@ -2245,6 +2696,7 @@
           B: { mT: mag.T * 1e3, deg: mag.deg },
           now,
           axis: Larmor.axis(atoms[0], now, mag),
+          axisLine,
           t0: atoms[0].t0,
           lifted,
           gJ: lv.gJ,
@@ -2260,12 +2712,12 @@
         let lit = 0
         for (let k = 0; k < counts.length; k++) if (counts[k]) lit++
         const by = b => fronts.filter(f => f.ln.band === b).length
-        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), source: !!(src && src.pts && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
+        return Object.assign({ level: levels[atoms[0].lv].id, M: atoms[0].M, lit, fronts: fronts.length, visible: fronts.filter(f => f.vis).length, uv: fronts.filter(f => !f.vis && f.uv).length, ir: by('IR'), warp: Math.round(warped * 1e4) / 1e4, source: !!(src && src.sign && now - src.t < SOURCE_T), field: Math.round(field * 100) / 100, rate: born.length, texts: still.concat(said).map(b => ({ t: b.t, x: r1(b.x), y: r1(b.y), w: r1(b.w), h: r1(b.h) })) }, tally, zee)
       }
     }
   }
 
-  const api = { Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, source, sphere, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
+  const api = { TRAIL, BAND_MIN, SHARP, LIFT, HAZE, GRID_PX, barStep, gridStep, Clock, Ensemble, Cloud, Front, Warp, Larmor, emission, cg, turnAbout, rotation, MU_B_H, FIELD_MAX, SPIN_MAX, TRACE_DT, TRACE_T, B_MAX, B_START, occupations, targets, tauScreen, slater, laguerre, outerP, radialP, radialTable, drawR, meanR, table, shells, size, mover, pattern, patternMax, detectDir, legendre, mPair, sourceSign, sphere, roster, NELSON, U_MAX, MORPH, SMOOTH, PTS_CORE, PTS_OUTER, SOURCE_PTS, SOURCE_T, decay, thermal, absorptions, pick, levelName, wlText, ground, EVENT, LIGHT, N_ATOMS }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).carbon = create
 })(this)
