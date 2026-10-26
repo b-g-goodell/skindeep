@@ -919,7 +919,9 @@
   // inverted damped by RIDGE. It ends where the image is lost, in
   // the shadow or behind the camera, or squeezed thinner than FAINT of
   // the curve, |J| above 1 / FAINT, where a trace would not show it, or
-  // at a fold, where it meets its twin and both are lost. One starts at
+  // at a fold, where it meets its twin and both are lost. It keeps its
+  // parity, the sign of det J, so it never steps across a fold onto its
+  // twin or an image born there. One starts at
   // a place with fewer branches than images to look for: the unbent
   // place, and about each hole in front of it the weak field's outer
   // image and the inner one, looked for while the weak field puts it at
@@ -935,6 +937,7 @@
   const DEPTH = 6
   const FAINT = 0.05
   const FOLD = 0.3
+  const PARITY = 0.02
   const DEEP = 10
   const BRANCHES = 32
   const CP = new Float64Array(3)
@@ -961,6 +964,10 @@
       const m = { u, x: IM[0], y: IM[1], a: IM[2], b: IM[3], c: IM[4], d: IM[5], qx, qy }
       return big(m) * FAINT > 1 ? null : m
     }
+    // Whether two images differ in parity, each J's less singular value
+    // PARITY or more, so neither is at a fold, where its sign is noise.
+    const sv = m => Math.abs(m.a * m.d - m.b * m.c) / big(m)
+    const flips = (m, k) => (m.a * m.d - m.b * m.c) * (k.a * k.d - k.b * k.c) < 0 && sv(m) >= PARITY && sv(k) >= PARITY
     const extend = (br, u1, depth) => {
       const s0 = br[br.length - 1]
       if (!where(u1)) return false
@@ -1029,8 +1036,11 @@
       // A guess farther than JUMP is halved before it is solved, as
       // often as the arc asks: each half carries the image half as far.
       const far = halves && Math.hypot(gx - s0.x, gy - s0.y) > JUMP
+      // An image keeps its parity, the sign of det J, from one place to
+      // the next: one of the other found beside a fold is its twin, or
+      // the image born there, and is no step of this branch.
       const s1 = far ? null : solve(u1, gx, gy)
-      if (s1 && Math.hypot(s1.x - s0.x, s1.y - s0.y) <= JUMP) {
+      if (s1 && Math.hypot(s1.x - s0.x, s1.y - s0.y) <= JUMP && !flips(s0, s1)) {
         br.push(s1)
         return true
       }
