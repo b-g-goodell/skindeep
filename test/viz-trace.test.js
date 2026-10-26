@@ -387,6 +387,61 @@ test('trace: a curve\'s images behind two holes leave no bright image with an op
   }
 })
 
+test('trace: a curve\'s images behind two holes keep their parity and step 3 px at most', () => {
+  // An arc of radius 150 behind the holes of 900 and of 300 at X 70, Y 8,
+  // 80 beyond it, 6 and 0.5 above the first hole's line, 64 and 220
+  // places: no branch steps from an image to one of the other parity,
+  // the sign of det J, both clear of a fold (J's less singular value
+  // 0.02 or more), no step is over 3 px, and each bright end of a branch
+  // inside the frame is met by another branch's end within 4 px and one
+  // place. Two holes of 900 25 apart, a line from 100 before them to
+  // 1500 beyond, 0.1 and 0.7 above their line, 64 and 110 places: no
+  // step over 3 px where the follower closes two branches lost at a fold.
+  const big = m => {
+    const s = m.a * m.a + m.b * m.b + m.c * m.c + m.d * m.d
+    const det = m.a * m.d - m.b * m.c
+    return Math.sqrt((s + Math.sqrt(Math.max(0, s * s - 4 * det * det))) / 2)
+  }
+  const det = m => m.a * m.d - m.b * m.c
+  const hole = (X, Y, Z, m) => [X, Y, Z, T.RING * 2 * m / 11.5 ** 2]
+  const cases = []
+  for (const n of [64, 220]) {
+    for (const y of [6, 0.5]) {
+      const pl = new Float64Array(3 * n)
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI * 0.9 + 1.8 * Math.PI * i / (n - 1)
+        pl.set([150 * Math.sin(a), y, 870 - 150 * Math.cos(a)], 3 * i)
+      }
+      cases.push([`arc behind 900 and 300, n ${n}, Y ${y}`, [...hole(0, 0, 620, 900), ...hole(70, 8, 700, 300)], pl, n, true])
+    }
+  }
+  for (const [n, y] of [[64, 0.1], [110, 0.7]]) {
+    const pl = new Float64Array(3 * n)
+    for (let i = 0; i < n; i++) pl.set([-220 + 440 * i / (n - 1), y, 520 + 1600 * i / (n - 1)], 3 * i)
+    cases.push([`line behind 900 and 900 25 apart, n ${n}, Y ${y}`, [...hole(0, 0, 620, 900), ...hole(25, 0, 640, 900)], pl, n, false])
+  }
+  for (const [at, hs, pl, n, ends] of cases) {
+    const br = T.curve({ ...LENS, hs: new Float64Array(hs), nh: 2 }, pl, n)
+    const tips = []
+    for (const b of br) {
+      for (let k = 1; k < b.length; k++) {
+        const p = b[k - 1]
+        const q = b[k]
+        assert.ok(Math.hypot(q.x - p.x, q.y - p.y) <= 3.001, `${at}: a step of ${Math.hypot(q.x - p.x, q.y - p.y).toFixed(2)} px at ${q.u.toFixed(3)}`)
+        const clear = Math.abs(det(p)) / big(p) >= 0.02 && Math.abs(det(q)) / big(q) >= 0.02
+        assert.ok(!clear || det(p) * det(q) > 0, `${at}: an image turns parity at ${q.u.toFixed(3)}, det J ${det(p).toFixed(3)} to ${det(q).toFixed(3)}`)
+      }
+      if (b[0].u > 0) tips.push([b[0], b])
+      if (b[b.length - 1].u < n - 1) tips.push([b[b.length - 1], b])
+    }
+    for (const [e, b] of ends ? tips : []) {
+      if (big(e) > 14 || e.x < -5 || e.y < -5 || e.x > 382 || e.y > 244) continue
+      const met = tips.some(([f, c]) => c !== b && Math.hypot(f.x - e.x, f.y - e.y) < 4 && Math.abs(f.u - e.u) < 1.01)
+      assert.ok(met, `${at}: an image ${e === b[0] ? 'begins' : 'is lost'} bright at ${e.u.toFixed(3)}, (${e.x.toFixed(1)}, ${e.y.toFixed(1)}), |J| ${big(e).toFixed(2)}`)
+    }
+  }
+})
+
 test('trace: a screen plane is read where it is drawn, a plane where its rays meet it', () => {
   // One dot drawn at the same place on a plane and on a screen plane, both
   // behind the hole: the plane's dot is bent away from where it is drawn,
