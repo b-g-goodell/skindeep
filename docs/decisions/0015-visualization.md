@@ -2370,8 +2370,8 @@ period of time, all the gravitational bodies are sub-schwarzschild".
   $r_s$. `scripts/checks/vizmodes.js`, in the full pane and the small
   one, wheels the live mode to both ends and captures it, pinches, and
   ages its holes by 270 s and by 1500 s more, capturing them shrunk,
-  shrunk 10 notches in, and gone. At 2f01e90, under swiftshader at a
-  load of 4 to 16, the full pane of 1200 by 760 drew 34.5 frames a
+  shrunk 10 notches in, and gone. At 2f01e90, under swiftshader, the
+  host's load 3.9 as it began, the full pane of 1200 by 760 drew 34.5 frames a
   second at 620, 11.5 at 90, where the shadow fills it and 52375 of
   its traced pixels were traced one by one against 1512 at 3300, and
   27 at 3300; the small pane of 300 by 380 drew 19, 10 and 27.5. The
