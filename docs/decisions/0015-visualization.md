@@ -2271,7 +2271,11 @@ period of time, all the gravitational bodies are sub-schwarzschild".
   pixels or 3 lines, is one step, positive away from the user. Chromium
   sends a pinch as a wheel with ctrlKey and $\Delta y = -100 \ln s$, $s$
   the pinch's scale, so a pinch's steps are $\Delta y / (100 \ln 1.2)$
-  and a mode zooming by 1.2 a step follows the fingers. The page
+  and a mode zooming by 1.2 a step follows the fingers. Both the
+  notch's 100 pixels and the pinch's form are Chromium's as recalled,
+  not measured here: Xvfb has no touchpad and the check sends its own
+  wheel events, and a notch of another size changes only how many
+  notches cross the range, not its ends. The page
   neither scrolls nor zooms, a mode without a pointer method hears
   nothing, and the other modes' pointer methods read a wheel as a move
   at most, to where the mouse already is.
