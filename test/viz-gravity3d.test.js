@@ -537,3 +537,93 @@ test('gravity3d: a busy burst flings neither the disc nor the planets', () => {
   assert.ok(out < 1.05 * Math.max(...quiet.kept) / RS, `a grain flung to ${out} r_s`)
   console.log('burst: planets', busy.planets.map(r => r.toFixed(2)), 'against', quiet.planets.map(r => r.toFixed(2)), 'grains kept', busy.kept.length, 'against', quiet.kept.length, 'farthest', out.toFixed(2), 'r_s against', (Math.max(...quiet.kept) / RS).toFixed(2))
 })
+
+// Issue #194: the wheel's zoom, its ends, and what the camera leaves
+// behind it when zoomed in.
+test('gravity3d: the camera\'s distance follows the wheel\'s steps and holds at each end of its range', () => {
+  let D = g.DIST
+  for (let k = 1; k <= 30; k++) {
+    const was = D
+    D = g.zoom(D, -1)
+    const want = Math.max(g.D_MIN, g.DIST / g.ZOOM ** k)
+    assert.ok(Math.abs(D - want) < 1e-9, `step ${k} in: ${D} against ${want}`)
+    if (was === g.D_MIN) assert.strictEqual(D, g.D_MIN, `step ${k} in moved the held end`)
+  }
+  assert.strictEqual(D, g.D_MIN)
+  for (let k = 1; k <= 40; k++) {
+    const was = D
+    D = g.zoom(D, 1)
+    assert.ok(D >= was && D <= g.D_MAX, `step ${k} out: ${D} from ${was}`)
+    if (was < g.D_MAX) assert.ok(Math.abs(D - Math.min(g.D_MAX, was * g.ZOOM)) < 1e-9, `step ${k} out: ${D} from ${was}`)
+  }
+  assert.strictEqual(D, g.D_MAX)
+  assert.strictEqual(g.zoom(D, 5), g.D_MAX)
+  // A pinch's fractional steps: a scale of 2 halves the distance.
+  assert.ok(Math.abs(g.zoom(g.DIST, -Math.log(2) / Math.log(g.ZOOM)) - g.DIST / 2) < 1e-9)
+  // The ends: at D_MIN the seed hole's shadow, of b_c at 900, fills
+  // nine tenths of a full pane's shorter side or more, and at D_MAX the
+  // pane's half height is what the waves' fronts reach (waves.js KEEP).
+  const f = 380 / Math.tan(0.42)
+  const R = f * Math.tan(Math.asin(g.RING * RS / g.D_MIN))
+  assert.ok(R > 0.9 * 380 && R < 380, `the shadow's radius at D_MIN: ${R} px of 380`)
+  assert.ok(Math.abs(g.D_MAX * Math.tan(0.42) / (512 * 0.25 * g.C) - 1) < 0.01)
+  // Never within STANDOFF b_c of the hole it turns about.
+  assert.strictEqual(g.standoff(g.D_MIN, 900), g.D_MIN)
+  assert.strictEqual(g.standoff(g.D_MIN, 3000), g.STANDOFF * g.RING * g.rs(3000))
+  // Zoomed in, the hole at the pane's centre and depth D_MIN, and what
+  // lies behind the camera not drawn.
+  const bodies = seeded()
+  const h = bodies[0]
+  const V = { D: g.D_MIN }
+  g.aim(V, 0.6, 0.36, 1200, 760, [h.x, h.y, h.z])
+  const P = {}
+  g.place(V, P, h.x, h.y, h.z)
+  assert.ok(Math.abs(P.x - 600) < 1e-9 && Math.abs(P.y - 380) < 1e-9 && Math.abs(P.d - g.D_MIN) < 1e-9 && P.on)
+  g.place(V, P, h.x + 150 * V.e[0], h.y + 150 * V.e[1], h.z + 150 * V.e[2])
+  assert.ok(!P.on && P.z < 0 && P.d === 1, `a point behind the camera: ${JSON.stringify(P)}`)
+})
+
+// Issue #194: the holes' evaporation over an idle spell of 25 min, in
+// frames of 10 s of quiet, as the mode reads the session's quiet
+// seconds: the seed's 900 and its pair's 30, a hole of HOLE_MAX, a star
+// a stop grew to BODY_MAX, and planets.
+test('gravity3d: idle, every hole loses mass, a hole under the floor is taken out, and after 25 min of quiet no body lies within its own r_s', () => {
+  assert.strictEqual(g.quietTime(3), 0)
+  assert.ok(Math.abs(g.quietTime(13) - 5) < 1e-12 && Math.abs(g.quietTime(13 + 1e-9) - 5) < 1e-6)
+  assert.strictEqual(g.quietTime(1500), 1492)
+  const bodies = seeded()
+  const big = { x: 400, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: g.HOLE_MAX, hole: true, chi: 0.5, chi0: 0.5, up: 0, jx: 0, jy: 0, jz: 1 }
+  big.r = g.horizon(big)
+  bodies.push(big)
+  bodies.push({ x: -400, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: g.BODY_MAX, star: true, hole: false, r: g.radius(g.BODY_MAX, true) })
+  const holes = () => bodies.filter(b => b.hole)
+  const total = bodies.filter(b => !b.hole).length
+  const life = []
+  let spent = 0
+  let last = new Map(holes().map(h => [h, h.m]))
+  for (let q = 10; q <= 1500; q += 10) {
+    const e = g.quietTime(q)
+    const gone = g.evaporate(bodies, e - spent)
+    spent = e
+    for (const o of gone) {
+      assert.ok(o.m >= g.FLOOR && o.m * Math.exp(-10 / g.EVAP) < g.FLOOR, `a hole of ${o.m} taken out at ${q} s`)
+      life.push([Math.round(o.m), q])
+    }
+    for (const h of holes()) {
+      if (q > 3) assert.ok(h.m < last.get(h), `at ${q} s a hole of ${h.m} lost nothing`)
+      assert.ok(Math.abs(h.r - g.horizon(h)) < 1e-12, `at ${q} s the horizon did not follow the mass`)
+      assert.ok(h.m >= g.FLOOR)
+    }
+    last = new Map(holes().map(h => [h, h.m]))
+  }
+  // The pair's 30 lasts EVAP ln(30 / FLOOR) of full idle, and 8 s more
+  // of quiet, the idle level's rise; the seed's 900 and HOLE_MAX in turn.
+  const at = m => 8 + g.EVAP * Math.log(m / g.FLOOR)
+  assert.strictEqual(life.length, 3)
+  for (const [i, m] of [30, 900, g.HOLE_MAX].entries()) assert.ok(life[i][1] >= at(m) && life[i][1] < at(m) + 10, `the hole of ${m} went at ${life[i][1]} s, not ${at(m)}`)
+  assert.strictEqual(holes().length, 0)
+  assert.strictEqual(bodies.length, total)
+  for (const b of bodies) assert.ok(g.radius(b.m, b.star) > g.rs(b.m), `a body of ${b.m} within its own r_s`)
+  assert.ok(g.radius(g.BODY_MAX, false) > g.rs(g.BODY_MAX))
+  console.log('evaporation: the holes of 30, 900 and HOLE_MAX gone after', life.map(([, q]) => q).join(', '), 's of quiet')
+})

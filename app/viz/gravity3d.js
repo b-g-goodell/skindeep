@@ -55,6 +55,31 @@
   // exaggerates it.
   const TAU = 3
   const HOLE_MAX = 1500
+  // A stop grows a body that is not a hole to at most BODY_MAX, where
+  // its radius (radius) still exceeds its r_s: from 990 a star, and
+  // from 914 a planet, lies within its own Schwarzschild radius.
+  const BODY_MAX = 800
+  // The zoom (decision 0015, issue #194): the camera stands cam.D from
+  // the view's centre, DIST at first, ZOOM times farther a wheel step
+  // (viz.js), from D_MIN, where the seed hole's shadow fills the pane's
+  // shorter side, to D_MAX, where the waves' fronts, kept to 1472 from
+  // their source (waves.js KEEP), reach its edge. The camera stays at
+  // least STANDOFF b_c from the hole it turns about, so a hole heavier
+  // than the seed's never swallows the view.
+  const DIST = 620
+  const D_MIN = 90
+  const D_MAX = 3300
+  const ZOOM = 1.2
+  const STANDOFF = 2
+  // The evaporation (issue #194): while the session is idle every hole
+  // loses mass, a part dt / EVAP of it in dt s, so each hole's horizon,
+  // shadow and photon ring shrink at one rate, and a hole below FLOOR
+  // ends in a flash and is gone. dt is the idle level's share of the
+  // quiet seconds (quietTime), never the simulation's time, which an
+  // idle spell all but stops. A hole of M lasts EVAP ln(M / FLOOR) s of
+  // full idle: the seed's 900 20.4 min, HOLE_MAX 22.1 min.
+  const EVAP = 200
+  const FLOOR = 2
   // A dust grain's mass, and the disc's viscosity: between the last
   // stable orbit, 3 r_+, and DISC r_s of a hole a grain's velocity
   // relaxes at rate VISC toward a circular orbit's, a little slower, so
@@ -210,6 +235,50 @@
   // so by at most 1 / TAU a second and never past a.
   function spinStep (s, a, dt) {
     return s + (a - s) * (1 - Math.exp(-Math.max(0, dt) / TAU))
+  }
+
+  // The camera's distance after steps of the wheel from D: ZOOM a step,
+  // held within D_MIN and D_MAX.
+  function zoom (D, steps) {
+    return Math.max(D_MIN, Math.min(D_MAX, D * ZOOM ** steps))
+  }
+
+  // The camera's distance from the hole of mass m it turns about at
+  // zoom D: D, but STANDOFF b_c at least.
+  function standoff (D, m) {
+    return Math.max(D, STANDOFF * RING * rs(m))
+  }
+
+  // The seconds of evaporation in q quiet seconds: the synthesiser's
+  // idle level, 0 to 3 s and 1 from 13 s, rising between (synth.js
+  // input), integrated over them.
+  function quietTime (q) {
+    if (q <= 3) return 0
+    if (q <= 13) return (q - 3) * (q - 3) / 20
+    return q - 8
+  }
+
+  // Every hole of bodies evaporated for s s of full idle: its mass times
+  // exp(-s / EVAP), its velocity kept, as an even loss of light carries
+  // no momentum in the hole's own frame, its horizon with it. A hole
+  // below FLOOR is taken out. Returns those taken out, each { x, y, z,
+  // m }, its mass before the loss.
+  function evaporate (bodies, s) {
+    const gone = []
+    if (!(s > 0)) return gone
+    const k = Math.exp(-s / EVAP)
+    for (let i = bodies.length - 1; i >= 0; i--) {
+      const h = bodies[i]
+      if (!h.hole) continue
+      if (h.m * k < FLOOR) {
+        gone.push({ x: h.x, y: h.y, z: h.z, m: h.m })
+        bodies.splice(i, 1)
+        continue
+      }
+      h.m *= k
+      h.r = horizon(h)
+    }
+    return gone
   }
 
   // A hole's own spin: chi0, or chi for a hole that has none.
@@ -692,8 +761,8 @@
   }
 
   // A point of the world in camera V's frame, into out: right, up and
-  // depth along the view, the camera V.D from V.o. The trace reads the
-  // holes so.
+  // depth along the view, the camera V.D from V.o, which the zoom sets.
+  // The trace reads the holes so.
   function frameOf (V, x, y, z, out) {
     x -= V.o[0]
     y -= V.o[1]
@@ -705,18 +774,24 @@
   }
 
   // A point of the world into P by camera V: its place on screen, its
-  // depth along the view and its scale.
+  // depth along the view, at least NEAR, its scale, and whether it lies
+  // NEAR or more ahead of the camera (on). What does not is not drawn: a
+  // camera zoomed in stands among the bodies and the dust (issue #194).
+  const NEAR = 1
   function place (V, P, x, y, z) {
     x -= V.o[0]
     y -= V.o[1]
     z -= V.o[2]
     const X = x * V.r[0] + y * V.r[1]
     const Y = x * V.u[0] + y * V.u[1] + z * V.u[2]
-    const d = Math.max(1, V.D - (x * V.e[0] + y * V.e[1] + z * V.e[2]))
+    const z0 = V.D - (x * V.e[0] + y * V.e[1] + z * V.e[2])
+    const d = Math.max(NEAR, z0)
     P.k = V.f / d
     P.x = V.cx + X * P.k
     P.y = V.cy - Y * P.k
     P.d = d
+    P.z = z0
+    P.on = z0 >= NEAR
   }
 
   // A seeded generator, so every pane shows the same sky.
@@ -897,12 +972,18 @@
     let subs = 0
     let shed = 0
     // The camera: its turn about the vertical and its height, in
-    // radians, and the time the pointer last turned it. The press while
-    // the pointer is down, and the counts the probe reports.
-    const cam = { yaw: 0.6, pitch: PITCH, held: -1e9 }
+    // radians, the time the pointer last turned it, and its zoom, the
+    // distance the wheel sets (zoom). The press while the pointer is
+    // down, and the counts the probe reports.
+    const cam = { yaw: 0.6, pitch: PITCH, held: -1e9, D: DIST }
     let press = null
     let thrown = 0
     let turns = 0
+    let zooms = 0
+    // The evaporation: its seconds spent in this idle spell (quietTime),
+    // and the holes it has taken out.
+    let spent = 0
+    let evaporated = 0
     // Each body's number, and the body and the hole the live checks
     // judge (look), set only by a staged scene (stage).
     let made = 0
@@ -926,8 +1007,8 @@
     // The frame's projection: centre on screen, focal length, camera
     // distance from the place it turns about, o, and basis (right, up,
     // toward the camera).
-    const V = { cx: 0, cy: 0, f: 1, D: 620, o: [0, 0, 0], r: [1, 0, 0], u: [0, 1, 0], e: [0, 0, 1] }
-    const P = { x: 0, y: 0, d: 0, k: 0 }
+    const V = { cx: 0, cy: 0, f: 1, D: DIST, o: [0, 0, 0], r: [1, 0, 0], u: [0, 1, 0], e: [0, 0, 1] }
+    const P = { x: 0, y: 0, d: 0, k: 0, z: 0, on: true }
     // The waves, their grid of cells' colours and the pair the probe
     // watches.
     const field = new W.Field(C)
@@ -972,7 +1053,7 @@
     }
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
-      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, chi0: 0, up: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tv: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0, g: 1 }
+      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, chi0: 0, up: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tv: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, on: true, heat: 0, g: 1 }
       b.r = b.hole ? horizon(b) : radius(m, b.star)
       bodies.push(b)
       return b
@@ -1003,7 +1084,7 @@
     // A grain, every one of the same shape, which keeps the loops over
     // them fast.
     function grain (o) {
-      return Object.assign({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hue: 0, disc: false, gone: false, px: 0, py: 0, pd: 1, heat: 0, g: 1, lum: 1 }, o)
+      return Object.assign({ x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, hue: 0, disc: false, gone: false, px: 0, py: 0, pd: 1, on: true, heat: 0, g: 1, lum: 1 }, o)
     }
 
     // Grains on circular orbits about hole h, in its equator.
@@ -1085,7 +1166,8 @@
         b.vz = s.vz + v * (-d[2] + miss / r * side[2])
         flares.push({ x: s.x, y: s.y, z: s.z, t: clock, r: s.hole ? RING * rs(s.m) : s.r })
       } else if (e.kind === 4) {
-        s.m = Math.min(Math.max(s.m, HOLE_MAX), s.m * 1.12)
+        const top = s.hole ? HOLE_MAX : BODY_MAX
+        s.m = Math.min(Math.max(s.m, top), s.m * 1.12)
         s.r = s.hole ? horizon(s) : radius(s.m, s.star)
         s.flash = 1
         flares.push({ x: s.x, y: s.y, z: s.z, t: clock, r: s.hole ? RING * rs(s.m) : s.r })
@@ -1149,6 +1231,17 @@
       }
     }
 
+    // The holes evaporated for s s of full idle (evaporate): each taken
+    // out ends in a flash, a ring from its shadow's radius, and the
+    // bodies are recentred, so with no hole left the view's centre, the
+    // origin, is the centre of mass of what remains.
+    function shrink (s) {
+      const gone = evaporate(bodies, s)
+      for (const o of gone) flares.push({ x: o.x, y: o.y, z: o.z, t: clock, r: RING * rs(o.m) })
+      evaporated += gone.length
+      if (gone.length) recentre()
+    }
+
     function cap () {
       let over = dust.length - MAX_DUST
       if (over <= 0) return
@@ -1182,10 +1275,11 @@
       cap()
     }
 
-    // The camera from its turn and height, about the heaviest hole.
+    // The camera from its turn, height and zoom, about the heaviest hole.
     function point (w, h) {
       const a = anchor(bodies)
       aim(V, cam.yaw, cam.pitch, w, h, a ? [a.x, a.y, a.z] : [0, 0, 0])
+      V.D = a ? standoff(cam.D, a.m) : cam.D
     }
 
     const project = (x, y, z) => place(V, P, x, y, z)
@@ -1432,7 +1526,8 @@
 
     // The waves on a grid of cells, 32 across the pane's shorter side and
     // 8 px at least, blurred up to the pane, each source's on the plane
-    // through it that faces the camera: at each cell the sums over
+    // through it that faces the camera, or at half the camera's distance
+    // for a source nearer than that: at each cell the sums over
     // sources of h_+ and h_x in the camera's basis, the line of sight and
     // the direction across it in that plane, which is the source's own
     // where its axis lies in the plane or along the line of sight, as
@@ -1457,9 +1552,19 @@
       }
       const src = []
       let zs = 0
+      // A source nearer the camera than half its distance, as one may be
+      // zoomed in, or behind it: its field on the plane at that half
+      // instead, through the axis, the same plane where the source
+      // reaches it, so its waves still cross the view.
+      const zn = V.D / 2
       for (const tr of field.traces.values()) {
         tr.at(tr.last(), at)
         project(at[0], at[1], at[2])
+        if (P.z < zn) {
+          const s = V.D - zn
+          for (let i = 0; i < 3; i++) at[i] = V.o[i] + s * V.e[i]
+          project(at[0], at[1], at[2])
+        }
         zs += P.d
         src.push({ tr, x: at[0], y: at[1], z: at[2], sx: P.x, sy: P.y, k: P.k, blur: 1.5 * cell / P.k / C })
       }
@@ -1542,7 +1647,7 @@
     // differ little across it.
     function bounds (far) {
       const zs = []
-      for (const b of bodies) if (b.hole) zs.push(b.pd)
+      for (const b of bodies) if (b.hole && b.on) zs.push(b.pd)
       zs.sort((a, b) => a - b)
       const out = zs.slice()
       if (!zs.length || far <= zs[0]) return out
@@ -1603,8 +1708,8 @@
     // if it is a hole.
     function scene (kt, tw, th, dim, keep, skip) {
       let far = 0
-      for (const b of bodies) if (!b.hole) far = Math.max(far, b.pd)
-      for (const d of dust) far = Math.max(far, d.pd)
+      for (const b of bodies) if (!b.hole && b.on) far = Math.max(far, b.pd)
+      for (const d of dust) if (d.on) far = Math.max(far, d.pd)
       const bs = bounds(far + 1)
       const ns = bs.length + 1
       while (pool.length < ns) pool.push(Object.assign(layer(), { batch: new Map(), s: layer() }))
@@ -1649,7 +1754,7 @@
         bref[i] = Math.max(1.5 * hs[4 * i + 3] + out, Math.cbrt(STEP * STEP * rs(b.m) * hs[4 * i + 2] ** 2 / (2 * tf)))
       })
       const lens = { cx: tcx, cy: tcy, f: tf, hs, nh: hb.length, ks }
-      const order = bodies.filter(b => !b.hole).sort((a, b) => b.pd - a.pd)
+      const order = bodies.filter(b => !b.hole && b.on).sort((a, b) => b.pd - a.pd)
       for (const b of order) {
         const L = at(b.pd)
         if (b !== skip) L.bodies.push(b)
@@ -1666,14 +1771,20 @@
           })
         }
       }
+      let nd = 0
       for (const d of dust) {
+        if (!d.on) continue
+        nd++
         const L = at(d.pd)
         L.dust.push(d)
         L.zs += d.pd
         L.ws++
       }
+      let nf = 0
       for (const f of flares) {
         project(f.x, f.y, f.z)
+        if (!P.on) continue
+        nf++
         const L = at(P.d)
         L.flares.push({ x: P.x, y: P.y, z: P.d, r: (f.r + (clock - f.t) * 3) * P.k, a: (1 - (clock - f.t) / 18) ** 2 })
         L.zs += P.d
@@ -1683,7 +1794,7 @@
       // of the slice it was painted on, and how many it had to paint:
       // every grain, body, trail piece and flare is painted on the slice
       // of its depth, or the trace bends it wrongly.
-      audit = { dust: [0, 0, dust.length], bodies: [0, 0, order.length - (order.includes(skip) ? 1 : 0)], trails: [0, 0, 0], flares: [0, 0, flares.length] }
+      audit = { dust: [0, 0, nd], bodies: [0, 0, order.length - (order.includes(skip) ? 1 : 0)], trails: [0, 0, 0], flares: [0, 0, nf] }
       for (const b of order) audit.trails[2] += b.trail.length ? trailCount(b, keep) : 0
       const planes = []
       for (let i = 0; i < ns; i++) {
@@ -2024,8 +2135,20 @@
         const w = canvas.width
         const h = canvas.height
         if (w < 4 || h < 4) return
-        for (const e of synth.since(since)) if (!staged) react(e)
         const L = synth.level
+        const evs = synth.since(since)
+        // Too few bodies: the seed again, but not while idle, when the
+        // holes evaporate and none may come back until the session acts.
+        if (bodies.length < 2 && !staged && (evs.length || L.idle < 0.5)) seed()
+        for (const e of evs) if (!staged) react(e)
+        // The holes evaporate by the idle seconds since the last frame,
+        // counted from the spell's start, so a frame stalled or a window
+        // closed loses none of them.
+        if (!staged) {
+          const e = quietTime(synth.quiet || 0)
+          shrink(e >= spent ? e - spent : e)
+          spent = e
+        }
         if (!staged) up = spinStep(up, activity(L), dt)
         for (const b of bodies) if (b.hole) spin(b, up)
         // Simulation time per second: the clock, as in the Gravity mode.
@@ -2061,7 +2184,6 @@
         }
         bodies = bodies.filter(b => b.star || b.hole || len(b.x, b.y, b.z) < VIEW * 4)
         dust = dust.filter(d => !d.gone && len(d.x, d.y, d.z) < VIEW * 2 && bodies.every(b => b.hole || (b.x - d.x) ** 2 + (b.y - d.y) ** 2 + (b.z - d.z) ** 2 > b.r * b.r))
-        if (bodies.length < 2 && !staged) seed()
         for (const b of bodies) b.flash *= Math.exp(-dt / 0.6)
 
         // The camera turns slowly by itself, unless the pointer turned
@@ -2089,6 +2211,7 @@
         for (const b of bodies) {
           project(b.x, b.y, b.z)
           b.pd = P.d
+          b.on = P.on
           b.pk = P.k
           b.px = P.x
           b.py = P.y
@@ -2098,6 +2221,7 @@
         for (const d of dust) {
           project(d.x, d.y, d.z)
           d.pd = P.d
+          d.on = P.on
           d.px = P.x
           d.py = P.y
           d.heat = heatAt(holes, d.x, d.y, d.z)
@@ -2141,8 +2265,17 @@
       // hole: across, about the vertical, and up and down, its height. A
       // click throws a moon from the point under it, on the plane through
       // that centre facing the camera, on a circular orbit about the
-      // heaviest body.
-      pointer (kind, x, y, down) {
+      // heaviest body. The wheel, steps of it, moves the camera toward
+      // that centre and away (zoom), and the zoom holds until it moves
+      // again.
+      pointer (kind, x, y, down, steps) {
+        if (kind === 'wheel') {
+          if (steps) {
+            cam.D = zoom(cam.D, steps)
+            zooms++
+          }
+          return
+        }
         if (kind === 'down') {
           press = { x0: x, y0: y, yaw: cam.yaw, pitch: cam.pitch, moved: false }
           return
@@ -2171,6 +2304,7 @@
         const Y = -(y - V.cy) / k
         const p = [0, 1, 2].map(i => V.o[i] + X * V.r[i] + Y * V.u[i])
         const s = sun()
+        if (!s) return
         let rel = [p[0] - s.x, p[1] - s.y, p[2] - s.z]
         let d = len(...rel)
         const least = s.hole ? 3.3 * rs(s.m) : s.r + 4
@@ -2214,6 +2348,7 @@
         staged = true
         cam.yaw = yaw
         cam.pitch = pitch
+        cam.D = DIST
         point(canvas.width, canvas.height)
         bodies = []
         dust = []
@@ -2264,11 +2399,18 @@
       },
 
       // For the live checks: the staged scene let go, and the mode seeded
-      // again.
+      // again at the first zoom.
       unstage () {
         staged = false
         judged.body = judged.hole = 0
+        cam.D = DIST
         seed()
+      },
+
+      // For the live checks: the holes evaporated at once by s s of full
+      // idle, as the session's quiet evaporates them (shrink).
+      age (s) {
+        if (!staged) shrink(s)
       },
 
       // For the live checks: the numbers of the body and the hole judged
@@ -2285,16 +2427,19 @@
       // heaviest hole as the trace draws it (rim), the view's centre (held:
       // the heaviest hole's number, its place on screen, the pane's
       // centre, and its place across the trace's axis, X right and Y up)
-      // and the recentrings so far, and how far the trails' places lie
-      // apart (spacing).
+      // and the recentrings so far, how far the trails' places lie
+      // apart (spacing), the zoom (cam.D: the wheel's distance, dist:
+      // the camera's, zooms: the wheel's turns), the holes evaporated and
+      // the seconds of it spent in this idle spell, and the bodies that
+      // lie within their own r_s (compact), a hole always.
       probe () {
         asked = performance.now()
-        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch, D: cam.D, dist: V.D, zooms }, evaporated, spent, compact: bodies.filter(b => b.hole || b.r <= rs(b.m)).length, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
       }
     }
   }
 
-  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, activity, spinStep, spin, C, CHI_MAX, TAU, PANE, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
+  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, radius, doppler, lapse, shift, spectral, wavelength, activity, spinStep, spin, zoom, standoff, quietTime, evaporate, C, CHI_MAX, TAU, PANE, HOLE_MAX, BODY_MAX, DIST, D_MIN, D_MAX, ZOOM, STANDOFF, EVAP, FLOOR, RING, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)
