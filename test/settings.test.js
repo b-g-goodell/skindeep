@@ -12,11 +12,11 @@ test('a missing or broken file, and any value outside a setting\'s list, read as
   const d = tmp()
   try {
     const f = path.join(d, 'settings.json')
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, 'viz.waves': null, panels: {} })
     fs.writeFileSync(f, '{not json')
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, 'viz.waves': null, panels: {} })
     fs.writeFileSync(f, JSON.stringify({ 'terminal.fontSize': 19, other: 3 }))
-    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, panels: {} })
+    assert.deepStrictEqual(settings.load(f), { 'terminal.fontSize': null, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, 'viz.waves': null, panels: {} })
   } finally {
     fs.rmSync(d, { recursive: true, force: true })
   }
@@ -28,7 +28,7 @@ test('a saved setting reads back, and the menu marks it beside the skin\'s own v
     const f = path.join(d, 'deeper', 'settings.json')
     settings.save(f, { 'terminal.fontSize': 20 })
     const v = settings.load(f)
-    assert.deepStrictEqual(v, { 'terminal.fontSize': 20, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, panels: {} })
+    assert.deepStrictEqual(v, { 'terminal.fontSize': 20, 'text.skin': null, 'text.window': null, 'text.viz': null, 'viz.fps': null, 'viz.trace': null, 'viz.waves': null, panels: {} })
     const [row] = settings.menu(v, { terminal: { fontSize: 19 } })
     assert.strictEqual(row.choices[0].label, 'Skin default (19 px)')
     assert.strictEqual(row.choices[0].current, false)
@@ -49,7 +49,7 @@ test('a text size reads back as a factor, and the menu offers it beside the defa
     assert.deepStrictEqual([v['text.skin'], v['text.window'], v['text.viz']], [150, 80, null])
     assert.deepStrictEqual(['text.skin', 'text.window', 'text.viz', 'terminal.fontSize'].map(id => settings.scale(v, id)), [1.5, 0.8, 1, 1])
     const rows = settings.menu(v, null)
-    assert.deepStrictEqual(rows.map(r => r.label), ['Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size', 'Visualization frame rate', 'Gravity 3D sharpness'])
+    assert.deepStrictEqual(rows.map(r => r.label), ['Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size', 'Visualization frame rate', 'Gravity 3D sharpness', 'Gravitational waves'])
     const skin = rows[1]
     assert.strictEqual(skin.choices[0].label, 'Skin default (100%)')
     assert.deepStrictEqual(skin.choices.map(c => c.label).slice(1), settings.TEXT_SCALES.map(p => `${p}%`))
@@ -75,6 +75,27 @@ test('only a defined setting and one of its values is valid', () => {
   for (const v of [0, 25, 120, '30', 30.5]) assert.ok(!settings.valid('viz.fps', v), `viz.fps ${v}`)
   for (const v of [15000, 45000, 60000, 90000, 135000, null]) assert.ok(settings.valid('viz.trace', v), `viz.trace ${v}`)
   for (const v of [0, 30000, 200000, '45000']) assert.ok(!settings.valid('viz.trace', v), `viz.trace ${v}`)
+  for (const v of ['smoke', null]) assert.ok(settings.valid('viz.waves', v), `viz.waves ${v}`)
+  for (const v of ['colour', 'gas', 1, 0]) assert.ok(!settings.valid('viz.waves', v), `viz.waves ${v}`)
+})
+
+// The Gravity modes' waves (decision 0015, issue #183): the colour
+// field unless smoke is chosen.
+test('the waves\' style is the colour field by default, and smoke when chosen', () => {
+  const d = tmp()
+  try {
+    const f = path.join(d, 'settings.json')
+    assert.strictEqual(settings.value(settings.load(f), 'viz.waves'), 'colour')
+    settings.save(f, { 'viz.waves': 'smoke' })
+    assert.strictEqual(settings.value(settings.load(f), 'viz.waves'), 'smoke')
+    settings.save(f, { 'viz.waves': 'fog' })
+    assert.strictEqual(settings.value(settings.load(f), 'viz.waves'), 'colour')
+    const row = settings.menu(settings.load(f), null).find(r => r.id === 'viz.waves')
+    assert.deepStrictEqual(row.choices.map(c => c.label), ['Default (colour)', 'smoke'])
+    assert.deepStrictEqual(row.choices.filter(c => c.current).map(c => c.value), [null])
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true })
+  }
 })
 
 // The visualization's frame rate cap (decision 0036): frames a second,
