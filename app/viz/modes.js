@@ -5,7 +5,7 @@
 // preset of presets.js. canvas: a Canvas2D renderer that scope.js,
 // classic.js, avs.js or the procedural mode's own file (fern.js, go.js,
 // zoom.js, gravity.js, gravity3d.js, quantum.js, carbon.js,
-// savannah.js, murmuration.js) registers under the id.
+// savannah.js, murmuration.js, sunset.js) registers under the id.
 // Loaded by the main process and by the viz page.
 
 ;(function (root) {
@@ -29,7 +29,8 @@
     { id: 'carbon', label: 'Carbon', kind: 'canvas' },
     { id: 'savannah', label: 'Savannah hunt', kind: 'canvas' },
     { id: 'murmuration', label: 'Murmuration', kind: 'canvas' },
-    { id: 'baitball', label: 'Bait ball', kind: 'canvas' }
+    { id: 'baitball', label: 'Bait ball', kind: 'canvas' },
+    { id: 'sunset', label: 'Sunset clouds', kind: 'canvas' }
   ]
   if (typeof module === 'object' && module.exports) module.exports = { MODES }
   else root.VizModes = MODES

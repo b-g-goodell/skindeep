@@ -28,8 +28,8 @@ particles of various wavelengths interacting instead of just one
 particle of one wavelength, and procedurally generated walls of
 potential instead of always using the same 2 apertures"), and
 2026-10-22 for the Savannah hunt mode and the flocking core it shares
-with the flocking modes to come (issue #186), and for the Murmuration
-mode (issue #187).
+with the flocking modes to come (issue #186), for the Murmuration
+mode (issue #187), and for the Sunset clouds mode (issue #189).
 
 ## Context
 
@@ -66,7 +66,7 @@ butterchurn-presets is MIT for its conversion only.
   shell, web, agent, other), a sweep on prompt submit and on stop, a low
   drone while idle, brightness from `tokens.out_rate`. Every mode draws
   from it.
-- Modes: nineteen, listed once in `app/viz/modes.js`, which the main process
+- Modes: twenty-one, listed once in `app/viz/modes.js`, which the main process
   and the page both load, in the order they cycle and the menu lists
   them:
   - Drift, Rings, Plasma, Star dust and Whirlpool: butterchurn presets
@@ -84,7 +84,7 @@ butterchurn-presets is MIT for its conversion only.
     examples of the Superscope's built-in list over a fade, and the Dot
     Plane in its default colours.
   - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum, Carbon, Savannah
-    hunt and Murmuration: the project's
+    hunt, Murmuration and Sunset clouds: the project's
     procedural modes, one file each, no image or video. Each reacts to
     its pane's events, a prompt, a tool call in its class's colour, a
     stop, a subagent, and calms at idle. Fern: a night garden of fronds,
@@ -125,7 +125,10 @@ butterchurn-presets is MIT for its conversion only.
     Murmuration). Bait ball: a school of sardines in open water, seen
     by a scuba diver below it, packing into a ball, splitting and
     reforming as dolphins, a shark, sailfish and gannets hunt it, by
-    the same core (see 2026-10-22: Bait ball). With the sound output alone,
+    the same core (see 2026-10-22: Bait ball).
+    Sunset clouds: cumulus over the plains of the US Southwest as the sun sets, in watercolour after
+    Georgia O'Keeffe, each cloud a volume lit through by the low sun
+    (see 2026-10-22: Sunset clouds). With the sound output alone,
     which brings no events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
@@ -184,6 +187,10 @@ butterchurn-presets is MIT for its conversion only.
   - Bait ball: a drag turns the diver's gaze, which eases back to the
     school after the release. A click: a shark cuts through the school
     at the fish nearest it (see 2026-10-22: Bait ball).
+  - Sunset clouds: a drag blows the clouds under it along, and they
+    keep a little way on after the release. A click in the sky raises
+    a cloud there, a click on the land drops clean water on it (see
+    2026-10-22: Sunset clouds).
   - Every other mode, the five butterchurn presets, Scope, the two
     analyzers, Superscope and Dot plane, has no method of its own: a
     press adds a short tone to the pane's signal, its pitch on the
@@ -242,7 +249,7 @@ page reads it, and nothing of it needs to reach the main process. A
 click that stepped the mode would take the click from the modes. The
 pointer's tone, for the modes that only draw the signal, makes each of
 them answer with no code of its own, and it is kept out of the events
-so a procedural mode never takes it for one. A flyout keeps the drop-down short: eighteen more
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: twenty-one more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -2105,3 +2112,155 @@ Rejected:
   detail too smooth to show.
 - The caustics at full strength on the surface: the underside read as
   a tiled ceiling over half the pane.
+
+## 2026-10-22: Sunset clouds
+
+Owner, 2026-10-22: "a new visualizer: volumetric watercolor clouds at
+sunset over the US southwest plains ala georgia o'keefe". Issue #189.
+The method, the signal's mapping and the pointer's are the builder's.
+
+### The scene
+
+`app/viz/sunset.js`, a Canvas2D mode as the others are, drawn on a
+canvas of the CPU and blitted to the pane once a frame.
+
+- The view: a level camera on the plains, 76 degrees across, its
+  horizon at 0.76 of the pane's height by a shifted principal point, so
+  the sky takes three quarters of the pane and verticals stay upright.
+  The sun stands 14 to 28 degrees to one side of the view's axis, the
+  side drawn for each sunset, and is drawn large, 2.8 degrees across,
+  as a painter makes it.
+- A sunset is 300 s of the clock, the sun sinking from 10 degrees to 7
+  below. A launch starts it somewhere in its first half. The light is
+  a table of eight keys by the sun's elevation: the sun's colour and
+  strength, the zenith, the horizon under the sun and away from it.
+  The clouds' sky light and the land's warm bounce are mixed from
+  those. When the sun reaches 7 below, a new sunset, with its own side,
+  land and clouds, fades in over the old in 5 s.
+- The clouds: 11 kept, 18 at most, each a base row of two to four
+  flattened ovoids and up to four rounder crowns, 1.5 to 4 km wide,
+  their flat bases near 1900 m, 2.6 to 40 km off. They drift across the
+  view on the wind, so the near ones pass large overhead and the far
+  ones lie in rows along the horizon. A thinned sky forms a new cloud
+  every 2 to 4 s, growing from 0.15 of its size, and a crowded one
+  thins its oldest cloud of more than a minute every 3 to 6 s, so the
+  sky returns to its calm.
+- The land: six bands far to near, a distant range, one to three
+  flat-topped mesas, a pale plain and three rolling bands of earth,
+  each a pigment lit by its share of sunlight and by the sky, and
+  hazed toward the horizon's colour by its distance.
+
+### The volume
+
+Each cloud is a volume marched on its own. The issue named three
+methods: a low-resolution march blurred up, a few layered slabs, and
+2D shapes shaded as volumes. This is the first, done per cloud rather
+than per pane.
+
+- A cloud's sprite lies in the plane at the cloud's depth, a sprite
+  pixel $s = \max(1.5, W/480)$ screen pixels, and the march samples it
+  every two sprite pixels, along the view ray to the cloud's middle:
+  12 steps across the span of the blobs the ray meets.
+- The density at a point is $D = \sum_i w_i (1 - q_i)^2$ over those
+  blobs, $q_i < 1$ the point's squared distance from blob $i$'s centre
+  in its radii, cut flat at the base, and the extinction is
+  $0.0042\,\mathrm{m}^{-1}$ times a smoothstep of $(D - 0.1)/0.4$.
+- From each step the optical depth toward the sun is
+  $0.011\,\mathrm{m}^{-1}$ times the integral of $1 - q_i$ along the
+  sun's ray through every blob, in closed form, the ray cut at the
+  base. The sun's light at the step is $e^{-\tau} + 0.2\,e^{-0.25\tau}$,
+  the second term the light scattered deeper in, times a phase of
+  Henyey-Greenstein's, $0.6$ of it at $g = 0.45$ and $0.4$ at
+  $g = -0.15$. So a cloud is bright on its sunward side, shadowed and
+  coloured within, and the thin edges of the clouds toward the sun
+  glow. The sky's light grows with height in the cloud, the ground's
+  bounce with depth below its top.
+- The earth's shadow: a cloud loses the sun once the sun is below the
+  cloud's own horizon, $\sqrt{2h/R}$ below the level, about 1.4
+  degrees at 2 km, so the bases glow pink just after sunset and the
+  clouds then go violet.
+- A march keeps the sun, sky and ground sums and the alpha of every
+  sample, so a change of the light's colour repaints a sprite without
+  a march. A cloud is marched again when the sun has moved a degree,
+  its size by a quarter or its shape, or the pane's width by 15
+  percent, and repainted when the sun has moved 0.15 degree. Marches
+  and repaints share 2.5 ms a frame, a march resuming row by row, the
+  clouds without a sprite first. The first frame marches for up to
+  60 ms, so the sky starts with its clouds: it took 154 ms in all at
+  1200 by 760 and 63 ms at 400 by 300, with the sky's and the land's
+  geometry.
+
+### The watercolour
+
+The pigment's density modulates a colour as Bousseau, Kaplan, Thollot
+and Sillion do ("Interactive watercolor rendering with temporal
+coherence and abstraction", NPAR 2006): $C' = C(1 - (1 - C)(d - 1))$,
+$d$ above 1 darkening.
+
+- Clouds: the march's alpha, interpolated to the sprite's resolution,
+  is moved by two octaves of noise fixed to the cloud and cut by a
+  smoothstep whose width a third noise sets, so an edge is wet and soft
+  in places and dry and hard in others. Pigment pools in a band just
+  inside the edge, less where it is wet.
+  Low noise makes the pigment uneven, and a hash granulates it, more
+  in the darker washes.
+- Sky: a graded wash from the horizon's colours to the zenith's with
+  the sun's glow on it, uneven pigment, granulation in the blue, and
+  two tide lines where one wash dried against the next.
+- Land: each band's wash pools along its top edge, lighter at its
+  crest and darker into its fold, uneven and granulated.
+- The sky and the land are painted small, 300 and 520 texels across,
+  when the sun has moved 0.12 degree and at most every 0.3 s of the
+  clock, then laid at the pane's size on a paper tile of tooth and
+  fibres, made once, by multiply. A frame blits them.
+- Drops on the paper: a pigment bloom with a ragged, darker rim, and
+  clean water's backrun, which lifts the wash and dries with a dark
+  rim.
+
+| Signal | Sunset clouds |
+| --- | --- |
+| prompt | a cloud billows up in the open sky, from 0.15 of its size |
+| tool call | a drop of pigment in the class's colour blooms on a cloud |
+| stop | the sun's rays break through, fanned behind the clouds, for a few seconds |
+| subagent | a cloudlet forms beside the newest cloud, at its depth, on its side toward the pane's centre, and held on the pane |
+| compaction | the smaller half of the clouds thin away and the rest grow by a fifth |
+| output event | a drop of clean water lands, its backrun drying with a dark rim |
+| bass | the wind, 8 to 38 m/s, and with busy the clock, 0.8 to 1.2 times real time |
+| idle | the clock slows to a fifth, the wind to 0.3, and the sun sinks up to 6 degrees more toward dusk |
+| drag | blows the clouds within 0.12 of the pane's width of it along, and they keep a little way on |
+| click | in the sky raises a cloud there, on the land drops clean water |
+
+- Cost, in an offscreen Electron page under xvfb on this host, by the
+  cost loop of `vizcarbon.js`, each mode alone at full activity, median
+  and p90 ms a draw, at load average 21 to 22: at 400 by 380 Sunset clouds 1.7
+  and 2.5, Savannah hunt 2.6 and 3.2, and at 1200 by 760 Sunset clouds
+  5.2 and 6.4, Savannah hunt 5.6 and 6.1. With idle rising over the
+  run, so the sun sinks and every cloud is marched and repainted
+  again, Sunset clouds took 1.4 and 5.6 at 400 by 380 and 4.5 and 6.9
+  at 1200 by 760, the p90 the marches' budget and the sky's and the
+  land's repaints.
+- `vizmodes.js` ran three panes of Carbon, Savannah hunt and Sunset
+  clouds at 13.5, 15.5, 14.5, 20.5 and 13.5 frames a second over its
+  five rounds, median 14.5, beside Fern, Go and Zoom out at median 17,
+  Gravity, Gravity 3D and Quantum at 16.5 and the butterchurn panes at
+  13, at load average 19 to 45, which sets the rate more than the mode.
+
+Rejected:
+
+- Layered slabs of 2D density with a light sweep across them: cheap and
+  near the same cost at any size, but a slab of noise makes a deck of
+  ragged cloud rather than O'Keeffe's few smooth rounded forms, and a
+  slab seen at a low angle has no side for the sun to light.
+- 2D shapes shaded as volumes, from a thickness map and its gradient:
+  no light passes through the cloud, so no shadow within and no glow
+  at a thin edge toward the sun.
+- A march for every pixel of the pane each frame: the clouds change
+  slowly, so a march per cloud, at a sample every few pixels and only
+  when the light or the cloud moves, does the same work far less often.
+- Drawing on the pane's own canvas, of the GPU: in the build, in the
+  same offscreen page, a draw returned in 0.1 ms, but with a read of
+  one pixel after it, which waits for the raster, it took 12 ms at 1200
+  by 760.
+- The paper multiplied over the whole pane every frame: 1.9 ms a frame
+  at 1200 by 760. It is laid on the sky and the land when they are
+  painted, and the clouds carry their own granulation.
