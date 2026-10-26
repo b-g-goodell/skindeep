@@ -125,8 +125,7 @@
   //   xi = (r^2 (3 - r) - a^2 (r + 1)) / (a (r - 1)),
   //   eta = r^3 (4 a^2 - r (r - 3)^2) / (a^2 (r - 1)^2),
   //   alpha = -xi / sin i, beta = +-sqrt(eta + a^2 cos^2 i - xi^2 cot^2 i)
-  // (Chandrasekhar 1983, section 63, as James et al. 2015, appendix A,
-  // give it). The edge, about the hole's own point, is written into out
+  // (after Bardeen 1973). The edge, about the hole's own point, is written into out
   // from o as NA radii over sqrt(27) less 1, at angles 2 pi k / NA from
   // alpha toward beta: 0 everywhere for chi = 0. sin i is held at 0.05
   // or more, where the edge is all but a circle.

@@ -512,10 +512,10 @@ test('trace: a screen plane is read where it is drawn, a plane where its rays me
 })
 
 // A spinning hole's shadow (issue #173). Seen edge-on, the edge crosses
-// the line across the axis at the equatorial circular photon orbits,
-// whose impact parameters are -a + 6 cos(arccos(-a) / 3) on the side
-// moving toward the camera and a + 6 cos(arccos(a) / 3) on the side
-// moving away (Bardeen, Press and Teukolsky 1972, eq. 2.18), M = 1.
+// the line across the axis at the equatorial circular photon orbits
+// (Bardeen, Press and Teukolsky 1972), whose impact parameters are
+// -a + 6 cos(arccos(-a) / 3) on the side moving toward the camera and
+// a + 6 cos(arccos(a) / 3) on the side moving away, M = 1.
 test('trace: a spinning hole\'s shadow edge meets the equatorial photon orbits seen edge-on', () => {
   const out = new Float64Array(T.NA)
   const r = k => (1 + out[k]) * Math.sqrt(27)

@@ -2144,8 +2144,7 @@ and its photon ring, which spin now shapes.
   $\eta = r^3[4a^2 - r(r - 3)^2]/[a^2(r - 1)^2]$,
   $\alpha = -\xi/\sin i$ and
   $\beta = \pm\sqrt{\eta + a^2\cos^2 i - \xi^2\cot^2 i}$
-  (Chandrasekhar 1983, section 63, as James et al., arXiv:1502.03808,
-  appendix A, give it). It is swept over 256 orbits and kept as the
+  (after Bardeen 1973). It is swept over 256 orbits and kept as the
   edge's radius about the hole's point at 128 angles, $\alpha$ across
   the projected axis toward the side moving away from the camera. Each
   frame builds it for every spinning hole from the camera's
@@ -2221,9 +2220,9 @@ and its photon ring, which spin now shapes.
   18.5 and 22. Single rounds of 2 s ran from 16.5 to 28 at either tree.
   In three earlier pairs on the same tree but for comments, three panes
   ran at 24.5, 23.5 and 24 against 25, 24.5 and 26. The trace alone,
-  timed in Node on a frame of 126 by 240 with a hole of $\chi = 0.95$,
-  cost 1.17 ms against 1.11 ms without spin, the extra pixels traced
-  one by one, 1044 against 720, most of it.
+  timed in Node at 44efc18 on a frame of 126 by 240 behind a hole of
+  $\chi = 0.95$, 200 renders, cost 2.01 ms against 1.98 ms without
+  spin, 1044 pixels traced one by one against 720.
 - Checked by `test/viz-trace.test.js`: the edge seen edge-on meets the
   equatorial photon orbits' impact parameters,
   $\mp a + 6\cos[\frac{1}{3}\arccos(\mp a)]$, to $2 \times 10^{-3}$ at
