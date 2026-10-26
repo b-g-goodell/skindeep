@@ -571,7 +571,140 @@
     return q * GAIN > 1 ? 1 / q : GAIN
   }
 
-  const api = { GAIN, TOP, quadrupole, sources, Trace, Field, Watch, shown, gain, label }
+  // The smoke (issue #183): the waves drawn as a sheet of gas in the
+  // drawn plane, which the strain compresses and thins, over the same
+  // grid of cells as the colour field, SUB texels to a cell. The plane
+  // holds the direction a wave travels, so of its two transverse
+  // directions one lies in the plane, along the front, and one out of
+  // it, and the strain in the plane is h_phi,phi = -h_+ along the front
+  // alone: the sheet's area changes by 1 - h_+ / 2 and its density by
+  // 1 + h_+ / 2 to first order, and h_x tilts it out of the plane and
+  // moves nothing in it. Drawn as 1 + s, s the strain as shown at the
+  // gain in use standing for h_+ / 2, so a front at tanh(1) nearly
+  // doubles the gas and a trough nearly empties it, glowing as the
+  // density squared, as a thin hot gas does. The gas at rest is a field
+  // of wisps, value noise warped by noise, in units of FEATURE cells, so
+  // it looks alike in every pane and at every zoom, drifting on the
+  // mode's clock. The fronts also carry it along themselves by a flow
+  // that keeps its area, its stream function STIR times s: a stir along
+  // the front, the direction the strain stretches it, of at most about
+  // two cells where the shown strain turns most steeply.
+  const SUB = 4
+  const FEATURE = 3.5
+  const STIR = 3
+  // The density of the thinnest gas at rest, against the densest.
+  const HAZE = 0.6
+  // The value noise's lattice: a hash of 256 values, seeded.
+  const NV = new Float32Array(256)
+  const NP = new Uint8Array(512)
+  {
+    let q = 2463534242
+    const next = () => {
+      q ^= q << 13
+      q ^= q >>> 17
+      q ^= q << 5
+      return (q >>> 0) / 4294967296
+    }
+    for (let i = 0; i < 256; i++) {
+      NV[i] = next()
+      NP[i] = i
+    }
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(next() * (i + 1))
+      const t = NP[i]
+      NP[i] = NP[j]
+      NP[j] = t
+    }
+    for (let i = 0; i < 256; i++) NP[256 + i] = NP[i]
+  }
+  // Value noise at (x, y), in 0 to 1, smooth between the lattice's
+  // points.
+  function noise (x, y) {
+    const fx = Math.floor(x)
+    const fy = Math.floor(y)
+    const i = fx & 255
+    const j = fy & 255
+    let u = x - fx
+    let v = y - fy
+    u = u * u * (3 - 2 * u)
+    v = v * v * (3 - 2 * v)
+    const a = NV[NP[NP[i] + j]]
+    const b = NV[NP[NP[i + 1] + j]]
+    const c = NV[NP[NP[i] + j + 1]]
+    const d = NV[NP[NP[i + 1] + j + 1]]
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v
+  }
+
+  // The gas at rest at (x, y), in cells, at the clock's time t: a
+  // density in HAZE to 1. Three octaves of noise, their place warped by
+  // two more that drift with t, the wisps; and a slow wind.
+  function medium (x, y, t) {
+    let px = x / FEATURE + 0.005 * t
+    let py = y / FEATURE + 0.002 * t
+    const wx = noise(0.7 * px + 0.003 * t, 0.7 * py + 3.1) - 0.5
+    const wy = noise(0.7 * px + 7.7, 0.7 * py - 0.0035 * t) - 0.5
+    px += 1.6 * wx
+    py += 1.6 * wy
+    const n = 0.55 * noise(px, py) + 0.3 * noise(2.03 * px + 1.7, 2.03 * py + 9.2) + 0.15 * noise(4.07 * px + 5.3, 4.07 * py + 2.9)
+    let w = (n - 0.3) / 0.45
+    w = w < 0 ? 0 : w > 1 ? 1 : w
+    return HAZE + (1 - HAZE) * w * w * (3 - 2 * w)
+  }
+
+  // The smoke of strain s as shown, on a grid gw by gh of cells, at the
+  // clock's time t, into out, RGBA, ((gw - 1) SUB + 1) by ((gh - 1) SUB
+  // + 1), texel (a, b) at cell (a / SUB, b / SUB), at brightness k: the
+  // gas at rest read where the stir carried it from, times (1 + s)^2.
+  // Uses buf, 2 gw gh long at least, as scratch.
+  const RGB = [205, 215, 232]
+  function smoke (s, gw, gh, t, out, k, buf) {
+    const gx = buf
+    const gy = buf.subarray(gw * gh)
+    for (let j = 0; j < gh; j++) {
+      for (let i = 0; i < gw; i++) {
+        const o = j * gw + i
+        const l = i > 0 ? o - 1 : o
+        const r = i < gw - 1 ? o + 1 : o
+        const u = j > 0 ? o - gw : o
+        const d = j < gh - 1 ? o + gw : o
+        gx[o] = (s[r] - s[l]) / Math.max(1, (r - l))
+        gy[o] = (s[d] - s[u]) / Math.max(1, (d - u) / gw)
+      }
+    }
+    const tw = (gw - 1) * SUB + 1
+    const th = (gh - 1) * SUB + 1
+    for (let b = 0; b < th; b++) {
+      const y = b / SUB
+      const j = Math.min(gh - 2, Math.floor(y))
+      const fy = y - j
+      for (let a = 0; a < tw; a++) {
+        const x = a / SUB
+        const i = Math.min(gw - 2, Math.floor(x))
+        const fx = x - i
+        const o = j * gw + i
+        const w00 = (1 - fx) * (1 - fy)
+        const w10 = fx * (1 - fy)
+        const w01 = (1 - fx) * fy
+        const w11 = fx * fy
+        const sv = s[o] * w00 + s[o + 1] * w10 + s[o + gw] * w01 + s[o + gw + 1] * w11
+        const ax = gx[o] * w00 + gx[o + 1] * w10 + gx[o + gw] * w01 + gx[o + gw + 1] * w11
+        const ay = gy[o] * w00 + gy[o + 1] * w10 + gy[o + gw] * w01 + gy[o + gw + 1] * w11
+        // The flow (d psi / dy, -d psi / dx), psi = STIR s: along the
+        // lines of equal strain, the fronts. The gas here came from the
+        // place it carried it from.
+        const rho = 1 + sv
+        const v = medium(x - STIR * ay, y + STIR * ax, t) * rho * rho * k
+        const p = 4 * (b * tw + a)
+        out[p] = RGB[0] * v
+        out[p + 1] = RGB[1] * v
+        out[p + 2] = RGB[2] * v
+        out[p + 3] = 255
+      }
+    }
+    return out
+  }
+
+  const api = { GAIN, TOP, SUB, STIR, HAZE, quadrupole, sources, Trace, Field, Watch, shown, gain, label, medium, smoke }
   if (typeof module === 'object' && module.exports) module.exports = api
   else root.VizWaves = api
 })(this)
