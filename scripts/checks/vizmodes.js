@@ -36,6 +36,10 @@
 // the frames to OUT/gravity3d-spin-<idle|busy>-<size>.png. The busy
 // hole's shadow is flatter on the side coming toward the camera and
 // shifted further toward the side going away.
+// Gravity 3D's zoom and evaporation (issue #194), in the same panes:
+// zoomed fully in and fully out by the wheel, and its holes aged by
+// idle until they shrink and then until none is left, the frames to
+// OUT/gravity3d-<zoom-in|zoom-out|shrunk|evaporated>-<size>.png.
 const { launch, sleep } = require('../drive.js')
 const fs = require('fs')
 const path = require('path')
@@ -170,6 +174,91 @@ async function doppler (viz, k, where) {
   check(await viz.evaluate(k => window.vizUnstage(k), k), `${where}: the mode would not let the staged scene go`)
 }
 
+// Gravity 3D's zoom and its holes' evaporation (issue #194), in pane k,
+// the mode seeded at the first zoom. The wheel at the pane's centre, 20
+// notches toward the user, holds the camera at D_MIN, the hole still at
+// the pane's centre, the frame to OUT/gravity3d-zoom-in-<where>.png, and
+// 30 away holds it at D_MAX, OUT/gravity3d-zoom-out-<where>.png; the
+// frames drawn in 2 s at each are logged. A pinch, the wheel with ctrl
+// by -100 ln 2, from the first zoom halves the distance. Then, the
+// session paused, the holes aged by 270 s of idle each keep exp(-270 /
+// EVAP) of their mass or are gone below FLOOR,
+// OUT/gravity3d-shrunk-<where>.png, and 10 notches in,
+// OUT/gravity3d-shrunk-near-<where>.png, and by 1500 s more none is left and
+// no body lies within its own r_s, the last holes' final flashes in
+// OUT/gravity3d-evaporated-<where>.png. The mode is seeded again after.
+const G3 = require('../../app/viz/gravity3d')
+async function zoomed (viz, k, where, state) {
+  const pane = async () => (await state()).panes[k]
+  const p0 = await pane()
+  check(p0.probe && p0.probe.cam.D === G3.DIST, `${where}: the zoom did not start at ${G3.DIST}`, p0.probe && p0.probe.cam)
+  await viz.mouse.move(p0.x + p0.w / 2, p0.y + p0.h / 2)
+  const fps = async () => {
+    const d0 = (await state()).drawn
+    await sleep(2000)
+    return ((await state()).drawn - d0) / 2
+  }
+  const rate = { first: await fps() }
+  const settle = async (want, msg) => {
+    for (let n = 0; n < 50; n++) {
+      const p = await pane()
+      if (Math.abs(p.probe.cam.D / want - 1) < 1e-6) return p
+      await sleep(100)
+    }
+    throw new Error(`${where}: ${msg}, at ${JSON.stringify((await pane()).probe.cam)}`)
+  }
+  const shot = async name => {
+    await sleep(1500)
+    const x = await viz.evaluate(k => {
+      const p = window.vizState().panes[k]
+      const c = [...document.querySelectorAll('.pane')][k].querySelector('canvas:not([hidden])')
+      return { probe: p.probe, png: c.toDataURL('image/png') }
+    }, k)
+    fs.writeFileSync(path.join(out, `gravity3d-${name}-${where}.png`), Buffer.from(x.png.split(',')[1], 'base64'))
+    return x.probe
+  }
+  for (let n = 0; n < 20; n++) await viz.mouse.wheel(0, -100)
+  await settle(G3.D_MIN, 'twenty notches in did not hold the camera at D_MIN')
+  const zin = await shot('zoom-in')
+  centred(zin, `${where} zoomed in`)
+  rate.in = await fps()
+  for (let n = 0; n < 30; n++) await viz.mouse.wheel(0, 100)
+  await settle(G3.D_MAX, 'thirty notches out did not hold the camera at D_MAX')
+  const zout = await shot('zoom-out')
+  rate.out = await fps()
+  check(await viz.evaluate(k => window.vizUnstage(k), k), `${where}: the mode would not seed again`)
+  await settle(G3.DIST, 'the mode seeded again away from the first zoom')
+  await viz.keyboard.down('Control')
+  await viz.mouse.wheel(0, -100 * Math.log(2))
+  await viz.keyboard.up('Control')
+  await settle(G3.DIST / 2, 'a pinch of 2 did not halve the distance')
+  check(await viz.evaluate(k => window.vizUnstage(k), k), `${where}: the mode would not seed again`)
+  console.log('gravity3d zoom', where, JSON.stringify({ in: zin.cam, out: zout.cam, rim: zin.rim, traced: [zin.trace.px, zout.trace.px], fps: rate }))
+
+  fs.writeFileSync(pause, '')
+  const age = s => viz.evaluate(([k, s]) => {
+    const before = window.vizState().panes[k].probe
+    window.vizAge(k, s)
+    return { before, after: window.vizState().panes[k].probe }
+  }, [k, s])
+  const a = await age(270)
+  const keep = Math.exp(-270 / G3.EVAP)
+  const left = a.before.at.filter(h => h[3] * keep >= G3.FLOOR).map(h => h[3] * keep)
+  check(a.after.holes === left.length && a.after.at.every((h, i) => Math.abs(h[3] / left[i] - 1) < 1e-9), `${where}: 270 s of idle did not shrink the holes`, { before: a.before.at, after: a.after.at })
+  const shrunk = await shot('shrunk')
+  await viz.mouse.wheel(0, -1000)
+  await settle(G3.DIST / G3.ZOOM ** 10, 'ten notches in did not bring the camera in')
+  const near = await shot('shrunk-near')
+  await viz.mouse.wheel(0, 1000)
+  await settle(G3.DIST, 'ten notches out did not take the camera back')
+  const b = await age(1500)
+  check(b.after.holes === 0 && b.after.compact === 0, `${where}: a hole is left after 1770 s of idle`, b.after.at)
+  const gone = await shot('evaporated')
+  fs.rmSync(pause)
+  console.log('gravity3d evaporation', where, JSON.stringify({ before: a.before.at.map(h => h[3]), shrunk: shrunk.at.map(h => h[3]), near: near.rim, evaporated: gone.evaporated, holes: gone.holes, compact: gone.compact, bodies: gone.bodies }, (k, v) => typeof v === 'number' ? Math.round(v * 100) / 100 : v))
+  check(await viz.evaluate(k => window.vizUnstage(k), k), `${where}: the mode would not seed again`)
+}
+
 // Gravity 3D's view's centre (issue #171): the heaviest hole within a
 // pixel of the pane's centre, and on the trace's axis.
 function centred (probe, where) {
@@ -265,6 +354,7 @@ function centred (probe, where) {
     if (id === 'gravity3d') {
       await spun(viz, 0, 'full')
       await doppler(viz, 0, 'full')
+      await zoomed(viz, 0, 'full', state)
     }
   }
   await vizWin(size0)
@@ -319,6 +409,7 @@ function centred (probe, where) {
   console.log('small panes', JSON.stringify(small.map(j => [NEW[j], st.panes[j].w, st.panes[j].h, st.panes[j].probe.pair])))
   await spun(viz, g3, 'small')
   await doppler(viz, g3, 'small')
+  await zoomed(viz, g3, 'small', state)
   const shots = {}
   const take = async phase => {
     shots[phase] = await viz.evaluate(grab)
