@@ -6,12 +6,12 @@
   "license": "MIT",
   "main": "app/main.js",
   "scripts": {
-    "start": "electron --no-sandbox .",
+    "start": "sh -c '. scripts/sandbox.sh && sandbox_env node_modules/electron/dist/electron && exec electron . \"$@\"' sh",
     "test": "node --test test/*.test.js",
     "checks": "node scripts/checks/suite.js"
   },
   "devDependencies": {
-    "electron": "^44.7.0",
+    "electron": "^44.9.3",
     "playwright-core": "^1.64.0"
   },
   "dependencies": {

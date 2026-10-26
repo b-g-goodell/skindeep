@@ -1,13 +1,15 @@
 # 0018 install.sh and uninstall.sh
 
-Status: accepted 2026-10-11, revised 2026-10-12 for portable commands.
+Status: accepted 2026-10-11, revised 2026-10-12 for portable commands,
+and 2026-10-22 for Chromium's sandbox (decision 0001).
 
 ## Context
 
 A user, or the user's agent, clones the repository on any Linux machine
 and runs one command. It builds the checkout's dependencies and writes
 three commands. Outside the checkout it writes nothing else but the
-download caches of npm (`~/.npm`) and Electron (`~/.cache/electron`).
+download caches of npm (`~/.npm`) and Electron (`~/.cache/electron`),
+and, with root, what Chromium's sandbox needs (decision 0001).
 `uninstall.sh` removes exactly the three commands.
 
 ## Decision
@@ -30,6 +32,15 @@ download caches of npm (`~/.npm`) and Electron (`~/.cache/electron`).
 - Install refuses to overwrite a file without the marker, and says so.
 - `uninstall.sh` removes every file in `BINDIR` whose second line is the
   marker, and nothing else.
+- Last, it makes Chromium's sandbox start, as decision 0001 says: where
+  `electron --version` aborts, the AppArmor profile
+  `/etc/apparmor.d/skindeep-electron` where AppArmor restricts user
+  namespaces, else a root-owned 4755 copy of `chrome-sandbox` in
+  `/usr/local/lib/claude-skins`, each by one root shell under `sudo`
+  that reads its input on stdin. It asks for a password only on a
+  terminal. Without one, or when sudo fails, it prints that one command
+  and exits 1. This is the one step that runs `sudo`: root is the step's whole
+  point, where a missing package is the user's to install.
 
 ## Why
 
