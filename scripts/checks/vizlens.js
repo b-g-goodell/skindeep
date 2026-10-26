@@ -50,10 +50,12 @@
 // and 1 with a second hole of 300 at X 70, Y 8, Z 80, as a subagent
 // adds one, whose shear turns the hole's point caustic into a small
 // astroid, so images are born and lost in pairs at folds: a pixel in
-// every bin of 5 degrees about the hole, and three pieces or fewer, the
-// outer arc, the inner one, and the second hole's own image of the
-// trail beside it. Two images of the trail lie in one column where a
-// fold turns one back, so runs are not counted there.
+// every bin of 5 degrees about the hole, and no more pieces than the
+// images drawn apart there: at 14 and 6 three, the outer arc, the inner
+// one, and the second hole's own image of the trail beside it, which
+// begins and ends faint, and at 1, where the arcs meet, two. That image
+// lies in the columns of the outer arc, and a fold turns one image back
+// under another, so runs are not counted there.
 // Frames go to OUT/lens-<size>-<k>.png, OUT/lens-hole-full-<k>.png and
 // OUT/trail-<k>.png.
 // At every frame read, the probe's audit shows each class of matter,
@@ -95,9 +97,9 @@ const HOLE_Z = 280
 const HOLES = [[0.06, 0], [0.12, 120], [0.18, 240]]
 // The trail frames: each height, how it is judged, far from the hole's
 // line, near it, where its images run round the hole, or with a second
-// hole, and the matter staged beside the trail.
+// hole, the matter staged beside the trail, and with it the most pieces.
 const HOLE2 = { kind: 'hole', m: 300, X: 70, Y: 8, Z: 80 }
-const TRAILS = [[28, 'far', []], [14, 'far', []], [3, 'near', []], [1, 'near', []], [14, 'two', [HOLE2]], [6, 'two', [HOLE2]], [1, 'two', [HOLE2]]]
+const TRAILS = [[28, 'far', []], [14, 'far', []], [3, 'near', []], [1, 'near', []], [14, 'two', [HOLE2], 3], [6, 'two', [HOLE2], 3], [1, 'two', [HOLE2], 2]]
 
 // The probe's state when a staged frame is not judged.
 function state (probe, rec) {
@@ -308,7 +310,7 @@ function slices (probe, where) {
   // The trail frames, in the full pane.
   await size([1200, 760])
   await sleep(1500)
-  for (const [k, [Y, judge, extra]] of TRAILS.entries()) {
+  for (const [k, [Y, judge, extra, most]] of TRAILS.entries()) {
     const where = `trail ${k}`
     const places = Array.from({ length: 64 }, (_, i) => [-220 + 440 * i / 63, Y, 40 + 320 * i / 63])
     const read = async (trail, keep) => {
@@ -326,7 +328,7 @@ function slices (probe, where) {
     const r = await read([], false)
     console.log(where, `Y ${Y}`, judge, JSON.stringify(r))
     if (judge === 'two') {
-      check(r.whole.pixels > 400 && r.whole.pieces.length >= 1 && r.whole.pieces.length <= 3, `${where}: the trail's images behind two holes are broken`, r.whole)
+      check(r.whole.pixels > 400 && r.whole.pieces.length >= 1 && r.whole.pieces.length <= most, `${where}: the trail's images behind two holes are broken`, r.whole)
       check(r.whole.empty.length === 0, `${where}: the trail's images behind two holes leave a gap round the hole`, r.whole)
     } else if (judge === 'near') {
       check(r.whole.pixels > 400 && r.whole.pieces.length >= 1 && r.whole.pieces.length <= 2, `${where}: the trail's images are broken`, r.whole)
