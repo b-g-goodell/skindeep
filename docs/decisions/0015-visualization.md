@@ -1951,11 +1951,12 @@ and under the hole cut where the images swing round it.
 
 It stages the trail at 14, 6 and 1 again with a second hole of 300
 at X 70, Y 8, Z 80, and there wants a pixel in every bin of 5 degrees
-and three pieces or fewer: the outer arc, the inner one, and the
-second hole's own image of the trail beside it. Runs down a column
+and no more pieces than the images drawn apart: at 14 and 6 three, the
+outer arc, the inner one, and the second hole's own image of the trail
+beside it, and at 1, where the arcs meet, two. Runs down a column
 are not counted, since a fold turns one image back under another, and
 the second hole's image lies under the outer arc. This tree read
-pieces of 4383, 2623 and 392, of 4081, 3744 and 331, and of 7941 and
+pieces of 4383, 2622 and 392, of 4082, 3744 and 331, and of 7941 and
 309, no empty bin, two runs. The smallest piece lies at x 665 to 708,
 y 362 to 398 of the pane at all three heights, the hole at 600, 380:
 an image beside the second hole that begins and ends faint, not a
