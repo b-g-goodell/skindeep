@@ -1799,8 +1799,11 @@ The rule now:
   forward (`trace.js`, `image`): the frame's point whose ray, traced by
   the one rule of 2026-10-17, crosses the place's depth at the place,
   by Newton's method on that map, its steps capped at 4 pixels and
-  halved until the ray comes nearer, to 0.05 traced pixels. The change
-  of the crossing with the image, J, is taken by differences.
+  halved until the ray comes nearer, to 0.002 traced pixels. The change
+  of the crossing with the image, J, is taken by differences. Where no
+  part of Newton's step brings the ray nearer, as beside a critical
+  curve, where J is near singular, the step is damped, (J^T J +
+  0.05^2)^-1 J^T, and turns toward the well-conditioned direction.
 - The images are followed along the trail (`curve`): each place's
   guessed from the place before it, turned about the hole nearest it,
   in units of its Einstein radius, as the place turns about that hole,
@@ -1814,12 +1817,52 @@ The rule now:
   through the line itself turns by pi at one point: at the last
   halving the guess is the place's step carried by J, and its images
   pass through the ring along the line. A branch ends where its image is lost, in the shadow or
-  behind the camera, or where J passes 20, a stroke squeezed to a
-  twentieth. A place with fewer branches than images to look for
-  starts one: the weak field's outer image about each hole in front of
-  it, and its inner one, found by halving along the line through the
-  hole, while the weak field puts it at a twentieth or more. With one
-  hole that is both images, and with several, each hole's pair.
+  behind the camera, where J passes 20, a stroke squeezed to a
+  twentieth, or at a fold, where it meets its twin and both are lost.
+  A place with fewer branches than images to look for starts one: the
+  weak field's outer image about each hole in front of it, and its
+  inner one, found by halving along the line through the hole, while
+  the weak field puts it at a twentieth or more. Each is followed both
+  ways along the trail from there, and stops where it meets another.
+- With several holes the weak field's pairs are not all the images.
+  Two holes' shear turns a hole's point caustic into a small astroid,
+  and as a place crosses it, images are born and lost in pairs at
+  folds, where J's less singular value falls to 0, at J of 2 to 3,
+  bright. The rule at 5e426fd seeded only at whole places, from each
+  hole's pair, so those images were never followed: with a second hole
+  of 300 the staged trail lost its inner arc and broke its outer one.
+  Now, where a branch starts or ends bright with J's less singular
+  value under 0.3, its twin is looked for a little back from the end,
+  2^-12 to 2^-1 of a piece, nearest first, from the branch's image
+  there mirrored through the end, since near a fold the pair lie on a
+  line through the fold point, one either side. The first image found
+  of the other parity, sign det J, apart from the branch and on no
+  other, is followed both ways, and its own ends the same. A branch
+  keeps its parity: a step to an image of the other sign, both with
+  J's less singular value 0.02 or more, is refused and the piece
+  halved, since an image changes sign only where it meets its twin.
+  Without that the follower stepped across a fold onto an image born
+  there, det J +0.36 to -0.68 in one step of 1.2 pixels on an arc
+  behind holes of 900 and 300, and left the image it should have
+  followed. Three further steps close what that leaves. Two branches
+  lost, or born, together at a fold, which stopped up to 6 pixels
+  apart, are joined through images found between them, or by one step
+  where they lie 3 pixels apart or less, never by a longer one. Past a
+  cusp an image sweeps along the
+  critical curve faster than halving follows, so one branch ends at a
+  fold within 2^-6 of a piece of where another starts farther along
+  it: the two are made one through images found between them. An end
+  with neither is looked past for an image of its parity. Beside a
+  fold the follower's guess inverts J damped as `image` does, so a
+  near-singular J no longer sends it crawling in steps of 1e-4 pixels,
+  and it halves a piece ten times more there, since the image runs as
+  the root of the place's step. The tolerance of 0.002 pixels keeps the
+  smear of points a fold leaves within it under a pixel: at 0.05 the
+  follower broke a trail along a cusp into up to 32 branches. Nearer
+  the fold the smear is the tolerance over J's less singular value, and
+  two followers may take one image there: a branch whose every image
+  lies on another, within 1.5 pixels or that smear, up to 3, is that
+  one's double, and dropped.
 - Each image is stroked lw / |adj(J) t| wide, lw the trail's width and
   t its unbent direction there, at most 3 lw: the width the trace of
   a stroke would show, so the inner image is thin and faint, not
@@ -1841,13 +1884,13 @@ The rule now:
 
 Cost, by the script of 2026-10-17's draw times (gravity3d alone at
 full activity, the median of draws 300 to 540), 1587565, the first
-follower (dde46e4) and this tree in turn, three rounds, the host at a
+follower (dde46e4) and 5e426fd in turn, three rounds, the host at a
 load of 29.5 to 43.5: a draw of 400 by 380 took 11.1, 9.8 and 11.5 ms
 at 1587565, 13.1, 12.8 and 15.2 with the first follower and 15.9, 14.9
-and 15.5 now, at 1200 by 760 17.7, 14.9 and 18.1, 21.7, 23.7 and 22.6,
+and 15.5 at 5e426fd, at 1200 by 760 17.7, 14.9 and 18.1, 21.7, 23.7 and 22.6,
 and 18.5, 20.9 and 20.2, and at 360 by 230 9.5, 8.4 and 8.9, 12.2,
 13.4 and 13.9, and 11.5, 12.1 and 13.9. The images of five to eight
-trails, 307 to 707 images a draw, took 0.7 to 2.7 ms now against 1.0
+trails, 307 to 707 images a draw, took 0.7 to 2.7 ms at 5e426fd against 1.0
 to 2.8 with the first follower: the turn about the hole costs no
 more than the arcs it now draws. In a fourth round of the first
 build, timed by parts, the screen layers' strokes and reads took 0.4
@@ -1865,7 +1908,23 @@ inner nearer the hole on the other. The staged trail, 28, 14, 3, 1 and
 of a hole of 3000 at 400, has an outer image along all of it and an
 inner one, neighbouring images 3 pixels apart or less, each meeting
 its place, and a curve that runs behind the camera has one image,
-unbroken across the traced frame, which ends past its edge. A dot on
+unbroken across the traced frame, which ends past its edge. The
+trail at 28, 14, 6, 3, 1 and 0.3, with a second hole of 300 beside
+the first and behind it, in front of it, and near its line, leaves no
+bright image with an open end: each end of a branch inside the trail
+is faint, past the frame, on another branch, or met by another
+branch's end within 4 pixels and one place. With the follower of
+5e426fd it failed at once: "second hole at 150, 20, 710, Y 28: an
+image is lost bright at 54.492". An arc of radius 150 behind the holes
+of 900 and of 300, 6 and 0.5 above the line, 64 and 220 places, never
+steps between images of opposite parity clear of a fold, never steps
+more than 3 pixels, and each bright end inside the frame is met by
+another branch's end, an end on another branch not excused; two holes
+of 900 25 apart, a line 0.1 and 0.7 above theirs, never step more than
+3 pixels. Before the parity rule it failed with "an image turns parity
+at 36.000, det J 0.361 to -0.677", before the join kept to 3 pixels
+with "a step of 4.40 px at 36.082", and before doubles were dropped
+with "an image begins bright at 110.310". A dot on
 a screen plane behind the hole is drawn where it is, and the same dot
 on a plane is bent away. Each fails with its behaviour removed: image
 returning the unbent place, the screen plane read as a plane, and the
@@ -1878,17 +1937,65 @@ it by 4 or more. At 28 and 14 it wants those above the hole's row one
 8-connected piece with one run of pixels down each column, and those
 below one piece. At 3 and 1 the inner image's ends reach the hole's
 row beside the straight arms, and a cut at the row splits whole
-curves: at 3, pieces of 4839, 22 and 8 above, the small ones the inner
+curves: at 3, pieces of 4818, 22 and 8 above, the small ones the inner
 image's tips. There it wants, over the frame, one or two pieces, a
 pixel in every bin of 5 degrees about the hole, and one run down each
 column above the row 8 pixels over the hole's. This tree read one
 piece of 4176 and of 4146 pixels above at 28 and 14, one run a column,
-and one piece of 1469 and of 1878 below, and at 3 and 1 two pieces,
-4839 and 2424, and 5124 and 2619, no empty bin and one run. At 1587565
+and one piece of 1483 and of 1879 below, and at 3 and 1 two pieces,
+4818 and 2428, and 5119 and 2626, no empty bin and one run. At 1587565
 the first frame read two pieces and two runs above and six pieces
 below. With the follower of the first build the frame at 1 read four
 pieces, 2312, 1652, 1033 and 431, and 38 empty bins, the arcs over
 and under the hole cut where the images swing round it.
+
+It stages the trail at 14, 6 and 1 again with a second hole of 300
+at X 70, Y 8, Z 80, and there wants a pixel in every bin of 5 degrees
+and three pieces or fewer: the outer arc, the inner one, and the
+second hole's own image of the trail beside it. Runs down a column
+are not counted, since a fold turns one image back under another, and
+the second hole's image lies under the outer arc. This tree read
+pieces of 4383, 2623 and 392, of 4081, 3744 and 331, and of 7941 and
+309, no empty bin, two runs. The smallest piece lies at x 665 to 708,
+y 362 to 398 of the pane at all three heights, the hole at 600, 380:
+an image beside the second hole that begins and ends faint, not a
+stub of the arcs. With the follower of 5e426fd the
+frame at 14 read four pieces, 4387, 748, 419 and 383, and 19 empty
+bins, 245 to 335 degrees, the inner arc gone but for stubs. Traced
+alone at 14, 6, 1 and 0.3, behind the second holes of the unit case
+at 150, 20, 90 and at 120, -40, -100, behind that of the live check
+alone and with a third of 200, and behind two of 250, every image that
+Newton's method finds from a grid of starts 3 pixels apart, at each
+quarter place, J under 14, lies within 1.5 pixels of a branch: none of
+544 to 795 a frame is off every branch now, and 0 to 108 a frame were
+with the follower of 5e426fd.
+
+Cost, the draw times of gravity3d alone at full activity (median of
+draws 300 to 540), 5e426fd and this tree in turn, two rounds, the host
+at a load of 22 to 52: with the central hole alone a draw of 400 by
+380 took 16.4 and 14.0 ms at 5e426fd and 9.7 and 12.9 now, at 1200 by
+760 22.4 and 20.7, and 18.2 and 19.9; with a subagent event every 5
+draws, up to three holes more, at 1200 by 760 28.7 and 27.6, and 24.4
+and 32.8, the trails' images 5.9 and 5.4 ms, and 4.7 and 10.3. The
+rounds of one tree differ as much as the two trees do.
+
+A closed loop of images born and lost together, which touches no
+branch and no seed, is not drawn. None was found in these scans.
+
+The review's scan of 2268 curves, one hole of 200 to 3000 and two
+holes, on lines, diagonals, lines through depth, arcs and orbits, 64 to
+220 places, 21 heights from 0 to 28, reads no step over 3 pixels, and
+of the ends of branches inside a curve 100 are bright and met by no
+other's end. 84 lie on the orbit of 2.6 Schwarzschild radii about the
+hole of 3000, which grazes its shadow. 16 lie behind two holes of 900
+25 apart, a third of their Einstein radius, the curve within 1.5 of
+their line, where J's less singular value is under 0.01 and an image
+is found only to the tolerance over it, pixels along the critical
+curve. 15 of those lie within 1.5 pixels of another branch, and one,
+at 62.526 on the line through depth 0.02 above theirs, does not. A
+subagent's hole is born with 150 to 300 on an orbit of 150 to 210
+about its star, far from such a pair. The staged trail behind that pair at 1, 0.3 and 0.1 drew two pieces, one
+and one, no empty bin: at 0.1 a closed ring with both arms on it.
 
 Rejected:
 
