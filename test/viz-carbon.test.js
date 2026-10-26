@@ -187,28 +187,195 @@ test('carbon: the ensemble jumps by its rates and keeps each M_L within its L', 
   assert.strictEqual(jumps, N)
 })
 
-test('carbon: a cloud of M_L != 0 turns about the axis, one of M_L = 0 stands', () => {
-  const at = id => D.levels.find(l => l.id === id)
-  const turned = M => {
-    const c = C.Cloud.make(at('2p3s_1Po_1'), M)
-    const before = Float32Array.from(c.pts)
-    C.Cloud.step(Object.assign(c, { debt: -1e9 }), 0.5)
-    let moved = 0
-    let sense = 0
-    for (let k = 0; k < c.m.length; k++) {
-      const x0 = before[3 * k]
-      const y0 = before[3 * k + 1]
-      const cross = x0 * c.pts[3 * k + 1] - y0 * c.pts[3 * k]
-      if (Math.abs(cross) > 1e-9) moved++
-      sense += cross
-    }
-    return { moved, sense }
+// The cloud's particles (issue #165). A seeded generator, mulberry32, so
+// each run draws the same numbers: the statistical tests below are
+// deterministic, and their bound is the Kolmogorov-Smirnov statistic's
+// critical value at a share 0.001 of independent draws, 1.95 / sqrt(n)
+// (the asymptotic Kolmogorov distribution).
+function seeded (seed) {
+  let s = seed >>> 0
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0
+    let t = Math.imul(s ^ (s >>> 15), s | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
-  assert.strictEqual(turned(0).moved, 0)
+}
+// The CDF of a density on [a, b], by the trapezoid on n steps, from the
+// orbitals themselves and not the mode's tables.
+function cdfOf (dens, a, b, n) {
+  const cs = new Float64Array(n + 1)
+  let prev = dens(a)
+  for (let k = 1; k <= n; k++) {
+    const v = dens(a + (b - a) * k / n)
+    cs[k] = cs[k - 1] + (v + prev) / 2
+    prev = v
+  }
+  return x => {
+    if (x <= a) return 0
+    if (x >= b) return 1
+    const f = (x - a) / (b - a) * n
+    const k = Math.floor(f)
+    return (cs[k] + (f - k) * (cs[k + 1] - cs[k])) / cs[n]
+  }
+}
+const ksStat = (xs, F) => {
+  const s = Float64Array.from(xs).sort()
+  let d = 0
+  for (let i = 0; i < s.length; i++) d = Math.max(d, Math.abs(F(s[i]) - i / s.length), Math.abs(F(s[i]) - (i + 1) / s.length))
+  return d
+}
+const KS = n => 1.95 / Math.sqrt(n)
+const radialCdfs = new Map()
+const radialCdf = key => {
+  if (!radialCdfs.has(key)) radialCdfs.set(key, cdfOf(r => C.radialP(key, r) ** 2, 0, 200, 200000))
+  return radialCdfs.get(key)
+}
+// Each slot's radii against its orbital's P(r)^2, and its cos theta, by
+// |m|, against P_l^|m|(cos theta)^2, or uniform where the slot has no
+// n_m: [{ what, n, d, bound }].
+function cloudKs (c) {
+  const out = []
+  c.kinds.forEach((k, s) => {
+    const rs = []
+    const byM = new Map()
+    for (let i = C.Cloud.SLOT_AT[s]; i < C.Cloud.SLOT_AT[s + 1]; i++) {
+      const r = Math.hypot(c.pts[3 * i], c.pts[3 * i + 1], c.pts[3 * i + 2])
+      rs.push(r)
+      const m = k.cum ? Math.abs(c.m[i]) : -1
+      if (!byM.has(m)) byM.set(m, [])
+      byM.get(m).push(c.pts[3 * i + 2] / r)
+    }
+    out.push({ what: `slot ${s} ${k.key} radius`, n: rs.length, d: ksStat(rs, radialCdf(k.key)), bound: KS(rs.length) })
+    for (const [m, cs] of byM) {
+      if (cs.length < 30) continue
+      const F = m < 0 ? x => (x + 1) / 2 : cdfOf(x => C.legendre(k.l, m, x) ** 2, -1, 1, 20000)
+      out.push({ what: `slot ${s} ${k.key} cos theta at |m| ${m}`, n: cs.length, d: ksStat(cs, F), bound: KS(cs.length) })
+    }
+  })
+  return out
+}
+const at = id => D.levels.find(l => l.id === id)
+const meanROf = key => D.outer[key] ? D.outer[key].meanR : D.rhf.meanR[key]
+
+test('carbon: the cloud at rest keeps each electron\'s |psi|^2 under Nelson\'s dynamics', () => {
+  // From a stationary start, 2400 steps of a 20th of a second, 120 s on
+  // screen, ten atomic units of time: the radii of each slot against its
+  // orbital's distribution, the polar angles against |Y_lm|^2. Two
+  // levels: the ground term, whose 2p slots hold m = 0 and 1, and a
+  // 2p4p level of M_L = 2, whose outer 4p electron, a node in its P(r),
+  // turns at m = 1.
+  for (const [id, M] of [['2p2_3P_1', 1], ['2p4p_3D_3', 2]]) {
+    const rand = seeded(165)
+    const c = C.Cloud.make(at(id), M, rand)
+    for (let i = 0; i < 2400; i++) C.Cloud.step(c, 1 / 20, rand)
+    for (const k of cloudKs(c)) assert.ok(k.d <= k.bound, `${id} M_L ${M} ${k.what}: KS ${k.d.toFixed(4)} over ${k.bound.toFixed(4)} at n ${k.n}`)
+    assert.strictEqual(c.pts.length, 3 * C.Cloud.N)
+    assert.ok(c.pts.every(Number.isFinite))
+    // The drawn points, each path's mean over SMOOTH, lag it by
+    // sqrt(D SMOOTH) an axis, rms, D = 1 / 2 atomic unit on the light
+    // clock: 0.10 bohr, a little less where the drift holds the path in.
+    const lag = Math.sqrt(C.NELSON / 2 / C.Clock.au * C.SMOOTH)
+    for (let s = 0; s < 6; s++) {
+      let v = 0
+      for (let i = 3 * C.Cloud.SLOT_AT[s]; i < 3 * C.Cloud.SLOT_AT[s + 1]; i++) v += (c.q[i] - c.pts[i]) ** 2
+      const rms = Math.sqrt(v / (3 * (C.Cloud.SLOT_AT[s + 1] - C.Cloud.SLOT_AT[s])))
+      assert.ok(rms > 0.7 * lag && rms < 1.1 * lag, `${id} slot ${s}: the drawn points lag ${rms} bohr against ${lag}`)
+    }
+  }
+})
+
+test('carbon: a cloud started from a wrong density relaxes to |psi|^2', () => {
+  // Every particle of the ground term 3P1, M_L = 1, at three times its
+  // orbital's mean radius and within 0.3 rad of the axis, where
+  // |Y_1,1|^2 vanishes, as many toward +z as toward -z: every slot fails
+  // the bound. After 240 s on screen, 20 atomic units of time, in steps
+  // of a quarter second, every slot passes it. Nelson's process does not
+  // cross a node of rho, so the start keeps each nodal domain's share:
+  // both lobes of |Y_1,0|^2 about the plane z = 0.
+  const rand = seeded(7)
+  const c = C.Cloud.make(at('2p2_3P_1'), 1, rand)
+  c.kinds.forEach((k, s) => {
+    for (let i = C.Cloud.SLOT_AT[s]; i < C.Cloud.SLOT_AT[s + 1]; i++) {
+      const r = 3 * meanROf(k.key)
+      const th = i % 2 ? Math.PI - 0.3 * Math.sqrt(rand()) : 0.3 * Math.sqrt(rand())
+      const ph = 2 * Math.PI * rand()
+      c.pts[3 * i] = r * Math.sin(th) * Math.cos(ph)
+      c.pts[3 * i + 1] = r * Math.sin(th) * Math.sin(ph)
+      c.pts[3 * i + 2] = r * Math.cos(th)
+    }
+  })
+  for (const k of cloudKs(c)) assert.ok(k.d > k.bound, `the wrong start passes ${k.what}: KS ${k.d.toFixed(4)}`)
+  for (let i = 0; i < 960; i++) C.Cloud.step(c, 0.25, rand)
+  for (const k of cloudKs(c)) assert.ok(k.d <= k.bound, `${k.what}: KS ${k.d.toFixed(4)} over ${k.bound.toFixed(4)} at n ${k.n}`)
+})
+
+test('carbon: a jump carries every particle to the lower level\'s density, none made or lost', () => {
+  // 2p4p 1P1 to 2p3s 1Po1, then on to the ground term before the first
+  // move ends, at frames of a 60th of a second: every particle keeps its
+  // index and moves less than 2 bohr a frame, where a redraw would move
+  // the 4p cloud's tail, 30 bohr out, by tens of bohr: the cloud of mean
+  // radius 14.6 bohr carried into 3s and then 2p, and after the moves
+  // each slot holds its new orbital's density. The raised slot's
+  // particles, in 2p, carry PTS_CORE / PTS_OUTER of a particle's ink.
+  const rand = seeded(42)
+  const c = C.Cloud.make(at('2p4p_1P_1'), 1, rand)
+  const n = C.Cloud.N
+  let worst = 0
+  let prev = Float32Array.from(c.pts)
+  const frames = k => {
+    for (let f = 0; f < k; f++) {
+      C.Cloud.step(c, 1 / 60, rand)
+      assert.strictEqual(c.pts.length, 3 * n)
+      for (let i = 0; i < n; i++) worst = Math.max(worst, Math.hypot(c.pts[3 * i] - prev[3 * i], c.pts[3 * i + 1] - prev[3 * i + 1], c.pts[3 * i + 2] - prev[3 * i + 2]))
+      prev = Float32Array.from(c.pts)
+    }
+  }
+  assert.deepStrictEqual(C.Cloud.to(c, at('2p3s_1Po_1'), 1), [5])
+  frames(Math.round(60 * C.MORPH))
+  for (const k of cloudKs(c)) assert.ok(k.d <= k.bound, `in 3s: ${k.what}: KS ${k.d.toFixed(4)} over ${k.bound.toFixed(4)}`)
+  assert.deepStrictEqual(C.Cloud.to(c, at('2p2_3P_1'), 0), [5])
+  frames(Math.round(20 * C.MORPH))
+  assert.ok(C.Cloud.moving(c, 5) > 0.9 * C.PTS_OUTER, 'the move to 2p under way')
+  assert.deepStrictEqual(C.Cloud.to(c, at('2p3s_1Po_1'), 0), [5])
+  frames(Math.round(15 * C.MORPH))
+  assert.deepStrictEqual(C.Cloud.to(c, at('2p2_3P_1'), 0), [5], 'a second move before the first ends')
+  frames(Math.round(70 * C.MORPH))
+  assert.strictEqual(C.Cloud.moving(c, 5), 0)
+  for (const k of cloudKs(c)) assert.ok(k.d <= k.bound, `in 2p: ${k.what}: KS ${k.d.toFixed(4)} over ${k.bound.toFixed(4)}`)
+  assert.ok(worst < 2, `a particle moved ${worst} bohr in a frame`)
+  for (let i = C.Cloud.SLOT_AT[5]; i < n; i++) assert.ok(Math.abs(c.w[i] - C.PTS_CORE / C.PTS_OUTER) < 1e-6 && !c.amber[i])
+  assert.ok(c.pts.every(Number.isFinite))
+})
+
+test('carbon: a cloud of M_L != 0 circulates about the axis, one of M_L = 0 does not', () => {
+  // Madelung's current, m / rho_perp about z, through the noise: the
+  // turn about z, x0 y1 - y0 x1, summed over each step of a quarter
+  // second for 50 s and over the particles, which the swirl moves by m
+  // times the step in atomic units where it is not clipped. The osmotic
+  // drift has no part about z. The ground term 3P1: at M_L = 1 its 2p
+  // particles hold m = 0 and 1, at M_L = 0 they hold m = -1 and 1 alike.
+  // Unclipped, an m = 1 particle turns 4.1 bohr^2 in all, so M_L = 1
+  // gives about 1.3 a particle. At M_L = 0 the draw of each particle's m
+  // and the noise leave about 0.08 either way: the bound is 0.2 of
+  // M_L = 1's, over three of those.
+  const turned = M => {
+    const rand = seeded(3)
+    const c = C.Cloud.make(at('2p2_3P_1'), M, rand)
+    let sum = 0
+    for (let f = 0; f < 200; f++) {
+      const before = Float32Array.from(c.pts)
+      C.Cloud.step(c, 0.25, rand)
+      for (let k = 0; k < C.Cloud.N; k++) sum += before[3 * k] * c.pts[3 * k + 1] - before[3 * k + 1] * c.pts[3 * k]
+    }
+    return sum / C.Cloud.N
+  }
   const plus = turned(1)
   const minus = turned(-1)
-  assert.ok(plus.moved > 0 && plus.sense > 0, 'M_L = +1 turns counterclockwise about z')
-  assert.ok(minus.sense < 0, 'and M_L = -1 the other way')
+  const none = turned(0)
+  assert.ok(plus > 0.3, `M_L = +1 turns counterclockwise about z: ${plus}`)
+  assert.ok(minus < -0.3, `and M_L = -1 the other way: ${minus}`)
+  assert.ok(Math.abs(none) < 0.2 * plus, `M_L = 0 does not turn: ${none} against ${plus}`)
 })
 
 test('carbon: the radial samplers give each orbital\'s mean radius', () => {
@@ -246,24 +413,27 @@ test('carbon: each radiation pattern sums over M to an isotropic one', () => {
 })
 
 test('carbon: a jump\'s source is the product of the two orbitals the line moves', () => {
-  const at = id => D.levels.find(l => l.id === id)
   const mv = C.mover(at('2p4p_1P_1'), at('2p3s_1Po_1'))
   assert.deepStrictEqual([mv.lf, mv.lt], [1, 0])
   assert.strictEqual(C.mover(at('2p4p_3P_2'), at('2s2p3_3Do_3')), null, 'a two-electron jump has no one-electron source')
-  // 4p times 3s, Delta M = 0: the angular part is cos theta, so the
-  // mean |cos theta| of the points is 2/3, and each point's sign is that
-  // of z times the radial product P_4p P_3s.
-  const p = C.source(mv, 0, 6000)
-  let mean = 0
+  // 4p times 3s, Delta M = 0: the angular part is cos theta, so the sign
+  // at each point is that of z times the radial product P_4p P_3s, and
+  // the flash takes it at each particle of the 4p cloud where it stands.
+  const sign = C.sourceSign(mv, 0)
+  const rand = seeded(5)
   let wrong = 0
-  for (let i = 0; i < p.length; i += 4) {
-    const r = Math.hypot(p[i], p[i + 1], p[i + 2])
-    mean += Math.abs(p[i + 2]) / r
-    if (Math.sign(p[i + 2]) * Math.sign(C.radialP(mv.from, r) * C.radialP(mv.to, r)) !== p[i + 3]) wrong++
+  let plus = 0
+  for (let i = 0; i < 6000; i++) {
+    const r = 40 * rand()
+    const z = 2 * rand() - 1
+    const ph = 2 * Math.PI * rand()
+    const s = Math.sqrt(1 - z * z)
+    const v = sign(r * s * Math.cos(ph), r * s * Math.sin(ph), r * z)
+    if (Math.sign(z) * Math.sign(C.radialP(mv.from, r) * C.radialP(mv.to, r)) !== v) wrong++
+    if (v > 0) plus++
   }
-  mean /= p.length / 4
-  assert.ok(Math.abs(mean - 2 / 3) < 0.02, `mean |cos theta| ${mean}`)
   assert.strictEqual(wrong, 0)
+  assert.ok(plus > 2000 && plus < 4000, `both signs: ${plus} of 6000 positive`)
 })
 
 test('carbon: the Clebsch-Gordan weights leave an unaligned atom isotropic and an aligned one not', () => {

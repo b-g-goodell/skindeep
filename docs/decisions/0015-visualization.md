@@ -22,7 +22,8 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 (issue #158) and for its flashes and its slowed clocks (issues #164
 and #166), and 2026-10-18 for its field's calibration (issue #169) and its
 photons at their true scale (issue #167), and 2026-10-22 for its
-invisible fronts on a grid (issue #168), and for the gravitational waves of the Gravity modes
+invisible fronts on a grid (issue #168) and its cloud as a flow (issue
+#165), and for the gravitational waves of the Gravity modes
 (issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
 for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
@@ -646,14 +647,13 @@ ruling's starting point by `carbon-photon.md`.
   diameter, 1.54 nm, in about 2.6 s, and the view's radius in 2.1 s. The view is fixed at 24 bohr so every
   front keeps that pace: an excited atom fills it, the ground atom is its
   bright core. The pane states both clocks.
-- The cloud (question 4, revised): Monte Carlo stippling of $|\psi|^2$
-  for the drawn atom's $M_L$ about the chosen axis $z$, labelled. Each
-  subshell with an entry in the research's Clebsch-Gordan table draws
-  each point's $m$ by $n_m$ and its direction from $|Y_{lm}|^2$, its
-  radius from the orbital's inverse-CDF table. $2s2p^3$ has no entry
-  and is drawn round. 1.2 % of the points are drawn afresh each 60th of
-  a second of wall time, a sampling on neither clock, so the cloud
-  seethes and keeps its shape. A point of
+- The cloud (question 4, revised): particles of $|\psi|^2$ for the
+  drawn atom's $M_L$ about the chosen axis $z$, which flow by Nelson's
+  stochastic mechanics (see 2026-10-22: Carbon's cloud as a flow, which
+  replaced the Monte Carlo stippling and its seethe). Each subshell with
+  an entry in the research's Clebsch-Gordan table gives each particle
+  its $m$ by $n_m$ and its density in direction $|Y_{lm}|^2$, its radius
+  the orbital's. $2s2p^3$ has no entry and is drawn round. A particle of
   $m \ne 0$ turns about $z$ at Madelung's $m/\rho^2$ in atomic units on
   the light clock, $12.09$ s on screen per atomic unit of time, at
   most 0.6 rad/s near the axis, where the density of $m \ne 0$
@@ -664,10 +664,12 @@ ruling's starting point by `carbon-photon.md`.
   coefficient (see 2026-10-16: Carbon in a magnetic field, which
   replaces the uniform draw). The core is Bunge's, the outer electron the
   quantum-defect model, drawn in amber and labelled a model.
-- The jump, by `carbon-photon.md` section 4: the drawn atom's cloud
-  snaps to the lower level's, and for 0.4 s of wall time its transition density
-  $\psi_f^*\psi_i$, of the one electron the line moves, flashes as the
-  source, mint where positive, pink where negative, labelled. A jump of
+- The jump, by `carbon-photon.md` section 4: the drawn atom's
+  particles move to the lower level's density over 1 s (see 2026-10-22:
+  Carbon's cloud as a flow, which replaced the snap), and for 0.4 s of
+  wall time its transition density $\psi_f^*\psi_i$, of the one
+  electron the line moves, flashes as the source on that electron's
+  particles, mint where positive, pink where negative, labelled. A jump of
   two electrons, $2s^2 2p\,nl$ to or from $2s2p^3$, which only
   configuration mixing allows, flashes none and says so.
 - The front: a sphere about the site, its brightness the radiation
@@ -1505,7 +1507,9 @@ dial's range kept.
   the clip, the trace and the Larmor rate on screen.
 - In wall time, kept: the source's flash, 0.4 s, a detection's square,
   0.6 s, a line's flash in the spectrum, the camera's turn and the
-  cloud's seethe, a sampling on neither clock. Scaled with the clocks
+  cloud's seethe, a sampling on neither clock (the seethe replaced by
+  Nelson's flow on the light clock, see 2026-10-22: Carbon's cloud as a
+  flow). Scaled with the clocks
   they would linger and overlap five times as long. The session's
   events arrive in wall time, so a prompt's cascade now spreads over
   about 2 s.
@@ -1726,7 +1730,8 @@ subagent's start leaves it, at rest for good, and $2p3p\,{}^3S_1$).
   `test/viz-carbon.test.js` pins 0.15 mT and the repeats at it.
 - Kept: the cloud, counted per cell, flickers far above three a second
   from its seethe, in wall time, and its stipple's motion: idle, with
-  no fronts, a cell reads 5. #165 replaces the seethe.
+  no fronts, a cell reads 5. #165 replaced the seethe (see 2026-10-22:
+  Carbon's cloud as a flow).
 
 ## 2026-10-18: Carbon's photons at their true scale
 
@@ -1945,3 +1950,225 @@ Rejected:
   is the trail, $\lambda/10^4$, from #167.
 - A haze that changes brightness by the mapping's Jacobian: a lens keeps
   an extended background's surface brightness.
+
+## 2026-10-22: Carbon's cloud as a flow
+
+Owner, 2026-10-16, issue #165: "replace the monte carlo stippling
+electrons with either fluid dynamics simulations or flocking behavior
+or something like that, driven by the electron's pdf." The issue left
+the dynamics, its time factor, the clip and the jump's morph to the
+builder, settled here. The points drawn afresh, 1.2 % of them each 60th
+of a second, go, and so does the snap of a new cloud at each change of
+level.
+
+- The dynamics: Nelson's stochastic mechanics (E. Nelson, Phys. Rev.
+  150, 1079, 1966). Each particle belongs to one electron and moves in
+  that electron's density $\rho = |R_{nl} Y_{lm}|^2$ by
+  $d\mathbf{x} = (\mathbf{v} + \mathbf{u})\,dt + d\mathbf{W}$, in
+  atomic units, each axis of $d\mathbf{W}$ of variance
+  $(\hbar/m_e)\,dt$, with the current velocity
+  $\mathbf{v} = \mathrm{Im}(\nabla\psi/\psi) = (m/\rho_\perp)\,\hat\phi$,
+  the Madelung swirl the mode drew already, and the osmotic velocity
+  $\mathbf{u} = \frac{1}{2}\nabla\ln\rho$. Its stationary density is
+  $|\psi|^2$: in the Fokker-Planck equation $\rho\mathbf{u}$ cancels the
+  diffusion and $\nabla\cdot(\rho\mathbf{v}) = 0$. Taken over the
+  issue's other candidates: the overdamped Langevin with a free
+  diffusion constant is this process on another clock, and a flock or a
+  smoothed-particle fluid keeps $\rho$ only by a correction measured
+  after the fact.
+- Exact at a frame's step. A step is two parts, each of which keeps
+  $\rho$ exactly: the swirl, a turn about $z$ by an angle of $\rho_\perp$
+  alone, which keeps any density round about $z$, and the osmotic drift
+  with the noise as one step of the Metropolis-adjusted Langevin
+  algorithm (G. O. Roberts and R. L. Tweedie, Bernoulli 2, 341, 1996):
+  the proposal $\mathbf{y} = \mathbf{x} + h\,\mathbf{u}(\mathbf{x}) + \sqrt{h}\,\boldsymbol\xi$,
+  taken with the chance
+  $\min(1, \rho(\mathbf{y})\,q(\mathbf{x}|\mathbf{y}) / \rho(\mathbf{x})\,q(\mathbf{y}|\mathbf{x}))$,
+  a refused one leaving the particle where it stands. The chain's
+  $\rho$ is $\ln R^2$ piecewise linear in $r$ on the radial table's grid,
+  4096 steps dense near the nucleus, times $\ln (P_l^m)^2$ piecewise
+  linear in $c = \cos\theta$ on 1024 steps, and $\mathbf{u}$ is the
+  gradient of the same pieces. A step is at most $(0.3\,\langle r\rangle)^2$
+  atomic units of time for an orbital of mean radius $\langle r\rangle$
+  (`STEP`), 0.0065 for 1s, where 98 % of proposals are taken: a frame is
+  one step down to 13 frames a second, a longer one several.
+- The clip: $|\mathbf{u}|$ at most `U_MAX` = 10 bohr per atomic unit of
+  time. $\mathbf{u}$ grows without bound at a node of $\rho$, a radial
+  node of 2s, 4s or 4p, a plane or cone of $Y_{lm}$, and on the axis
+  for $m \ne 0$, where it is $|m|/\rho_\perp$ outward as $\mathbf{v}$ is
+  $m/\rho_\perp$ about it. Carbon's 1s reaches 6 at the nucleus, Kato's
+  cusp at $Z = 6$, so the clip acts only near the nodes and the axis.
+  The swirl keeps its clip, `SPIN_MAX`, 0.6 rad/s. Under the Metropolis
+  step neither clip moves the stationary density: each changes the
+  proposal, not the law.
+- Nodes. In continuous time a particle never crosses a node of $\rho$,
+  so each nodal domain keeps its share, a known property of Nelson's
+  process. The discrete chain crosses rarely. Every start the mode
+  makes, a new cloud and each morph, draws each domain's share right.
+- The time factor: `NELSON` = 1, Nelson's process on the light clock,
+  the clock of the swirl and the fronts, an atomic unit of time 12.09 s
+  on screen. A particle wanders $\sqrt{3t/12.09}$ bohr in $t$ seconds,
+  rms: 0.50 bohr in a second, 6.4 pixels in a pane of 1200 by 760 at
+  12.75 pixels a bohr, 1.0 in one of 360 by 230, and 2.2 bohr, 28
+  pixels, in 20 s. The 2p core, 1.7 bohr, churns, and a 2p4p level's
+  outer cloud, 15 bohr, drifts. The factor scales $\mathbf{v}$ and
+  $\mathbf{u}$ alike, Nelson's process run faster, the swirl under its
+  clip.
+- The drawn point. A particle is drawn at its path's exponential mean
+  over `SMOOTH` = 0.25 s of wall time, and at the path itself while a
+  morph carries it, so it arrives on time. Unsmoothed, the noise moves
+  every point 0.47 pixels an axis a frame in a full pane, back and
+  forth, and
+  the cloud twinkles, a seethe by other means. The mean lags the path by
+  $\sqrt{D\tau}$ an axis, rms, $D = \frac{1}{2}$ atomic unit on the
+  light clock: 0.10 bohr, 0.08 in 1s where the drift holds the path in,
+  a blur of 6 % of the 2p cloud's radius. The drawn path glides at about
+  $\sqrt{D/\tau}$, 0.4 bohr a second an axis, 5 pixels in a full pane
+  and 0.8 in a small one. The dynamics and the tests are on the true
+  positions, which stay $|\psi|^2$ exactly. The flash's sign is read at
+  the drawn point.
+- The measure that set the factor and the mean: the cloud alone, on
+  black, no axis, grid or front, at a fixed camera (yaw 0.4, pitch
+  0.32), dim 1, 12 s after 1 s, each frame to the counter of
+  `scripts/flash.js`, at 12.75 pixels a bohr and 60 frames a second and
+  at 2.06 and 20, in the ground term $^3P_1$, $M_L = 1$, and in
+  $2p4p\,{}^3D_3$, $M_L = 2$: a scratch harness, not committed. A
+  cell's most flashes in a second and the cells over 3, in that order
+  of panes and levels:
+  | cloud | full, $^3P_1$ | full, $2p4p$ | small, $^3P_1$ | small, $2p4p$ |
+  | --- | --- | --- | --- | --- |
+  | the seethe, two runs | 4, 1 and 3, 0 | 4, 1 and 4, 1 | 2, 0 and 2, 0 | 3, 0 and 4, 1 |
+  | `NELSON` 1, drawn bare, two runs | 10, 82 and 10, 83 | 10, 301 and 11, 325 | 1, 0 and 1, 0 | 2, 0 and 5, 1 |
+  | `NELSON` 3, bare | 14, 109 | 14, 1054 | 2, 0 | 4, 5 |
+  | `NELSON` 10, bare | 18, 141 | 17, 1466 | 2, 0 | 6, 95 |
+  | `NELSON` 30, bare | 21, 144 | 21, 1205 | 4, 3 | 7, 238 |
+  | `NELSON` 1, mean over 0.25 s | 3, 0 | 3, 0 | 1, 0 | 2, 0 |
+  | `NELSON` 1, mean over 0.5 s | 2, 0 | 3, 0 | 1, 0 | 1, 0 |
+  | `NELSON` 3, mean over 0.5 s | 4, 1 | 3, 0 | 1, 0 | 2, 0 |
+  | `NELSON` 10, mean over 0.5 s | 4, 13 | 4, 20 | 1, 0 | 2, 0 |
+  No field flashed in any, within a frame or within 0.1 s. Only a mean
+  brings the flow to the seethe's count, and the smallest blur that does
+  is `NELSON` 1 over 0.25 s. In the pane, at idle, the cloud is dimmed
+  to 0.7 and the camera turns, and `vizflash.js`'s idle scene read a
+  cell's most at 5 and 33 cells over 3 at every factor from 1 to 30
+  bare, as at the base: that cell, at 348,432, is the detector's label
+  passing, not the cloud.
+- The particles. Six electron slots, 1s, 1s, 2s, 2s, 2p, and the slot
+  of the electron a level raises: in $2s^2 2p^2$ it is in 2p, in
+  $2s2p^3$ the second 2s slot is in 2p too, in $2s^2 2p\,nl$ it is the
+  outer electron, the model's. `PTS_CORE` = 230 particles a slot and
+  `PTS_OUTER` = 1300 in the raised slot, 2450 in every level, where the
+  ground term drew 1380 points. The raised slot's particles stay in
+  every level, each with $230/1300$ of a particle's ink while in a core
+  orbital, so each electron carries a core electron's ink there and the
+  cloud keeps the stippling's shape and brightness by the same orbitals
+  (Bunge 1993 for the core, the quantum-defect model for the outer
+  electron, labelled a model), the same $M_L$ and the same $n_m$. A
+  particle's $m$ is the inverse of its subshell's $n_m$ at a share drawn
+  once with the cloud, so a change of level sets every $m$ anew and
+  draws nothing.
+- The morph, for every change of the drawn atom's level, a jump, a
+  collision, a lamp or the pulse, since the issue's item 2 forbids a
+  redraw for any cause: displacement interpolation. A particle whose
+  density changes is carried from its quantile of the old density to
+  the same quantile of the new, its radius by the two radial tables and
+  its $\cos\theta$ by the two tables of $|Y_{lm}|^2$, its azimuth kept,
+  linear in $r$ and $\theta$ and eased by smoothstep, over `MORPH` =
+  0.5 s of wall time: 30 frames at 60 a second and 10 in a split of
+  three, and within the 0.37 to 1.22 s a $2p4p$ level lives on the event
+  clock, so a lifted cloud mostly reaches its level before it jumps. At
+  1 s, the first choice, the captures showed a lamp's lift into $2p3d$
+  cut off by its jump at 139 ms, the cloud barely grown. A $2p3s$ level,
+  13.6 to 14.4 ms, is passed through: its cloud is not reached. A
+  carried particle takes no Nelson step. A second change before it
+  arrives sends it on from where it stands to the new level's density
+  at the quantiles of its first move. The raised slot's ink and
+  colour pass from the old orbital's to the new, amber to blue half way.
+  A two-electron jump moves both of its slots. A collision still sets
+  the drawn atom's axis anew (#169), which turns the cloud whole at
+  once: that reset is the owner's to change.
+- The source rides on the same particles: for its 0.4 s the particles
+  of the slot the line moves, the raised slot within $2s^2 2p^2$, are
+  drawn again in mint where $\psi_f^*\psi_i$ is positive at the particle
+  and pink where negative, its sign from
+  $P_f P_i\,P_{l_f}^{|m|} P_{l_t}^{|m'|} \cos q\phi$ as before, the rest
+  of the cloud dimmed as before, each at $\min(1, 700/n)$ of the
+  brightness of a source point for $n$ particles, the ink of the 700
+  points it had. Its magnitude $|\psi_f^*\psi_i| = \sqrt{\rho_f\rho_i}$
+  lies between the two densities, where the moving particles are.
+- Precession about $B$ and the camera's turn act on the particles as on
+  the points: the particles live in the atom's frame, turned by it and
+  projected.
+- Checked by `test/viz-carbon.test.js`, seeded, each bound the
+  Kolmogorov-Smirnov statistic's critical value at a share 0.001,
+  $1.95/\sqrt{n}$. From a stationary start, 2400 steps of a 20th of a
+  second: in the ground term $^3P_1$, $M_L = 1$, and in
+  $2p4p\,{}^3D_3$, $M_L = 2$, each slot's radii against its orbital's
+  $P(r)^2$ and its $\cos\theta$ by $|m|$ against $(P_l^{|m|})^2$, both
+  integrated from the orbitals and not from the mode's tables, and the
+  drawn points behind the paths by 0.7 to 1.1 times 0.10 bohr. From a
+  wrong start, every particle of $^3P_1$ at three times its mean radius
+  within 0.3 rad of the axis, half each way: every slot fails at the
+  start and passes after 240 s. A jump of $2p4p\,{}^1P_1$ to
+  $2p3s\,{}^1P^o_1$ and on to $^3P_1$, and a second change before the
+  first move ends: every particle kept, under 2 bohr a frame, each slot
+  at its new density, the raised slot in 2p at $230/1300$ of the ink.
+  The swirl's circulation through the noise: $M_L = \pm1$ turn each
+  way, $M_L = 0$ under a fifth of that. With $\ln (P_l^m)^2$ left out of
+  the target both density tests fail, and with the morph aimed at the
+  old orbital the jump's fails.
+- The cost (`scripts/checks/vizcarbon.js`, Carbon drawn alone on a
+  400 by 380 canvas at full activity, the median of a draw). The step
+  of 2450 particles takes 0.4 to 0.46 ms in node. Against the base at
+  38bf72f, run back to back: 7.7 ms at the base and 8.7 at 2de4cfc,
+  1-minute load 13.71 and 13.39 before each. At e65bb66 9.4, the base
+  8.6 and e65bb66 again 10.8, load 19.45, 37.53 and 37.95 before each.
+  The issue's 6.3 ms was read on 2026-10-16: the base read 7.7 to 9.5
+  on this host on 2026-10-22. Three panes of 720 by 460 all in Carbon,
+  the median of five rounds, on the fake session's activity and at full
+  activity: the base 28.5 and 33, then 13 and 14.5, this change 22.5
+  and 29.5 (2de4cfc), then 19 and 13 and 15.5 and 16.5 (e65bb66),
+  rounds ranging 9 to 38.5, Gravity's medians moving as far (10 to
+  29.5) between the same runs: within the host's noise.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`,
+  exit 0 at 38bf72f and at e65bb66, loads 55.59 and 10.07 before:
+  every scene 0 general and 0 red flashes a second within one frame,
+  the bound. A cell's most in a second, base and e65bb66: full 13 and
+  10, full at B_MAX 22 and 20, the pulse 13 and 13, at B_MAX 16 and 17,
+  moderate 10 and 9, idle 5 and 5, a prompt 8 and 8, a subagent 8 and
+  8, the split of three at full activity 5 and 4, at B_MAX 7 and 7, the
+  small pane 5 and 4, a prompt there 3 and 4. Within 0.1 s, reported
+  and not asserted: full 2 and 5, full at B_MAX 6 and 1, the pulse's 10
+  and 10, moderate 2 and 0, the rest 0 and 0. A run at 2de4cfc read 1,
+  3, 10 and 0, within one setting's spread. The frame's mean light at
+  full activity 0.0691 and 0.0698.
+- The frames, looked at at e65bb66 and 2b1ce51, Carbon alone on a
+  canvas of 1200 by 760 and one of 360 by 230 (a scratch capture, not
+  committed). At rest in the ground term the cloud is the small bright
+  2p core as the stippling drew it, its 1s dot a few pixels wide. A
+  difference of frames 1 s apart moves every point, by the flow and the
+  camera's turn. During a jump, the jump's flash lies on the moving
+  particles in mint and pink, then the cloud contracts over half a
+  second: with the event clock slowed ten times so a $2p4p\,{}^3D_3$
+  cloud settles first, its amber particles spread over the view, then
+  on a jump to $2p4s$ and on to the ground term within 0.4 s they
+  gather toward the core, the last of them still on the way at 0.6 s.
+  With $M_L = \pm2$ in a $2p4p$ level held by an event clock of
+  $10^{15}$, the 4p cloud of $m = \pm1$ thins along the cyan axis. In
+  the small pane the 4p cloud fills the atom's square, and the ground
+  term is a dot of a few pixels.
+
+Rejected:
+
+- Euler-Maruyama of Nelson's equation: biased at a frame's step and at
+  the clip, where the Metropolis step is exact.
+- A flock or a smoothed-particle fluid: livelier, but neither keeps
+  $\rho$, and the correction is a measured drift.
+- A time factor above 1: at 3 over 0.5 s the mean lags 0.25 bohr an
+  axis, 15 % of the 2p cloud's radius, a change of the cloud's shape,
+  and at 10 over 0.5 s the cells over 3 rise to 13 and 20 against the
+  seethe's 0 and 1.
+- The flow drawn bare, its points at the true positions: a cell's most
+  10 to 11 a second against the seethe's 3 to 4.
+- Particles of the moving electron alone, the rest stippled: the issue
+  asks every particle a trajectory.
