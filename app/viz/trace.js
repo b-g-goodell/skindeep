@@ -1250,7 +1250,19 @@
       return false
     }
     for (let k = 0; k < BRANCHES && mend(); k++);
-    return done.filter(br => br.length > 1)
+    // A branch whose every image lies on one other branch kept, within
+    // 1.5 pixels or as near as the trace places an image there, IMG_TOL
+    // over J's less singular value, up to JUMP, is that branch's double,
+    // and dropped: beside a fold the images of one place smear along the
+    // critical curve, and two followers may take one.
+    const kept = done.filter(br => br.length > 1)
+    const out = []
+    for (let k = 0; k < kept.length; k++) {
+      const br = kept[k]
+      const on = o => br.every(m => point(o, m.u) && Math.hypot(P[0] - m.x, P[1] - m.y) < Math.max(1.5, Math.min(JUMP, IMG_TOL / sv(m))))
+      if (!out.some(on) && !kept.slice(k + 1).some(on)) out.push(br)
+    }
+    return out
   }
 
   const api = { RING, BBAR, deflection, trace, STRIDE, MAXSEG, plane, render, skyTiles, seen, XY, image, IM, curve }
