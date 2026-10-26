@@ -856,9 +856,21 @@
         // The sun's rays break through.
         rays = { t: clock, a: rnd() * 10 }
       } else if (e.kind === 5) {
-        // A cloudlet forms beside the newest cloud.
-        const o = clouds.filter(c => !c.gone).pop()
-        const c = o ? cloud(o.X + (rnd() < 0.5 ? -1 : 1) * o.L * (0.8 + 0.4 * rnd()), o.Z * (0.95 + 0.1 * rnd()), 600 + 500 * rnd(), { scale: 0.2, flat: 0.8 }) : at(W / 2, cy * 0.6, 900)
+        // A cloudlet forms beside the newest cloud, on its side toward
+        // the pane's centre, at its depth and its base, its box at full
+        // size moved onto the pane: across it whole, and down far
+        // enough that its base and most of its height show.
+        const o = newest()
+        let c
+        if (o) {
+          const Z = o.Z * (0.95 + 0.1 * rnd())
+          c = cloud(o.X + (sx(o.X, o.Z) < cx ? 1 : -1) * o.L * (0.8 + 0.4 * rnd()), Z, 600 + 500 * rnd(), { scale: 0.2, flat: 0.8 })
+          c.Y0 = Math.min(o.Y0, cy * Z / f - 0.6 * c.top)
+          const half = 0.6 * c.L
+          const lo = (0 - cx) * Z / f + half
+          const hi = (W - cx) * Z / f - half
+          c.X = lo > hi ? (lo + hi) / 2 : clamp(c.X, lo, hi)
+        } else c = at(W / 2, cy * 0.6, 900)
         clouds.push(c)
         trim()
       } else if (e.kind === 6) {
@@ -874,6 +886,13 @@
         if (drops.filter(d => d.water).length >= 8) drops.splice(drops.findIndex(d => d.water), 1)
         drops.push({ x: rnd() * W, y: rnd() * cy * 0.95, r: (0.02 + 0.025 * rnd()) * Math.max(W, H), t: clock, water: true, life: 4.5, seed: (rnd() * 1e6) | 0 })
       }
+    }
+
+    // The newest live cloud, the greatest id (see trim).
+    function newest () {
+      let o = null
+      for (const c of clouds) if (!c.gone && (!o || c.id > o.id)) o = c
+      return o
     }
 
     // Past the most clouds, the oldest, the least id, thins away. Ids
@@ -1123,6 +1142,11 @@
         } else drops.push({ x: p.x0, y: p.y0, r: 0.04 * Math.max(W, H), t: clock, water: true, life: 4.5, seed: (rnd() * 1e6) | 0 })
       },
 
+      // For the unit tests: each cloud, its screen box at full size.
+      list () {
+        return clouds.map(c => ({ id: c.id, born: c.born, X: c.X, Y0: c.Y0, Z: c.Z, L: c.L, scale: c.scale, gone: c.gone, box: bbox(Object.assign({}, c, { scale: 1 })) }))
+      },
+
       // For the live checks: the clouds, those with a sprite, the sun's
       // elevation, the sunset's share run, the marches.
       probe () {
@@ -1131,6 +1155,6 @@
     }
   }
 
-  if (typeof module === 'object' && module.exports) module.exports = { PAL, LAND, CYCLE }
+  if (typeof module === 'object' && module.exports) module.exports = { PAL, LAND, CYCLE, create }
   else (root.VizCanvas = root.VizCanvas || {}).sunset = create
 })(this)
