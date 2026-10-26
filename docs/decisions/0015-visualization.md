@@ -359,9 +359,10 @@ distant background of stars".
   drawn flat on slices of depth and seen through the trace (see
   2026-10-17: Gravity 3D's optics), and bodies are sized and dimmed
   with distance. A
-  trail is the places a body passed, kept every 1.5 units of time or 4
-  of travel, drawn each frame as their images through the holes (see
-  2026-10-22: Gravity 3D's trails, one curve). Matter at $d$ from a hole heats
+  trail is the places a body passed, kept after a step when 1.5 units
+  of time or 4 of travel have passed (see 2026-10-26: Gravity 3D's
+  ring, flood and corners), drawn each frame as their images through
+  the holes (see 2026-10-22: Gravity 3D's trails, one curve). Matter at $d$ from a hole heats
   as $\min(1, (2.3 r_s/d)^2)$, toward orange, white and then blue
   white, larger and brighter. What emits is shifted in colour and
   brightness by its motion and by the holes' potential (see
@@ -956,7 +957,8 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   each body's term is held to $4 m c^2$ in norm, so a plunge's burst
   stays near $\mu c^2$. The dynamics keep the whole pull.
 - The gain: the strain is drawn as $\tanh(5000\,h)$, one gain for both
-  modes. Where a strong source's strain would turn from + to - within
+  modes, which Gravity 3D lowers where a strong field would saturate it
+  (see 2026-10-26: Gravity 3D's ring, flood and corners). Where a strong source's strain would turn from + to - within
   one drawn cell, so that the grid blurred up to the pane would show the
   turn as steps, the argument is divided by the local steepness, the
   largest step of $5000\,h$ to a neighbouring cell over 0.8: an
@@ -967,7 +969,8 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   along the axis and half in the plane, and 5000 brings that to about
   0.6: 0.63 for Gravity's pair in its plane, 0.87 on the axis of
   Gravity 3D's and 0.44 in its plane. The pane says so at its top
-  right, "gravitational waves, exaggerated x5000", clear of the
+  right, "gravitational waves, exaggerated x5000", the gain in use at
+  two figures, clear of the
   drop-down's button, else "waves exaggerated x5000", else that under
   the button, at the visualization text size.
 - Gravity's wave speed: $c = 11.5$, the value of Gravity 3D's, so the
@@ -1018,7 +1021,8 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   thinner than a cell is drawn ramped, not aliased into beads. In
   Gravity the ground is opaque, under everything else. In Gravity 3D
   it lies at its sources' mean depth and is traced as everything else
-  is (see 2026-10-17: Gravity 3D's optics).
+  is, read once a ray and never in a shadow (see 2026-10-17: Gravity
+  3D's optics, and 2026-10-26: Gravity 3D's ring, flood and corners).
 - Probe: both modes report their sources and, for the pair of shortest
   period, its separation, period, turns and the sign changes of its
   $h_+$ 80 from it, along its axis in Gravity 3D and in its plane in
@@ -1128,7 +1132,9 @@ behind it vanished under paint.
   its content's mean depth. The waves' picture (see 2026-10-16) is a
   plane at its sources' mean depth that emits and hides nothing: it is
   a diagram of the strain on the planes through its sources, so it is
-  bent as what else lies there is. The distant stars and the galaxy's
+  bent as what else lies there is, but read once a ray and never by a
+  captured one (see 2026-10-26: Gravity 3D's ring, flood and corners).
+  The distant stars and the galaxy's
   glow are a cube of directions, built at about the pane's density,
   its faces in steps of 64 pixels so that panes of near sizes share
   it, read along a ray's last direction.
@@ -2010,3 +2016,103 @@ Rejected:
   shadow would not cut a trail behind the hole short of where its
   image is lost.
 
+
+## 2026-10-26: Gravity 3D's ring, flood and corners
+
+Issue #193: the owner's second screenshot showed a thick ring about the
+central hole, brighter than anything else and coloured as the field
+behind it, about a soft dark blur where the shadow should be, a pane
+covered in soft blocks of saturated colour with straight edges, and a
+trail that ran straight down from its body and then straight left.
+The three were reproduced at 644cbc4, which holds the trails of
+2026-10-22, by a capture of the running mode in one pane of 400 by 380
+every 2.5 s for 150 s, the probe read with each frame, and by the mode
+driven in Node with a seeded generator and stub canvases, its traced
+frame dumped: the waves' ground and the holes, no slice.
+
+- The ring and the blur. The waves' ground lies at its sources' mean
+  depth, which swings before and behind the hole as the companion
+  turns: in the capture it lay 571 to 674 from the camera, the hole at
+  620. Whenever it lay in front, two kinds of ray read it wrongly. A
+  ray the hole turns by more than a right angle crossed the ground's
+  depth again on its way back to the camera and read it a second time,
+  so a ring just outside the shadow shone twice as bright as the ground
+  about it, in its colours. A ray the hole captures crossed the ground
+  first, so the shadow showed the ground. The frame of the capture with
+  the ground at 611 showed both, as the screenshot does, and frames
+  with it behind showed a black disc with a thin ring. The ground is
+  now read once a ray, where it first reaches its depth, and by no
+  captured ray, in the rays traced pixel by pixel and at the lens
+  map's nodes, whose smooth cells fill the shadow (`trace.js`, a plane
+  flagged `ground`). For a transparent emitter the second crossing
+  would be light of its own, but the picture is a diagram of the
+  strain, not light, and the hole's shadow and photon ring stand over
+  it whichever side of the hole its sources lie. In the seeded run,
+  with the ground at 543, 608 and 556 before the hole, the frames at
+  644cbc4 show the ring and the filled shadow, and this tree's a black
+  disc. In a capture of this tree the frames with the ground before
+  the hole show a dark disc and a thin ring.
+- The flood. The strain was drawn as $\tanh(5000\,h)$, which brings
+  the seed's pair to about 0.6. A subagent's hole or star of 100 to
+  300 about the central hole, or that hole grown by stops, radiates a
+  field strong enough to pass 1 across the whole pane, and its
+  wavelength, longer than the view, leaves large flat lobes of
+  saturated colour. A front that ends on the grid of cells then draws
+  as a step, the blocks' straight edges. In the seeded run up to 95.4%
+  of the cells were drawn past 0.9. Gravity 3D now lowers the gain
+  below 5000 just enough that the top tenth of the cells, by the
+  greater polarization, is drawn at $\tanh(1)$, the rest darker
+  (`waves.js` `gain`). It falls at once and rises again over 2 s, so a
+  burst does not flood the pane nor pump it, and the label reads the
+  gain in use at two figures. A field whose top tenth stays under 1 at
+  5000, as the seeds' pairs' does, keeps 5000, and Gravity keeps its
+  fixed gain. In the same run no frame drew more than 2.3% of its
+  cells past 0.9. In a capture of this tree the gain fell as low as 76
+  and no pane was flooded.
+- The corners. A trail kept a place once a frame, when 1.5 units of
+  time or 4 of travel had passed, and a frame advances up to 60 steps
+  of 0.25, so a fast body's trail was its path cut into chords of a
+  frame's travel. With places kept that way, the probe's figure for the
+  most a trail's places lie apart beyond one step's travel at their
+  speed read 5.9 to 24.7 over 86 reads of the pane of 400 by 380, a
+  frame advancing up to 2.8. The places are now kept after every step,
+  by the same rule (`track`), so the spacing the rule names holds at
+  any frame rate. At a usual frame rate the trails are as long as
+  before, and on a slow host shorter in time, as the rule always meant.
+  Separately, a planet that merged into a star could leave its trail
+  on the star, when it was the first of the pair. A star keeps no
+  places, so the trail stood still and was drawn to the star in one
+  straight leg as it moved on, a corner where the old trail ends. One
+  run read 335.8 for that figure over 17 reads while a frame advanced
+  under 1.7, a leg no frame's travel explains, which a stranded trail
+  does. A merged body now keeps the larger's trail, as it keeps its
+  colour, or none if it is a star. The screenshot's body at the corner
+  is large and orange, as a star is drawn. That both legs lie along
+  the screen's axes is not explained by either cause.
+- Checked by `test/viz-trace.test.js`: a uniform ground before the
+  hole and behind it renders a black shadow and no pixel brighter than
+  the ground; at 644cbc4 it failed with "the ground at 500: 120,180,240
+  at 56, 47, 13.6 px from the hole, brighter than the ground", against
+  the ground's 60,90,120. `test/viz-waves.test.js`: a weak field keeps
+  5000 and is shown as before, a bright spot on under a tenth of the
+  cells keeps it, and a strong one's top tenth is drawn at $\tanh(1)$.
+  `test/viz-gravity3d.test.js`: a trail kept every step about a hole
+  of 900 at 4 $r_s$ has its places at most 4 plus one step's travel
+  apart, and a planet merged into a star leaves no trail on it, two
+  planets the larger's. `scripts/checks/vizlens.js` reads the probe's
+  figure in its smoke pass of the full pane and wants it at most 8:
+  this tree read 3.92 and 3.93 in two runs.
+
+Rejected:
+
+- A fixed lower gain: the seed's pair, the field most panes show,
+  would fade to nothing.
+- Each source drawn to its own peak: a burst or a strong pair would
+  look no stronger than the seed's.
+- The top hundredth of the cells at $\tanh(1)$, tried first: no cell
+  saturated, but the far field of a strong pair went near black and
+  its fronts were lost. The top quarter left up to 7.2% of the cells
+  past 0.9.
+- The ground placed behind every hole: its far field would be pulled
+  into rings that fill the frame, as the light at infinity was (see
+  2026-10-17: Gravity 3D's optics).
