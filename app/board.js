@@ -18,6 +18,18 @@ const PAGE = 50
 const PAGES = 10
 const LOOPBACK = ['127.0.0.1', 'localhost', '[::1]']
 
+// A host whose last label is a number, decimal or 0x hex, is an IPv4
+// address to a resolver: it passes only as canonical dotted decimal.
+// Node 24.22.0's checkServerIdentity misjudges the other spellings
+// (CVE-2026-106069, CVE-2026-106072, issue #210), and the scp-like form
+// and ssh:// and git:// URLs pass them through unchanged.
+const OCTET = '(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'
+const IPV4 = new RegExp(`^${OCTET}(\\.${OCTET}){3}$`)
+function canonicalHost (host) {
+  const last = host.replace(/\.$/, '').split('.').pop()
+  return !/^([0-9]+|0x[0-9a-f]*)$/i.test(last) || IPV4.test(host)
+}
+
 // A remote URL as { forge, scheme, host, port, owner, repo, key }, or
 // null: an https remote, an ssh or scp-like one (its forge on https), or
 // an http one on the loopback host alone. Any user or password in the
@@ -53,6 +65,7 @@ function parseRemote (url) {
     port = ''
     path = m[2]
   }
+  if (!canonicalHost(host)) return null
   const parts = path.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '').split('/')
   if (parts.length !== 2 || !parts.every(s => /^[A-Za-z0-9._-]+$/.test(s))) return null
   const [owner, repo] = parts
