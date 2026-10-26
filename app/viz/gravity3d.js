@@ -55,6 +55,10 @@
   // exaggerates it.
   const TAU = 3
   const HOLE_MAX = 1500
+  // A stop grows a body that is not a hole to at most BODY_MAX, where
+  // its radius (radius) still exceeds its r_s: past about 980 a star or
+  // a planet would lie within its own Schwarzschild radius.
+  const BODY_MAX = 800
   // The zoom (decision 0015, issue #194): the camera stands cam.D from
   // the view's centre, DIST at first, ZOOM times farther a wheel step
   // (viz.js), from D_MIN, where the seed hole's shadow fills the pane's
@@ -67,6 +71,15 @@
   const D_MAX = 3300
   const ZOOM = 1.2
   const STANDOFF = 2
+  // The evaporation (issue #194): while the session is idle every hole
+  // loses mass, a part dt / EVAP of it in dt s, so each hole's horizon,
+  // shadow and photon ring shrink at one rate, and a hole below FLOOR
+  // ends in a flash and is gone. dt is the idle level's share of the
+  // quiet seconds (quietTime), never the simulation's time, which an
+  // idle spell all but stops. A hole of M lasts EVAP ln(M / FLOOR) s of
+  // full idle: the seed's 900 20.4 min, HOLE_MAX 22.1 min.
+  const EVAP = 200
+  const FLOOR = 2
   // A dust grain's mass, and the disc's viscosity: between the last
   // stable orbit, 3 r_+, and DISC r_s of a hole a grain's velocity
   // relaxes at rate VISC toward a circular orbit's, a little slower, so
@@ -234,6 +247,38 @@
   // zoom D: D, but STANDOFF b_c at least.
   function standoff (D, m) {
     return Math.max(D, STANDOFF * RING * rs(m))
+  }
+
+  // The seconds of evaporation in q quiet seconds: the synthesiser's
+  // idle level, 0 to 3 s and 1 from 13 s, rising between (synth.js
+  // input), integrated over them.
+  function quietTime (q) {
+    if (q <= 3) return 0
+    if (q <= 13) return (q - 3) * (q - 3) / 20
+    return q - 8
+  }
+
+  // Every hole of bodies evaporated for s s of full idle: its mass times
+  // exp(-s / EVAP), its velocity kept, as an even loss of light carries
+  // no momentum in the hole's own frame, its horizon with it. A hole
+  // below FLOOR is taken out. Returns those taken out, each { x, y, z,
+  // m }, its mass before the loss.
+  function evaporate (bodies, s) {
+    const gone = []
+    if (!(s > 0)) return gone
+    const k = Math.exp(-s / EVAP)
+    for (let i = bodies.length - 1; i >= 0; i--) {
+      const h = bodies[i]
+      if (!h.hole) continue
+      if (h.m * k < FLOOR) {
+        gone.push({ x: h.x, y: h.y, z: h.z, m: h.m })
+        bodies.splice(i, 1)
+        continue
+      }
+      h.m *= k
+      h.r = horizon(h)
+    }
+    return gone
   }
 
   // A hole's own spin: chi0, or chi for a hole that has none.
@@ -935,6 +980,10 @@
     let thrown = 0
     let turns = 0
     let zooms = 0
+    // The evaporation: its seconds spent in this idle spell (quietTime),
+    // and the holes it has taken out.
+    let spent = 0
+    let evaporated = 0
     // Each body's number, and the body and the hole the live checks
     // judge (look), set only by a staged scene (stage).
     let made = 0
@@ -1117,7 +1166,8 @@
         b.vz = s.vz + v * (-d[2] + miss / r * side[2])
         flares.push({ x: s.x, y: s.y, z: s.z, t: clock, r: s.hole ? RING * rs(s.m) : s.r })
       } else if (e.kind === 4) {
-        s.m = Math.min(Math.max(s.m, HOLE_MAX), s.m * 1.12)
+        const top = s.hole ? HOLE_MAX : BODY_MAX
+        s.m = Math.min(Math.max(s.m, top), s.m * 1.12)
         s.r = s.hole ? horizon(s) : radius(s.m, s.star)
         s.flash = 1
         flares.push({ x: s.x, y: s.y, z: s.z, t: clock, r: s.hole ? RING * rs(s.m) : s.r })
@@ -1179,6 +1229,17 @@
         f.y += dy
         f.z += dz
       }
+    }
+
+    // The holes evaporated for s s of full idle (evaporate): each taken
+    // out ends in a flash, a ring from its shadow's radius, and the
+    // bodies are recentred, so with no hole left the view's centre, the
+    // origin, is the centre of mass of what remains.
+    function shrink (s) {
+      const gone = evaporate(bodies, s)
+      for (const o of gone) flares.push({ x: o.x, y: o.y, z: o.z, t: clock, r: RING * rs(o.m) })
+      evaporated += gone.length
+      if (gone.length) recentre()
     }
 
     function cap () {
@@ -2074,8 +2135,20 @@
         const w = canvas.width
         const h = canvas.height
         if (w < 4 || h < 4) return
-        for (const e of synth.since(since)) if (!staged) react(e)
         const L = synth.level
+        const evs = synth.since(since)
+        // Too few bodies: the seed again, but not while idle, when the
+        // holes evaporate and none may come back until the session acts.
+        if (bodies.length < 2 && !staged && (evs.length || L.idle < 0.5)) seed()
+        for (const e of evs) if (!staged) react(e)
+        // The holes evaporate by the idle seconds since the last frame,
+        // counted from the spell's start, so a frame stalled or a window
+        // closed loses none of them.
+        if (!staged) {
+          const e = quietTime(synth.quiet || 0)
+          shrink(e >= spent ? e - spent : e)
+          spent = e
+        }
         if (!staged) up = spinStep(up, activity(L), dt)
         for (const b of bodies) if (b.hole) spin(b, up)
         // Simulation time per second: the clock, as in the Gravity mode.
@@ -2111,7 +2184,6 @@
         }
         bodies = bodies.filter(b => b.star || b.hole || len(b.x, b.y, b.z) < VIEW * 4)
         dust = dust.filter(d => !d.gone && len(d.x, d.y, d.z) < VIEW * 2 && bodies.every(b => b.hole || (b.x - d.x) ** 2 + (b.y - d.y) ** 2 + (b.z - d.z) ** 2 > b.r * b.r))
-        if (bodies.length < 2 && !staged) seed()
         for (const b of bodies) b.flash *= Math.exp(-dt / 0.6)
 
         // The camera turns slowly by itself, unless the pointer turned
@@ -2232,6 +2304,7 @@
         const Y = -(y - V.cy) / k
         const p = [0, 1, 2].map(i => V.o[i] + X * V.r[i] + Y * V.u[i])
         const s = sun()
+        if (!s) return
         let rel = [p[0] - s.x, p[1] - s.y, p[2] - s.z]
         let d = len(...rel)
         const least = s.hole ? 3.3 * rs(s.m) : s.r + 4
@@ -2334,6 +2407,12 @@
         seed()
       },
 
+      // For the live checks: the holes evaporated at once by s s of full
+      // idle, as the session's quiet evaporates them (shrink).
+      age (s) {
+        if (!staged) shrink(s)
+      },
+
       // For the live checks: the numbers of the body and the hole judged
       // and whether each is still there, the moons thrown, the camera's
       // turns by a drag, what the holes have swallowed, the bodies and the
@@ -2349,16 +2428,18 @@
       // the heaviest hole's number, its place on screen, the pane's
       // centre, and its place across the trace's axis, X right and Y up)
       // and the recentrings so far, how far the trails' places lie
-      // apart (spacing), and the zoom (cam.D: the wheel's distance, dist:
-      // the camera's, zooms: the wheel's turns).
+      // apart (spacing), the zoom (cam.D: the wheel's distance, dist:
+      // the camera's, zooms: the wheel's turns), the holes evaporated and
+      // the seconds of it spent in this idle spell, and the bodies that
+      // lie within their own r_s (compact), a hole always.
       probe () {
         asked = performance.now()
-        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch, D: cam.D, dist: V.D, zooms }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch, D: cam.D, dist: V.D, zooms }, evaporated, spent, compact: bodies.filter(b => b.hole || b.r <= rs(b.m)).length, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
       }
     }
   }
 
-  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, activity, spinStep, spin, zoom, standoff, C, CHI_MAX, TAU, PANE, DIST, D_MIN, D_MAX, ZOOM, STANDOFF, RING, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
+  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, radius, doppler, lapse, shift, spectral, wavelength, activity, spinStep, spin, zoom, standoff, quietTime, evaporate, C, CHI_MAX, TAU, PANE, HOLE_MAX, BODY_MAX, DIST, D_MIN, D_MAX, ZOOM, STANDOFF, EVAP, FLOOR, RING, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)

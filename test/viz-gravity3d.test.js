@@ -582,3 +582,48 @@ test('gravity3d: the camera\'s distance follows the wheel\'s steps and holds at 
   g.place(V, P, h.x + 150 * V.e[0], h.y + 150 * V.e[1], h.z + 150 * V.e[2])
   assert.ok(!P.on && P.z < 0 && P.d === 1, `a point behind the camera: ${JSON.stringify(P)}`)
 })
+
+// Issue #194: the holes' evaporation over an idle spell of 25 min, in
+// frames of 10 s of quiet, as the mode reads the session's quiet
+// seconds: the seed's 900 and its pair's 30, a hole of HOLE_MAX, a star
+// a stop grew to BODY_MAX, and planets.
+test('gravity3d: idle, every hole loses mass, a hole under the floor is taken out, and after 25 min of quiet no body lies within its own r_s', () => {
+  assert.strictEqual(g.quietTime(3), 0)
+  assert.ok(Math.abs(g.quietTime(13) - 5) < 1e-12 && Math.abs(g.quietTime(13 + 1e-9) - 5) < 1e-6)
+  assert.strictEqual(g.quietTime(1500), 1492)
+  const bodies = seeded()
+  const big = { x: 400, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: g.HOLE_MAX, hole: true, chi: 0.5, chi0: 0.5, up: 0, jx: 0, jy: 0, jz: 1 }
+  big.r = g.horizon(big)
+  bodies.push(big)
+  bodies.push({ x: -400, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: g.BODY_MAX, star: true, hole: false, r: g.radius(g.BODY_MAX, true) })
+  const holes = () => bodies.filter(b => b.hole)
+  const total = bodies.filter(b => !b.hole).length
+  const life = []
+  let spent = 0
+  let last = new Map(holes().map(h => [h, h.m]))
+  for (let q = 10; q <= 1500; q += 10) {
+    const e = g.quietTime(q)
+    const gone = g.evaporate(bodies, e - spent)
+    spent = e
+    for (const o of gone) {
+      assert.ok(o.m >= g.FLOOR && o.m * Math.exp(-10 / g.EVAP) < g.FLOOR, `a hole of ${o.m} taken out at ${q} s`)
+      life.push([Math.round(o.m), q])
+    }
+    for (const h of holes()) {
+      if (q > 3) assert.ok(h.m < last.get(h), `at ${q} s a hole of ${h.m} lost nothing`)
+      assert.ok(Math.abs(h.r - g.horizon(h)) < 1e-12, `at ${q} s the horizon did not follow the mass`)
+      assert.ok(h.m >= g.FLOOR)
+    }
+    last = new Map(holes().map(h => [h, h.m]))
+  }
+  // The pair's 30 lasts EVAP ln(30 / FLOOR) of full idle, and 8 s more
+  // of quiet, the idle level's rise; the seed's 900 and HOLE_MAX in turn.
+  const at = m => 8 + g.EVAP * Math.log(m / g.FLOOR)
+  assert.strictEqual(life.length, 3)
+  for (const [i, m] of [30, 900, g.HOLE_MAX].entries()) assert.ok(life[i][1] >= at(m) && life[i][1] < at(m) + 10, `the hole of ${m} went at ${life[i][1]} s, not ${at(m)}`)
+  assert.strictEqual(holes().length, 0)
+  assert.strictEqual(bodies.length, total)
+  for (const b of bodies) assert.ok(g.radius(b.m, b.star) > g.rs(b.m), `a body of ${b.m} within its own r_s`)
+  assert.ok(g.radius(g.BODY_MAX, false) > g.rs(g.BODY_MAX))
+  console.log('evaporation: the holes of 30, 900 and HOLE_MAX gone after', life.map(([, q]) => q).join(', '), 's of quiet')
+})

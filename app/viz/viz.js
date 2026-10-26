@@ -353,8 +353,8 @@
     }
   }
   // For the live checks alone: pane k's mode stages a scene and holds it
-  // still, or lets it go (gravity3d stage, unstage). Nothing else calls
-  // them, and a mode without them answers null.
+  // still, lets it go, or ages it (gravity3d stage, unstage, age).
+  // Nothing else calls them, and a mode without them answers null.
   const flat = k => {
     const p = [...panes.values()][k]
     return p && p.flat && p.flat.stage ? p.flat : null
@@ -366,6 +366,11 @@
   window.vizUnstage = k => {
     const f = flat(k)
     return f ? (f.unstage(), true) : null
+  }
+  // Pane k's holes evaporated at once by s s of full idle (gravity3d age).
+  window.vizAge = (k, s) => {
+    const f = flat(k)
+    return f && f.age ? (f.age(s), true) : null
   }
   requestAnimationFrame(loop)
 })()
