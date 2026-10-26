@@ -2055,7 +2055,7 @@ $d$ above 1 darkening.
 | prompt | a cloud billows up in the open sky, from 0.15 of its size |
 | tool call | a drop of pigment in the class's colour blooms on a cloud |
 | stop | the sun's rays break through, fanned behind the clouds, for a few seconds |
-| subagent | a cloudlet forms beside the newest cloud |
+| subagent | a cloudlet forms beside the newest cloud, at its depth, on its side toward the pane's centre, and held on the pane |
 | compaction | the smaller half of the clouds thin away and the rest grow by a fifth |
 | output event | a drop of clean water lands, its backrun drying with a dark rim |
 | bass | the wind, 8 to 38 m/s, and with busy the clock, 0.8 to 1.2 times real time |
