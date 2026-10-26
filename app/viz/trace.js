@@ -1,6 +1,6 @@
 'use strict'
 // The optics of Gravity 3D (decision 0015): light traced backward from
-// the camera past Schwarzschild holes, by one rule for every ray.
+// the camera past black holes, by one rule for every ray.
 //
 // A ray is straight but where it crosses a hole's lens plane, the plane
 // through the hole across the camera's axis, in the order it crosses
@@ -12,6 +12,10 @@
 // alpha (Virbhadra and Ellis 2000), for several holes the multi-plane
 // recursion. It holds for source and camera far from the hole next to
 // the bend, and is an approximation for matter within a few b of it.
+// A spinning hole's shadow takes the edge of a Kerr hole's (shadow),
+// shifted toward the side moving away and flattened on the side moving
+// toward the camera, and the deflection about it is Schwarzschild's in
+// the distance from that edge: Kerr's shadow, not Kerr's geodesics.
 //
 // The same rule, solved forward, finds where a point is seen: its
 // images, each the frame's point whose ray meets it (image), and a
@@ -112,6 +116,107 @@
   const STRIDE = 7
   const MAXSEG = 1 + MAXEV
 
+  // A spinning hole's shadow (Bardeen 1973): the edge of the shadow of a
+  // Kerr hole of spin chi seen from far away at inclination i to its
+  // axis, cos i given, in the celestial coordinates (alpha, beta) of
+  // M = 1, alpha across the projected axis toward the side that moves
+  // away from the camera, beta along it. For the spherical photon orbit
+  // of radius r, between the prograde and the retrograde circular ones,
+  //   xi = (r^2 (3 - r) - a^2 (r + 1)) / (a (r - 1)),
+  //   eta = r^3 (4 a^2 - r (r - 3)^2) / (a^2 (r - 1)^2),
+  //   alpha = -xi / sin i, beta = +-sqrt(eta + a^2 cos^2 i - xi^2 cot^2 i)
+  // (after Bardeen 1973). The edge, about the hole's own point, is written into out
+  // from o as NA radii over sqrt(27) less 1, at angles 2 pi k / NA from
+  // alpha toward beta: 0 everywhere for chi = 0. sin i is held at 0.05
+  // or more, where the edge is all but a circle.
+  const NA = 128
+  const KS = 7 + NA
+  const SQ27 = Math.sqrt(27)
+  function shadow (chi, cosi, out, o = 0) {
+    const a = Math.max(0, Math.min(0.9999, chi))
+    if (a < 1e-4) {
+      for (let k = 0; k < NA; k++) out[o + k] = 0
+      return out
+    }
+    const s = Math.max(0.05, Math.sqrt(Math.max(0, 1 - cosi * cosi)))
+    const c2 = 1 - s * s
+    const xi = r => (r * r * (3 - r) - a * a * (r + 1)) / (a * (r - 1))
+    const b2 = r => {
+      const x = xi(r)
+      return r * r * r * (4 * a * a - r * (r - 3) ** 2) / (a * a * (r - 1) ** 2) + a * a * c2 - x * x * c2 / (s * s)
+    }
+    const r1 = 2 * (1 + Math.cos(2 / 3 * Math.acos(-a)))
+    const r2 = 2 * (1 + Math.cos(2 / 3 * Math.acos(a)))
+    // beta^2 is positive between two roots in (r1, r2), found by halving
+    // from the photon orbit of greatest beta^2.
+    let rm = r1
+    let best = -Infinity
+    for (let k = 1; k < 64; k++) {
+      const r = r1 + (r2 - r1) * k / 64
+      const v = b2(r)
+      if (v > best) {
+        best = v
+        rm = r
+      }
+    }
+    const root = (lo, hi) => {
+      for (let k = 0; k < 60; k++) {
+        const m = (lo + hi) / 2
+        if ((b2(m) < 0) === (b2(lo) < 0)) lo = m
+        else hi = m
+      }
+      return (lo + hi) / 2
+    }
+    const ra = b2(r1) < 0 ? root(r1, rm) : r1
+    const rb = b2(r2) < 0 ? root(rm, r2) : r2
+    // The upper half of the edge, from the prograde side (theta near pi)
+    // to the retrograde (theta near 0), denser at its ends.
+    const NP = 256
+    const th = new Float64Array(NP + 1)
+    const rho = new Float64Array(NP + 1)
+    for (let k = 0; k <= NP; k++) {
+      const r = ra + (rb - ra) * (1 - Math.cos(Math.PI * k / NP)) / 2
+      const al = -xi(r) / s
+      const be = Math.sqrt(Math.max(0, b2(r)))
+      th[k] = Math.atan2(be, al)
+      rho[k] = Math.hypot(al, be)
+    }
+    // Resampled at NA angles, the lower half the upper's mirror.
+    let j = NP
+    for (let k = 0; k <= NA / 2; k++) {
+      const t = 2 * Math.PI * k / NA
+      while (j > 0 && th[j - 1] <= t) j--
+      let v
+      if (j === 0) v = rho[0]
+      else if (t <= th[NP]) v = rho[NP]
+      else {
+        const lo = th[j]
+        const hi = th[j - 1]
+        v = hi > lo ? rho[j] + (rho[j - 1] - rho[j]) * (t - lo) / (hi - lo) : rho[j]
+      }
+      out[o + k] = v / SQ27 - 1
+      if (k && k < NA / 2) out[o + NA - k] = out[o + k]
+    }
+    return out
+  }
+
+  // The edge of hole i's shadow toward offset (px, py, pz) from it, less
+  // b_c, from ks (scene: ks), KS per hole: whether it spins, the unit
+  // axes alpha and beta of its edge in the camera's frame, and NA
+  // offsets of the edge from b_c, as shadow gives them scaled. 0 for a
+  // hole that does not spin.
+  function edge (ks, i, px, py, pz) {
+    const o = KS * i
+    if (!ks || !ks[o]) return 0
+    const x = px * ks[o + 1] + py * ks[o + 2] + pz * ks[o + 3]
+    const y = px * ks[o + 4] + py * ks[o + 5] + pz * ks[o + 6]
+    let t = Math.atan2(y, x) * NA / (2 * Math.PI)
+    if (t < 0) t += NA
+    const k = t | 0
+    const f = t - k
+    return ks[o + 7 + k % NA] * (1 - f) + ks[o + 7 + (k + 1) % NA] * f
+  }
+
   // Trace the ray from (ox, oy, oz) along unit (dx, dy, dz) past the nh
   // holes of hs, a flat array of [x, y, z, b_c] each, z the depth along
   // the camera's axis. The ray is bent where it crosses a hole's lens
@@ -121,12 +226,16 @@
   // one hole on the axis this is the lens equation of Virbhadra and
   // Ellis (2000, eqs. 1 and 2), which allows any alpha, and for several
   // the multi-plane recursion (McCully et al. 2014, eq. 16) with the
-  // exact alpha. Its straight pieces go into seg, STRIDE each: origin,
+  // exact alpha. A spinning hole of ks (edge) moves the edge of its
+  // shadow by e(phi), phi the line's angle about it: a ray is captured
+  // within b_c + e and turned by alpha of b - e, so the deflection
+  // diverges at the edge and is Schwarzschild's far out. Its straight
+  // pieces go into seg, STRIDE each: origin,
   // unit direction and length, the last of length Infinity unless the
   // ray is captured. Returns the count of pieces, negative if the ray is
   // captured. ev, if given, gets each hole met, its b and its alpha, in
   // order.
-  function trace (ox, oy, oz, dx, dy, dz, hs, nh, seg, ev) {
+  function trace (ox, oy, oz, dx, dy, dz, hs, nh, seg, ev, ks) {
     let n = 0
     let last = -1
     if (ev) ev.length = 0
@@ -162,11 +271,12 @@
       const py = oy + tc * dy - hy
       const pz = oz + tc * dz - hz
       const b = Math.sqrt(px * px + py * py + pz * pz)
-      if (b <= bc) {
+      const e = edge(ks, bi, px, py, pz)
+      if (b <= bc + e) {
         if (ev) ev.push(bi, b, Infinity)
         return -n
       }
-      turn(bc / b)
+      turn(bc / (b - e))
       if (ev) ev.push(bi, b, TA)
       const qx = px / b
       const qy = py / b
@@ -442,7 +552,7 @@
   function ray (sc, dx, dy, dz, x, y) {
     R = Gc = B = 0
     T = 1
-    let n = trace(0, 0, 0, dx, dy, dz, sc.hs, sc.nh, SEG)
+    let n = trace(0, 0, 0, dx, dy, dz, sc.hs, sc.nh, SEG, null, sc.ks)
     const cap = n < 0
     if (cap) n = -n
     const ps = sc.planes
@@ -515,7 +625,7 @@
   const M = { nn: 0, np: 0, sig: null, px: null, py: null, fi: null, fx: null, fy: null, fd: null, sc: null }
 
   // Render scene sc into out, RGBA w by h: sc = { w, h, cx, cy, f, S,
-  // hs, nh, bref, planes, sky }, the camera at the origin looking along
+  // hs, nh, ks, bref, planes, sky }, ks optional, the camera at the origin looking along
   // +z, y up, the pixel (x, y) at (cx + f X / Z, cy - f Y / Z), planes
   // in increasing z. A cell of S by S pixels whose four corner rays have
   // one signature, met each hole no nearer than its bref but to be
@@ -554,7 +664,7 @@
         dx /= l
         dy /= l
         const dz = 1 / l
-        let n = trace(0, 0, 0, dx, dy, dz, sc.hs, sc.nh, SEG, EV)
+        let n = trace(0, 0, 0, dx, dy, dz, sc.hs, sc.nh, SEG, EV, sc.ks)
         const cap = n < 0
         if (cap) n = -n
         let code = 1
@@ -804,7 +914,7 @@
     let dx = (sx - sc.cx) / sc.f
     let dy = -(sy - sc.cy) / sc.f
     const l = Math.sqrt(dx * dx + dy * dy + 1)
-    const n = Math.abs(trace(0, 0, 0, dx / l, dy / l, 1 / l, sc.hs, sc.nh, SEEN))
+    const n = Math.abs(trace(0, 0, 0, dx / l, dy / l, 1 / l, sc.hs, sc.nh, SEEN, null, sc.ks))
     for (let s = 0; s < n; s++) {
       const k = STRIDE * s
       const ez = SEEN[k + 5]
@@ -1150,7 +1260,6 @@
         const hx = sc.cx + sc.f * sc.hs[4 * h] / Zh
         const hy = sc.cy - sc.f * sc.hs[4 * h + 1] / Zh
         const te = sc.f * Math.sqrt(2 * sc.hs[4 * h + 3] / RING * (Z - Zh) / (Zh * Z))
-        const R = sc.f * sc.hs[4 * h + 3] / Zh
         let ex = qx - hx
         let ey = qy - hy
         const beta = Math.hypot(ex, ey)
@@ -1161,6 +1270,9 @@
           ex = 1
           ey = 0
         }
+        // The shadow's edge on the far side of the hole, (-ex, -ey) on
+        // the frame, which is y down.
+        const R = sc.f * (sc.hs[4 * h + 3] + edge(sc.ks, h, -ex, ey, 0)) / Zh
         const root = Math.sqrt(beta * beta + 4 * te * te)
         guess.push(hx + ex * (beta + root) / 2, hy + ey * (beta + root) / 2)
         if ((root - beta) / 2 < xin * te) continue
@@ -1279,7 +1391,7 @@
     return out
   }
 
-  const api = { RING, BBAR, deflection, trace, STRIDE, MAXSEG, plane, render, skyTiles, seen, XY, image, IM, curve }
+  const api = { RING, BBAR, deflection, trace, shadow, edge, NA, KS, STRIDE, MAXSEG, plane, render, skyTiles, seen, XY, image, IM, curve }
   if (typeof module === 'object' && module.exports) module.exports = api
   else root.VizTrace = api
 })(this)

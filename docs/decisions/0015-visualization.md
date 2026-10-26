@@ -311,14 +311,17 @@ distant background of stars".
   frame of their centre of mass, merging on contact.
 - Potential: a hole pulls by Paczynski and Wiita's
   $\Phi = -GM/(r - r_+)$, $r_+$ its horizon, $r_s$ at rest. Its
-  circular orbits have $v^2 = GMr/(r - r_s)^2$ and
-  $L^2 = GMr^3/(r - r_s)^2$, least at $r = 3 r_s$: the last stable
-  circular orbit, at $6GM/c^2$ as in Schwarzschild's geometry. The pair
+  circular orbits have $v^2 = GMr/(r - r_+)^2$ and
+  $L^2 = GMr^3/(r - r_+)^2$, least at $r = 3 r_+$: the last stable
+  circular orbit, at rest $3 r_s = 6GM/c^2$ as in Schwarzschild's
+  geometry, nearer with spin. The pair
   force is symmetric, so momentum holds. Near a hole the step is cut
   into substeps of at most 3% of the gap to the horizon over the speed
   across it.
 - Spin: a hole carries $a = \chi GM/c^2$, $0 \le \chi \le 0.95$, about
-  a unit axis $\hat{j}$, and its horizon shrinks to
+  a unit axis $\hat{j}$, $\chi$ set by the session's activity from the
+  hole's own spin $\chi_0$ (see 2026-10-26: Gravity 3D's spin follows
+  the session), and its horizon shrinks to
   $r_+ = GM/c^2 + \sqrt{(GM/c^2)^2 - a^2}$. What moves at $\mathbf{v}$
   relative to it, at $r \hat{n}$ from it, feels the Lense-Thirring
   acceleration $\mathbf{a} = \mathbf{v} \times \mathbf{B}_g$ with
@@ -331,8 +334,8 @@ distant background of stars".
 - Capture: a body whose centre crosses $r_+$ is swallowed, a crossing
   within a substep caught by the least distance of the pair's relative
   motion taken as straight over it, its mass,
-  momentum and angular momentum about the hole the hole's, whose spin
-  follows, capped at $\chi = 0.95$. A grain of dust weighs 0.004. Two
+  momentum and angular momentum about the hole the hole's, whose own
+  spin follows, capped at $\chi_0 = 0.95$. A grain of dust weighs 0.004. Two
   holes merge when their horizons touch.
 - Checked by `test/viz-gravity3d.test.js`: $r_+ = r_s$ at rest and
   $0.9 r_s$ at $\chi = 0.6$, the least $L$ at $3 r_s$ to within 0.002,
@@ -343,10 +346,11 @@ distant background of stars".
   about a hole of $\chi = 0.9$ turning its node to within 10% of the
   Lense-Thirring rate, the other way for the opposite spin and not at
   all at rest.
-- The seed: a hole of 900 spinning at $\chi = 0.7$, 420 grains in its
+- The seed: a hole of 900 of own spin $\chi_0 = 0.35$, 420 grains in its
   equator between 3.3 and 8 $r_s$, a companion of 80 at 175, a star of
   50 and a hole of 30 in a tight pair 16 apart (see 2026-10-16:
-  gravitational waves), and two planets, at 215 and 245. Within 10 $r_s$ of a hole and outside $3 r_s$, the
+  gravitational waves), and two planets, at 215 and 245. Within 10
+  $r_s$ of a hole and outside its last stable orbit, $3 r_+$, the
   disc's viscosity relaxes a grain's velocity, at a rate of 0.01 per
   unit of time, toward 99.5% of the circular velocity in the plane of
   its orbit: grains settle on circles, spiral to the last stable orbit
@@ -369,9 +373,11 @@ distant background of stars".
   2026-10-18: Gravity 3D's Doppler shift). Merger rings and the
   idle dimming are the Gravity mode's.
 - A hole is not drawn. Its shadow, of radius
-  $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$, the image of its photon
-  sphere at $1.5 r_s$, and its photon ring are what the trace makes of
-  the light near it (see 2026-10-17). A hole's flash, as it swallows,
+  $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$ at rest, the image of its
+  photon sphere at $1.5 r_s$, and its photon ring are what the trace
+  makes of the light near it (see 2026-10-17), a spinning hole's shadow
+  shifted and flattened (see 2026-10-26: Gravity 3D's spin follows the
+  session). A hole's flash, as it swallows,
   brightens the hot matter about it.
 - Background: 3000 stars at infinity, a third of them in a band about
   a great circle, a galaxy's disc seen from inside, under 120 soft dots
@@ -388,8 +394,8 @@ distant background of stars".
   a hole's disc. A prompt sends a comet from the edge, aimed to miss a
   hole by 1.5 to 4.5 $r_s$, so some are swallowed, and rings the
   heaviest body. A stop flares the heaviest body and adds 12% to its
-  mass, up to 1500. A subagent adds a black hole of 150 to 300 spinning
-  at $\chi$ of 0.3 to 0.9 about any axis, with a small disc, the next a
+  mass, up to 1500. A subagent adds a black hole of 150 to 300 of own
+  spin 0.15 to 0.45 about any axis, with a small disc, the next a
   star, three of each at most, and a star first when none is left. A
   compaction slows every body and grain to 0.6 of its speed, so
   everything falls inward. An output event puffs 16 grains from a body
@@ -1145,14 +1151,14 @@ behind it vanished under paint.
   area, not brightened. The shift of an emitter's light by its motion
   and by the holes' potential is applied where it is drawn, on its
   slice (see 2026-10-18: Gravity 3D's Doppler shift).
-- Spin is not in the optics: the light is Schwarzschild's for every
-  hole, and nothing paints a shift. A spinning hole's shadow bulges on
-  the side moving away and flattens on the side moving toward the
-  camera (Bardeen at Les Houches in 1972, as James et al., section
-  1.1, recount it), but
-  tracing Kerr geodesics per ray, as they do, is beyond the frame's
-  cost on a CPU. The spin moves matter, by the Lense-Thirring term,
-  and #173 will move the spin.
+- Spin: a spinning hole's shadow bulges on the side moving away and
+  flattens on the side moving toward the camera (Bardeen at Les
+  Houches in 1972, as James et al., section 1.1, recount it). Tracing
+  Kerr geodesics per ray, as they do, is beyond the frame's cost on a
+  CPU, so the trace takes the edge of Kerr's shadow and Schwarzschild's
+  deflection measured from it (see 2026-10-26: Gravity 3D's spin
+  follows the session). Nothing paints it. The spin also moves matter,
+  by the Lense-Thirring term.
 - What the rule leaves out: it is a thin lens, exact for camera and
   source far from the hole that bends the ray, so matter within a few
   $b$ of a hole, the inner disc, is bent as if its light left the lens
@@ -2116,3 +2122,130 @@ Rejected:
 - The ground placed behind every hole: its far field would be pulled
   into rings that fill the frame, as the light at infinity was (see
   2026-10-17: Gravity 3D's optics).
+
+## 2026-10-26: Gravity 3D's spin follows the session
+
+Owner, issue #173: "black hole rotation can depend on activity so the
+distortion from rotation gets more exagerrated with high activity."
+
+The issue was written when Gravity 3D painted a hole's shadow
+(`drawHole` at d18161f: a disc shifted by $2 a \sin i$ and flattened
+by $1 - 0.22 \chi \sin i$ on the approaching side). Issue #170 then
+removed every painted part of a hole, and its optics left spin out
+(2026-10-17). The issue's shadow, "flattened on its approaching side
+and shifted toward the receding one", is taken as the traced shadow
+and its photon ring, which spin now shapes.
+
+- The spinning shadow (`trace.js` `shadow`, `edge`). The edge of a
+  Kerr hole's shadow seen from far away at inclination $i$ to its axis
+  is Bardeen's curve: for the spherical photon orbit of radius $r$,
+  $M = 1$, between the prograde and the retrograde circular ones,
+  $\xi = [r^2(3 - r) - a^2(r + 1)]/[a(r - 1)]$,
+  $\eta = r^3[4a^2 - r(r - 3)^2]/[a^2(r - 1)^2]$,
+  $\alpha = -\xi/\sin i$ and
+  $\beta = \pm\sqrt{\eta + a^2\cos^2 i - \xi^2\cot^2 i}$
+  (after Bardeen 1973). It is swept over 256 orbits and kept as the
+  edge's radius about the hole's point at 128 angles, $\alpha$ across
+  the projected axis toward the side moving away from the camera. Each
+  frame builds it for every spinning hole from the camera's
+  inclination to its axis, $\sin i$ held at 0.05 or more. A ray whose
+  line passes the hole at $b$, at angle $\phi$ about it, is captured
+  within $b_c + e(\phi)$, $e$ the edge's offset from the Schwarzschild
+  $b_c$, and is turned by the Schwarzschild $\hat\alpha(b - e(\phi))$.
+  The deflection then diverges at the edge, so the photon ring follows
+  it, and far out it is Schwarzschild's to within $e/b$. It is Kerr's
+  shadow, not Kerr's light: the dragging of rays past the edge, which
+  twists the higher images, is left out, and a ray turned back by a
+  hole reads the edge as one seen from the camera. The cost is an
+  arctangent and a table read for each ray at a spinning hole, and the
+  cells traced pixel by pixel reach out to $1.5 b_c$ plus the edge's
+  greatest offset.
+- The mapping. The session's activity is
+  $A = \max(\min(1, \text{bass}), \text{busy}, \text{treble})(1 - \text{idle})$,
+  the synthesiser's levels. A share $s$ moves toward $A$ by
+  $1 - e^{-\Delta t/\tau}$ of the gap each frame, $\tau = 3$ s, and
+  every hole spins at $\chi = \chi_0 + (0.95 - \chi_0) s$, $\chi_0$ its
+  own spin. $\chi$ changes by at most $(0.95 - \chi_0)/\tau$ a second,
+  0.2 of the seed's at most in a burst of 0.2 s, never steps with a
+  stalled frame, and stays below 1. A staged scene holds $s$.
+- The own spin is the idle base. The seed's hole has $\chi_0 = 0.35$
+  and a subagent's 0.15 to 0.45, half of the 0.7 and 0.3 to 0.9 they
+  had, so the idle hole is less spun than before and a busy one spins
+  up toward 0.95. A swallowing sums the holes' own spins' angular
+  momentum and the orbit's, sets $\chi_0$ from it, capped at 0.95, and
+  keeps the hole's share, so what a hole swallows still raises its
+  idle spin. A hole of no spin of its own, the companion's, spins up
+  with the rest.
+- No gain. The shadow drawn is Kerr's at the hole's $\chi$, so nothing
+  is drawn past what $\chi < 1$ gives and the pane says nothing of it.
+  At the staged hole's inclination, 0.15 rad from its equator, the
+  side coming toward the camera lies at 0.858 of the Schwarzschild
+  radius $R$ at $\chi = 0.35$ and 0.501 at 0.95, and the shadow's centre
+  0.134 $R$ and 0.413 $R$ toward the side going away (`shadow`); at
+  the old seed's 0.7 they were 0.688 and 0.279.
+- The dynamics read the same $\chi$: the horizon $r_+$, the last
+  stable orbit $3 r_+$, which is now also where the disc's viscosity
+  stops (it stopped at $3 r_s$), and the Lense-Thirring drag. A busy
+  burst does not fling the disc or the planets: on the seed's hole,
+  120 grains between 3.3 and 8 $r_s$ and planets of 4 at 215 and 245,
+  12 s at 30 frames a second and 42 of simulation a second, the first
+  6 s busy, against the same at idle, every grain was kept, the
+  farthest at 8.52 $r_s$ against 8.15, and the planets ended 218.57
+  and 258.30 from the hole against 212.19 and 249.62. That 3 to 3.5%
+  is the potential's: $-GM/(r - r_+)$ pulls less far out as $r_+$
+  shrinks with spin, 3.6% less at 245 from $\chi$ 0.35 to 0.95, where
+  Kerr's far field does not change.
+- Seen: `scripts/checks/vizmodes.js` stages the hole of 900 with the
+  Doppler arm's camera, own spin 0.35, idle and busy, before a square
+  of grains at its depth, which every ray the hole lets past reads
+  where it passes, in the full pane of 1200 by 760 and a small one of
+  300 by 380. At 8c2c59e the probe read, along the line across the
+  axis, from the hole's point: in the full pane, $R$ 48.53 px, idle
+  41.71 toward the camera and 54.83 away, busy 24.33 and 64.59, the
+  centre 6.56 and 20.13 px toward the side going away; in the small
+  pane, $R$ 19.16, idle 16.46 and 21.64, busy 9.60 and 25.49, the
+  centre 2.59 and 7.95. In the frames the idle shadow is all but round
+  about the hole's point and the busy one is pushed toward the side
+  going away, its side coming toward the camera flattened and near
+  the point, with a bright crescent outside it, in both panes. That
+  side is the disc's brighter and bluer side in the Doppler arm's
+  frames. In the live full pane, the session busy, the shadow lies
+  off the hole's point toward the side going away.
+- Frame rate, under swiftshader on this host, by a script that puts
+  Gravity 3D alone in one pane of a 1200 by 760 window and then in
+  three panes of a 720 by 460 window, the session busy, five times 2 s
+  each, b40443a and 8c2c59e in turn, twice, at loads of 11.7 to 14.9:
+  one pane ran at a median of 34 and 30.5 frames a second at b40443a
+  against 32 and 32 at 8c2c59e, three panes at 23.5 and 25 against
+  18.5 and 22. Single rounds of 2 s ran from 16.5 to 28 at either tree.
+  In three earlier pairs on the same tree but for comments, three panes
+  ran at 24.5, 23.5 and 24 against 25, 24.5 and 26. The trace alone,
+  timed in Node at 44efc18 on a frame of 126 by 240 behind a hole of
+  $\chi = 0.95$, 200 renders, cost 2.01 ms against 1.98 ms without
+  spin, 1044 pixels traced one by one against 720.
+- Checked by `test/viz-trace.test.js`: the edge seen edge-on meets the
+  equatorial photon orbits' impact parameters,
+  $\mp a + 6\cos[\frac{1}{3}\arccos(\mp a)]$, to $2 \times 10^{-3}$ at
+  $\chi$ of 0.3, 0.7 and 0.95, is the circle at 0 and flattens less at
+  45 degrees; a hole of $\chi = 0.95$ captures at its edge on both
+  sides to $10^{-9}$ rad and loops a ray just outside it past $2\pi$;
+  and a hole whose entry does not spin traces as before.
+  `test/viz-gravity3d.test.js`: the spin rises toward 0.95 under
+  sustained activity and falls back to $\chi_0$ at idle, within 1% of
+  the gap after $5\tau$ each, monotone, the horizon with it, never
+  faster than the bound, a 1 s frame included; a swallowing keeps the
+  own spins and the share; and the burst above.
+
+Rejected:
+
+- A drawing gain on the edge's offset, the hole's own spin kept at its
+  old values: a gain that made the busy hole plainly more distorted
+  would draw the idle one past its spin too, more distorted than the
+  painted shadow of d18161f, and a gain on the spin-up's part alone
+  would be a second law beside Kerr's.
+- The own spin replaced by the activity's target: what a hole
+  swallows would no longer change it.
+- The waves kept as the ground behind the staged hole, tried first:
+  in the small pane the ground about the hole was dark when staged,
+  and the shadow did not show on it.
+- Kerr geodesics per ray: see 2026-10-17.

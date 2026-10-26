@@ -510,3 +510,72 @@ test('trace: a screen plane is read where it is drawn, a plane where its rays me
   const p = centre([T.plane(900, dot, W, W)])
   assert.ok(Math.hypot(p[0] - at[0], p[1] - at[1]) > 3, `the plane's dot bent, at ${p}`)
 })
+
+// A spinning hole's shadow (issue #173). Seen edge-on, the edge crosses
+// the line across the axis at the equatorial circular photon orbits
+// (Bardeen, Press and Teukolsky 1972), whose impact parameters are
+// -a + 6 cos(arccos(-a) / 3) on the side moving toward the camera and
+// a + 6 cos(arccos(a) / 3) on the side moving away, M = 1.
+test('trace: a spinning hole\'s shadow edge meets the equatorial photon orbits seen edge-on', () => {
+  const out = new Float64Array(T.NA)
+  const r = k => (1 + out[k]) * Math.sqrt(27)
+  T.shadow(0, 0, out)
+  assert.ok(out.every(v => v === 0), 'no spin, the circle')
+  for (const a of [0.3, 0.7, 0.95]) {
+    T.shadow(a, 0, out)
+    const away = a + 6 * Math.cos(Math.acos(a) / 3)
+    const toward = -a + 6 * Math.cos(Math.acos(-a) / 3)
+    assert.ok(Math.abs(r(0) - away) < 2e-3, `chi ${a}: ${r(0)} on the side moving away, want ${away}`)
+    assert.ok(Math.abs(r(T.NA / 2) - toward) < 2e-3, `chi ${a}: ${r(T.NA / 2)} on the side moving toward, want ${toward}`)
+    for (let k = 1; k < T.NA / 2; k++) assert.strictEqual(out[k], out[T.NA - k], 'mirrored across the line')
+  }
+  // Inclined, the flattening is less.
+  const edgeOn = T.shadow(0.95, 0, new Float64Array(T.NA))[T.NA / 2]
+  const tilted = T.shadow(0.95, Math.cos(Math.PI / 4), new Float64Array(T.NA))[T.NA / 2]
+  assert.ok(edgeOn < tilted && tilted < 0, `flattened by ${edgeOn} edge-on, ${tilted} at 45 degrees`)
+})
+
+test('trace: a spinning hole captures within its edge and loops rays just outside, the old rule where it does not spin', () => {
+  const rs = 10
+  const D = 600
+  const bc = T.RING * rs
+  const hs = new Float64Array([0, 0, D, bc])
+  const ks = new Float64Array(T.KS)
+  ks.set([1, 1, 0, 0, 0, 1, 0])
+  T.shadow(0.95, 0, ks, 7)
+  const frac = ks.slice(7)
+  for (let k = 0; k < T.NA; k++) ks[7 + k] *= bc
+  for (const [side, k] of [[1, 0], [-1, T.NA / 2]]) {
+    const captured = th => T.trace(0, 0, 0, side * Math.sin(th), 0, Math.cos(th), hs, 1, SEG, null, ks) < 0
+    let lo = 0
+    let hi = 0.2
+    for (let i = 0; i < 60; i++) {
+      const m = (lo + hi) / 2
+      if (captured(m)) lo = m
+      else hi = m
+    }
+    const want = Math.asin(bc * (1 + frac[k]) / D)
+    assert.ok(Math.abs(lo - want) < 1e-9, `side ${side}: the edge at ${lo} rad, want ${want}`)
+    const ev = []
+    T.trace(0, 0, 0, side * Math.sin(want * 1.00001), 0, Math.cos(want * 1.00001), hs, 1, SEG, ev, ks)
+    assert.ok(ev[2] > 2 * Math.PI, `side ${side}: alpha ${ev[2]} at the edge`)
+  }
+  // Far out the deflection is Schwarzschild's to within the edge's offset over b.
+  const far = []
+  T.trace(0, 0, 0, Math.sin(0.5), 0, Math.cos(0.5), hs, 1, SEG, far, ks)
+  const plain = []
+  T.trace(0, 0, 0, Math.sin(0.5), 0, Math.cos(0.5), hs, 1, SEG, plain)
+  assert.ok(Math.abs(far[2] / plain[2] - 1) < 2 * Math.abs(ks[7]) / far[1], `alpha ${far[2]} against ${plain[2]}`)
+  // A hole of ks that does not spin traces as one without ks.
+  ks[0] = 0
+  const seg2 = new Float64Array(T.STRIDE * T.MAXSEG)
+  for (const th of [0.02, 0.05, 0.08, 0.3]) {
+    for (const ph of [0, 1, 2, 4]) {
+      const d = [Math.sin(th) * Math.cos(ph), Math.sin(th) * Math.sin(ph), Math.cos(th)]
+      const n1 = T.trace(0, 0, 0, d[0], d[1], d[2], hs, 1, SEG, null, ks)
+      const n2 = T.trace(0, 0, 0, d[0], d[1], d[2], hs, 1, seg2)
+      assert.strictEqual(n1, n2)
+      assert.deepStrictEqual(Array.from(SEG.slice(0, T.STRIDE * Math.abs(n1))), Array.from(seg2.slice(0, T.STRIDE * Math.abs(n2))))
+    }
+  }
+})

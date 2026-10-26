@@ -431,3 +431,109 @@ test('gravity3d: a planet merged into a star leaves no trail on it, and two plan
   assert.deepStrictEqual(two[0].trail, trail)
   assert.strictEqual(two[0].hue, 200)
 })
+
+// The session spins its holes (issue #173). Frames of dt s at levels L
+// (synth.js), a frame of 1 s among them, as after a stall.
+function frames (h, s, L, secs, dt, each, stall = true) {
+  for (let t = 0; t < secs; t += dt) {
+    const step = stall && t > secs / 3 && t <= secs / 3 + dt ? 1 : dt
+    const before = h.chi
+    s = g.spinStep(s, g.activity(L), step)
+    g.spin(h, s)
+    each(before, h.chi, step)
+  }
+  return s
+}
+
+test('gravity3d: a hole spins up toward CHI_MAX while the session is busy, back to its own spin at idle, never faster than (CHI_MAX - chi0) / TAU a second', () => {
+  const chi0 = 0.35
+  const h = hole()
+  h.chi0 = chi0
+  g.spin(h, 0)
+  const rate = (g.CHI_MAX - chi0) / g.TAU
+  let most = 0
+  const watch = sense => (before, after, dt) => {
+    assert.ok(after < 1 && after <= g.CHI_MAX && after >= chi0, `chi ${after}`)
+    assert.ok(sense * (after - before) >= 0, `chi went ${before} to ${after} against the activity`)
+    most = Math.max(most, Math.abs(after - before) / dt)
+    assert.ok(Math.abs(g.horizon(h) - (RS / 2) * (1 + Math.sqrt(1 - after * after))) < 1e-9, 'the horizon reads the spin')
+  }
+  const busy = { bass: 0.6, busy: 1, treble: 0.4, idle: 0 }
+  assert.strictEqual(g.activity(busy), 1)
+  let s = frames(h, 0, busy, 5 * g.TAU, 1 / 60, watch(1))
+  assert.ok(g.CHI_MAX - h.chi < 0.01 * (g.CHI_MAX - chi0), `after 5 TAU busy, chi ${h.chi}`)
+  const idle = { bass: 0, busy: 0, treble: 0, idle: 1 }
+  assert.strictEqual(g.activity(idle), 0)
+  s = frames(h, s, idle, 5 * g.TAU, 1 / 60, watch(-1))
+  assert.ok(h.chi - chi0 < 0.01 * (g.CHI_MAX - chi0), `after 5 TAU idle, chi ${h.chi}`)
+  assert.ok(most <= rate * (1 + 1e-9), `chi changed at ${most} a second, the bound ${rate}`)
+  // A burst of 12 frames, 0.2 s, moves it by at most 0.2 of the bound.
+  const b0 = h.chi
+  for (let k = 0; k < 12; k++) g.spin(h, (s = g.spinStep(s, 1, 1 / 60)))
+  assert.ok(h.chi - b0 <= 0.2 * rate + 1e-9, `a burst moved chi by ${h.chi - b0}`)
+})
+
+test('gravity3d: a swallowing keeps the holes\' own spins, the hole spun up by the same share', () => {
+  const h = hole()
+  h.chi0 = 0.5
+  g.spin(h, 0.5)
+  assert.ok(Math.abs(h.chi - (0.5 + (g.CHI_MAX - 0.5) * 0.5)) < 1e-12)
+  const b = { x: 0.6 * RS, y: 0, z: 0, vx: -1, vy: 0, vz: 0, m: 7, r: 1 }
+  g.step([h, b], 0.25)
+  const want = 0.5 * M * M / ((M + 7) * (M + 7))
+  // A radial fall adds no angular momentum but the little the drag gave it.
+  assert.ok(Math.abs(h.chi0 / want - 1) < 1e-4, `chi0 ${h.chi0}, want ${want}`)
+  assert.ok(Math.abs(h.chi - (h.chi0 + (g.CHI_MAX - h.chi0) * 0.5)) < 1e-12, `chi ${h.chi}`)
+})
+
+// A busy burst on the seed's hole, its disc and two planets, against the
+// same at idle: the spin, from the seed's 0.35 to CHI_MAX and back, as
+// fast as the session moves it, at the busy clock's 42 of simulation a
+// second.
+test('gravity3d: a busy burst flings neither the disc nor the planets', () => {
+  const run = burst => {
+    let seed = 7
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+    const h = hole(0, [0, 0, 1])
+    h.chi0 = 0.35
+    g.spin(h, 0)
+    const bodies = [h]
+    for (const [r, a, inc] of [[215, 0, 0.3], [245, Math.PI, -0.25]]) {
+      const v = g.circular(h, r)
+      const c = Math.cos(a)
+      const si = Math.sin(a)
+      bodies.push({ x: r * c, y: r * si, z: 0, vx: -v * si, vy: v * c * Math.cos(inc), vz: v * c * Math.sin(inc), m: 4, r: 2, chi: 0, jx: 0, jy: 0, jz: 1, trail: [] })
+    }
+    const dust = []
+    for (let k = 0; k < 120; k++) {
+      const r = (3.3 + 4.7 * rnd()) * RS
+      const a = 2 * Math.PI * rnd()
+      const v = g.circular(h, r)
+      dust.push({ x: r * Math.cos(a), y: r * Math.sin(a), z: 0, vx: -v * Math.sin(a), vy: v * Math.cos(a), vz: 0, hue: 0, disc: true, gone: false })
+    }
+    let s = 0
+    const dt = 1 / 30
+    for (let t = 0; t < 12; t += dt) {
+      s = g.spinStep(s, burst && t < 6 ? 1 : 0, dt)
+      g.spin(h, s)
+      let left = 42 * dt
+      while (left > 0) {
+        const hh = Math.min(0.25, left)
+        g.step(bodies, hh)
+        g.fall(dust, bodies, hh)
+        left -= hh
+      }
+    }
+    const radius = b => Math.hypot(b.x - h.x, b.y - h.y, b.z - h.z)
+    return { peak: h.chi, planets: bodies.slice(1).map(radius), kept: dust.filter(d => !d.gone).map(radius) }
+  }
+  const quiet = run(false)
+  const busy = run(true)
+  assert.ok(busy.peak < 0.45 && quiet.peak === 0.35, `the spin fell back to ${busy.peak}`)
+  assert.strictEqual(busy.planets.length, 2)
+  busy.planets.forEach((r, i) => assert.ok(Math.abs(r / quiet.planets[i] - 1) < 0.05, `planet ${i} at ${r} against ${quiet.planets[i]}`))
+  assert.ok(busy.kept.length >= quiet.kept.length - 3, `the disc kept ${busy.kept.length} grains against ${quiet.kept.length}`)
+  const out = Math.max(...busy.kept) / RS
+  assert.ok(out < 1.05 * Math.max(...quiet.kept) / RS, `a grain flung to ${out} r_s`)
+  console.log('burst: planets', busy.planets.map(r => r.toFixed(2)), 'against', quiet.planets.map(r => r.toFixed(2)), 'grains kept', busy.kept.length, 'against', quiet.kept.length, 'farthest', out.toFixed(2), 'r_s against', (Math.max(...quiet.kept) / RS).toFixed(2))
+})
