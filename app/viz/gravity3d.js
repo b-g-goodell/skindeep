@@ -430,6 +430,14 @@
           a.hue = big.hue
           a.star = a.star || b.star
           a.comet = big.comet
+          // The trail of the larger, whose colour the body keeps, or none
+          // for a star, which keeps none: a trail left on a star stood
+          // still while the star moved on, and was drawn to it straight.
+          if (a.trail) {
+            a.trail = a.star ? [] : big.trail
+            a.tv = a.star ? [] : big.tv
+            a.tt = big.tt
+          }
           merged.push({ x: a.x, y: a.y, z: a.z, m: Math.min(a.m, b.m) })
           a.m = m
           a.r = radius(m, a.star)
@@ -454,6 +462,30 @@
       t += hs
     }
     return { merged, swallowed }
+  }
+
+  // A place of body b's trail at time clock, if it is due: one every
+  // TRAIL_DT units of time, or TRAIL_D of travel, the last TRAIL_N kept,
+  // each with the velocity there relative to c, the view's centre, which
+  // its light is shifted by. Called after every step, not every frame: a
+  // frame may advance up to 60 steps, and a place a frame drew a fast
+  // body's path as chords of a frame's travel, a trail turning sharp
+  // corners. A hole and a star keep none. True if a place was kept.
+  const TRAIL_DT = 1.5
+  const TRAIL_D = 4
+  const TRAIL_N = 64
+  const REST = { vx: 0, vy: 0, vz: 0 }
+  function track (b, clock, c) {
+    if (b.hole || b.star) return false
+    const tr = b.trail
+    const k = tr.length - 3
+    if (k >= 0 && clock - b.tt < TRAIL_DT && (b.x - tr[k]) ** 2 + (b.y - tr[k + 1]) ** 2 + (b.z - tr[k + 2]) ** 2 < TRAIL_D * TRAIL_D) return false
+    b.tt = clock
+    tr.push(b.x, b.y, b.z)
+    b.tv.push(b.vx - c.vx, b.vy - c.vy, b.vz - c.vz)
+    if (tr.length > 3 * TRAIL_N) tr.splice(0, 3)
+    if (b.tv.length > tr.length) b.tv.splice(0, b.tv.length - tr.length)
+    return true
   }
 
   function radius (m, star) {
@@ -844,8 +876,10 @@
     // recentrings of the bodies so far.
     let held = null
     let recentred = 0
-    // The pane's signal clock at the last frame.
+    // The pane's signal clock at the last frame, and the simulation time
+    // the last frame advanced.
     let tick = 0
+    let adv = 0
     // The frame's projection: centre on screen, focal length, camera
     // distance from the place it turns about, o, and basis (right, up,
     // toward the camera).
@@ -1799,6 +1833,38 @@
       return rec
     }
 
+    // For the live checks: how far a trail's places lie apart beyond
+    // what track allows, the most over neighbouring places, and the last
+    // and the body, of their distance less the travel of one step of H
+    // at the greater of their speeds, relative to the view's centre,
+    // plus that centre's own speed. Kept every step, places lie within
+    // TRAIL_D of travel and one step's more, so this is under TRAIL_D but
+    // for a merger's jump to the pair's centre of mass. adv is the
+    // simulation time the last frame advanced.
+    function spacing () {
+      const c = anchor(bodies)
+      const vc = c ? len(c.vx, c.vy, c.vz) : 0
+      let most = 0
+      for (const b of bodies) {
+        const tr = b.trail
+        const tv = b.tv
+        if (b.hole || tr.length < 3 || tv.length !== tr.length) continue
+        const n = tr.length / 3
+        for (let i = 0; i < n; i++) {
+          const k = 3 * i
+          const last = i === n - 1
+          const x1 = last ? b.x : tr[k + 3]
+          const y1 = last ? b.y : tr[k + 4]
+          const z1 = last ? b.z : tr[k + 5]
+          const v0 = len(tv[k], tv[k + 1], tv[k + 2])
+          const v1 = last ? len(b.vx - (c ? c.vx : 0), b.vy - (c ? c.vy : 0), b.vz - (c ? c.vz : 0)) : len(tv[k + 3], tv[k + 4], tv[k + 5])
+          const dd = len(x1 - tr[k], y1 - tr[k + 1], z1 - tr[k + 2]) - H * (Math.max(v0, v1) + vc)
+          most = Math.max(most, dd)
+        }
+      }
+      return { apart: most, adv }
+    }
+
     seed()
     return {
       draw (synth, dt) {
@@ -1810,6 +1876,7 @@
         // Simulation time per second: the clock, as in the Gravity mode.
         const speed = (6 + 30 * Math.min(1, L.bass) + 14 * L.busy + 10 * L.treble) * (1 - 0.9 * L.idle)
         let left = staged ? 0 : Math.min(speed * dt, 60 * H)
+        adv = left
         const bursts = []
         const eaten = []
         while (left > 0) {
@@ -1824,6 +1891,8 @@
           feed(hh)
           left -= hh
           clock += hh
+          const c0 = anchor(bodies) || REST
+          for (const b of bodies) track(b, clock, c0)
           // After the step: a body merged or swallowed in it carries its
           // last acceleration for one sample, and the pair's end leaves
           // as a front.
@@ -1838,22 +1907,7 @@
         bodies = bodies.filter(b => b.star || b.hole || len(b.x, b.y, b.z) < VIEW * 4)
         dust = dust.filter(d => !d.gone && len(d.x, d.y, d.z) < VIEW * 2 && bodies.every(b => b.hole || (b.x - d.x) ** 2 + (b.y - d.y) ** 2 + (b.z - d.z) ** 2 > b.r * b.r))
         if (bodies.length < 2 && !staged) seed()
-        const c0 = anchor(bodies) || { vx: 0, vy: 0, vz: 0 }
-        for (const b of bodies) {
-          b.flash *= Math.exp(-dt / 0.6)
-          // A place every 1.5 time units, or every 4 units of travel,
-          // and the velocity there relative to the view's centre, which
-          // its light is shifted by.
-          if (b.hole || b.star) continue
-          const tr = b.trail
-          const k = tr.length - 3
-          if (k >= 0 && clock - b.tt < 1.5 && (b.x - tr[k]) ** 2 + (b.y - tr[k + 1]) ** 2 + (b.z - tr[k + 2]) ** 2 < 16) continue
-          b.tt = clock
-          tr.push(b.x, b.y, b.z)
-          b.tv.push(b.vx - c0.vx, b.vy - c0.vy, b.vz - c0.vz)
-          if (tr.length > 3 * 64) tr.splice(0, 3)
-          if (b.tv.length > tr.length) b.tv.splice(0, b.tv.length - tr.length)
-        }
+        for (const b of bodies) b.flash *= Math.exp(-dt / 0.6)
 
         // The camera turns slowly by itself, unless the pointer turned
         // it in the last 4 s.
@@ -2067,15 +2121,16 @@
       // height, the holes' places and masses, the view's centre (held:
       // the heaviest hole's number, its place on screen, the pane's
       // centre, and its place across the trace's axis, X right and Y up)
-      // and the recentrings so far.
+      // and the recentrings so far, and how far the trails' places lie
+      // apart (spacing).
       probe () {
         asked = performance.now()
-        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), held, recentred }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), held, recentred, trails: spacing() }
       }
     }
   }
 
-  const api = { step, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, C, CHI_MAX, PANE, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
+  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, C, CHI_MAX, PANE, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)
