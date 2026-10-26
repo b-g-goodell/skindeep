@@ -128,7 +128,10 @@ butterchurn-presets is MIT for its conversion only.
   save a press on a drop-down: the left button's press, moves and release go to the pane under the
   press, found with `layout.js`, in the pane's canvas pixels, through
   the renderer's optional `pointer(kind, x, y, down)`. The press holds
-  the pointer to its pane until the release. Nothing the pointer does
+  the pointer to its pane until the release. The wheel, and a pinch on
+  a touchpad, goes to the same method as a fourth kind, `wheel`, with
+  its delta in steps (see 2026-10-26: Gravity 3D's zoom and its holes'
+  evaporation), and the page neither scrolls nor zooms. Nothing the pointer does
   changes a mode, the pane layout or the tab, and the keyboard stays
   with the terminal. Each mode answers in its own way:
   - Quantum: a drag throws a packet, a press held still for a quarter
@@ -143,8 +146,9 @@ butterchurn-presets is MIT for its conversion only.
   - Gravity: the release throws a moon from the press: a click puts it
     on a circular orbit about the heaviest body, a drag gives it a
     velocity in proportion to the drag, its aim drawn while pressed.
-  - Gravity 3D: a drag turns the camera, a click throws a moon (see
-    2026-10-15: Gravity 3D).
+  - Gravity 3D: a drag turns the camera, a click throws a moon, the
+    wheel or a pinch zooms (see 2026-10-15: Gravity 3D, and 2026-10-26:
+    Gravity 3D's zoom and its holes' evaporation).
   - Carbon: a drag turns the camera, a click on the atom lets the drawn
     atom absorb a photon from its present level, a click on the level
     diagram lifts it to the level under the click by a collision (see
@@ -357,9 +361,10 @@ distant background of stars".
   and plunge. The star nearest a hole sheds grains from the point
   between them where the pulls balance, L1, at 1.1 to 1.45 times its
   own angular speed: a stream that feeds the disc.
-- Drawing: the camera, 620 from the heaviest hole with a half view
-  angle of 0.42 rad, turns about it (see 2026-10-18: Gravity 3D's
-  centre). Bodies and grains are
+- Drawing: the camera, 620 from the heaviest hole at first, which the
+  wheel moves from 90 to 3300 (see 2026-10-26: Gravity 3D's zoom and
+  its holes' evaporation), with a half view angle of 0.42 rad, turns
+  about it (see 2026-10-18: Gravity 3D's centre). Bodies and grains are
   drawn flat on slices of depth and seen through the trace (see
   2026-10-17: Gravity 3D's optics), and bodies are sized and dimmed
   with distance. A
@@ -394,7 +399,9 @@ distant background of stars".
   a hole's disc. A prompt sends a comet from the edge, aimed to miss a
   hole by 1.5 to 4.5 $r_s$, so some are swallowed, and rings the
   heaviest body. A stop flares the heaviest body and adds 12% to its
-  mass, up to 1500. A subagent adds a black hole of 150 to 300 of own
+  mass, up to 1500 for a hole and 800 for any other body. While idle
+  the holes evaporate (see 2026-10-26: Gravity 3D's zoom and its holes'
+  evaporation). A subagent adds a black hole of 150 to 300 of own
   spin 0.15 to 0.45 about any axis, with a small disc, the next a
   star, three of each at most, and a star first when none is left. A
   compaction slows every body and grain to 0.6 of its speed, so
@@ -1585,7 +1592,8 @@ of mass's drift since the last.
   merged hole, which is the same body. With no hole the view takes the
   origin, the centre of mass. `anchor` in `app/viz/gravity3d.js`
   chooses it each frame.
-- Only the camera follows it. The camera stands 620 from it, turns
+- Only the camera follows it. The camera stands 620 from it, or where
+  the wheel puts it, turns
   about it by itself and by the pointer's drag, and every world point
   is taken relative to it: `place` for the bodies, the dust, the
   trails, the flares and the waves' sources, and so the slices, their
@@ -2249,3 +2257,145 @@ Rejected:
   in the small pane the ground about the hole was dark when staged,
   and the shadow did not show on it.
 - Kerr geodesics per ray: see 2026-10-17.
+
+## 2026-10-26: Gravity 3D's zoom and its holes' evaporation
+
+Owner, issue #194, 2026-10-22: "for the 3d gravity visualizer i want
+to be able to zoom in and out quite far, and i want the black holes to
+gradually shrink so that if the agents have become idle for a long
+period of time, all the gravitational bodies are sub-schwarzschild".
+
+- The wheel. `viz.js` sends a wheel event to the mode in the pane under
+  the pointer, or the pane a press holds, as
+  `pointer('wheel', x, y, down, steps)`. A notch of a mouse wheel, 100
+  pixels or 3 lines, is one step, positive away from the user. Chromium
+  sends a pinch as a wheel with ctrlKey and $\Delta y = -100 \ln s$, $s$
+  the pinch's scale, so a pinch's steps are $\Delta y / (100 \ln 1.2)$
+  and a mode zooming by 1.2 a step follows the fingers. The page
+  neither scrolls nor zooms, a mode without a pointer method hears
+  nothing, and the other modes' pointer methods read a wheel as a move
+  at most, to where the mouse already is.
+- The zoom. The camera stands $D$ from the view's centre, 620 at first,
+  and each step multiplies $D$ by 1.2, held within 90 and 3300 until
+  the wheel moves it again. The slow turn and a drag's turn go on at
+  any zoom. At 90 the seed hole's shadow, of $b_c = 35.4$, has a
+  radius of $f \tan(\arcsin(b_c / D))$, 364 px of a full pane's 380 to
+  its shorter edge, its photon ring at that edge: $b_c / \sin 0.42$ is
+  87. At 3300 the pane's half height, $D \tan 0.42$, is 1474, the 1472
+  that the waves' fronts reach from their source (`waves.js` KEEP, 512
+  samples of 0.25 at $c = 11.5$), and the system, 250 across from its
+  hole, is 64 px of that 380. Twenty notches cross the range. The
+  camera stands $2 b_c$ from the hole it turns about at least, which
+  moves it past 90 for a hole over 1145, so a hole past 2290, whose
+  $b_c$ passes 90, never captures every ray: the standoff moves only
+  the camera, not the zoom. A staged scene and its
+  release put the zoom back at 620, so the staged checks' figures
+  hold.
+- What the zoom moves. `frameOf`, `place`, the eye of the Doppler shift,
+  the fog, the slices' depths, the click's plane and the waves' ground
+  already read the camera's distance. Zoomed in, the camera stands
+  among the bodies and the disc: what lies less than 1 ahead of it,
+  the depth the trails' images already start at (`trace.js` curve), is
+  not drawn, where it was drawn at depth 1 on the nearest slice, the
+  slices part only at holes ahead of the camera, and the slice audit
+  counts what is ahead. A wave source nearer than half the camera's
+  distance shows its field on the plane at that half, through the
+  axis, which is its own plane where it reaches it, so the pair's
+  waves still cross the view while it passes behind the camera.
+- The thin lens, zoomed in: the trace takes the camera as far from the
+  hole, so at 90 from the seed's hole, 6.6 $r_s$, its shadow is drawn
+  at $\arcsin(b_c / D)$ where a camera at rest there would see
+  $\arcsin(b_c \sqrt{1 - r_s / D} / D)$ (Synge 1966), 9% smaller across.
+- The clock of the evaporation. The synthesiser keeps the seconds since
+  the session's last activity, `pty.idle_s` as the frame gives it, 0
+  while the sound output alone drives the signal. Gravity 3D integrates
+  the idle level's ramp, 0 to 3 s and 1 from 13 s, over them:
+  $E(q) = (q - 3)^2 / 20$ between, $q - 8$ past 13 s, and each frame
+  evaporates the holes by $E$ less what this spell has spent. The
+  simulation's clock, which an idle spell all but stops, plays no part,
+  and a stalled frame or a closed window loses none of the spell: a
+  pane that opens after a long spell sees it all at once.
+- The rate and the floor. While idle every hole loses mass, $M$ times
+  $e^{-s/200}$ in $s$ s of full idle, its velocity kept, as an even
+  loss of light carries no momentum in its own frame. Its horizon, its
+  shadow and photon ring ($b_c$), its last stable orbit $3 r_+$ and
+  its disc's reach shrink with it at one rate, its spin $\chi$
+  unchanged, so the shadow keeps its shape (see 2026-10-26: Gravity
+  3D's spin follows the session), and the heaviest hole stays the
+  heaviest. Below a mass of 2, whose shadow is under a pixel even at
+  90, a hole ends in a flare, a ring from its shadow's radius, and is
+  gone, and the bodies are recentred, so with none left the view takes
+  the centre of mass of what remains (see 2026-10-18: Gravity 3D's
+  centre). A hole of $M$ lasts $200 \ln(M / 2)$ s of full idle: the
+  pair's 30 9.0 min, a subagent's 300 16.7 min, the seed's 900 20.4
+  min and a stop's 1500 22.1 min. After 25 min of quiet no hole of up
+  to 3474 is left, more than twice 1500, the stop's cap.
+- No body within its own $r_s$. A star or a planet of $m$ has the radius
+  $4 + 1.1 m^{1/3}$ or $1.2 + 1.3 m^{1/3}$, and $r_s = 2m/c^2$ passes
+  it at 990 for a star and 914 for a planet. A stop grew the heaviest
+  body to 1500, so with no hole
+  left a star could become one in all but name: a stop now grows a body
+  that is not a hole to 800 at most, where its radius is 14.2 against
+  $r_s$ 12.1. A merger of two such bodies could still pass 914, and is
+  left as it was.
+- The seed waits for the session. A frame with fewer than two bodies
+  seeds the scene again, as before, but only on an event or with the
+  idle level under 0.5, and before the events are read, so no hole
+  comes back while idle and an event never meets an empty scene. A
+  subagent's hole and the seed after a dispersal are the holes the
+  session makes again.
+- What remains. The holes' pull is their mass, so as they lose it what
+  orbits them is let go. A run of the seed's system in Node, stepped at
+  the idle clock of 0.6 of simulation a second with 120 grains, no
+  events and no recentring, the holes evaporating as above: after
+  150 s the holes were 425 and 14.2 and the planets 227 and 279 from
+  the centre of mass, against 214 and 258; after 300 s the disc's
+  median grain was at 307, against 82; after 600 s 6 grains of 120
+  were left within the cull at 480; after 1050 s the planets had passed
+  the cull at 960 and the star stood at 990; at 1350 s no hole was
+  left. Past about ten minutes of quiet the pane holds the star or
+  stars, what planets and dust have not left, and the sky.
+- The flash. A flare ages on the simulation's clock, as the other
+  rings do, so an evaporating hole's ring grows and fades over about
+  30 s at full idle, and in a fraction of a second when the session is
+  busy, as a hole aged at once by the check shows.
+- Checked by `test/viz-gravity3d.test.js`: the zoom stepped in and out
+  past both ends follows $1.2^{k}$ and holds at 90 and 3300, a pinch's
+  scale of 2 halves it, the ends' derivations above, the standoff, and
+  a point behind the camera not drawn; and 25 min of quiet in frames of
+  10 s over the seed's holes, a hole of 1500 and a star of 800, every
+  hole losing mass every frame past 3 s, its horizon with it, each
+  taken out within one frame of $8 + 200 \ln(M / 2)$ s, after 550,
+  1230 and 1340 s, and at the end no hole and no body within its own
+  $r_s$. `scripts/checks/vizmodes.js`, in the full pane and the small
+  one, wheels the live mode to both ends and captures it, pinches, and
+  ages its holes by 270 s and by 1500 s more, capturing them shrunk,
+  shrunk 10 notches in, and gone. At 2f01e90, under swiftshader at a
+  load of 4 to 16, the full pane of 1200 by 760 drew 34.5 frames a
+  second at 620, 11.5 at 90, where the shadow fills it and 52375 of
+  its traced pixels were traced one by one against 1512 at 3300, and
+  27 at 3300; the small pane of 300 by 380 drew 19, 10 and 27.5. The
+  trace's cap on its pixels (see 2026-10-18: Gravity 3D's sharpness as
+  a setting) bounds the cost zoomed in. In the frames, zoomed in, the
+  shadow fills the pane's shorter side, the waves' ground and the sky
+  bent into rings about it and the disc's grains along its edge;
+  zoomed out, the system is a small knot at the centre in the waves'
+  bands; shrunk, the disc's grains stand far out from a hole whose
+  shadow, 10 notches in, is a small dark disc that a trail's image
+  bends about; gone, a flare's ring at each hole's last place, the
+  star at the view's centre and the dust.
+
+Rejected:
+
+- Hawking's own law, $\dot{M} \propto -1/M^2$, a lifetime in $M^3$: with
+  the seed's 900 gone in 20.4 min, the pair's 30 would last 0.045 s of
+  idle and be gone at every pause, and a hole of 1500 would last 94 min.
+  The loss here is a fixed part a second, so every hole shrinks at one
+  rate and the last goes in a bounded time.
+- The idle level summed over the frames drawn, $\Delta t$ times the
+  level: the frame's $\Delta t$ is held to 0.1 s and no frame is drawn
+  while the window is closed, so an idle spell spent with the window
+  closed would leave every hole as it was.
+- A zoom range in the hole's own $r_s$: the zoom would move as the hole
+  shrank or grew, where the issue wants it held until the wheel moves
+  it.

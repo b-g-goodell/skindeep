@@ -56,8 +56,8 @@
   const TAU = 3
   const HOLE_MAX = 1500
   // A stop grows a body that is not a hole to at most BODY_MAX, where
-  // its radius (radius) still exceeds its r_s: past about 980 a star or
-  // a planet would lie within its own Schwarzschild radius.
+  // its radius (radius) still exceeds its r_s: from 990 a star, and
+  // from 914 a planet, lies within its own Schwarzschild radius.
   const BODY_MAX = 800
   // The zoom (decision 0015, issue #194): the camera stands cam.D from
   // the view's centre, DIST at first, ZOOM times farther a wheel step
