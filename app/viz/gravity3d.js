@@ -894,6 +894,13 @@
     let xs = null
     let vs = null
     let ws = null
+    let gb = null
+    // The waves' gain as drawn (waves.js gain), and the time over which
+    // it rises again, in s: it falls at once, so a burst or a strong
+    // pair never floods the pane, and rises slowly, so the pane does not
+    // pump as a burst passes.
+    let gk = W.GAIN
+    const RISE = 2
     const hv = [0, 0]
     const at = [0, 0, 0]
     const cf = [0, 0, 0]
@@ -1382,13 +1389,14 @@
     // sources of h_+ and h_x in the camera's basis, the line of sight and
     // the direction across it in that plane, which is the source's own
     // where its axis lies in the plane or along the line of sight, as
-    // shown (waves.js) squared, its sign kept, h_+ in blue and amber, h_x
-    // in teal and rose, over black: the frame's ground, a plane at the
+    // shown (waves.js) at the gain gk, eased over dt, squared, its sign
+    // kept, h_+ in blue and amber, h_x in teal and rose, over black: the
+    // frame's ground, a plane at the
     // sources' mean depth that emits this light and hides nothing, which
     // the trace bends as it bends what else lies at that depth, read
     // bilinear from the grid itself at the trace's scale kt, once a ray
     // and never in a hole's shadow (trace.js plane).
-    function drawWaves (w, h, dim, kt) {
+    function drawWaves (w, h, dim, kt, dt) {
       const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
       const gw = Math.ceil(w / cell) + 1
       const gh = Math.ceil(h / cell) + 1
@@ -1398,6 +1406,7 @@
         xs = new Float32Array(gw * gh)
         vs = new Float32Array(gw * gh)
         ws = new Float32Array(gw * gh)
+        gb = new Float32Array(gw * gh)
       }
       const src = []
       let zs = 0
@@ -1426,8 +1435,10 @@
           xs[j * gw + i] = hx
         }
       }
-      W.shown(hs, gw, gh, vs)
-      W.shown(xs, gw, gh, ws)
+      const want = W.gain(hs, xs, gw * gh, gb)
+      gk = want < gk ? want : gk * (want / gk) ** (1 - Math.exp(-dt / RISE))
+      W.shown(hs, gw, gh, vs, gk)
+      W.shown(xs, gw, gh, ws, gk)
       for (let j = 0; j < gh; j++) {
         for (let i = 0; i < gw; i++) {
           const a0 = vs[j * gw + i]
@@ -1684,7 +1695,7 @@
       c.globalAlpha = 1
       c.imageSmoothingEnabled = true
       c.drawImage(frame, 0, 0, img.width, img.height, 0, 0, img.width / kt, img.height / kt)
-      W.label(c, canvas.width, env && env.text ? env.text() : 1)
+      W.label(c, canvas.width, env && env.text ? env.text() : 1, gk)
     }
 
     // For the live check (vizlens.js), while the probe asks: the body and
@@ -1970,7 +1981,7 @@
         const F = Math.min(CUBE, Math.max(64, Math.round(2 * tf / 64) * 64))
         const cb = cube(F, F / (2 * V.f))
         sk = { F, faces: cb.faces, lit: cb.lit, nt: cb.nt, dim, m: [V.r[0], V.r[1], V.r[2], V.u[0], V.u[1], V.u[2], -V.e[0], -V.e[1], -V.e[2]] }
-        drawWaves(w, h, dim, kt)
+        drawWaves(w, h, dim, kt, dt)
         const sc = scene(kt, tw, th, dim, keep, null)
         if (!fimg || fimg.width !== tw || fimg.height !== th) fimg = fx.createImageData(tw, th)
         traced = { w: tw, h: th, px: T3.render(sc, fimg.data), planes: sc.planes.length, holes: sc.nh, slices: sc.audit }
