@@ -122,7 +122,10 @@ butterchurn-presets is MIT for its conversion only.
     starlings over a clearing in a forest, seen from the forest floor
     looking up through the canopy, folding and turning as falcons dive
     at it, by the same core in three dimensions (see 2026-10-22:
-    Murmuration). With the sound output alone,
+    Murmuration). Bait ball: a school of sardines in open water, seen
+    by a scuba diver below it, packing into a ball, splitting and
+    reforming as dolphins, a shark, sailfish and gannets hunt it, by
+    the same core (see 2026-10-22: Bait ball). With the sound output alone,
     which brings no events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
@@ -178,6 +181,9 @@ butterchurn-presets is MIT for its conversion only.
     flock's distance, and the starlings shy from it, a hole following
     the pointer through the flock. A click: a peregrine stoops on the
     bird nearest it (see 2026-10-22: Murmuration).
+  - Bait ball: a drag turns the diver's gaze, which eases back to the
+    school after the release. A click: a shark cuts through the school
+    at the fish nearest it (see 2026-10-22: Bait ball).
   - Every other mode, the five butterchurn presets, Scope, the two
     analyzers, Superscope and Dot plane, has no method of its own: a
     press adds a short tone to the pane's signal, its pitch on the
@@ -1939,3 +1945,163 @@ Rejected:
 - A camera that turns to follow the flock: the forest's layers, some
   thousands of leaves, would be painted again on every move. The flock
   turns home instead.
+
+## 2026-10-22: Bait ball
+
+Issue #188, the third of the owner's three flocking modes (see
+2026-10-22: Savannah hunt): ocean predators hunting a school, seen by a
+scuba diver in open water. The design is the builder's.
+
+### The core
+
+`app/viz/flock.js` is unchanged. The two things the school needs that
+the core lacks, the sea's surface and the packing of a bait ball, are
+the mode's, both through the core's per-prey `push` (see 2026-10-22:
+Murmuration). The core's `bounds` are a sphere and have no plane, so
+within 2 m of the surface each fish is steered down, up to a weight of
+1.5, and after each substep no fish is above $z = -0.4$ m, its upward
+speed dropped. The seeded probe of the Savannah and the core's hashes
+under the Savannah's rule, by rank in the plane and in space, are the
+same at the base 2e51f54 and with the mode.
+
+### The mode
+
+`app/viz/baitball.js`, a Canvas2D mode on a CPU canvas. Its
+simulation, the school, its waves of turning, the attacks and the
+clock, is a `world` with no canvas, which the tests run too.
+
+- The camera: the diver's eye is 14 m down, the lens's focal length
+  0.6 times the pane's longer side. The diver stays in place, bobbing
+  0.07 m with each breath, every 5 s, 7 at idle, and lets out a stream
+  of bubbles that rise past the lens on each breath out. The gaze turns
+  toward the school's centre over 2 s, looking out and up by 0.1 to
+  0.42 rad, so the school stays in view as it wanders and as predators
+  drive it up. Nothing is painted in world space, so the turn costs
+  nothing.
+- The water: a gradient by each row's elevation, navy below, blue
+  level, brighter toward the surface, and Snell's window, a bright disc
+  about the zenith whose edge stands $\arcsin(1/1.333)$, 48.6 degrees,
+  from it, deep blue at dusk. The surface's waves are a height field
+  $h$ of six waves on an 8 m tile, and the light they focus below,
+  the caustics, is $1/|\det(I + D \nabla^2 h)|$ on a 64 by 64 tile,
+  computed each draw. It is laid on the surface's underside in
+  perspective, strip by strip, fading with the distance to it, plays on
+  the fish's light and on the backs of predators within 20 m. Ten light
+  shafts fall from the surface along the sun's refracted ray, 42 m
+  long, fading down and flickering with the waves. The gradient, the
+  window, the caustics and the shafts are drawn on a canvas of half the
+  pane's size and scaled up. Snow drifts near the lens and turns with
+  the gaze.
+- Depth: every fish and predator is mixed toward the water's colour
+  along its ray by $1 - e^{-d/24}$, $d$ its distance in metres. The fish
+  are drawn in five bands of distance, the two beyond 23 m on a canvas
+  of half the pane's size, scaled up, so far fish are softer than near
+  ones, within the box they fill.
+- The school: 700 fish, each following its nearest seven by rank
+  within 4 m, at 1.2 m/s, bursting to 4, keeping 0.9 m, held level by
+  `level` 0.5, about a home 15 m ahead and 7 m down, on a course that
+  wanders and turns home past 4 m. The core's bounds, 10 m about home,
+  are a backstop. A predator is seen at 8 m and fear is passed on at
+  0.3, so a hole opens about a predator without alarming the whole
+  school (Murmuration's finding), and flight weighs 1.4. Each fish is
+  drawn as four sardines at fixed places about it in its own frame,
+  2800 fish, a stroke as long and deep as a sardine, or within 11 m a
+  spindle with a forked tail. A fish rolls into a turn by its
+  acceleration across its heading, smoothed over 0.15 s, and its silver
+  flank flashes as it mirrors the light from above to the eye: the
+  light is $|n \cdot \hat h|^5$, $n$ the flank's normal and $\hat h$
+  half way between the eye and the light, in five levels from the dark
+  back to the silver flash. So a wave of turning crosses the school as
+  a flash.
+- The bait ball: while predators hunt within 18 m of the school, a
+  level $p$ rises over 1.5 s to $0.45$ a predator, at most 1, and each
+  fish is steered to the school's centre with weight
+  $2.5p \min(1, (d - 1)/3)$, $d$ its distance from it past 1 m, and
+  round it, milling about the vertical at 1.8 m/s, with weight $1.2p$,
+  as each fish seeks the middle of a selfish herd (Hamilton, J. Theor.
+  Biol. 31, 1971). Packed, the fish cruise up to 1.2 m/s faster and
+  steer 10 m/s$^2$ harder, so a ball split by a dash closes again in a
+  second or two. In seeded runs of 40 s a pod packs the school from a
+  median distance of 4.4 to 4.7 m from its centre at rest to 1.7 to 2.3
+  m.
+- The attacks, each predator a phase of its plan, circling the ball
+  and then dashing at it, seen at half the school's sight while it
+  circles:
+  - A pod of three to five dolphins (2.3 m, 9 m/s in the dash, 7 within
+    6 m of its fish) circles 4 m outside the ball and 3.5 m below it,
+    driving it up against the surface, and dashes at the middle and the
+    edge in turn, four passes each.
+  - A shark (2.8 m, 8 m/s, 6 within 6 m) circles 7 m out and cuts
+    through the middle, three passes.
+  - Two or three sailfish (3 m with the bill, 12 m/s, 8 within 5 m)
+    slash at the edge, the sail raised and the bars lit in the dash,
+    four passes each.
+  - A volley of four to seven gannets enters the water over the school
+    0.4 to 1.2 s apart at 13 m/s, a burst of bubbles and a trail behind
+    each, slows by 5 m/s$^2$, takes the nearest fish within 6 m if it
+    can, and floats up after 2.2 s.
+  - The predators of an attack dash one at a time, 1.5 to 3 s apart,
+    so the school packs again between dashes. A kill leaves a puff of
+    scales. Fish swim in from the blue in schools of 8 to 12 while no
+    predator dashes, until the school is whole. Two attacks run at
+    most, a third sending the oldest away, and an attack starts of its
+    own every 40 to 70 s of the clock while the session works.
+
+| Signal | Bait ball |
+| --- | --- |
+| prompt | an attack, in turn a pod of dolphins, a shark, sailfish, a volley of gannets |
+| tool call | a fish startles, marked by a ring in the class's colour, and a wave of turning flashes across the school from it |
+| stop | every predator circling dashes now |
+| subagent | one more predator joins the newest attack, three more gannets its volley, or a lone shark's attack begins |
+| compaction | the school balls up for 12 s, and a wave of turning crosses it from its leading edge |
+| output event | a glint: a short turn among the fish within 3 m of one |
+| bass | with busy, the clock, 0.8 to 1.2 times real time |
+| treble | the surface's chop: the caustics' speed and the shafts' flicker |
+| idle | the clock slows to a fifth, the light fades toward dusk, the school sinks 3 m, the predators leave and no attack starts |
+| drag | turns the diver's gaze, which eases back to the school 1.5 s after the release |
+| click | a shark cuts through the school at the fish nearest the click |
+
+- `test/viz-baitball.test.js`, seeded, under the mode's rule: the
+  mode's world, with no predator, keeps its school one group, linked by
+  steps under 2 m, but for three fish at most, within 12 m of home
+  across the water and 4 m in depth, its spread under 7 m, for 60 s.
+  Fish within a predator's sight are farther from it 1 s later than
+  with no predator, by more than 1.5 m on average. A predator picking
+  by edge, middle or straggler is nearer its fish at every look until
+  it takes it. A pod of dolphins packs the school to under 0.6 of its
+  resting median spread within 40 s, and no fish rises past the
+  surface.
+- Cost, each mode alone on a CPU canvas in an offscreen Electron page
+  under xvfb, at full activity, 240 draws of 1/60 s after 300 of
+  warm-up, as `vizcarbon.js` measures, median and p90 ms a draw, at
+  load average 27 to 30: at 400 by 380 Bait ball 8.3 and 11.9,
+  Murmuration 5.7 and 7.4, Savannah hunt 3.0 and 4.3, and at 1200 by
+  760 Bait ball 19.4 and 23.1, Murmuration 18.2 and 21.4, Savannah hunt
+  8.1 and 11.1. `vizmodes.js` ran
+  three panes of Bait ball, Fern and Go at 7.5, 13.5, 12.5, 13.5 and
+  13.5 frames a second over its five rounds, median 13.5, beside Fern,
+  Go and Zoom out at median 14, Gravity, Gravity 3D and Quantum at 17,
+  Carbon, Savannah hunt and Murmuration at 6.5 and the butterchurn
+  panes at 14, at load average 28 to 30.
+
+Rejected:
+
+- A plane in the core's bounds for the surface: the mode's push and a
+  hold after each substep do it, and the core, the Savannah and the
+  Murmuration stay as they were, bit for bit.
+- Packing by a pull to the centre alone, of weight 0.9: each dash blew
+  the school to as much as 2.4 times its resting median spread and it
+  never packed, its afraid fish running at their flight speed. The
+  milling steer, the stronger pull and the faster packed fish make the
+  ball.
+- Predators dashing whenever ready: a pod kept the school in flight,
+  and no ball formed between dashes.
+- A gaze held still: the school, wandering and driven up to the
+  surface, left the frame.
+- A vignette over the pane: a full-pane composite each draw for a
+  diving mask's dark corners.
+- The water at full size: its gradient, window, caustics and shafts
+  cost 7.7 ms a draw at 1200 by 760 over the half-size canvas, for
+  detail too smooth to show.
+- The caustics at full strength on the surface: the underside read as
+  a tiled ceiling over half the pane.

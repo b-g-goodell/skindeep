@@ -28,7 +28,8 @@
     { id: 'quantum', label: 'Quantum', kind: 'canvas' },
     { id: 'carbon', label: 'Carbon', kind: 'canvas' },
     { id: 'savannah', label: 'Savannah hunt', kind: 'canvas' },
-    { id: 'murmuration', label: 'Murmuration', kind: 'canvas' }
+    { id: 'murmuration', label: 'Murmuration', kind: 'canvas' },
+    { id: 'baitball', label: 'Bait ball', kind: 'canvas' }
   ]
   if (typeof module === 'object' && module.exports) module.exports = { MODES }
   else root.VizModes = MODES
