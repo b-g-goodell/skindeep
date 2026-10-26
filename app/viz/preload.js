@@ -7,7 +7,8 @@
 // its newest samples, in -1 to 1. t: the text size, a factor of 0.5 to
 // 2 (decision 0036). c: the frame rate cap, frames a second in 1 to
 // 240, 0 for none. r: Gravity 3D's traced pixels a pane, in 1000 to
-// 1000000, 0 for the mode's own (decision 0015).
+// 1000000, 0 for the mode's own (decision 0015). w: the Gravity modes'
+// waves, 1 for smoke, 0 for the colour field (decision 0015).
 const { contextBridge, ipcRenderer } = require('electron')
 
 // A number in lo to hi, else 0.
@@ -23,6 +24,7 @@ contextBridge.exposeInMainWorld('vizFeed', {
     s: Float32Array.from(f.s || [], v => Math.max(-1, Math.min(1, Number(v) || 0))),
     t: Math.max(0.5, Math.min(2, Number(f.t) || 1)),
     c: within(f.c, 1, 240),
-    r: within(f.r, 1000, 1000000)
+    r: within(f.r, 1000, 1000000),
+    w: within(f.w, 1, 1)
   }))
 })
