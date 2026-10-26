@@ -2462,8 +2462,11 @@ medium and its law to the builder, settled here.
   mode drawn
   alone on a canvas of its own at a fixed step of 1/30 s for 14 s, its
   random numbers seeded so the colour field and the smoke run one
-  scene, the host's load 2 to 2.7: the seed's pair (weak) and three
-  subagent events (strong, Gravity 3D's gain falling to 456), in a
+  scene, the host's load 2 to 2.7: the seed's pair (weak) and, in
+  Gravity 3D, three subagent events (strong, its gain falling to 456;
+  Gravity's subagent stars orbit wide, within their near zone, and gave
+  no field stronger than the seed's, so no strong field of Gravity was
+  seen), in a
   pane of 1200 by 760 and one of 300 by 380, and Gravity 3D wheeled to
   90 and to 3300. The median draw went from 5.2 to 7.6 ms in Gravity's
   full pane and from 1.8 to 4.2 in its small one, and in Gravity 3D's
