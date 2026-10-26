@@ -5,7 +5,8 @@
 // G = 1 and c = C, so a hole of mass M has its Schwarzschild radius
 // r_s = 2 M / C^2. A hole pulls by the
 // Paczynski-Wiita potential -M / (r - r_+), r_+ its horizon, which puts
-// the last stable circular orbit at 3 r_s, and a spinning (Kerr) hole,
+// the last stable circular orbit at 3 r_+, 3 r_s at rest, and a
+// spinning (Kerr) hole,
 // of spin a = chi M / C^2, drags what moves near it by the Lense-Thirring
 // acceleration v x B, B = (2 M a / (C r^3)) (j - 3 (j . n) n), j its axis
 // and n the direction from it. What crosses a horizon is swallowed, its
@@ -18,8 +19,9 @@
 // shows them (trace.js curve), to the waves' ground and the distant
 // stars. The shadow, the photon ring, arcs, Einstein
 // rings, inner images and one hole seen through another all follow from
-// that one rule. The optics are Schwarzschild's: spin drags matter, as
-// above, but bends no light here. What emits, the dust, the bodies and
+// that one rule. A spinning hole's shadow takes the edge of a Kerr
+// hole's, shifted and flattened, and the session's activity spins the
+// holes up (spin). What emits, the dust, the bodies and
 // their trails, is drawn shifted by its Doppler factor relative to the
 // view's centre, which carries the camera, and by the holes'
 // gravitational shift, in hue (shift) and by its cube in brightness.
@@ -44,11 +46,20 @@
   // Spin at most this fraction of the extreme M / C^2, the horizon at
   // least 0.66 r_s.
   const CHI_MAX = 0.95
+  // The session spins its holes (decision 0015, issue #173): a hole's
+  // own spin chi0, which the seed (0.35), a subagent's hole (0.15 to
+  // 0.45) and a swallowing set, is its spin at idle, and the session's
+  // activity, eased over TAU s (spinStep), spins it up toward CHI_MAX
+  // (spin). The horizon, the last stable orbit, the Lense-Thirring drag
+  // and the shadow all read the spin so set, chi, and nothing
+  // exaggerates it.
+  const TAU = 3
   const HOLE_MAX = 1500
-  // A dust grain's mass, and the disc's viscosity: between 3 and DISC
-  // r_s of a hole a grain's velocity relaxes at rate VISC toward a
-  // circular orbit's, a little slower, so the disc's grains settle on
-  // circles and spiral in, and plunge from the last stable orbit.
+  // A dust grain's mass, and the disc's viscosity: between the last
+  // stable orbit, 3 r_+, and DISC r_s of a hole a grain's velocity
+  // relaxes at rate VISC toward a circular orbit's, a little slower, so
+  // the disc's grains settle on circles and spiral in, and plunge from
+  // the last stable orbit.
   const DUST_M = 0.004
   const VISC = 0.01
   const SLOW = 0.995
@@ -186,6 +197,34 @@
     const arc = 360 + HUE_RED - HUE_BLUE
     const x = Math.max(0, Math.min(1, (360 + HUE_RED - h) / arc + Math.log(g) / Math.log(LAM_RED / LAM_BLUE)))
     return (360 + HUE_RED - x * arc) % 360
+  }
+
+  // The session's activity, 0 to 1, from its levels (synth.js): the
+  // strongest of the output, busy and the tokens' rate, none at idle.
+  function activity (L) {
+    return Math.min(1, Math.max(Math.min(1, L.bass), L.busy, L.treble)) * (1 - L.idle)
+  }
+
+  // The share s of the way from a hole's own spin to CHI_MAX after dt s
+  // of activity a: it moves toward a by 1 - exp(-dt / TAU) of the gap,
+  // so by at most 1 / TAU a second and never past a.
+  function spinStep (s, a, dt) {
+    return s + (a - s) * (1 - Math.exp(-Math.max(0, dt) / TAU))
+  }
+
+  // A hole's own spin: chi0, or chi for a hole that has none.
+  function own (h) {
+    return h.chi0 === undefined ? (h.chi || 0) : h.chi0
+  }
+
+  // Hole h spun up by share s: chi = chi0 + (CHI_MAX - chi0) s, its
+  // horizon moved with it.
+  function spin (h, s) {
+    const c = own(h)
+    h.up = s
+    h.chi = c + (CHI_MAX - c) * Math.max(0, Math.min(1, s))
+    h.r = horizon(h)
+    return h
   }
 
   // The outer horizon of hole h: r_+ = M / C^2 + sqrt((M / C^2)^2 - a^2).
@@ -361,7 +400,9 @@
   }
 
   // Hole h swallows b: mass, momentum and angular momentum kept, the
-  // spin capped below the extreme.
+  // spin capped below the extreme. The angular momentum is that of the
+  // holes' own spins (chi0), so the session's spin-up leaves none behind,
+  // and the hole stays spun up by the same share.
   function absorb (h, b) {
     const m = h.m + b.m
     const mu = h.m * b.m / m
@@ -371,8 +412,8 @@
     const vx = b.vx - h.vx
     const vy = b.vy - h.vy
     const vz = b.vz - h.vz
-    const sh = (h.chi || 0) * h.m * h.m / C
-    const sb = b.hole ? (b.chi || 0) * b.m * b.m / C : 0
+    const sh = own(h) * h.m * h.m / C
+    const sb = b.hole ? own(b) * b.m * b.m / C : 0
     const jx = sh * h.jx + sb * (b.jx || 0) + mu * (ry * vz - rz * vy)
     const jy = sh * h.jy + sb * (b.jy || 0) + mu * (rz * vx - rx * vz)
     const jz = sh * h.jz + sb * (b.jz || 0) + mu * (rx * vy - ry * vx)
@@ -385,10 +426,11 @@
     h.vz = (h.vz * h.m + b.vz * b.m) / m
     h.m = m
     if (J > 0) {
-      h.chi = Math.min(CHI_MAX, J * C / (m * m))
+      h.chi0 = Math.min(CHI_MAX, J * C / (m * m))
       h.jx = jx / J
       h.jy = jy / J
       h.jz = jz / J
+      spin(h, h.up || 0)
     }
     h.r = horizon(h)
   }
@@ -501,7 +543,8 @@
     const eaten = new Map()
     const r2 = holes.map(horizon)
     const disc = holes.map(b => DISC * rs(b.m))
-    const isco = holes.map(b => 3 * rs(b.m))
+    // The last stable orbit, 3 r_+ in this potential, which the spin moves.
+    const isco = r2.map(r => 3 * r)
     const hz = bodies.map(b => b.hole ? horizon(b) : 0)
     for (const d of dust) {
       let n = 1
@@ -901,6 +944,10 @@
     // pump as a burst passes.
     let gk = W.GAIN
     const RISE = 2
+    // The share of the way from each hole's own spin to CHI_MAX that the
+    // session's activity has spun the holes (spinStep), held by a staged
+    // scene.
+    let up = 0
     const hv = [0, 0]
     const at = [0, 0, 0]
     const cf = [0, 0, 0]
@@ -925,7 +972,7 @@
     }
 
     function body (x, y, z, vx, vy, vz, m, hue, kind) {
-      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tv: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0, g: 1 }
+      const b = { id: ++made, x, y, z, vx, vy, vz, m, hue, star: kind === 'star', hole: kind === 'hole', comet: kind === 'comet', chi: 0, chi0: 0, up: 0, jx: 0, jy: 0, jz: 1, r: 0, ax: 0, ay: 0, az: 0, trail: [], tv: [], tt: clock, flash: 0, px: 0, py: 0, pd: 1, pk: 0, heat: 0, g: 1 }
       b.r = b.hole ? horizon(b) : radius(m, b.star)
       bodies.push(b)
       return b
@@ -983,8 +1030,8 @@
       field.reset()
       const h = body(0, 0, 0, 0, 0, 0, 900, 0, 'hole')
       const n = tilt(0.12)
-      Object.assign(h, { chi: 0.7, jx: n[0], jy: n[1], jz: n[2] })
-      h.r = horizon(h)
+      Object.assign(h, { chi0: 0.35, jx: n[0], jy: n[1], jz: n[2] })
+      spin(h, up)
       const s = rs(h.m)
       disc(h, 420, 3.3 * s, 8 * s, 30)
       pair(h, tilt(0.35), Math.random() * 6.3)
@@ -1052,8 +1099,8 @@
         if (subs % 2 && holes < 3 && suns > 0) {
           const h = orbit(s, r, tilt(0.4), Math.random() * 6.3, 150 + Math.random() * 150, 0, 'hole')
           const n = tilt(1)
-          Object.assign(h, { chi: 0.3 + 0.6 * Math.random(), jx: n[0], jy: n[1], jz: n[2] })
-          h.r = horizon(h)
+          Object.assign(h, { chi0: 0.15 + 0.3 * Math.random(), jx: n[0], jy: n[1], jz: n[2] })
+          spin(h, up)
           disc(h, 50, 3.3 * rs(h.m), 7 * rs(h.m), 280)
           flares.push({ x: h.x, y: h.y, z: h.z, t: clock, r: RING * rs(h.m) })
         } else if (suns < 3) orbit(s, r, tilt(0.4), Math.random() * 6.3, 100 + Math.random() * 150, 15, 'star')
@@ -1586,18 +1633,22 @@
       const hb = bodies.filter(b => b.hole && b !== skip)
       const hs = new Float64Array(4 * hb.length)
       const bref = new Float64Array(hb.length)
+      const ks = new Float64Array(T3.KS * hb.length)
       hb.forEach((b, i) => {
         frameOf(V, b.x, b.y, b.z, cf)
         hs[4 * i] = cf[0]
         hs[4 * i + 1] = cf[1]
         hs[4 * i + 2] = cf[2]
         hs[4 * i + 3] = RING * rs(b.m)
+        const out = b.chi > 0 ? edged(b, ks, T3.KS * i, hs[4 * i + 3]) : 0
         // Where a cell's linear map would be off by a pixel or more, the
         // light from far behind bent by theta_E^2 / theta: the error of
-        // the line across S pixels is S^2 r_s D^2 / (2 f b^3).
-        bref[i] = Math.max(1.5 * hs[4 * i + 3], Math.cbrt(STEP * STEP * rs(b.m) * hs[4 * i + 2] ** 2 / (2 * tf)))
+        // the line across S pixels is S^2 r_s D^2 / (2 f b^3). A spinning
+        // hole bends by b less its edge's offset (trace.js), so by as much
+        // as 1.5 b_c further out by that offset.
+        bref[i] = Math.max(1.5 * hs[4 * i + 3] + out, Math.cbrt(STEP * STEP * rs(b.m) * hs[4 * i + 2] ** 2 / (2 * tf)))
       })
-      const lens = { cx: tcx, cy: tcy, f: tf, hs, nh: hb.length }
+      const lens = { cx: tcx, cy: tcy, f: tf, hs, nh: hb.length, ks }
       const order = bodies.filter(b => !b.hole).sort((a, b) => b.pd - a.pd)
       for (const b of order) {
         const L = at(b.pd)
@@ -1679,7 +1730,57 @@
         while (i < planes.length && planes[i].z < ground.z) i++
         planes.splice(i, 0, ground)
       }
-      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, bref, planes, sky: sk, holes: hb, audit }
+      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, ks, bref, planes, sky: sk, holes: hb, audit }
+    }
+
+    // The edge of spinning hole b's shadow, of b_c bc, for the trace,
+    // into ks from o (trace.js edge): it seen from the camera (eye) at
+    // inclination i to its axis j, its axes alpha = beta x n and beta,
+    // j across n, n toward the camera, in the camera's frame, and the
+    // edge's offsets from bc. Returns the greatest.
+    const ja = [0, 0, 0]
+    const jb = [0, 0, 0]
+    function edged (b, ks, o, bc) {
+      let nx = eye[0] - b.x
+      let ny = eye[1] - b.y
+      let nz = eye[2] - b.z
+      const nl = len(nx, ny, nz) || 1
+      nx /= nl
+      ny /= nl
+      nz /= nl
+      const ci = b.jx * nx + b.jy * ny + b.jz * nz
+      let ux = b.jx - ci * nx
+      let uy = b.jy - ci * ny
+      let uz = b.jz - ci * nz
+      let ul = len(ux, uy, uz)
+      if (ul < 1e-6) {
+        // Seen along its axis: any beta across n.
+        const k = V.u[0] * nx + V.u[1] * ny + V.u[2] * nz
+        ux = V.u[0] - k * nx
+        uy = V.u[1] - k * ny
+        uz = V.u[2] - k * nz
+        ul = len(ux, uy, uz) || 1
+      }
+      jb[0] = ux / ul
+      jb[1] = uy / ul
+      jb[2] = uz / ul
+      ja[0] = jb[1] * nz - jb[2] * ny
+      ja[1] = jb[2] * nx - jb[0] * nz
+      ja[2] = jb[0] * ny - jb[1] * nx
+      ks[o] = 1
+      for (const [at, v] of [[1, ja], [4, jb]]) {
+        ks[o + at] = v[0] * V.r[0] + v[1] * V.r[1] + v[2] * V.r[2]
+        ks[o + at + 1] = v[0] * V.u[0] + v[1] * V.u[1] + v[2] * V.u[2]
+        ks[o + at + 2] = -(v[0] * V.e[0] + v[1] * V.e[1] + v[2] * V.e[2])
+      }
+      T3.shadow(b.chi, ci, ks, o + 7)
+      let most = 0
+      for (let k = 0; k < T3.NA; k++) {
+        const e = ks[o + 7 + k] * bc
+        ks[o + 7 + k] = e
+        most = Math.max(most, e)
+      }
+      return most
     }
 
     // The traced frame img, at scale kt, onto the canvas of c, scaled up
@@ -1767,6 +1868,46 @@
       // the trails' images found without the hole.
       if (hole) seenHole = record(hole, true, sc, kt, dim, keep)
       if (body) seen = record(body, false, sc, kt, dim, keep)
+    }
+
+    // For the live checks, while the probe asks: the shadow of hole i of
+    // scene sc as the trace draws it, along the frame's line through the
+    // hole's point across its projected axis, from that point to the
+    // edge on the side moving away (away) and on the side moving toward
+    // the camera (toward), and the Schwarzschild shadow's radius R, in
+    // the pane's pixels, found by halving on the trace's own rule, and
+    // the hole's spin chi.
+    const RIMSEG = new Float64Array(T3.STRIDE * T3.MAXSEG)
+    let rimmed = null
+    function rim (sc, i, kt) {
+      const o = T3.KS * i
+      let ux = sc.ks[o] ? sc.ks[o + 1] : 1
+      let uy = sc.ks[o] ? -sc.ks[o + 2] : 0
+      const ul = len(ux, uy) || 1
+      ux /= ul
+      uy /= ul
+      const Z = sc.hs[4 * i + 2]
+      const hx = sc.cx + sc.f * sc.hs[4 * i] / Z
+      const hy = sc.cy - sc.f * sc.hs[4 * i + 1] / Z
+      const R = sc.f * sc.hs[4 * i + 3] / Z
+      const caught = (x, y) => {
+        const dx = (x - sc.cx) / sc.f
+        const dy = -(y - sc.cy) / sc.f
+        const l = Math.sqrt(dx * dx + dy * dy + 1)
+        return T3.trace(0, 0, 0, dx / l, dy / l, 1 / l, sc.hs, sc.nh, RIMSEG, null, sc.ks) < 0
+      }
+      const out = { chi: sc.holes[i].chi, R: R / kt }
+      for (const [k, side] of [['away', 1], ['toward', -1]]) {
+        let lo = 0
+        let hi = 3 * R
+        for (let n = 0; n < 40; n++) {
+          const m = (lo + hi) / 2
+          if (caught(hx + side * m * ux, hy + side * m * uy)) lo = m
+          else hi = m
+        }
+        out[k] = lo / kt
+      }
+      return out
     }
 
     function record (t, isHole, sc, kt, dim, keep) {
@@ -1885,6 +2026,8 @@
         if (w < 4 || h < 4) return
         for (const e of synth.since(since)) if (!staged) react(e)
         const L = synth.level
+        if (!staged) up = spinStep(up, activity(L), dt)
+        for (const b of bodies) if (b.hole) spin(b, up)
         // Simulation time per second: the clock, as in the Gravity mode.
         const speed = (6 + 30 * Math.min(1, L.bass) + 14 * L.busy + 10 * L.treble) * (1 - 0.9 * L.idle)
         let left = staged ? 0 : Math.min(speed * dt, 60 * H)
@@ -1988,6 +2131,7 @@
         const a = anchor(bodies)
         const ai = a ? sc.holes.indexOf(a) : -1
         held = ai < 0 ? null : { id: a.id, x: a.px, y: a.py, cx: V.cx, cy: V.cy, X: sc.hs[4 * ai], Y: sc.hs[4 * ai + 1] }
+        rimmed = ai >= 0 && performance.now() - asked < 2000 ? rim(sc, ai, kt) : null
         present(out, fimg, kt)
         look(sc, kt, dim, keep)
         tick = now
@@ -2050,7 +2194,9 @@
 
       // For the live checks: a scene staged and held still. The camera at
       // turn yaw and height pitch, a hole of mass m at the centre, its
-      // spin along the vertical, and items, each { kind, m, Z, u, a } or
+      // spin along the vertical, its own spin chi (0 if not given) spun
+      // up by the share busy of the way to CHI_MAX (0 if not given), as
+      // the session's activity spins it, and items, each { kind, m, Z, u, a } or
       // { kind, m, Z, X, Y }: a planet, a star, a hole, a grain (dust) or
       // a flare (of radius r), Z beyond the hole along the line of sight
       // (nearer if negative), and from the hole's line u weak-field
@@ -2064,7 +2210,7 @@
       // equator, from 3.3 to 8 r_s, which turn counterclockwise seen
       // from above, held still with their velocities. Returns the items'
       // numbers.
-      stage ({ yaw, pitch, m, items, judge, disc: nd }) {
+      stage ({ yaw, pitch, m, chi, busy, items, judge, disc: nd }) {
         staged = true
         cam.yaw = yaw
         cam.pitch = pitch
@@ -2074,6 +2220,9 @@
         flares = []
         field.reset()
         const c = body(0, 0, 0, 0, 0, 0, m, 0, 'hole')
+        up = busy || 0
+        c.chi0 = chi || 0
+        spin(c, up)
         if (nd) disc(c, nd, 3.3 * rs(m), 8 * rs(m), 30)
         const ids = items.map(it => {
           let X = it.X
@@ -2130,19 +2279,22 @@
       // and holes, and per class of matter [painted, painted on a slice
       // that does not hold its depth, to paint]), the records of the body
       // and the hole judged behind a hole (look), the camera's turn and
-      // height, the holes' places and masses, the view's centre (held:
+      // height, the holes' places and masses, the share of the way to
+      // CHI_MAX the session has spun the holes and each hole's own spin
+      // and spin (spin: { up, chi: [[chi0, chi]] }), the shadow of the
+      // heaviest hole as the trace draws it (rim), the view's centre (held:
       // the heaviest hole's number, its place on screen, the pane's
       // centre, and its place across the trace's axis, X right and Y up)
       // and the recentrings so far, and how far the trails' places lie
       // apart (spacing).
       probe () {
         asked = performance.now()
-        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), held, recentred, trails: spacing() }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch }, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
       }
     }
   }
 
-  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, C, CHI_MAX, PANE, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
+  const api = { step, track, fall, centre, anchor, aim, frameOf, place, horizon, circular, rs, doppler, lapse, shift, spectral, wavelength, activity, spinStep, spin, C, CHI_MAX, TAU, PANE, BETA, LAM_BLUE, LAM_RED, HUE_BLUE, HUE_RED, quadrupole: W.quadrupole }
   if (typeof module === 'object' && module.exports) module.exports = api
   else (root.VizCanvas = root.VizCanvas || {}).gravity3d = create
 })(this)
