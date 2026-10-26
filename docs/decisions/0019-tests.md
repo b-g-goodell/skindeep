@@ -49,7 +49,11 @@ Tests only where they pay.
   `scripts/clean-env xvfb-run` with `scripts/fake` first on PATH, a
   few at once, and names each failure with its error line. The checks
   that need a real agent or only measure are listed in it as excluded,
-  with the reason. A full pass on a clean tree records the tree's hash
+  with the reason. A job that fails runs once more, alone, after the
+  others: a loaded host fails the checks that time real frames, and a
+  defect fails both times. A job that passes alone counts as passed,
+  and the summary and the record name it (issue #217). A full pass on
+  a clean tree records the tree's hash
   under the checkout's git directory (`scripts/checks/passrecord.js`),
   and publishing refuses a branch whose tree has none, since `npm
   test` alone never runs a live check.
