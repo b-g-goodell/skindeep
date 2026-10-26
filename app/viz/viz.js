@@ -35,10 +35,13 @@
   let text = 1
   // The frame rate cap, frames a second or 0 for none (decision 0036),
   // and Gravity 3D's traced pixels a pane, 0 for the mode's own
-  // (decision 0015), which a mode reads through trace().
+  // (decision 0015), which a mode reads through trace(). The Gravity
+  // modes' waves, 0 the colour field and 1 smoke (decision 0015), which
+  // a mode reads through waves() as 'colour' or 'smoke'.
   let cap = 0
   let trace = 0
-  const env = { text: () => text, trace: () => trace }
+  let waves = 0
+  const env = { text: () => text, trace: () => trace, waves: () => waves ? 'smoke' : 'colour' }
 
   try {
     const probe = document.createElement('canvas').getContext('webgl2')
@@ -258,6 +261,7 @@
     sound = { src: f.src, st: f.st, s: f.s }
     cap = f.c
     trace = f.r
+    waves = f.w
     if (f.t !== text) {
       text = f.t
       document.documentElement.style.setProperty('--viz-text', String(text))
@@ -332,7 +336,7 @@
   }
 
   // mode: the active pane's, else the first's. drawn: the frames drawn,
-  // cap and trace as the last frame set them. A pane's clock: its synthesiser's
+  // cap, trace and waves as the last frame set them. A pane's clock: its synthesiser's
   // seconds, and milkTime its butterchurn's, which steps by its own
   // reading of the time between the frames it renders. warp: the zoom's
   // log and the turn butterchurn has applied, summed (loop).
@@ -348,6 +352,7 @@
       drawn,
       cap,
       trace,
+      waves: env.waves(),
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
       panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, clock: p.synth.t, milkTime: p.milk && !p.flat ? p.milk.renderer.time : null, warp: p.milk && !p.flat ? { zoom: p.zoomed, rot: p.turned } : null, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }

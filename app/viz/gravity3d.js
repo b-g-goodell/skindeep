@@ -1025,6 +1025,10 @@
     // pump as a burst passes.
     let gk = W.GAIN
     const RISE = 2
+    // The waves as smoke (waves.js smoke), when env.waves() chooses it:
+    // its texels, SUB to a cell, and the gradient's scratch.
+    let simg = null
+    let sbuf = null
     // The share of the way from each hole's own spin to CHI_MAX that the
     // session's activity has spun the holes (spinStep), held by a staged
     // scene.
@@ -1537,7 +1541,9 @@
     // sources' mean depth that emits this light and hides nothing, which
     // the trace bends as it bends what else lies at that depth, read
     // bilinear from the grid itself at the trace's scale kt, once a ray
-    // and never in a hole's shadow (trace.js plane).
+    // and never in a hole's shadow (trace.js plane). With smoke, the gas
+    // that h_+ compresses and thins instead (waves.js smoke), the same
+    // plane.
     function drawWaves (w, h, dim, kt, dt) {
       const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
       const gw = Math.ceil(w / cell) + 1
@@ -1591,6 +1597,10 @@
       gk = want < gk ? want : gk * (want / gk) ** (1 - Math.exp(-dt / RISE))
       W.shown(hs, gw, gh, vs, gk)
       W.shown(xs, gw, gh, ws, gk)
+      if (env && env.waves && env.waves() === 'smoke') {
+        drawSmoke(gw, gh, cell, dim, kt)
+        return
+      }
       for (let j = 0; j < gh; j++) {
         for (let i = 0; i < gw; i++) {
           const a0 = vs[j * gw + i]
@@ -1628,6 +1638,25 @@
       ground = T3.plane(groundZ, img.data, gw, gh, ground, -cell * kt / 2, -cell * kt / 2)
       ground.edge = ground.add = ground.smooth = ground.ground = true
       ground.k = 1 / (cell * kt)
+    }
+
+    // The smoke of h_+ as shown, vs, on its grid gw by gh of cells cell px
+    // across: the ground as the colour field is, its texels SUB to a cell.
+    function drawSmoke (gw, gh, cell, dim, kt) {
+      const tw = (gw - 1) * W.SUB + 1
+      const th = (gh - 1) * W.SUB + 1
+      if (!simg || simg.width !== tw || simg.height !== th) {
+        simg = new ImageData(tw, th)
+        sbuf = new Float32Array(2 * gw * gh)
+      }
+      W.smoke(vs, gw, gh, clock, simg.data, 0.2 * dim, sbuf)
+      const d = cell / W.SUB
+      ground = T3.plane(groundZ, simg.data, tw, th, ground, -d * kt / 2, -d * kt / 2)
+      ground.edge = ground.add = ground.ground = true
+      // Read at every traced pixel, not bilinear between the lens map's
+      // nodes, which lie farther apart than the wisps.
+      ground.smooth = false
+      ground.k = 1 / (d * kt)
     }
 
     // The slices the scene is drawn on, flat, near to far, and a slice's
@@ -2416,7 +2445,8 @@
       // For the live checks: the numbers of the body and the hole judged
       // and whether each is still there, the moons thrown, the camera's
       // turns by a drag, what the holes have swallowed, the bodies and the
-      // dust, the waves' sources and the pair watched (waves.js), the last
+      // dust, the waves' sources, the pair watched and the gain in use
+      // (waves.js), the last
       // frame's trace (its size, the pixels traced one by one, its planes
       // and holes, and per class of matter [painted, painted on a slice
       // that does not hold its depth, to paint]), the records of the body
@@ -2434,7 +2464,7 @@
       // lie within their own r_s (compact), a hole always.
       probe () {
         asked = performance.now()
-        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch, D: cam.D, dist: V.D, zooms }, evaporated, spent, compact: bodies.filter(b => b.hole || b.r <= rs(b.m)).length, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
+        return { judged: { body: judged.body, hole: judged.hole, live: [judged.body, judged.hole].map(id => bodies.some(b => b.id === id)) }, thrown, turns, swallowed, holes: bodies.filter(b => b.hole).length, bodies: bodies.length, dust: dust.length, disc: dust.filter(d => d.disc).length, sources: field.traces.size, pair: watch.report(), gain: gk, trace: traced, lens: seen, hole: seenHole, cam: { yaw: cam.yaw, pitch: cam.pitch, D: cam.D, dist: V.D, zooms }, evaporated, spent, compact: bodies.filter(b => b.hole || b.r <= rs(b.m)).length, at: bodies.filter(b => b.hole).map(b => [b.x, b.y, b.z, b.m]), spin: { up, chi: bodies.filter(b => b.hole).map(b => [b.chi0, b.chi]) }, rim: rimmed, held, recentred, trails: spacing() }
       }
     }
   }
