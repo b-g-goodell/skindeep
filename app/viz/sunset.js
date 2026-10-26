@@ -876,10 +876,12 @@
       }
     }
 
-    // Past the most clouds, the oldest thins away.
+    // Past the most clouds, the oldest, the least id, thins away. Ids
+    // count up as clouds are made, and draw sorts the clouds by depth,
+    // so their order is not their age.
     function trim () {
       const live = clouds.filter(c => !c.gone)
-      if (live.length > MOST) live[0].gone = true
+      if (live.length > MOST) live.reduce((a, c) => c.id < a.id ? c : a).gone = true
     }
 
     function onScreen (c) {
