@@ -15,6 +15,29 @@ test('remotes: https, ssh and scp forms map to the forge on https', () => {
   assert.deepStrictEqual(pick(parseRemote('https://git.example.org:8443/o/r/')), ['gitea', 'https://git.example.org:8443/o/r'])
 })
 
+test('remotes: a host spelled as a non-canonical IPv4 address is refused (#210)', () => {
+  // Node 24.22.0's checkServerIdentity misjudges these spellings
+  // (CVE-2026-106069, CVE-2026-106072): the scp-like form and ssh:// and
+  // git:// URLs pass them through unchanged.
+  const odd = ['0x7f.0.0.1', '0177.0.0.1', '0127.0.0.1', '2130706433', '127.1', '127.0.0.1.', '256.0.0.1', '127.0.0.0x1']
+  for (const h of odd) {
+    assert.strictEqual(parseRemote(`git@${h}:o/r.git`), null, `scp ${h}`)
+    assert.strictEqual(parseRemote(`ssh://git@${h}/o/r.git`), null, `ssh ${h}`)
+    assert.strictEqual(parseRemote(`git://${h}/o/r.git`), null, `git ${h}`)
+  }
+  // Fullwidth digits (CVE-2026-105483): ssh:// percent-encodes them.
+  assert.strictEqual(parseRemote('ssh://git@\uff11\uff12\uff17.0.0.1/o/r.git'), null)
+  // https:// canonicalizes the host before it is used.
+  assert.deepStrictEqual(pick(parseRemote('https://0x7f.0.0.1/o/r')), ['gitea', 'https://127.0.0.1/o/r'])
+  assert.deepStrictEqual(pick(parseRemote('https://\uff11\uff12\uff17.0.0.1/o/r')), ['gitea', 'https://127.0.0.1/o/r'])
+  // Canonical IPv4, IPv6 and names whose labels hold digits still parse.
+  assert.deepStrictEqual(pick(parseRemote('git@192.168.1.10:o/r.git')), ['gitea', 'https://192.168.1.10/o/r'])
+  assert.deepStrictEqual(pick(parseRemote('ssh://git@10.0.0.1:2222/o/r.git')), ['gitea', 'https://10.0.0.1/o/r'])
+  assert.deepStrictEqual(pick(parseRemote('ssh://git@[::1]/o/r.git')), ['gitea', 'https://[::1]/o/r'])
+  assert.deepStrictEqual(pick(parseRemote('git@git2.example.org:o/r.git')), ['gitea', 'https://git2.example.org/o/r'])
+  assert.deepStrictEqual(pick(parseRemote('git@0x7f.example.org:o/r.git')), ['gitea', 'https://0x7f.example.org/o/r'])
+})
+
 test('remotes: a user or password in the URL is dropped', () => {
   const r = parseRemote('https://me:secret-token@git.example.org/o/r.git')
   assert.strictEqual(r.key, 'https://git.example.org/o/r')

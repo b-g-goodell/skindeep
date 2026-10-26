@@ -4,7 +4,7 @@
 # Electron's stderr goes to a per-launch log.
 
 usage() {
-  echo "usage: skinned [--skin NAME|PATH] [--statusline=always|chain-only] [--no-viz] [--mute] -- CMD [ARGS...]" >&2
+  echo "usage: skinned [--skin NAME|PATH] [--statusline=always|chain-only] [--no-viz] [--mute] [--unsafe-no-sandbox] -- CMD [ARGS...]" >&2
   exit 125
 }
 
@@ -18,18 +18,41 @@ fi
 
 # Check the app's own options here, so a typo fails before any window.
 found=
+unsafe=
+[ "${SKINNED_UNSAFE_NO_SANDBOX:-}" = 1 ] && unsafe=1
 for a in "$@"; do
   case "$a" in
     --) found=1; break ;;
+    --unsafe-no-sandbox) unsafe=1 ;;
     --skin|--skin=*|--statusline=always|--statusline=chain-only|--no-viz|--mute) ;;
     -*) echo "skinned: unknown option $a" >&2; usage ;;
   esac
 done
 [ -n "$found" ] || usage
 
+# Chromium's sandbox confines every page the app renders (decision
+# 0001). Where it cannot start, refuse rather than run without it,
+# unless the caller asked for that by name. sandbox_env points Chromium
+# at the root-owned setuid helper, where install.sh made one.
+. "$repo/scripts/sandbox.sh"
+sandbox_env "$electron"
+if [ -z "$unsafe" ] && ! sandbox_starts "$electron"; then
+  echo "skinned: Chromium's sandbox does not start for $electron" >&2
+  echo "skinned: run $repo/install.sh once: it installs, with sudo, what the sandbox needs on this system" >&2
+  echo "skinned: --unsafe-no-sandbox or SKINNED_UNSAFE_NO_SANDBOX=1 runs without it, and a bug in any page it renders then runs with all your rights" >&2
+  exit 125
+fi
+
+# The log dir and the log are the user's alone: umask 077 for them, and
+# a chmod for a dir an earlier launch left group- or world-readable,
+# which closes the older logs inside it as well. The subshell keeps the
+# umask from Electron and the CLI, whose files keep the caller's modes.
 logdir="${XDG_STATE_HOME:-$HOME/.local/state}/claude-skins"
-mkdir -p "$logdir" || exit 125
 log="$logdir/$(date +%Y%m%d-%H%M%S)-$$.log"
+if ! (umask 077 && mkdir -p -m 700 "$logdir" && chmod 700 "$logdir" && : >>"$log"); then
+  echo "skinned: cannot make $logdir private to you, or the log in it" >&2
+  exit 125
+fi
 
 # Chromium writes into its user data dir while it shuts down, so the
 # runtime dir is removed here, after Electron has exited.
@@ -44,7 +67,7 @@ export SKINNED_RUNTIME_DIR="$rundir"
 # trap only keeps this shell alive to clean up after it.
 trap : INT TERM HUP
 exec 3>&2
-"$electron" --no-sandbox "$repo" "$@" 2>>"$log"
+"$electron" ${unsafe:+--no-sandbox} "$repo" "$@" 2>>"$log"
 code=$?
 exec 3>&-
 rm -rf "$rundir"

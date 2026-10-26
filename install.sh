@@ -3,8 +3,8 @@
 # write three commands into BINDIR (default ~/.local/bin): claude-skins,
 # codex-skins and skinned. Outside this checkout it writes only those,
 # plus the download caches of npm (~/.npm) and Electron
-# (~/.cache/electron). Run again after a pull or a move. ./uninstall.sh
-# removes the commands.
+# (~/.cache/electron), and, with sudo, what Chromium's sandbox needs.
+# Run again after a pull or a move. ./uninstall.sh removes the commands.
 set -eu
 
 repo=$(cd "$(dirname "$0")" && pwd -P)
@@ -109,3 +109,36 @@ case ":$PATH:" in
   *":$bin:"*) ;;
   *) echo "install: $bin is not on PATH, add it to run the commands by name" >&2 ;;
 esac
+
+# Chromium's sandbox (decision 0001). bin/skinned refuses to start
+# Electron without it. It needs user namespaces, which AppArmor grants
+# only to profiled binaries where it restricts them, or else a
+# chrome-sandbox setuid root. Either takes root once, by one sudo whose
+# input arrives on stdin, so root opens no path the user can write. The
+# probe makes a rerun a no-op, and after npm ci or an Electron download
+# has put chrome-sandbox back beside Electron, removes it again.
+. "$repo/scripts/sandbox.sh"
+electron=$(readlink -f "$repo/node_modules/electron/dist/electron")
+sandbox_env "$electron"
+if sandbox_starts "$electron"; then
+  echo "install: Chromium's sandbox starts"
+  exit 0
+fi
+
+SANDBOX_TTY=
+[ ! -t 0 ] || SANDBOX_TTY=1
+case $(sandbox_route) in
+  apparmor)
+    old=$(sed -n 's/^profile [^ ]* "\(.*\)" flags=.*/\1/p' "$SANDBOX_PROFILE_FILE" 2>/dev/null) || old=
+    [ -z "$old" ] || [ "$old" = "$electron" ] ||
+      echo "install: this replaces the profile $SANDBOX_PROFILE for $old, whose launches will then be refused" >&2
+    sandbox_apparmor "$electron" || exit 1
+    ;;
+  setuid)
+    sandbox_setuid "$electron" || exit 1
+    sandbox_env "$electron"
+    ;;
+esac
+sandbox_starts "$electron" ||
+  fail "Chromium's sandbox still does not start for $electron. skinned --unsafe-no-sandbox runs without it, and a bug in any page it renders then runs with all your rights"
+echo "install: Chromium's sandbox starts"
