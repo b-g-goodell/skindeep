@@ -29,7 +29,10 @@ for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
 particles of various wavelengths interacting instead of just one
 particle of one wavelength, and procedurally generated walls of
-potential instead of always using the same 2 apertures").
+potential instead of always using the same 2 apertures"), and
+2026-10-22 for the Savannah hunt mode and the flocking core it shares
+with the flocking modes to come (issue #186), for the Murmuration
+mode (issue #187), and for the Sunset clouds mode (issue #189).
 
 ## Context
 
@@ -66,7 +69,7 @@ butterchurn-presets is MIT for its conversion only.
   shell, web, agent, other), a sweep on prompt submit and on stop, a low
   drone while idle, brightness from `tokens.out_rate`. Every mode draws
   from it.
-- Modes: seventeen, listed once in `app/viz/modes.js`, which the main process
+- Modes: twenty-one, listed once in `app/viz/modes.js`, which the main process
   and the page both load, in the order they cycle and the menu lists
   them:
   - Drift, Rings, Plasma, Star dust and Whirlpool: butterchurn presets
@@ -83,7 +86,8 @@ butterchurn-presets is MIT for its conversion only.
     ported from its BSD source with its license in the file: three
     examples of the Superscope's built-in list over a fade, and the Dot
     Plane in its default colours.
-  - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum and Carbon: the project's
+  - Fern, Go, Zoom out, Gravity, Gravity 3D, Quantum, Carbon, Savannah
+    hunt, Murmuration and Sunset clouds: the project's
     procedural modes, one file each, no image or video. Each reacts to
     its pane's events, a prompt, a tool call in its class's colour, a
     stop, a subagent, and calms at idle. Fern: a night garden of fronds,
@@ -113,7 +117,21 @@ butterchurn-presets is MIT for its conversion only.
     field from the session excites and that jumps by Monte Carlo at
     NIST's rates, one atom's cloud drawn in three dimensions, every
     jump's front crossing the pane, beside the level diagram and the
-    spectrum (see 2026-10-15: Carbon). With the sound output alone,
+    spectrum (see 2026-10-15: Carbon). Savannah hunt: a herd of
+    wildebeest and zebra on a dry plain, seen from a helicopter, run
+    down by a cheetah, a pride of lions or a pack of wild dogs, the herd
+    and the predators steered by the flocking core `app/viz/flock.js`
+    (see 2026-10-22: Savannah hunt). Murmuration: a murmuration of
+    starlings over a clearing in a forest, seen from the forest floor
+    looking up through the canopy, folding and turning as falcons dive
+    at it, by the same core in three dimensions (see 2026-10-22:
+    Murmuration). Bait ball: a school of sardines in open water, seen
+    by a scuba diver below it, packing into a ball, splitting and
+    reforming as dolphins, a shark, sailfish and gannets hunt it, by
+    the same core (see 2026-10-22: Bait ball).
+    Sunset clouds: cumulus over the plains of the US Southwest as the sun sets, in watercolour after
+    Georgia O'Keeffe, each cloud a volume lit through by the low sun
+    (see 2026-10-22: Sunset clouds). With the sound output alone,
     which brings no events, a rise of its loudness counts as one.
 - Each pane's mode belongs to the main process. The space bar steps the
   active tab's pane: the main process reads it from the window's input
@@ -161,6 +179,21 @@ butterchurn-presets is MIT for its conversion only.
     surprise.
   - Fern: a click curls the fronds near it, which unroll again, and
     gold spores rise from it.
+  - Savannah hunt: a drag moves the helicopter over the plain, and it
+    drifts back to the herd after the release. A click: a cheetah
+    breaks cover where it lands and sprints at the nearest animal (see
+    2026-10-22: Savannah hunt).
+  - Murmuration: a drag holds a hawk's lure under the pointer, at the
+    flock's distance, and the starlings shy from it, a hole following
+    the pointer through the flock. A click: a peregrine stoops on the
+    bird nearest it (see 2026-10-22: Murmuration).
+  - Bait ball: a drag turns the diver's gaze, which eases back to the
+    school after the release. A click: a shark cuts through the school
+    at the fish nearest it (see 2026-10-22: Bait ball).
+  - Sunset clouds: a drag blows the clouds under it along, and they
+    keep a little way on after the release. A click in the sky raises
+    a cloud there, a click on the land drops clean water on it (see
+    2026-10-22: Sunset clouds).
   - Every other mode, the five butterchurn presets, Scope, the two
     analyzers, Superscope and Dot plane, has no method of its own: a
     press adds a short tone to the pane's signal, its pitch on the
@@ -219,7 +252,7 @@ page reads it, and nothing of it needs to reach the main process. A
 click that stepped the mode would take the click from the modes. The
 pointer's tone, for the modes that only draw the signal, makes each of
 them answer with no code of its own, and it is kept out of the events
-so a procedural mode never takes it for one. A flyout keeps the drop-down short: seventeen more
+so a procedural mode never takes it for one. A flyout keeps the drop-down short: twenty-one more
 rows would run past the bottom of a window at its minimum height.
 The procedural modes are Canvas2D, as the Winamp ports are: they need no
 WebGL context, so they never count against the eight, and every one
@@ -2172,3 +2205,621 @@ Rejected:
   10 to 11 a second against the seethe's 3 to 4.
 - Particles of the moving electron alone, the rest stippled: the issue
   asks every particle a trajectory.
+
+## 2026-10-22: Savannah hunt
+
+Owner, 2026-10-22: "file 3 issues for new visualizers based on
+flocking behavior with individual and small groups of predators giong
+after large groups of prey". Issue #186 is the first of the three, a
+predator hunt on an open plain seen from a helicopter. #187
+(Murmuration) and #188 (Bait ball) are the others. The design is the
+builder's.
+
+### The flocking core
+
+`app/viz/flock.js` is a module of its own, loaded by the page before
+the flocking modes and by the tests, and it draws nothing. Its
+interface: `new Flock({ dim, cap, params, rnd })`, `add`, `remove`,
+`hunter(o)` for a predator, `pick(q, how)`, `centre()`, and
+`step(dt)`, which returns the prey taken. `dim` is 2 for a plane, where
+z stays 0, or 3 for space, for the Murmuration's sky and the Bait
+ball's water. `rnd` takes a seeded generator, mulberry32 as
+`quantum.js` has it. The parameters the Murmuration added are off by
+default, so a flock that sets none moves as before, bit for bit (see
+2026-10-22: Murmuration).
+
+- Each prey steers by separation, alignment and cohesion with its
+  neighbours (Reynolds, "Flocks, Herds, and Schools", SIGGRAPH 1987),
+  each term a steer capped at length 1 and weighted, the sum scaled to
+  the steering limit and capped there. The neighbours are by distance,
+  every prey within $r$ up to 24, or by rank, the nearest $k$ within
+  $r$, which the Murmuration needs (Ballerini et al., PNAS 105, 2008).
+  Both are found on a hashed grid, rebuilt each step, the rank rule
+  searching ring by ring until no farther ring can hold a nearer prey.
+- Fear, in $[0, 1]$ for each prey, moves it from its resting rule to
+  its flight rule. A predator within sight, $55$ m for the herd, raises
+  it to $0.55 + 0.45\,t$, $t$ falling from 1 at the predator to 0 at
+  the sight's edge. A prey takes up $0.88$ of its most afraid
+  neighbour's fear at a rate of 4 a second, so alarm runs across the
+  herd ahead of the predator, and fear fades by $0.18$ a second. With
+  fear $f$ the top speed runs from the resting $0.8$ m/s to the
+  flight's $16$, the steering limit from 3 to 26 m/s$^2$, alignment is
+  weighted $1 + 3f$ and cohesion $1 + 2f$, the distance kept from a
+  neighbour shrinks to $1 - 0.45f$ of its $5$ m, and above $f = 0.2$ a
+  prey steers to a place behind its nearest neighbour ahead, within 45
+  degrees of its heading. So a herd that grazes loose bunches at a
+  threat and streams in file in flight.
+- Flight from every predator in sight: away from it, turned toward the
+  side of the predator's run by $0.7$, so a dash into the group splits
+  it and the halves flow past and close behind (the fountain effect of
+  fish schools).
+- At rest a slow random steer, a drift the mode sets, and a pull to the
+  centre of all the prey past the radius of the whole group at rest,
+  $0.4 \cdot sep \cdot \sqrt{n}$, so split groups trot back and rejoin.
+  A prey that runs hard tires after `endurance` seconds and has lost
+  `tire` of its top speed after twice that, which the herd sets to 20 s
+  and 0.4 and the core leaves off.
+- Each predator, a plain object the mode extends, picks a target by
+  `pick`: `'straggler'`, the prey most alone and farthest from the
+  group's centre, the nearer ones first, `'edge'`, the nearest prey, or
+  `'middle'`, the prey nearest the centre of the group, a dash that
+  splits it. It reads the prey within its range, or within that range
+  of the nearest when none is. It pursues the target's place
+  $\min(1.5, d/v)$ seconds ahead at its top speed and steering limit,
+  or heads to a goal point when it has none, and takes the target
+  within its reach. One predator or a small group both use it.
+- `step(dt)` advances in substeps of at most 1/30 s, or the mode's
+  `substep`, so the motion is the same at any frame rate.
+- `test/viz-flock.test.js`, seeded, by distance and by rank: 120 prey
+  held 120 s with no predator stay one group, linked by steps under 14
+  m, their spread within 1.5 times the start's, in the plane and in
+  space. Every prey within a standing predator's sight is farther from
+  it 3 s later, by more than 10 m on average, while with no predator
+  the same prey move under 2 m from the point on average. A
+  predator at 24 m/s picking each of the three targets is nearer it at
+  every look until it takes it.
+
+### The mode
+
+`app/viz/savannah.js`, a Canvas2D mode as the others are.
+
+- The camera looks down at 60 degrees through a long lens, as wildlife
+  crews film from helicopters, so the view is near orthographic: the
+  ground foreshortened by $\sin 60$, heights by $\cos 60$, north up. It
+  follows the herd and the hunters near it, eased over 1.6 s, and
+  scales to frame them over 2.5 s, from 0.5 to 10 pixels a metre. The
+  helicopter sways by a pixel or two.
+- The herd: 180 animals, a fifth of them zebra, the rest wildebeest in
+  two shades, each a body and a head, the head down at a grazing pace,
+  legs that swing with the distance run when the view is near enough,
+  and a long shadow. A grazing animal faces its own way, the core's
+  random steer, and a running one where it runs. A thinned herd is
+  made up by stragglers walking in from behind it while no predator
+  runs.
+- The ground: dry grass from a tile at 24 m and paler and darker
+  patches from a tile at 600 m, three families of winding game trails
+  repeated across the plain, acacias and bush from a seeded hash of 70
+  m cells, every shadow cast by a sun 15 degrees high, and dust kicked
+  up where the animals run faster than 7 m/s, drifting on the wind.
+  The grass, the trails and the trees' shadows are painted at the
+  view's scale on a canvas with a margin of a quarter of the pane's
+  larger side and blitted each frame, painted again only when the view
+  leaves it or the scale or the shadows change by 3 percent. The haze, the dusk and
+  the vignette are one overlay, painted again when the dusk changes.
+- The hunts, each predator a phase of its plan:
+  - A cheetah (29 m/s, 14 s of sprint) stalks a straggler at 5 m/s,
+    seen at 0.3 of the herd's sight, and sprints within 55 m or once
+    its target is afraid.
+  - A pride of three or four lions (19 m/s, 8 s) takes places around
+    the herd, at angles spread over 0.9 of the circle, and when all are
+    placed, or one is seen, charges: the first at the middle, the rest
+    at the edge.
+  - A pack of five or six wild dogs (18.5 m/s, 9 s) trots up openly at
+    8 m/s, then two run at a straggler while the rest follow at the
+    leaders' heels, and a leader spent hands its target to the freshest
+    dog behind it, for up to 75 s: the herd tires at 20 s and the pack
+    runs it down.
+  - A spent predator rests 12 s and leaves. A catch takes the animal
+    from the herd, leaves a carcass for 90 s, and keeps the hunt's
+    predators at it for 30 s. Two hunts run at most, a third starting
+    makes the oldest give up, and a hunt starts of its own every 60 to
+    90 s of the clock while the session works.
+
+| Signal | Savannah hunt |
+| --- | --- |
+| prompt | a hunt, in turn a cheetah, a pride of lions, a pack of wild dogs |
+| tool call | an animal startles, marked by a bracket in the class's colour, and its fear runs to its neighbours |
+| stop | every predator still closing in charges now |
+| subagent | one more predator joins the newest hunt, or a lone cheetah's hunt begins |
+| compaction | a stampede: the whole herd runs and its drift turns a quarter |
+| output event | an animal stots, kicking up dust |
+| bass | the herd's drift, 0.15 to 0.5 m/s, and with busy the clock, 0.8 to 1.2 times real time |
+| treble | the wind that carries the dust |
+| idle | the clock slows to a fifth, the sun sinks toward dusk and the shadows lengthen, every hunt rests |
+| drag | moves the helicopter over the plain, which drifts back to the herd |
+| click | a cheetah breaks cover there and sprints at the nearest animal |
+
+- Cost, under swiftshader on this host, by the method of
+  `vizcarbon.js`, each mode alone at full activity, median and p90 ms
+  a draw, at load average 44 to 49: at 400 by 380 Savannah hunt 3.3
+  and 5.7, Gravity 2.0, Quantum 3.0, Fern 2.9, Zoom out 5.3, Carbon
+  9.0, and at 1200 by 760 Savannah hunt 8.2 and 24.6, the p90 the
+  ground's repaints, Gravity 7.4, Quantum 7.5, Zoom out 21.6, Carbon
+  42.8. Painting the ground every frame cost 23 ms at 1200 by 760.
+  `vizmodes.js` ran three panes of Carbon, Savannah hunt and Fern at 5,
+  8, 8, 6.5 and 13 frames a second over its five rounds, median 8,
+  beside Fern, Go and Zoom out at median 8, Gravity, Gravity 3D and
+  Quantum at 6 and the butterchurn panes at 6.5, at load average 41 to
+  73, which sets the rate more than the mode.
+
+Rejected:
+
+- Perspective from the helicopter: the ground would need a projective
+  map, which Canvas2D cannot draw, and a long lens makes the view near
+  orthographic anyway.
+- A camera that turns with the run: the ground's canvas would be
+  painted again on every frame, at three times the cost.
+- A stop that ends the hunt: a session's turns are often seconds long,
+  so no hunt would reach its end.
+- Fear without a fade of its own, only from sight: the herd would calm
+  the moment a predator passed, and no alarm would run ahead of it.
+
+## 2026-10-22: Murmuration
+
+Issue #187, the second of the owner's three flocking modes (see
+2026-10-22: Savannah hunt): a murmuration of starlings answering
+falcons, seen from the ground at a clearing in a forest. The design is
+the builder's.
+
+### The core in space
+
+`app/viz/flock.js` as #186 left it ran a flock of 500 in space by rank
+at about 78 ms a simulated second, 70 percent of it in the neighbour
+search, too slow for thousands of starlings. The Murmuration adds five
+parameters, each off by default, so a flock that sets none moves as
+before, bit for bit: a seeded run of the Savannah's rule in the plane
+and of the rank rule in the plane and in space gives the same hash of
+positions, velocities and fears at the core of #186 and at this one.
+
+- `substep`: the longest substep, 1/30 s unless the mode sets it.
+- `relist`: the substeps between searches for each prey's neighbours.
+  Between them a prey keeps the neighbours it found and measures them
+  again, as a starling keeps track of its seven. Any add or remove
+  forces a search, since indices move.
+- `level`: in space, a steer to level flight, faded by fear, so a
+  flock stays a thin sheet, as the real ones are.
+- `gatherR`: the radius past which the rejoin pull acts, which the core
+  sizes for a group packed in the plane.
+- `push`: a steer per prey that the mode sets and the core adds as it
+  stands, the length its weight, for a wave of turning the mode
+  drives.
+
+With `substep` 1/20 s and `relist` 3, the Murmuration's 600 birds cost
+about 27 ms a simulated second on this host.
+
+### The mode
+
+`app/viz/murmuration.js`, a Canvas2D mode on a CPU canvas. Its
+simulation, the flock, the waves, the attacks and the clock, is a
+`world` with no canvas, which the tests run too.
+
+- The camera stands on the forest floor at the clearing's edge, the eye
+  1.7 m up, and looks north, up at 36 degrees, through a lens of focal
+  length 0.6 times the pane's longer side. Two trees on each side lean
+  in toward the zenith from the pane's edges, 9 to 20 m away, their
+  crowns and the boughs of the trees overhead framing the top corners,
+  and the treeline across the clearing, 80 to 140 m away in two hazier
+  ranks, the bottom. The sky over the clearing fills the rest. The
+  forest is painted once per pane size: the treeline and the trunks on
+  one still layer, the canopy in a layer per side, cropped to what it
+  covers, which the wind sways by up to 0.2 percent of the pane's
+  longer side in a calm and 0.7 at full treble.
+- The sky follows the local hour, from ten colours of its zenith and
+  horizon through the day, a glow low at the right in the morning and
+  at the left in the evening. The night is held at a deep twilight, so
+  the birds still show.
+- The flock: 600 birds, each following its nearest seven by rank
+  within 12 m (Ballerini et al., PNAS 105, 2008), at 10 m/s, never
+  under 8, keeping 1.8 m, held level by `level` 0.6, over a home 78 m
+  ahead and 46 m up. Each bird is drawn as ten starlings at fixed
+  places about it in its own frame, 6000 specks. A speck is a stroke
+  along the bird's wings, its darkness the share of the wings' area
+  that faces the eye: the bird's lift, up in level flight and tilted
+  into a turn by its acceleration across its heading, smoothed over
+  0.15 s. Seen from below, a level bird shows its whole underside and a
+  banked one its edge, so a wave of turning crosses the flock as a
+  band of changed shade, and a sheet seen edge on darkens. A speck
+  under a pixel and a half is a dot as faint as the bird is small.
+- Waves of turning: a front from a bird, at 20 m/s, turns each bird it
+  reaches about an axis near the vertical, for the same time each, by
+  the core's push, so a front crosses the whole shape and folds it. The
+  front reaches a bird when it has run as far as the bird stood from
+  its start, wherever the bird flies meanwhile: a band that turned each
+  bird for as long as the front held it turned birds flying with the
+  front three times as far as birds flying against it, and the flock
+  split in two. The flock turns home by a wave from its leading edge
+  when its centre strays 12 m from home across the ground and flies
+  outward, at most every 4 s, and a gentle steer of every bird alike
+  holds its height. The core's bounds, 45 m about home, are only a
+  backstop.
+- The falcons, each a phase of its plan:
+  - A peregrine circles 70 m above the flock, then stoops on the bird
+    nearest it at 38 m/s, seen at 1.6 times the flock's sight of 12 m.
+    Within 25 m of its bird it slows to chase through the flock at 21
+    m/s, and the birds within sight open a hole about it, burst away
+    from it in a flash expansion, and the flock turns away from it in a
+    wave from its bird. Past its bird, or after 5 s, it climbs for
+    another pass, three at most, and leaves.
+  - A sparrowhawk dashes in low from the trees across the clearing at
+    a straggler at 17 m/s, for two passes.
+  - A pair of peregrines circles and stoops, one on the edge, one
+    through the middle, which splits the flock.
+  - A catch is carried off. Starlings fly in from the trees in parties
+    of three to six while no falcon dives, until the flock is whole.
+    Two attacks run at most, a third sending the oldest off, and an
+    attack starts of its own every 45 to 75 s of the clock while the
+    session works.
+
+| Signal | Murmuration |
+| --- | --- |
+| prompt | an attack, in turn a peregrine, a sparrowhawk, a pair of peregrines |
+| tool call | a wave of turning across the flock from a bird marked by a ring in the class's colour |
+| stop | every falcon circling or climbing stoops now |
+| subagent | one more falcon joins the newest attack, or a lone peregrine's begins |
+| compaction | the flock turns about, a wave from its leading edge |
+| output event | a ripple: a short turn among the birds within 14 m of one |
+| bass | with busy, the clock, 0.8 to 1.2 times real time |
+| treble | the wind that sways the canopy |
+| idle | the clock slows to a fifth, the flock settles 18 m lower toward the roost, the sky darkens toward dusk, the falcons leave and no attack starts |
+| drag | holds a hawk's lure under the pointer, at the flock's distance, and the starlings shy from it |
+| click | a peregrine stoops on the bird nearest the click |
+
+- `test/viz-murmuration.test.js`, seeded, under the mode's rule: the
+  mode's world, with no falcon, keeps its flock one group, linked by
+  steps under 6 m, but for three birds at most, within 35 m of home and
+  a spread under 30 m, for 60 s, wheeled by at least five of its waves.
+  Birds within a falcon's sight are farther from it 0.6 s later than
+  with no falcon, by more than 2 m on average. A falcon picking by
+  edge, middle or straggler is nearer its bird at every look until it
+  takes it. A push about the vertical on half the flock turns those
+  birds left.
+- Cost, each mode alone on a CPU canvas in an offscreen Electron page
+  under xvfb, at full activity, 240 draws of 1/60 s after 300 of
+  warm-up, as `vizcarbon.js` measures, median and p90 ms a draw, at
+  load average 11 to 12: at 400 by 380 Murmuration 4.1 and 5.6,
+  Savannah hunt 2.0 and 2.2, and at 1200 by 760 Murmuration 12.6 and
+  15.1, Savannah hunt 6.5 and 9.0, under Zoom out's 21.6 and Carbon's
+  42.8 of the Savannah's figures. `vizmodes.js` ran three panes of
+  Carbon, Savannah hunt and Murmuration at 7, 8, 9.5, 11.5 and 8 frames
+  a second over its five rounds, median 8, as Carbon, Savannah hunt and
+  Fern ran for #186, beside Fern, Go and Zoom out at median 25, Gravity,
+  Gravity 3D and Quantum at 22.5 and the butterchurn panes at 19.5, at
+  load average 27 to 29.
+
+Rejected:
+
+- Every starling simulated: at about 45 microseconds a bird a
+  simulated second under this rule, 6000 birds would take a quarter of
+  every second of the clock, before any drawing.
+- A wave of turning from the core's fear alone: fear speeds and
+  tightens a flock but turns no bird, so no band would cross it.
+- A stoop through the flock at full speed: at 38 m/s the falcon crossed
+  the flock before a hole showed in the captures, so it slows to chase
+  within 25 m.
+- Falcons at their true size: a peregrine 80 m off is a few pixels,
+  lost among the starlings, so a falcon is drawn at least 16 px across.
+- A camera that turns to follow the flock: the forest's layers, some
+  thousands of leaves, would be painted again on every move. The flock
+  turns home instead.
+
+## 2026-10-22: Bait ball
+
+Issue #188, the third of the owner's three flocking modes (see
+2026-10-22: Savannah hunt): ocean predators hunting a school, seen by a
+scuba diver in open water. The design is the builder's.
+
+### The core
+
+`app/viz/flock.js` is unchanged. The two things the school needs that
+the core lacks, the sea's surface and the packing of a bait ball, are
+the mode's, both through the core's per-prey `push` (see 2026-10-22:
+Murmuration). The core's `bounds` are a sphere and have no plane, so
+within 2 m of the surface each fish is steered down, up to a weight of
+1.5, and after each substep no fish is above $z = -0.4$ m, its upward
+speed dropped. The seeded probe of the Savannah and the core's hashes
+under the Savannah's rule, by rank in the plane and in space, are the
+same at the base 2e51f54 and with the mode.
+
+### The mode
+
+`app/viz/baitball.js`, a Canvas2D mode on a CPU canvas. Its
+simulation, the school, its waves of turning, the attacks and the
+clock, is a `world` with no canvas, which the tests run too.
+
+- The camera: the diver's eye is 14 m down, the lens's focal length
+  0.6 times the pane's longer side. The diver stays in place, bobbing
+  0.07 m with each breath, every 5 s, 7 at idle, and lets out a stream
+  of bubbles that rise past the lens on each breath out. The gaze turns
+  toward the school's centre over 2 s, looking out and up by 0.1 to
+  0.42 rad, so the school stays in view as it wanders and as predators
+  drive it up. Nothing is painted in world space, so the turn costs
+  nothing.
+- The water: a gradient by each row's elevation, navy below, blue
+  level, brighter toward the surface, and Snell's window, a bright disc
+  about the zenith whose edge stands $\arcsin(1/1.333)$, 48.6 degrees,
+  from it, deep blue at dusk. The surface's waves are a height field
+  $h$ of six waves on an 8 m tile, and the light they focus below,
+  the caustics, is $1/|\det(I + D \nabla^2 h)|$ on a 64 by 64 tile,
+  computed each draw. It is laid on the surface's underside in
+  perspective, strip by strip, fading with the distance to it, plays on
+  the fish's light and on the backs of predators within 20 m. Ten light
+  shafts fall from the surface along the sun's refracted ray, 42 m
+  long, fading down and flickering with the waves. The gradient, the
+  window, the caustics and the shafts are drawn on a canvas of half the
+  pane's size and scaled up. Snow drifts near the lens and turns with
+  the gaze.
+- Depth: every fish and predator is mixed toward the water's colour
+  along its ray by $1 - e^{-d/24}$, $d$ its distance in metres. The fish
+  are drawn in five bands of distance, the two beyond 23 m on a canvas
+  of half the pane's size, scaled up, so far fish are softer than near
+  ones, within the box they fill.
+- The school: 700 fish, each following its nearest seven by rank
+  within 4 m, at 1.2 m/s, bursting to 4, keeping 0.9 m, held level by
+  `level` 0.5, about a home 15 m ahead and 7 m down, on a course that
+  wanders and turns home past 4 m. The core's bounds, 10 m about home,
+  are a backstop. A predator is seen at 8 m and fear is passed on at
+  0.3, so a hole opens about a predator without alarming the whole
+  school (Murmuration's finding), and flight weighs 1.4. Each fish is
+  drawn as four sardines at fixed places about it in its own frame,
+  2800 fish, a stroke as long and deep as a sardine, or within 11 m a
+  spindle with a forked tail. A fish rolls into a turn by its
+  acceleration across its heading, smoothed over 0.15 s, and its silver
+  flank flashes as it mirrors the light from above to the eye: the
+  light is $|n \cdot \hat h|^5$, $n$ the flank's normal and $\hat h$
+  half way between the eye and the light, in five levels from the dark
+  back to the silver flash. So a wave of turning crosses the school as
+  a flash.
+- The bait ball: while predators hunt within 18 m of the school, a
+  level $p$ rises over 1.5 s to $0.45$ a predator, at most 1, and each
+  fish is steered to the school's centre with weight
+  $2.5p \min(1, (d - 1)/3)$, $d$ its distance from it past 1 m, and
+  round it, milling about the vertical at 1.8 m/s, with weight $1.2p$,
+  as each fish seeks the middle of a selfish herd (Hamilton, J. Theor.
+  Biol. 31, 1971). Packed, the fish cruise up to 1.2 m/s faster and
+  steer 10 m/s$^2$ harder, so a ball split by a dash closes again in a
+  second or two. In seeded runs of 40 s a pod packs the school from a
+  median distance of 4.4 to 4.7 m from its centre at rest to 1.7 to 2.3
+  m.
+- The attacks, each predator a phase of its plan, circling the ball
+  and then dashing at it, seen at half the school's sight while it
+  circles:
+  - A pod of three to five dolphins (2.3 m, 9 m/s in the dash, 7 within
+    6 m of its fish) circles 4 m outside the ball and 3.5 m below it,
+    driving it up against the surface, and dashes at the middle and the
+    edge in turn, four passes each.
+  - A shark (2.8 m, 8 m/s, 6 within 6 m) circles 7 m out and cuts
+    through the middle, three passes.
+  - Two or three sailfish (3 m with the bill, 12 m/s, 8 within 5 m)
+    slash at the edge, the sail raised and the bars lit in the dash,
+    four passes each.
+  - A volley of four to seven gannets enters the water over the school
+    0.4 to 1.2 s apart at 13 m/s, a burst of bubbles and a trail behind
+    each, slows by 5 m/s$^2$, takes the nearest fish within 6 m if it
+    can, and floats up after 2.2 s.
+  - The predators of an attack dash one at a time, 1.5 to 3 s apart,
+    so the school packs again between dashes. A kill leaves a puff of
+    scales. Fish swim in from the blue in schools of 8 to 12 while no
+    predator dashes, until the school is whole. Two attacks run at
+    most, a third sending the oldest away, and an attack starts of its
+    own every 40 to 70 s of the clock while the session works.
+
+| Signal | Bait ball |
+| --- | --- |
+| prompt | an attack, in turn a pod of dolphins, a shark, sailfish, a volley of gannets |
+| tool call | a fish startles, marked by a ring in the class's colour, and a wave of turning flashes across the school from it |
+| stop | every predator circling dashes now |
+| subagent | one more predator joins the newest attack, three more gannets its volley, or a lone shark's attack begins |
+| compaction | the school balls up for 12 s, and a wave of turning crosses it from its leading edge |
+| output event | a glint: a short turn among the fish within 3 m of one |
+| bass | with busy, the clock, 0.8 to 1.2 times real time |
+| treble | the surface's chop: the caustics' speed and the shafts' flicker |
+| idle | the clock slows to a fifth, the light fades toward dusk, the school sinks 3 m, the predators leave and no attack starts |
+| drag | turns the diver's gaze, which eases back to the school 1.5 s after the release |
+| click | a shark cuts through the school at the fish nearest the click |
+
+- `test/viz-baitball.test.js`, seeded, under the mode's rule: the
+  mode's world, with no predator, keeps its school one group, linked by
+  steps under 2 m, but for three fish at most, within 12 m of home
+  across the water and 4 m in depth, its spread under 7 m, for 60 s.
+  Fish within a predator's sight are farther from it 1 s later than
+  with no predator, by more than 1.5 m on average. A predator picking
+  by edge, middle or straggler is nearer its fish at every look until
+  it takes it. A pod of dolphins packs the school to under 0.6 of its
+  resting median spread within 40 s, and no fish rises past the
+  surface.
+- Cost, each mode alone on a CPU canvas in an offscreen Electron page
+  under xvfb, at full activity, 240 draws of 1/60 s after 300 of
+  warm-up, as `vizcarbon.js` measures, median and p90 ms a draw, at
+  load average 27 to 30: at 400 by 380 Bait ball 8.3 and 11.9,
+  Murmuration 5.7 and 7.4, Savannah hunt 3.0 and 4.3, and at 1200 by
+  760 Bait ball 19.4 and 23.1, Murmuration 18.2 and 21.4, Savannah hunt
+  8.1 and 11.1. `vizmodes.js` ran
+  three panes of Bait ball, Fern and Go at 7.5, 13.5, 12.5, 13.5 and
+  13.5 frames a second over its five rounds, median 13.5, beside Fern,
+  Go and Zoom out at median 14, Gravity, Gravity 3D and Quantum at 17,
+  Carbon, Savannah hunt and Murmuration at 6.5 and the butterchurn
+  panes at 14, at load average 28 to 30.
+
+Rejected:
+
+- A plane in the core's bounds for the surface: the mode's push and a
+  hold after each substep do it, and the core, the Savannah and the
+  Murmuration stay as they were, bit for bit.
+- Packing by a pull to the centre alone, of weight 0.9: each dash blew
+  the school to as much as 2.4 times its resting median spread and it
+  never packed, its afraid fish running at their flight speed. The
+  milling steer, the stronger pull and the faster packed fish make the
+  ball.
+- Predators dashing whenever ready: a pod kept the school in flight,
+  and no ball formed between dashes.
+- A gaze held still: the school, wandering and driven up to the
+  surface, left the frame.
+- A vignette over the pane: a full-pane composite each draw for a
+  diving mask's dark corners.
+- The water at full size: its gradient, window, caustics and shafts
+  cost 7.7 ms a draw at 1200 by 760 over the half-size canvas, for
+  detail too smooth to show.
+- The caustics at full strength on the surface: the underside read as
+  a tiled ceiling over half the pane.
+
+## 2026-10-22: Sunset clouds
+
+Owner, 2026-10-22: "a new visualizer: volumetric watercolor clouds at
+sunset over the US southwest plains ala georgia o'keefe". Issue #189.
+The method, the signal's mapping and the pointer's are the builder's.
+
+### The scene
+
+`app/viz/sunset.js`, a Canvas2D mode as the others are, drawn on a
+canvas of the CPU and blitted to the pane once a frame.
+
+- The view: a level camera on the plains, 76 degrees across, its
+  horizon at 0.76 of the pane's height by a shifted principal point, so
+  the sky takes three quarters of the pane and verticals stay upright.
+  The sun stands 14 to 28 degrees to one side of the view's axis, the
+  side drawn for each sunset, and is drawn large, 2.8 degrees across,
+  as a painter makes it.
+- A sunset is 300 s of the clock, the sun sinking from 10 degrees to 7
+  below. A launch starts it somewhere in its first half. The light is
+  a table of eight keys by the sun's elevation: the sun's colour and
+  strength, the zenith, the horizon under the sun and away from it.
+  The clouds' sky light and the land's warm bounce are mixed from
+  those. When the sun reaches 7 below, a new sunset, with its own side,
+  land and clouds, fades in over the old in 5 s.
+- The clouds: 11 kept, 18 at most, each a base row of two to four
+  flattened ovoids and up to four rounder crowns, 1.5 to 4 km wide,
+  their flat bases near 1900 m, 2.6 to 40 km off. They drift across the
+  view on the wind, so the near ones pass large overhead and the far
+  ones lie in rows along the horizon. A thinned sky forms a new cloud
+  every 2 to 4 s, growing from 0.15 of its size, and a crowded one
+  thins its oldest cloud of more than a minute every 3 to 6 s, so the
+  sky returns to its calm.
+- The land: six bands far to near, a distant range, one to three
+  flat-topped mesas, a pale plain and three rolling bands of earth,
+  each a pigment lit by its share of sunlight and by the sky, and
+  hazed toward the horizon's colour by its distance.
+
+### The volume
+
+Each cloud is a volume marched on its own. The issue named three
+methods: a low-resolution march blurred up, a few layered slabs, and
+2D shapes shaded as volumes. This is the first, done per cloud rather
+than per pane.
+
+- A cloud's sprite lies in the plane at the cloud's depth, a sprite
+  pixel $s = \max(1.5, W/480)$ screen pixels, and the march samples it
+  every two sprite pixels, along the view ray to the cloud's middle:
+  12 steps across the span of the blobs the ray meets.
+- The density at a point is $D = \sum_i w_i (1 - q_i)^2$ over those
+  blobs, $q_i < 1$ the point's squared distance from blob $i$'s centre
+  in its radii, cut flat at the base, and the extinction is
+  $0.0042\,\mathrm{m}^{-1}$ times a smoothstep of $(D - 0.1)/0.4$.
+- From each step the optical depth toward the sun is
+  $0.011\,\mathrm{m}^{-1}$ times the integral of $1 - q_i$ along the
+  sun's ray through every blob, in closed form, the ray cut at the
+  base. The sun's light at the step is $e^{-\tau} + 0.2\,e^{-0.25\tau}$,
+  the second term the light scattered deeper in, times a phase of
+  Henyey-Greenstein's, $0.6$ of it at $g = 0.45$ and $0.4$ at
+  $g = -0.15$. So a cloud is bright on its sunward side, shadowed and
+  coloured within, and the thin edges of the clouds toward the sun
+  glow. The sky's light grows with height in the cloud, the ground's
+  bounce with depth below its top.
+- The earth's shadow: a cloud loses the sun once the sun is below the
+  cloud's own horizon, $\sqrt{2h/R}$ below the level, about 1.4
+  degrees at 2 km, so the bases glow pink just after sunset and the
+  clouds then go violet.
+- A march keeps the sun, sky and ground sums and the alpha of every
+  sample, so a change of the light's colour repaints a sprite without
+  a march. A cloud is marched again when the sun has moved a degree,
+  its size by a quarter or its shape, or the pane's width by 15
+  percent, and repainted when the sun has moved 0.15 degree. Marches
+  and repaints share 2.5 ms a frame, a march resuming row by row, the
+  clouds without a sprite first. The first frame marches for up to
+  60 ms, so the sky starts with its clouds: it took 154 ms in all at
+  1200 by 760 and 63 ms at 400 by 300, with the sky's and the land's
+  geometry.
+
+### The watercolour
+
+The pigment's density modulates a colour as Bousseau, Kaplan, Thollot
+and Sillion do ("Interactive watercolor rendering with temporal
+coherence and abstraction", NPAR 2006): $C' = C(1 - (1 - C)(d - 1))$,
+$d$ above 1 darkening.
+
+- Clouds: the march's alpha, interpolated to the sprite's resolution,
+  is moved by two octaves of noise fixed to the cloud and cut by a
+  smoothstep whose width a third noise sets, so an edge is wet and soft
+  in places and dry and hard in others. Pigment pools in a band just
+  inside the edge, less where it is wet.
+  Low noise makes the pigment uneven, and a hash granulates it, more
+  in the darker washes.
+- Sky: a graded wash from the horizon's colours to the zenith's with
+  the sun's glow on it, uneven pigment, granulation in the blue, and
+  two tide lines where one wash dried against the next.
+- Land: each band's wash pools along its top edge, lighter at its
+  crest and darker into its fold, uneven and granulated.
+- The sky and the land are painted small, 300 and 520 texels across,
+  when the sun has moved 0.12 degree and at most every 0.3 s of the
+  clock, then laid at the pane's size on a paper tile of tooth and
+  fibres, made once, by multiply. A frame blits them.
+- Drops on the paper: a pigment bloom with a ragged, darker rim, and
+  clean water's backrun, which lifts the wash and dries with a dark
+  rim.
+
+| Signal | Sunset clouds |
+| --- | --- |
+| prompt | a cloud billows up in the open sky, from 0.15 of its size |
+| tool call | a drop of pigment in the class's colour blooms on a cloud |
+| stop | the sun's rays break through, fanned behind the clouds, for a few seconds |
+| subagent | a cloudlet forms beside the newest cloud, at its depth, on its side toward the pane's centre, and held on the pane |
+| compaction | the smaller half of the clouds thin away and the rest grow by a fifth |
+| output event | a drop of clean water lands, its backrun drying with a dark rim |
+| bass | the wind, 8 to 38 m/s, and with busy the clock, 0.8 to 1.2 times real time |
+| idle | the clock slows to a fifth, the wind to 0.3, and the sun sinks up to 6 degrees more toward dusk |
+| drag | blows the clouds within 0.12 of the pane's width of it along, and they keep a little way on |
+| click | in the sky raises a cloud there, on the land drops clean water |
+
+- Cost, in an offscreen Electron page under xvfb on this host, by the
+  cost loop of `vizcarbon.js`, each mode alone at full activity, median
+  and p90 ms a draw, at load average 21 to 22: at 400 by 380 Sunset clouds 1.7
+  and 2.5, Savannah hunt 2.6 and 3.2, and at 1200 by 760 Sunset clouds
+  5.2 and 6.4, Savannah hunt 5.6 and 6.1. With idle rising over the
+  run, so the sun sinks and every cloud is marched and repainted
+  again, Sunset clouds took 1.4 and 5.6 at 400 by 380 and 4.5 and 6.9
+  at 1200 by 760, the p90 the marches' budget and the sky's and the
+  land's repaints.
+- `vizmodes.js` ran three panes of Carbon, Savannah hunt and Sunset
+  clouds at 13.5, 15.5, 14.5, 20.5 and 13.5 frames a second over its
+  five rounds, median 14.5, beside Fern, Go and Zoom out at median 17,
+  Gravity, Gravity 3D and Quantum at 16.5 and the butterchurn panes at
+  13, at load average 19 to 45, which sets the rate more than the mode.
+
+Rejected:
+
+- Layered slabs of 2D density with a light sweep across them: cheap and
+  near the same cost at any size, but a slab of noise makes a deck of
+  ragged cloud rather than O'Keeffe's few smooth rounded forms, and a
+  slab seen at a low angle has no side for the sun to light.
+- 2D shapes shaded as volumes, from a thickness map and its gradient:
+  no light passes through the cloud, so no shadow within and no glow
+  at a thin edge toward the sun.
+- A march for every pixel of the pane each frame: the clouds change
+  slowly, so a march per cloud, at a sample every few pixels and only
+  when the light or the cloud moves, does the same work far less often.
+- Drawing on the pane's own canvas, of the GPU: in the build, in the
+  same offscreen page, a draw returned in 0.1 ms, but with a read of
+  one pixel after it, which waits for the raster, it took 12 ms at 1200
+  by 760.
+- The paper multiplied over the whole pane every frame: 1.9 ms a frame
+  at 1200 by 760. It is laid on the sky and the land when they are
+  painted, and the clouds carry their own granulation.
