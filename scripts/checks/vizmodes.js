@@ -26,6 +26,13 @@
 // Before the phases, Gravity's and Gravity 3D's small panes report their
 // tight pair and three frames 0.5 s apart go to
 // OUT/<mode>-waves-small-<k>.png.
+// The waves as smoke (issue #183), in the full pane after the colour
+// field's frames and in the small panes after theirs: File, Settings,
+// Gravitational waves set to smoke as the menu sets it, the page told,
+// three frames 0.5 s apart to OUT/<mode>-smoke-<full|small>-<k>.png,
+// each drawing something and most of its lit cells grey, as the gas is
+// and the colour field is not, then the colour field again, most of its
+// lit cells not grey.
 // Gravity 3D's Doppler shift (issue #172), in its full pane and its
 // small one: a staged hole of 900 with a disc of 420 grains seen 0.15
 // rad above its plane, the frame to OUT/gravity3d-doppler-<size>.png.
@@ -77,6 +84,20 @@ function changed (a, b) {
   return n / (a.length / 4)
 }
 const peak = a => a.reduce((m, v, i) => i % 4 === 3 ? m : Math.max(m, v), 0)
+// The share of a grid's lit cells, its brightest channel past 30, that
+// are grey, their channels within a quarter of the brightest of each
+// other: the smoke's tint is within 0.12.
+function grey (a) {
+  let lit = 0
+  let n = 0
+  for (let i = 0; i < a.length; i += 4) {
+    const hi = Math.max(a[i], a[i + 1], a[i + 2])
+    if (hi <= 30) continue
+    lit++
+    if (hi - Math.min(a[i], a[i + 1], a[i + 2]) <= hi / 4) n++
+  }
+  return lit ? n / lit : 0
+}
 
 // Gravity 3D's spin (issue #173): pane k staged with the camera and the
 // hole of the Doppler shift's, the hole's own spin the seed's 0.35, idle
@@ -322,6 +343,35 @@ function centred (probe, where) {
   console.log('space', seen.join(' '))
   check(seen.join() === want.join(), 'space does not step through every mode')
 
+  // The waves as smoke in panes js, as File, Settings sets them, three
+  // frames, then the colour field again.
+  async function smoked (js, size) {
+    check((await win.evaluate(() => window.skinned.setSetting('viz.waves', 'smoke'))).ok, 'the settings refused viz.waves smoke')
+    await until(async () => (await state()).waves === 'smoke', 'the page never drew smoke')
+    await sleep(500)
+    const seen = js.map(() => [])
+    for (let k = 0; k < 3; k++) {
+      if (k) await sleep(500)
+      const xs = await viz.evaluate(grab)
+      for (const [n, j] of js.entries()) {
+        const id = (await state()).panes[j].mode
+        const x = xs[j]
+        check(peak(x.grid) > 40, `${id}: a blank ${size} pane in smoke`)
+        seen[n].push(Math.round(grey(x.grid) * 1000) / 1000)
+        fs.writeFileSync(path.join(out, `${id}-smoke-${size}-${k}.png`), Buffer.from(x.png.split(',')[1], 'base64'))
+      }
+    }
+    console.log('smoke', size, 'grey share of lit cells', JSON.stringify(seen))
+    for (const s of seen) check(s.every(g => g > 0.5), `the ${size} smoke is not grey`, seen)
+    check((await win.evaluate(() => window.skinned.setSetting('viz.waves', null))).ok, 'the settings refused viz.waves null')
+    await until(async () => (await state()).waves === 'colour', 'the page never drew the colour field again')
+    await sleep(500)
+    const xs = await viz.evaluate(grab)
+    const back = js.map(j => Math.round(grey(xs[j].grid) * 1000) / 1000)
+    console.log('colour again', size, 'grey share of lit cells', JSON.stringify(back))
+    check(back.every(g => g < 0.5), `the ${size} colour field came back grey`, back)
+  }
+
   // Gravity and Gravity 3D alone in a full pane: the seed's tight pair,
   // its waves at twice its orbital frequency, three frames.
   const vizWin = fn => app.evaluate(({ BrowserWindow }, f) => {
@@ -351,6 +401,7 @@ function centred (probe, where) {
       check(peak(x.grid) > 40, `${id}: a blank full pane`)
       fs.writeFileSync(path.join(out, `${id}-waves-full-${k}.png`), Buffer.from(x.png.split(',')[1], 'base64'))
     }
+    await smoked([0], 'full')
     if (id === 'gravity3d') {
       await spun(viz, 0, 'full')
       await doppler(viz, 0, 'full')
@@ -407,6 +458,7 @@ function centred (probe, where) {
   }
   const st = await state()
   console.log('small panes', JSON.stringify(small.map(j => [NEW[j], st.panes[j].w, st.panes[j].h, st.panes[j].probe.pair])))
+  await smoked(small, 'small')
   await spun(viz, g3, 'small')
   await doppler(viz, g3, 'small')
   await zoomed(viz, g3, 'small', state)
