@@ -5,7 +5,10 @@
 // One pane in Gravity 3D, fed by the fake claude, in a 1200 by 760
 // window and then a 360 by 230 one. First, in the full pane, a smoke
 // pass of the running mode for SMOKE ms judges no lensing: it reads the
-// slice audit of each frame and wants no page error. Every judged frame
+// slice audit of each frame and wants no page error, and every trail's
+// neighbouring places, and its last and its body, no farther apart than
+// APART beyond one step's travel at their speed (issue #193): a trail
+// kept once a frame drew a fast body's path as chords. Every judged frame
 // is of a scene the check stages and the mode holds still
 // (window.vizStage, gravity3d stage): no event, step or turn of the
 // camera moves it, and no other body, grain, flare or wave is in it.
@@ -77,6 +80,10 @@ function check (ok, msg, seen) {
 
 // The smoke pass's length, in ms.
 const SMOKE = 8000
+// The most a trail's neighbouring places may lie apart in the smoke pass
+// beyond one step's travel at their speed (probe trails.apart, issue
+// #193): 4 of travel between places and a merger's jump.
+const APART = 8
 // The least radius of the judged moon's disc, in pixels of the trace.
 const MIN_DISC = 1
 // The staged scene: the camera's turn, the central hole's mass, and the
@@ -253,12 +260,19 @@ function slices (probe, where) {
   await sleep(1500)
   const t0 = Date.now()
   let reads = 0
+  let apart = 0
+  let adv = 0
   while (Date.now() - t0 < SMOKE) {
-    slices((await pane()).probe, 'smoke')
+    const p = (await pane()).probe
+    slices(p, 'smoke')
+    check(p.trails, 'smoke: the probe reports no trail spacing', p)
+    apart = Math.max(apart, p.trails.apart)
+    adv = Math.max(adv, p.trails.adv)
+    check(p.trails.apart <= APART, 'smoke: a trail\'s places lie farther apart than its body\'s path allows', p.trails)
     reads++
     await sleep(250)
   }
-  console.log('smoke', `${reads} frames read`)
+  console.log('smoke', `${reads} frames read, trail places apart beyond a step's travel ${apart.toFixed(2)}, most time a frame ${adv.toFixed(2)}`)
 
   // A staged scene with item it judged, and its first judged frame.
   async function judge (where, item, hole, least) {

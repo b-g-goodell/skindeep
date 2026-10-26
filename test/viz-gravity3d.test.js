@@ -393,3 +393,41 @@ test('gravity3d: the gravitational shift of light from rest at r is sqrt(1 - r_s
   assert.strictEqual(g.lapse([h], 0.9 * RS, 0, 0), 0)
   assert.strictEqual(g.lapse([], 1, 2, 3), 1)
 })
+
+test('gravity3d: a trail kept every step follows a fast orbit, its places 4 of travel and one step apart at most', () => {
+  const h = hole()
+  const b = Object.assign(orbiter(h, 4, 1), { trail: [], tv: [], tt: 0 })
+  const bodies = [h, b]
+  const v = g.circular(h, 4 * RS)
+  let t = 0
+  for (let k = 0; k < 2000; k++) {
+    g.step(bodies, 0.25)
+    t += 0.25
+    g.track(b, t, h)
+  }
+  const tr = b.trail
+  assert.strictEqual(tr.length, 3 * 64)
+  for (let i = 3; i < tr.length; i += 3) {
+    const d = Math.hypot(tr[i] - tr[i - 3], tr[i + 1] - tr[i - 2], tr[i + 2] - tr[i - 1])
+    assert.ok(d <= 4 + 0.25 * v + 1e-9, `places ${d} apart at speed ${v}`)
+  }
+  assert.strictEqual(g.track(Object.assign({}, b, { star: true }), t + 10, h), false, 'a star keeps no trail')
+})
+
+test('gravity3d: a planet merged into a star leaves no trail on it, and two planets keep the larger\'s', () => {
+  const trail = [1, 2, 3, 4, 5, 6]
+  const planet = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: 5, r: 3, hue: 120, trail: trail.slice(), tv: [0, 0, 0, 0, 0, 0], tt: 0 }
+  const star = { x: 4, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: 100, r: 9, hue: 15, star: true, trail: [], tv: [], tt: 0 }
+  const bodies = [planet, star]
+  g.step(bodies, 0.01)
+  assert.strictEqual(bodies.length, 1)
+  assert.ok(bodies[0].star)
+  assert.deepStrictEqual(bodies[0].trail, [], 'the star keeps the planet\'s trail, drawn to it straight as it moves on')
+  const small = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: 2, r: 3, hue: 120, trail: [9, 9, 9], tv: [0, 0, 0], tt: 0 }
+  const large = { x: 4, y: 0, z: 0, vx: 0, vy: 0, vz: 0, m: 6, r: 3, hue: 200, trail: trail.slice(), tv: [0, 0, 0, 0, 0, 0], tt: 0 }
+  const two = [small, large]
+  g.step(two, 0.01)
+  assert.strictEqual(two.length, 1)
+  assert.deepStrictEqual(two[0].trail, trail)
+  assert.strictEqual(two[0].hue, 200)
+})

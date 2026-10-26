@@ -13,7 +13,8 @@
 // Each source's Iddot and place are kept against simulation time in a
 // ring buffer, read at the retarded time t_r = t - |x - X(t_r)| / c, and
 // its field fades within its near zone. The strain is drawn as tanh(GAIN
-// h) (shown): GAIN is the one exaggeration.
+// h) (shown): GAIN is the one exaggeration, which Gravity 3D lowers
+// where its sources are strong enough to saturate it (gain).
 
 ;(function (root) {
   const GAIN = 5000
@@ -507,8 +508,13 @@
   // colour at text size t: at its top right, clear of the drop-down's
   // button (layout.js: 4 px in, 150 by 20 at t = 1), else shorter, else
   // under the button.
-  const SAYS = [`gravitational waves, exaggerated x${GAIN}`, `waves exaggerated x${GAIN}`]
-  function label (g, w, t) {
+  // The label's gain, at two significant figures, so it does not flicker.
+  const says = k => {
+    const x = Number(k.toPrecision(2))
+    return [`gravitational waves, exaggerated x${x}`, `waves exaggerated x${x}`]
+  }
+  function label (g, w, t, k = GAIN) {
+    const SAYS = says(k)
     g.font = `${Math.round(11 * t)}px "DejaVu Sans Mono", monospace`
     g.fillStyle = 'rgba(200, 255, 220, 0.55)'
     g.textBaseline = 'top'
@@ -528,29 +534,44 @@
     g.textBaseline = 'alphabetic'
   }
 
-  // The strain as drawn, on a grid gw by gh of h into out: tanh(GAIN h /
-  // s), s the grid's local steepness, the largest step of GAIN h to a
-  // neighbour over 0.8, at least 1. Where a strong source's strain turns
-  // from + to - within a cell, the turn then spans a cell or so, not an
-  // edge that the blur up to the pane would draw as steps. Elsewhere s
-  // is 1.
-  function shown (h, gw, gh, out) {
+  // The strain as drawn, on a grid gw by gh of h into out: tanh(k h /
+  // s), k the gain, GAIN unless given, s the grid's local steepness, the
+  // largest step of k h to a neighbour over 0.8, at least 1. Where a
+  // strong source's strain turns from + to - within a cell, the turn then
+  // spans a cell or so, not an edge that the blur up to the pane would
+  // draw as steps. Elsewhere s is 1.
+  function shown (h, gw, gh, out, k = GAIN) {
     for (let j = 0; j < gh; j++) {
       for (let i = 0; i < gw; i++) {
         const o = j * gw + i
-        const c = GAIN * h[o]
+        const c = k * h[o]
         let d = 0
-        if (i > 0) d = Math.max(d, Math.abs(GAIN * h[o - 1] - c))
-        if (i < gw - 1) d = Math.max(d, Math.abs(GAIN * h[o + 1] - c))
-        if (j > 0) d = Math.max(d, Math.abs(GAIN * h[o - gw] - c))
-        if (j < gh - 1) d = Math.max(d, Math.abs(GAIN * h[o + gw] - c))
+        if (i > 0) d = Math.max(d, Math.abs(k * h[o - 1] - c))
+        if (i < gw - 1) d = Math.max(d, Math.abs(k * h[o + 1] - c))
+        if (j > 0) d = Math.max(d, Math.abs(k * h[o - gw] - c))
+        if (j < gh - 1) d = Math.max(d, Math.abs(k * h[o + gw] - c))
         out[o] = Math.tanh(c / Math.max(1, d / 0.8))
       }
     }
     return out
   }
 
-  const api = { GAIN, quadrupole, sources, Trace, Field, Watch, shown, label }
+  // The gain that keeps a strong field from saturating, for strains hp
+  // and hx on n cells: GAIN, or less where the top TOP of the cells,
+  // by the greater of |hp| and |hx|, would pass 1 at GAIN, so that
+  // quantile is drawn at tanh(1) and the rest below it, fronts over a
+  // darker ground. A field whose top TOP stays below 1 at GAIN, as the
+  // seeds' pairs' does, keeps GAIN. Uses buf, n long at least, as
+  // scratch.
+  const TOP = 0.1
+  function gain (hp, hx, n, buf) {
+    for (let i = 0; i < n; i++) buf[i] = Math.max(Math.abs(hp[i]), Math.abs(hx[i]))
+    const v = buf.subarray(0, n).sort()
+    const q = v[Math.min(n - 1, Math.floor((1 - TOP) * n))]
+    return q * GAIN > 1 ? 1 / q : GAIN
+  }
+
+  const api = { GAIN, TOP, quadrupole, sources, Trace, Field, Watch, shown, gain, label }
   if (typeof module === 'object' && module.exports) module.exports = api
   else root.VizWaves = api
 })(this)

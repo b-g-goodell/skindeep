@@ -255,6 +255,39 @@ test('trace: a uniform sky keeps its brightness wherever it is seen', () => {
   assert.ok(Math.abs(dark - Math.PI * R * R) < 2 * Math.PI * R, `the shadow's ${dark} pixels`)
 })
 
+test('trace: the waves\' ground is read once a ray, never in a shadow, so no ring outshines it', () => {
+  // A uniform ground, the plane that only emits, before the hole and
+  // behind it: the shadow is black, and every other pixel is the
+  // ground's colour, never more, though a ray the hole turns back
+  // crosses the ground's depth again on its way to the camera (issue
+  // #193).
+  const W = 121
+  const C = [60, 90, 120]
+  const data = new Uint8ClampedArray(W * W * 4)
+  for (let i = 0; i < data.length; i += 4) data.set([...C, 255], i)
+  const R = 200 * Math.tan(Math.asin(T.RING * 13.6 / 600))
+  for (const Z of [500, 800]) {
+    const g = T.plane(Z, data, W, W)
+    g.edge = g.add = g.smooth = g.ground = true
+    const sc = { w: W, h: W, cx: W / 2, cy: W / 2, f: 200, S: 4, hs: new Float64Array([0, 0, 600, T.RING * 13.6]), nh: 1, bref: new Float64Array([60]), planes: [g], sky: null }
+    const out = new Uint8ClampedArray(W * W * 4)
+    T.render(sc, out)
+    let lit = 0
+    for (let y = 0; y < W; y++) {
+      for (let x = 0; x < W; x++) {
+        const k = 4 * (y * W + x)
+        const r = Math.hypot(x + 0.5 - W / 2, y + 0.5 - W / 2)
+        const px = [out[k], out[k + 1], out[k + 2]]
+        if (r < R - 0.75) assert.deepStrictEqual(px, [0, 0, 0], `the ground at ${Z}: the shadow at ${x}, ${y} reads ${px}`)
+        for (let ch = 0; ch < 3; ch++) assert.ok(px[ch] <= C[ch], `the ground at ${Z}: ${px} at ${x}, ${y}, ${r.toFixed(1)} px from the hole, brighter than the ground`)
+        if (Z < 600 && r > R + 0.75) assert.deepStrictEqual(px, C, `the ground at ${Z}: ${x}, ${y}, ${r.toFixed(1)} px out`)
+        if (px[0] === C[0]) lit++
+      }
+    }
+    assert.ok(lit > W * W / 2, `the ground at ${Z} seen at ${lit} pixels`)
+  }
+})
+
 // The scene of Gravity 3D's pane of 1200 by 760 at its trace's scale, a
 // hole of 900 at depth 620, for the forward map.
 const KT = 377 / 1200
