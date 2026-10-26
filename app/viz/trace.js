@@ -1221,7 +1221,8 @@
           if (j >= 0 && jl === last && jd <= 2 * JUMP) {
             if (jd <= 0.1) continue
             const f = tip(done[j], jl)
-            const mid = span(e, f, 4) || []
+            const mid = span(e, f, 4) || (jd <= JUMP ? [] : null)
+            if (!mid) continue
             if (last) A.push(...mid, { ...f })
             else A.unshift({ ...f }, ...mid.reverse())
             continue
