@@ -20,7 +20,10 @@ then the fern garden (maintainer: "re: fern, get more creative"), and
 "visualizations in the tabs"), and 2026-10-15 for the Carbon mode
 (issue #144), and 2026-10-16 for the Carbon atom in a magnetic field
 (issue #158) and for its flashes and its slowed clocks (issues #164
-and #166), and for the gravitational waves of the Gravity modes
+and #166), and 2026-10-18 for its field's calibration (issue #169) and its
+photons at their true scale (issue #167), and 2026-10-22 for its
+invisible fronts on a grid (issue #168) and its cloud as a flow (issue
+#165), and for the gravitational waves of the Gravity modes
 (issue #163), and 2026-10-17 for Gravity 3D's optics (issue #170) and
 for Quantum play (owner: "creatively
 improve the interactivity of the quantum visualizer, and to add maybe
@@ -644,14 +647,13 @@ ruling's starting point by `carbon-photon.md`.
   diameter, 1.54 nm, in about 2.6 s, and the view's radius in 2.1 s. The view is fixed at 24 bohr so every
   front keeps that pace: an excited atom fills it, the ground atom is its
   bright core. The pane states both clocks.
-- The cloud (question 4, revised): Monte Carlo stippling of $|\psi|^2$
-  for the drawn atom's $M_L$ about the chosen axis $z$, labelled. Each
-  subshell with an entry in the research's Clebsch-Gordan table draws
-  each point's $m$ by $n_m$ and its direction from $|Y_{lm}|^2$, its
-  radius from the orbital's inverse-CDF table. $2s2p^3$ has no entry
-  and is drawn round. 1.2 % of the points are drawn afresh each 60th of
-  a second of wall time, a sampling on neither clock, so the cloud
-  seethes and keeps its shape. A point of
+- The cloud (question 4, revised): particles of $|\psi|^2$ for the
+  drawn atom's $M_L$ about the chosen axis $z$, which flow by Nelson's
+  stochastic mechanics (see 2026-10-22: Carbon's cloud as a flow, which
+  replaced the Monte Carlo stippling and its seethe). Each subshell with
+  an entry in the research's Clebsch-Gordan table gives each particle
+  its $m$ by $n_m$ and its density in direction $|Y_{lm}|^2$, its radius
+  the orbital's. $2s2p^3$ has no entry and is drawn round. A particle of
   $m \ne 0$ turns about $z$ at Madelung's $m/\rho^2$ in atomic units on
   the light clock, $12.09$ s on screen per atomic unit of time, at
   most 0.6 rad/s near the axis, where the density of $m \ne 0$
@@ -662,10 +664,12 @@ ruling's starting point by `carbon-photon.md`.
   coefficient (see 2026-10-16: Carbon in a magnetic field, which
   replaces the uniform draw). The core is Bunge's, the outer electron the
   quantum-defect model, drawn in amber and labelled a model.
-- The jump, by `carbon-photon.md` section 4: the drawn atom's cloud
-  snaps to the lower level's, and for 0.4 s of wall time its transition density
-  $\psi_f^*\psi_i$, of the one electron the line moves, flashes as the
-  source, mint where positive, pink where negative, labelled. A jump of
+- The jump, by `carbon-photon.md` section 4: the drawn atom's
+  particles move to the lower level's density over 1 s (see 2026-10-22:
+  Carbon's cloud as a flow, which replaced the snap), and for 0.4 s of
+  wall time its transition density $\psi_f^*\psi_i$, of the one
+  electron the line moves, flashes as the source on that electron's
+  particles, mint where positive, pink where negative, labelled. A jump of
   two electrons, $2s^2 2p\,nl$ to or from $2s2p^3$, which only
   configuration mixing allows, flashes none and says so.
 - The front: a sphere about the site, its brightness the radiation
@@ -679,16 +683,18 @@ ruling's starting point by `carbon-photon.md`.
   brightness and never cancel. Where two thin rings cross, the drawn
   brightness adds amplitudes, and crossings are brief.
 - Visible fronts (question 2, revised) in their hue, the limb of the
-  sphere and two crests behind it at a spacing that grows as
-  $\lambda^{0.35}$, a symbol: the pane prints, for example, "538.0 nm =
-  699 x this atom". Ultraviolet fronts sharpen the picture and lift its
-  contrast across a band as wide as their crest spacing. Infrared fronts
-  refract it, shifting pixels along the radius by a ripple of their
-  spacing, heat haze. Both are one pass over the atom's pixels: every
+  sphere as the packet's leading edge and a trail inside it,
+  $\lambda/10^4$ long, with no crest (see 2026-10-18: Carbon's photons
+  at their true scale, which replaced the symbolic crests). Ultraviolet
+  fronts sharpen the picture and lift its contrast across that trail.
+  Infrared fronts refract it, shifting pixels along the radius by one
+  lobe across it, heat haze. Both are one pass over the atom's pixels: every
   front adds to tables by integer radius and pattern kind, and a pixel
   takes its radius's tables times each kind's shape in its direction,
-  radii with no front skipped. A faint fixed grain lies under the atom
-  for them to act on, since on black they would show nothing.
+  radii with no front skipped. A faint grid in bohr lies under the atom
+  for them to act on, since on black they would show nothing (see
+  2026-10-22: Carbon's invisible fronts on a grid, which replaced the
+  random grain).
 - Detection: a front that reaches the pane's nearest edge collapses to
   one point, in a direction drawn from its pattern, and its line lights
   in the spectrum then, not at the jump. At most 500 fronts fly, and past
@@ -826,15 +832,16 @@ builder, settled here, and the rest follows its text.
   taken as $z$. Its distance from the centre over the radius, squared,
   is $B$'s share of 2 mT, in steps of 0.01 mT, so the low fields where a
   $2p4p$ emitter turns 1 to 5 times a lifetime take most of the dial.
-  $B$ starts at 0.30 mT at 60 degrees, so the mode precesses unasked.
+  $B$ starts at 0.15 mT at 60 degrees, so the mode precesses unasked
+  (0.30 mT until #169's calibration, 2026-10-18 below).
   $B$ lies in the $x$-$z$ plane: every excitation here is round about
   $z$, so $B$'s azimuth about $z$ changes nothing. The 3D view draws $B$
   as a violet axis through the atom with its arrow and name. A small
   pane keeps the dial and writes no text over its atom: the field and
   the drawn atom's rate go with the ensemble's caption above it.
-- The pane states the field ("B 0.30 mT at 60 deg to z, in the x-z
+- The pane states the field ("B 0.15 mT at 60 deg to z, in the x-z
   plane"), the drawn atom's rate on screen and its real value ("turns
-  about B at 1.26 Hz on screen, 6.30 MHz real"), and its $g_J$ marked
+  about B at 0.630 Hz on screen, 3.15 MHz real"), and its $g_J$ marked
   measured or "LS: a model". With $B$ along $z$ it says that an $M$
   state about $B$ is stationary and nothing turns, with $B$ at 0 that
   nothing precesses, and at $J = 0$ that the level has no moment.
@@ -1500,7 +1507,9 @@ dial's range kept.
   the clip, the trace and the Larmor rate on screen.
 - In wall time, kept: the source's flash, 0.4 s, a detection's square,
   0.6 s, a line's flash in the spectrum, the camera's turn and the
-  cloud's seethe, a sampling on neither clock. Scaled with the clocks
+  cloud's seethe, a sampling on neither clock (the seethe replaced by
+  Nelson's flow on the light clock, see 2026-10-22: Carbon's cloud as a
+  flow). Scaled with the clocks
   they would linger and overlap five times as long. The session's
   events arrive in wall time, so a prompt's cascade now spreads over
   about 2 s.
@@ -1613,3 +1622,553 @@ Rejected:
   move every frame, and the culls would measure from the hole.
 - Easing the view across a merger, so the trails glide rather than
   move by the recoil: the hole would leave the centre for the glide.
+
+## 2026-10-18: Carbon's field, calibrated
+
+Owner, 2026-10-16, issue #169: "the drawn atom's own axis is what is
+flickering in such a confusing way from my pov, but reducing the
+magnitude of the magnetic field helped *A TON*. keep the min and max
+magnetic field values where they are though". The clocks are slowed
+five times (#166, above), so the axis's look, a line with no
+arrowhead, repeats on screen at $2f_L = 2g_J\mu_B B/h/E$, 8.40 a
+second per mT at $g_J$ 1.501 ($2p^2\,{}^3P_{1,2}$, the levels the atom
+rests in) and 11.21 at $g_J$ 2.002 ($2s2p^3\,{}^5S^o_2$, where a
+subagent's start leaves it, at rest for good, and $2p3p\,{}^3S_1$).
+
+- The count. The axis is 1.5 pixels wide, so no field of the WCAG
+  count can see it. `scripts/checks/vizflash.js` now draws it alone,
+  each frame its segment as the probe reports it (`axisLine`), in its
+  own stroke on black on a canvas of its own, and counts that canvas's
+  cells, each flashing as the line passes. It counts twice: the axis
+  whole, and its turning alone, a fresh count after each time the axis
+  is set anew, the most of the stretches kept. New scenes: full
+  activity at B_MAX in the full pane and the split of three, a pulse on
+  a quiet session at the start and at B_MAX, so the cloud that turns
+  with the pulsed level and its beat come under the field count, and a
+  subagent's start, which leaves the drawn atom in 5So2. The field,
+  B_MAX at the start's 60 degrees, and the pulse are set by the
+  renderer's pointer, as a press.
+- What the count found: a cell flashes faster than $2f_L$. The axis
+  lies on a cone of 60 degrees about $B$, so its line does not repeat
+  after half a turn, and with the camera turning (0.25 rad/s at
+  activity) the view leaves the cone and the line swings back and
+  forth over some cells. At 0.30 mT, $2f_L$ 2.52 a second, its turning
+  reads 4 a second.
+- The frame rates, `xvfb-run node scripts/checks/vizcarbon.js OUT`,
+  which now counts one pane's rate too, twice, load (1-minute
+  `/proc/loadavg`) 35.05 before and 19.37 after the first, 24.75 and
+  41.72 the second: one pane of 1200 by 760 at full activity 29, 30
+  and 30 frames a second, then 12.5, 14 and 15.5, and three panes of
+  720 by 460 in Carbon at full activity 25, 22, 32.5, 29.5 and 17.5,
+  median 25, then 16.5, 17.5, 9.5, 7 and 18.5, median 16.5.
+- Aliasing, the repeat against half the frame rate. At the start,
+  0.15 mT: 1.26 and 1.68 a second, under 3.5, half the slowest round's
+  7: none. At 2 mT: 16.81 and 22.42 a second, over 15, half the one
+  pane's best 30, and over 12.5, half the split's best median 25: the
+  axis aliases in both on this loaded host. In an unloaded pane at 60
+  frames a second both stay under 30 and neither aliases. The counter
+  shows it: at 2 mT the axis's cells read 12 to 17 a second at 60
+  frames a second against the 16.81 stated, and 7 or 8 at 20, the
+  alias.
+- The axis's turning alone, the most flashes of a cell in any one
+  second, `xvfb-run node scripts/checks/vizflash.js OUT --only
+  full,moderate,idle,beat,prompt,subagent,split-full --set
+  B_START=0.15e-3` and the like, loads 38.55 before and 87.35 after,
+  and the check as committed, `xvfb-run node scripts/checks/vizflash.js
+  OUT`, loads 33.95 to 64.04:
+
+  | start | idle | pulse | prompt | subagent, $g_J$ 2 | full | moderate | split |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 0.30 mT | 4 | 2 | 4 | 4 | 2 | 4 | 3 |
+  | 0.18 mT, two runs | 2, 2 | 2, 2 | 2, 2 | 3, 3 | 2, 2 | 2, 2 | 2, 2 |
+  | 0.15 mT | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+  | 0.15 mT, the check as committed, two runs | 2, 2 | 2, 2 | 2, 2 | 2, 2 | 2, 2 | 2, 2 | 2, 2 |
+
+  At $g_J$ 1.5 the turning reads 2 at $2f_L$ 1.51 and 4 at 2.52, at
+  $g_J$ 2 it reads 3 at 2.02. The count is the extreme of a few
+  thousand cells, so it moves by one between runs.
+- Resets and jumps (item 4 of #169). Every session event lifts the
+  drawn atom (`some` takes atom 0 always), and a lift sets its axis to
+  $z$ turned about $B$ by a random phase: at full activity 7 to 10
+  times in 12 s, the line jumping a median of 15 to 79 degrees on the
+  pane, by run and scene. A jump keeps the axis where it is and changes
+  only its rate, 0 to 9 times in 12 s. Once slow, the reset is what adds to the
+  confusion: counted with the axis whole, its leap adds about one flash
+  to a cell, and some run read 4 at every start tried from 0.12 to
+  0.30 mT (`--only full,idle,beat,prompt,split-full --set
+  B_START=0.25e-3` and the like, loads 6.90 to 87.35), the reading 4
+  even after a single prompt at 0.18 mT. No field removes it. A change
+  of rate shows in no count. A change to the reset, an eased turn to
+  the new axis or a reset only at a collision, is its own decision,
+  left to the owner. The axis whole is reported, its turning asserted.
+- The calibration. `B_START` = 0.15 mT, the start at which the turning
+  read 2 at both $g_J$, a count under the bound of three at $g_J$ 2,
+  which at 0.18 mT read 3. The dial's range is the owner's, 0 to 2 mT,
+  `B_MAX` kept, and its law is kept: the radius's share squared is
+  $B$'s share of 2 mT, so 0.15 mT sits at 0.27 of the radius, the band
+  where a $2p4p\,{}^3P_2$ emitter turns 1 to 5 times a lifetime, 0.34
+  to 1.69 mT, at 0.41 to 0.92, and aliasing in a split begins at 1.49
+  mT, 0.86 of the radius, at its median 25 frames a second, and at
+  0.98 mT, 0.70, at the second run's median 16.5. No measurement
+  singled out another law, the clocks scale rates and lifetimes
+  together so the reason for the square law holds, and both ends are
+  fixed.
+- The beat at the start: $2f_L$ of $2p4p\,{}^3P_2$ is 1.26 Hz against
+  its 0.70 s on screen, 0.89 periods a lifetime. Looked at, the trace
+  after a pulse shows a plateau, a fall and one shoulder: the beat is
+  barely legible, where at 0.18 mT it showed a peak, a dip and a second
+  bump. The calm start is taken over it, and turning the dial up shows
+  the beat. At 2 mT it is a comb of 16.8 Hz.
+- Asserted by `vizflash.js` at the start field, in every scene: no cell
+  of the axis's turning over 3 a second, the drawn atom turning for 2 s
+  in all, the pulse lifting the drawn atom, the subagent leaving it in
+  5So2, and B_MAX taken from the press. With `B_START` set back to 0.30
+  mT it fails. The axis whole and the scenes at B_MAX are reported. The
+  field count holds every scene at 0 general and 0 red flashes a second
+  within one frame, the pulse's turning cloud included. `vizzeeman.js`
+  reads `B_START` and `B_MAX` from the mode, and
+  `test/viz-carbon.test.js` pins 0.15 mT and the repeats at it.
+- Kept: the cloud, counted per cell, flickers far above three a second
+  from its seethe, in wall time, and its stipple's motion: idle, with
+  no fronts, a cell reads 5. #165 replaced the seethe (see 2026-10-22:
+  Carbon's cloud as a flow).
+
+## 2026-10-18: Carbon's photons at their true scale
+
+Owner, 2026-10-16, issue #167: "no crests behind a ring indicating a
+photon, i would prefer some representation that more correclty and
+realisticially takes the wavelength into account." The crests behind a
+visible front, at a spacing of $4.5\,(\lambda/119\ \mathrm{nm})^{0.35}$
+pixels, go, and so does the readout's "crest spacing a symbol".
+
+- The near zone. Every length is the line's vacuum wavelength, the
+  light's at the atom (NIST's air wavelength stays on the spectrum's
+  axis and in the captions). On the light clock of $c/(5\times10^{17})$,
+  11.33 bohr a second, a period is $\lambda$ over that speed:
+
+  | Line | $\lambda$, vacuum | in bohr | over the view's 24 bohr | $\lambda/2\pi$, bohr | period on the light clock | trail, $\lambda/10^4$ |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | VUV, $2p4d\,{}^3F^o_2$ to $2p^2\,{}^3P_1$ | 119.43 nm | 2257 | 94 | 359 | 199 s | 0.226 bohr |
+  | $2p3s\,{}^3P^o_1$ to $2p^2\,{}^3P_1$ | 165.74 nm | 3132 | 130 | 498 | 276 s | 0.313 bohr |
+  | visible, $2p4p\,{}^1P_1$ to $2p3s\,{}^1P^o_1$ | 538.18 nm | 10170 | 424 | 1619 | 898 s | 1.017 bohr |
+  | near IR, $2p3p\,{}^3P_2$ to $2p3s\,{}^3P^o_2$ | 909.73 nm | 17191 | 716 | 2736 | 1517 s | 1.719 bohr |
+  | edge of the spectrum | 10 $\mu$m | 188973 | 7874 | 30076 | 4.6 h | 18.9 bohr |
+  | ground term, ${}^3P_1$ to ${}^3P_0$ | 609 $\mu$m | $1.15\times10^7$ | $4.8\times10^5$ | $1.8\times10^6$ | 282 h | 1151 bohr |
+
+  The periods are five times the issue's, which predate the light
+  clock's slowing (#166). A front is detected where it reaches the
+  pane's nearest edge: 24.5 bohr from the site in a pane of 1200 by
+  760, 33.7 in one of 360 by 230, 37.4 in one of 240 by 460 (the edge
+  over the atom's pixels a bohr). The shortest line, 118.88 nm, has
+  $\lambda/2\pi$ = 358 bohr. So every front lives and dies in the near
+  zone, $r \ll \lambda/2\pi$, where the field of the jump's oscillating
+  multipole is quasi-static and has one phase across the whole view: no
+  crest exists behind any front, at any zoom, and in the 2.2 to 3.3 s a
+  front is in flight its phase moves by at most $2\pi \times 3.3/198$,
+  a sixtieth of a turn.
+- The representation. A visible front is the packet's leading edge, the
+  limb as before, and a trail inside it, $\lambda/T$ long with
+  $T = 10^4$ (`TRAIL`), drawn in three bands of a third each at 0.42,
+  0.24 and 0.10 of the edge's brightness, fading inward. The trail's
+  length is a length standing for the wavelength, in the true ratio of
+  the lines' wavelengths (538.2 / 119.4 = 4.5) and in the view's bohr
+  against the scale bar by the factor $T$, which the pane prints:
+  "fronts: an edge and a trail $\lambda$ / 1e4 long, $\lambda$ in
+  vacuum", kept in a narrow atom, written over no atom in a small pane,
+  as the scale bar is not. Nothing is drawn ahead of the edge, where no
+  field has come, and nothing oscillates, so no oscillation runs off
+  the light clock. $T$ puts the 538 nm trail at 13 pixels in a pane of
+  1200 by 760, about the old two crests' 15, and the visible lines' at
+  11 to 19.
+- The readout. The drawn atom's photon now states "538.2 nm vac = 699
+  x this atom, 424 x the view: in phase across it" and "a period 15 min
+  on the light clock, no crest in view". The true comparison the pane
+  printed before stays, in vacuum.
+- The ultraviolet and infrared passes (item 4) are re-based on the same
+  trail: each acts behind the edge only, across $\lambda/T$ and at
+  least `BAND_MIN` = 1.6 pixels, the edge's stroke, so a 119 nm band in
+  a small pane does not fall under a pixel. The sharpening falls from
+  the edge inward as $1-u$, $u$ the share of the band. The haze's
+  ripple at the crest spacing, a spatial oscillation at a false
+  wavelength, becomes one lobe of displacement, $16u(1-u)$ pixels per
+  unit amplitude, 4 at its peak as the ripple's was: a refracting
+  shell. Before, both bands also reached a band's width ahead of the
+  edge. An infrared line past 2 $\mu$m has a trail over 3.8 bohr, and
+  one at 10 $\mu$m 18.9, most of the view, uncapped: its amplitude
+  $\sqrt{\nu/\nu_{538}}$ keeps it faint.
+- What #168 inherits: the grain under the atom, untouched. The
+  harmonic pass by integer radius, untouched. A band that is the trail,
+  $\lambda/10^4$ behind the edge and at least 1.6 pixels, and two
+  strengths to raise, the sharpening's contrast lift (0.5 of the
+  Laplacian and 0.35 of the pixel per unit amplitude) and the haze's
+  peak shift (4 pixels per unit amplitude). Lengths are in bohr, as its
+  item 4 asks.
+- Checked by `test/viz-carbon.test.js`: for the 119.4 and 538.2 nm
+  lines, the wavelengths in bohr against the issue's 2256 and 10170, 94
+  and 424 times the view, the periods against its 40 and 180 s times 5,
+  the trails and their ratio 4.507, no crest in the source, and the
+  invisible pass run on a fake canvas, whose changed pixels lie in the
+  band behind the edge, the haze one lobe of one sign. With the old
+  profiles restored the pass's test fails, a 119.4 nm front changing
+  pixels to 64 against its edge at 60.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`
+  at 3a54b9c, before, loads (1-minute `/proc/loadavg`) 31.07 to 66.16,
+  and after, 41.69 to 53.07: both pass, every scene 0 general and 0 red
+  flashes a second within one frame. Nothing is drawn across the view,
+  so no large-area change enters. The largest share of a quarter field
+  within a frame, before and after: full 0.281 and 0.183, moderate
+  0.389 and 0.146, a prompt 0.139 and 0.103, the split of three 0.172
+  and 0.061, the small pane 0.196 and 0.061, and in the pulse's scenes,
+  whose cloud turns, 0.557 and 0.587, 0.480 and 0.554 at B_MAX, full at
+  B_MAX 0.317 and 0.325. Within 0.1 s: full 5 and 0, moderate 3 and 0,
+  full at B_MAX 7 general and 8 red and 7 and 0, a prompt 6 red and 0,
+  the pulse's 10 and 10, the rest 0 and 0. A cell's most a second fell
+  in every scene but idle, the subagent's and the pulse at B_MAX, held
+  at 5, 8 and 16. The
+  fronts in flight held, 148 and 152 at full activity, the frame's mean
+  light 0.0459 and 0.0432.
+- The frames, looked at: a visible front in a pane of 1200 by 760 is a
+  thin limb in its hue with a soft band inside it, 16 to 19 pixels for
+  the red lines at 12.75 pixels a bohr, and in one of 360 by 230, at
+  2.06, a ring with a trail of 1.8 to 3 pixels about the cloud. The
+  ultraviolet fronts show as thin rings of crisper grain and the
+  infrared ones as broad shells of shifted grain, plain only in a
+  difference of two frames: as faint as before, which #168 takes up.
+
+Rejected:
+
+- A true-scale inset, the atom a point and the wave's crests at the
+  true $\lambda$: on the light clock a front is detected 25 to 38 bohr
+  out, 2 nm, so in an inset of a micrometre the packet is a dot for as
+  long as it flies. Crests show there only on a second clock, hundreds
+  of times faster, printed, and in a box over the cloud that a small
+  pane has no room for.
+- The near field drawn across the view at the line's frequency: at its
+  true period, 198 s to 282 h, nothing moves while a front flies. At a
+  multiple large enough to see, it is the made-up timing the owner
+  refused, and with dozens of fronts at one site a large-area luminance
+  change against #164's bound.
+- A trail on a law other than linear, $\lambda^{0.35}$ or a logarithm:
+  it breaks the true ratio of the wavelengths.
+
+## 2026-10-22: Carbon's invisible fronts on a grid
+
+Owner, 2026-10-16, issue #168: "the sharpening front and the infrared
+shimmers are not very clear and are very subtle. we may need a better
+background than subtle noise." The random grain under the atom goes:
+sharpening noise of at most 24 of 255 and shifting random pixels by a
+pixel or two both read as more noise.
+
+- The backdrop. A Cartesian grid about the site, drawn once a resize
+  (`drawBackdrop`). A radial shift leaves a ring about the site a ring
+  and a spoke a spoke, so a polar grid would hide the haze. Its spacing
+  is the least of 1, 2, 5, 10, 20 or 50 bohr that divides the scale
+  bar's length and is `GRID_PX` = 10 pixels or more (`gridStep`), so the
+  bar spans whole cells: 1 bohr under a 5 bohr bar in a pane of 1200 by
+  760, 5 under 10 in one of 360 by 230. Its lines are Gaussian across,
+  $\sigma$ 0.7 pixel, at 22, 30, 50 of 255 over a floor of 4, 6, 10, and
+  from 0.55 of the atom box's half side out to the half side they fall
+  linearly to 0.4 of that, so the captions in the box's corners stand on
+  a dimmer grid. The dashed equator and meridian stay.
+- The ultraviolet sharpening. Per unit of the front's drawn amplitude it
+  takes 1.5 of the Laplacian and lifts the pixel by 4 (`SHARP`, `LIFT`),
+  against 0.5 and 0.35, across the trail as before. It moves a channel
+  by `SHARP_MAX` = 56 levels at most, which keeps a lifted grid line
+  under a relative luminance of 0.1, and above 64 that most falls
+  linearly to 0.15 of it at 172, so the cloud's dense points are crisped
+  and barely lifted. A front reads as a thin bright crisp ring.
+- The infrared haze. One lobe across the trail as before, peak shift
+  `HAZE` = 8 pixels per unit amplitude, against 4. The lobe $A\,4u(1-u)$
+  folds the picture where $A > w/4$, $w$ the band: a 909.7 nm front 10
+  bohr out in a full pane has $a = 0.62$, $A$ = 5.0 pixels and $w$ = 22,
+  a lens that bends each line it crosses without folding it. Closer to
+  the site, where $a$ is larger, and in every small pane, whose band is
+  3.5 pixels, it folds, a mirage. A front reads as a broad shell of bent
+  lines with no change of brightness, so the two kinds are told apart by
+  brightness and width: the ultraviolet ring bright and thin, the
+  infrared shell dim and broad.
+- The measure (`scripts/checks/vizcarbon.js`). Carbon alone on a quiet
+  canvas, its levels at 0, one front sent from the site by the
+  renderer's `send` hook and caught 10 bohr out. `Warp.apply` keeps the
+  mean change its pass makes to the atom box's pixels, levels of 255 a
+  channel, the frame with the front against without it. At 43a4dd1, the
+  grain, and at 9f6260d, the grid, 165.7 nm: 0.0364 and 0.1667 in a full
+  pane (4.6 times), 0.0477 and 0.3125 in a small one (6.6 times). 909.7
+  nm: 0.2163 and 0.3016 (1.39 times), 0.1854 and 0.2913 (1.57 times).
+  The infrared figure was high at 43a4dd1 though nothing showed:
+  shifting random pixels changes nearly every pixel of the band by the
+  grain's own spread, while a shift of the grid changes only its line
+  pixels, about a third of the band at a 1 bohr spacing, and a pixel
+  once however far its line moves. Only a denser or brighter grid raises
+  it, and both make the frame with no front a mesh that competes with
+  the cloud and the captions (sigma 0.8 and lines at 26, 36, 58 gave
+  1.86 and 1.99 times and were refused on sight). The check holds the
+  ultraviolet front to 3 times today's figure and the infrared one to
+  1.3.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`,
+  exit 0 at 43a4dd1 and at 7287dc6: every scene 0 general and 0 red
+  flashes a second within one frame. The count within 0.1 s, reported
+  and not asserted, in three runs of each (one whole, two of the full
+  and moderate scenes alone): full activity 0, 4 and 4 general at
+  43a4dd1 against 7, 2 and 6, moderate 0, 0 and 5 against 1, 0 and 6,
+  the cells flashing more than three times a second at full activity
+  2174, 3186 and 2699 against 4264, 3134 and 4796. So the count sits
+  within one setting's spread, up to 6 (2026-10-16 above), leaning a
+  little higher. The pulse's scenes stay at 10 and 10. The frame's mean
+  light at full activity 0.0445 against 0.0679, the grid's. While
+  tuning, unlogged and on code never committed: the sharpening
+  uncapped saturated the count at 10 over 14 863 cells (a920cb7's
+  message records it at its parent), with the sharpening off it fell to
+  1 and with the haze off it stayed at 10, and a cap of 56 levels for
+  every pixel left the moderate scene at 9, its heat map on the cloud,
+  hence the cap's fall above 64.
+- The frame rate. Per draw alone at 400 by 380 at full activity, 7.3 ms
+  at 9f6260d against 10.7 at 43a4dd1, run back to back on a loaded
+  host (1-minute load 20 and 26): the grid is one image a resize. The
+  split of three, median of five rounds, Carbon 16 and 17.5 frames a
+  second against 19 and 20.5, Gravity 21 and 21.5 against 18.5 and 23,
+  rounds of one set ranging 9 to 39.5: within the host's noise.
+- The frames, looked at at 9f6260d. With no front, a full pane shows a
+  dim blue-grey grid, brightest about the cloud and dimmer under the
+  captions, the cloud the brightest thing in it. One 165.7 nm front is a
+  thin continuous grey ring with brighter beads where it crosses the
+  lines. One 909.7 nm front is a shell about 22 pixels deep in which the
+  lines kink outward. In a pane of 360 by 230 the grid is a 10 pixel
+  mesh, the ultraviolet ring a faint thin ring about the cloud, and the
+  infrared shell a ring of broken line pieces, faint: its band is 3.5
+  pixels. At full activity the grid carries many thin bright rings and
+  broad bent shells, the cloud still brightest.
+
+Rejected:
+
+- A polar grid about the site: a radial shift leaves its rings and
+  spokes in place.
+- A low-frequency pattern of features a few pixels wide: it raises the
+  measure by changes the eye does not resolve as a shift, as the grain
+  did.
+- A wider band floor for the invisible fronts in a small pane: the band
+  is the trail, $\lambda/10^4$, from #167.
+- A haze that changes brightness by the mapping's Jacobian: a lens keeps
+  an extended background's surface brightness.
+
+## 2026-10-22: Carbon's cloud as a flow
+
+Owner, 2026-10-16, issue #165: "replace the monte carlo stippling
+electrons with either fluid dynamics simulations or flocking behavior
+or something like that, driven by the electron's pdf." The issue left
+the dynamics, its time factor, the clip and the jump's morph to the
+builder, settled here. The points drawn afresh, 1.2 % of them each 60th
+of a second, go, and so does the snap of a new cloud at each change of
+level.
+
+- The dynamics: Nelson's stochastic mechanics (E. Nelson, Phys. Rev.
+  150, 1079, 1966). Each particle belongs to one electron and moves in
+  that electron's density $\rho = |R_{nl} Y_{lm}|^2$ by
+  $d\mathbf{x} = (\mathbf{v} + \mathbf{u})\,dt + d\mathbf{W}$, in
+  atomic units, each axis of $d\mathbf{W}$ of variance
+  $(\hbar/m_e)\,dt$, with the current velocity
+  $\mathbf{v} = \mathrm{Im}(\nabla\psi/\psi) = (m/\rho_\perp)\,\hat\phi$,
+  the Madelung swirl the mode drew already, and the osmotic velocity
+  $\mathbf{u} = \frac{1}{2}\nabla\ln\rho$. Its stationary density is
+  $|\psi|^2$: in the Fokker-Planck equation $\rho\mathbf{u}$ cancels the
+  diffusion and $\nabla\cdot(\rho\mathbf{v}) = 0$. Taken over the
+  issue's other candidates: the overdamped Langevin with a free
+  diffusion constant is this process on another clock, and a flock or a
+  smoothed-particle fluid keeps $\rho$ only by a correction measured
+  after the fact.
+- Exact at a frame's step. A step is two parts, each of which keeps
+  $\rho$ exactly: the swirl, a turn about $z$ by an angle of $\rho_\perp$
+  alone, which keeps any density round about $z$, and the osmotic drift
+  with the noise as one step of the Metropolis-adjusted Langevin
+  algorithm (G. O. Roberts and R. L. Tweedie, Bernoulli 2, 341, 1996):
+  the proposal $\mathbf{y} = \mathbf{x} + h\,\mathbf{u}(\mathbf{x}) + \sqrt{h}\,\boldsymbol\xi$,
+  taken with the chance
+  $\min(1, \rho(\mathbf{y})\,q(\mathbf{x}|\mathbf{y}) / \rho(\mathbf{x})\,q(\mathbf{y}|\mathbf{x}))$,
+  a refused one leaving the particle where it stands. The chain's
+  $\rho$ is $\ln R^2$ piecewise linear in $r$ on the radial table's grid,
+  4096 steps dense near the nucleus, times $\ln (P_l^m)^2$ piecewise
+  linear in $c = \cos\theta$ on 1024 steps, and $\mathbf{u}$ is the
+  gradient of the same pieces. A step is at most $(0.3\,\langle r\rangle)^2$
+  atomic units of time for an orbital of mean radius $\langle r\rangle$
+  (`STEP`), 0.0065 for 1s, where 98 % of proposals are taken: a frame is
+  one step down to 13 frames a second, a longer one several.
+- The clip: $|\mathbf{u}|$ at most `U_MAX` = 10 bohr per atomic unit of
+  time. $\mathbf{u}$ grows without bound at a node of $\rho$, a radial
+  node of 2s, 4s or 4p, a plane or cone of $Y_{lm}$, and on the axis
+  for $m \ne 0$, where it is $|m|/\rho_\perp$ outward as $\mathbf{v}$ is
+  $m/\rho_\perp$ about it. Carbon's 1s reaches 6 at the nucleus, Kato's
+  cusp at $Z = 6$, so the clip acts only near the nodes and the axis.
+  The swirl keeps its clip, `SPIN_MAX`, 0.6 rad/s. Under the Metropolis
+  step neither clip moves the stationary density: each changes the
+  proposal, not the law.
+- Nodes. In continuous time a particle never crosses a node of $\rho$,
+  so each nodal domain keeps its share, a known property of Nelson's
+  process. The discrete chain crosses rarely. Every start the mode
+  makes, a new cloud and each morph, draws each domain's share right.
+- The time factor: `NELSON` = 1, Nelson's process on the light clock,
+  the clock of the swirl and the fronts, an atomic unit of time 12.09 s
+  on screen. A particle wanders $\sqrt{3t/12.09}$ bohr in $t$ seconds,
+  rms: 0.50 bohr in a second, 6.4 pixels in a pane of 1200 by 760 at
+  12.75 pixels a bohr, 1.0 in one of 360 by 230, and 2.2 bohr, 28
+  pixels, in 20 s. The 2p core, 1.7 bohr, churns, and a 2p4p level's
+  outer cloud, 15 bohr, drifts. The factor scales $\mathbf{v}$ and
+  $\mathbf{u}$ alike, Nelson's process run faster, the swirl under its
+  clip.
+- The drawn point. A particle is drawn at its path's exponential mean
+  over `SMOOTH` = 0.25 s of wall time, and at the path itself while a
+  morph carries it, so it arrives on time. Unsmoothed, the noise moves
+  every point 0.47 pixels an axis a frame in a full pane, back and
+  forth, and
+  the cloud twinkles, a seethe by other means. The mean lags the path by
+  $\sqrt{D\tau}$ an axis, rms, $D = \frac{1}{2}$ atomic unit on the
+  light clock: 0.10 bohr, 0.08 in 1s where the drift holds the path in,
+  a blur of 6 % of the 2p cloud's radius. The drawn path glides at about
+  $\sqrt{D/\tau}$, 0.4 bohr a second an axis, 5 pixels in a full pane
+  and 0.8 in a small one. The dynamics and the tests are on the true
+  positions, which stay $|\psi|^2$ exactly. The flash's sign is read at
+  the drawn point.
+- The measure that set the factor and the mean: the cloud alone, on
+  black, no axis, grid or front, at a fixed camera (yaw 0.4, pitch
+  0.32), dim 1, 12 s after 1 s, each frame to the counter of
+  `scripts/flash.js`, at 12.75 pixels a bohr and 60 frames a second and
+  at 2.06 and 20, in the ground term $^3P_1$, $M_L = 1$, and in
+  $2p4p\,{}^3D_3$, $M_L = 2$: a scratch harness, not committed. A
+  cell's most flashes in a second and the cells over 3, in that order
+  of panes and levels:
+  | cloud | full, $^3P_1$ | full, $2p4p$ | small, $^3P_1$ | small, $2p4p$ |
+  | --- | --- | --- | --- | --- |
+  | the seethe, two runs | 4, 1 and 3, 0 | 4, 1 and 4, 1 | 2, 0 and 2, 0 | 3, 0 and 4, 1 |
+  | `NELSON` 1, drawn bare, two runs | 10, 82 and 10, 83 | 10, 301 and 11, 325 | 1, 0 and 1, 0 | 2, 0 and 5, 1 |
+  | `NELSON` 3, bare | 14, 109 | 14, 1054 | 2, 0 | 4, 5 |
+  | `NELSON` 10, bare | 18, 141 | 17, 1466 | 2, 0 | 6, 95 |
+  | `NELSON` 30, bare | 21, 144 | 21, 1205 | 4, 3 | 7, 238 |
+  | `NELSON` 1, mean over 0.25 s | 3, 0 | 3, 0 | 1, 0 | 2, 0 |
+  | `NELSON` 1, mean over 0.5 s | 2, 0 | 3, 0 | 1, 0 | 1, 0 |
+  | `NELSON` 3, mean over 0.5 s | 4, 1 | 3, 0 | 1, 0 | 2, 0 |
+  | `NELSON` 10, mean over 0.5 s | 4, 13 | 4, 20 | 1, 0 | 2, 0 |
+  No field flashed in any, within a frame or within 0.1 s. Only a mean
+  brings the flow to the seethe's count, and the smallest blur that does
+  is `NELSON` 1 over 0.25 s. In the pane, at idle, the cloud is dimmed
+  to 0.7 and the camera turns, and `vizflash.js`'s idle scene read a
+  cell's most at 5 and 33 cells over 3 at every factor from 1 to 30
+  bare, as at the base: that cell, at 348,432, is the detector's label
+  passing, not the cloud.
+- The particles. Six electron slots, 1s, 1s, 2s, 2s, 2p, and the slot
+  of the electron a level raises: in $2s^2 2p^2$ it is in 2p, in
+  $2s2p^3$ the second 2s slot is in 2p too, in $2s^2 2p\,nl$ it is the
+  outer electron, the model's. `PTS_CORE` = 230 particles a slot and
+  `PTS_OUTER` = 1300 in the raised slot, 2450 in every level, where the
+  ground term drew 1380 points. The raised slot's particles stay in
+  every level, each with $230/1300$ of a particle's ink while in a core
+  orbital, so each electron carries a core electron's ink there and the
+  cloud keeps the stippling's shape and brightness by the same orbitals
+  (Bunge 1993 for the core, the quantum-defect model for the outer
+  electron, labelled a model), the same $M_L$ and the same $n_m$. A
+  particle's $m$ is the inverse of its subshell's $n_m$ at a share drawn
+  once with the cloud, so a change of level sets every $m$ anew and
+  draws nothing.
+- The morph, for every change of the drawn atom's level, a jump, a
+  collision, a lamp or the pulse, since the issue's item 2 forbids a
+  redraw for any cause: displacement interpolation. A particle whose
+  density changes is carried from its quantile of the old density to
+  the same quantile of the new, its radius by the two radial tables and
+  its $\cos\theta$ by the two tables of $|Y_{lm}|^2$, its azimuth kept,
+  linear in $r$ and $\theta$ and eased by smoothstep, over `MORPH` =
+  0.5 s of wall time: 30 frames at 60 a second and 10 in a split of
+  three, and within the 0.37 to 1.22 s a $2p4p$ level lives on the event
+  clock, so a lifted cloud mostly reaches its level before it jumps. At
+  1 s, the first choice, the captures showed a lamp's lift into $2p3d$
+  cut off by its jump at 139 ms, the cloud barely grown. A $2p3s$ level,
+  13.6 to 14.4 ms, is passed through: its cloud is not reached. A
+  carried particle takes no Nelson step. A second change before it
+  arrives sends it on from where it stands to the new level's density
+  at the quantiles of its first move. The raised slot's ink and
+  colour pass from the old orbital's to the new, amber to blue half way.
+  A two-electron jump moves both of its slots. A collision still sets
+  the drawn atom's axis anew (#169), which turns the cloud whole at
+  once: that reset is the owner's to change.
+- The source rides on the same particles: for its 0.4 s the particles
+  of the slot the line moves, the raised slot within $2s^2 2p^2$, are
+  drawn again in mint where $\psi_f^*\psi_i$ is positive at the particle
+  and pink where negative, its sign from
+  $P_f P_i\,P_{l_f}^{|m|} P_{l_t}^{|m'|} \cos q\phi$ as before, the rest
+  of the cloud dimmed as before, each at $\min(1, 700/n)$ of the
+  brightness of a source point for $n$ particles, the ink of the 700
+  points it had. Its magnitude $|\psi_f^*\psi_i| = \sqrt{\rho_f\rho_i}$
+  lies between the two densities, where the moving particles are.
+- Precession about $B$ and the camera's turn act on the particles as on
+  the points: the particles live in the atom's frame, turned by it and
+  projected.
+- Checked by `test/viz-carbon.test.js`, seeded, each bound the
+  Kolmogorov-Smirnov statistic's critical value at a share 0.001,
+  $1.95/\sqrt{n}$. From a stationary start, 2400 steps of a 20th of a
+  second: in the ground term $^3P_1$, $M_L = 1$, and in
+  $2p4p\,{}^3D_3$, $M_L = 2$, each slot's radii against its orbital's
+  $P(r)^2$ and its $\cos\theta$ by $|m|$ against $(P_l^{|m|})^2$, both
+  integrated from the orbitals and not from the mode's tables, and the
+  drawn points behind the paths by 0.7 to 1.1 times 0.10 bohr. From a
+  wrong start, every particle of $^3P_1$ at three times its mean radius
+  within 0.3 rad of the axis, half each way: every slot fails at the
+  start and passes after 240 s. A jump of $2p4p\,{}^1P_1$ to
+  $2p3s\,{}^1P^o_1$ and on to $^3P_1$, and a second change before the
+  first move ends: every particle kept, under 2 bohr a frame, each slot
+  at its new density, the raised slot in 2p at $230/1300$ of the ink.
+  The swirl's circulation through the noise: $M_L = \pm1$ turn each
+  way, $M_L = 0$ under a fifth of that. With $\ln (P_l^m)^2$ left out of
+  the target both density tests fail, and with the morph aimed at the
+  old orbital the jump's fails.
+- The cost (`scripts/checks/vizcarbon.js`, Carbon drawn alone on a
+  400 by 380 canvas at full activity, the median of a draw). The step
+  of 2450 particles takes 0.4 to 0.46 ms in node. Against the base at
+  38bf72f, run back to back: 7.7 ms at the base and 8.7 at 2de4cfc,
+  1-minute load 13.71 and 13.39 before each. At e65bb66 9.4, the base
+  8.6 and e65bb66 again 10.8, load 19.45, 37.53 and 37.95 before each.
+  The issue's 6.3 ms was read on 2026-10-16: the base read 7.7 to 9.5
+  on this host on 2026-10-22. Three panes of 720 by 460 all in Carbon,
+  the median of five rounds, on the fake session's activity and at full
+  activity: the base 28.5 and 33, then 13 and 14.5, this change 22.5
+  and 29.5 (2de4cfc), then 19 and 13 and 15.5 and 16.5 (e65bb66),
+  rounds ranging 9 to 38.5, Gravity's medians moving as far (10 to
+  29.5) between the same runs: within the host's noise.
+- The flashes (#164). `xvfb-run node scripts/checks/vizflash.js OUT`,
+  exit 0 at 38bf72f and at e65bb66, loads 55.59 and 10.07 before:
+  every scene 0 general and 0 red flashes a second within one frame,
+  the bound. A cell's most in a second, base and e65bb66: full 13 and
+  10, full at B_MAX 22 and 20, the pulse 13 and 13, at B_MAX 16 and 17,
+  moderate 10 and 9, idle 5 and 5, a prompt 8 and 8, a subagent 8 and
+  8, the split of three at full activity 5 and 4, at B_MAX 7 and 7, the
+  small pane 5 and 4, a prompt there 3 and 4. Within 0.1 s, reported
+  and not asserted: full 2 and 5, full at B_MAX 6 and 1, the pulse's 10
+  and 10, moderate 2 and 0, the rest 0 and 0. A run at 2de4cfc read 1,
+  3, 10 and 0, within one setting's spread. The frame's mean light at
+  full activity 0.0691 and 0.0698.
+- The frames, looked at at e65bb66 and 2b1ce51, Carbon alone on a
+  canvas of 1200 by 760 and one of 360 by 230 (a scratch capture, not
+  committed). At rest in the ground term the cloud is the small bright
+  2p core as the stippling drew it, its 1s dot a few pixels wide. A
+  difference of frames 1 s apart moves every point, by the flow and the
+  camera's turn. During a jump, the jump's flash lies on the moving
+  particles in mint and pink, then the cloud contracts over half a
+  second: with the event clock slowed ten times so a $2p4p\,{}^3D_3$
+  cloud settles first, its amber particles spread over the view, then
+  on a jump to $2p4s$ and on to the ground term within 0.4 s they
+  gather toward the core, the last of them still on the way at 0.6 s.
+  With $M_L = \pm2$ in a $2p4p$ level held by an event clock of
+  $10^{15}$, the 4p cloud of $m = \pm1$ thins along the cyan axis. In
+  the small pane the 4p cloud fills the atom's square, and the ground
+  term is a dot of a few pixels.
+
+Rejected:
+
+- Euler-Maruyama of Nelson's equation: biased at a frame's step and at
+  the clip, where the Metropolis step is exact.
+- A flock or a smoothed-particle fluid: livelier, but neither keeps
+  $\rho$, and the correction is a measured drift.
+- A time factor above 1: at 3 over 0.5 s the mean lags 0.25 bohr an
+  axis, 15 % of the 2p cloud's radius, a change of the cloud's shape,
+  and at 10 over 0.5 s the cells over 3 rise to 13 and 20 against the
+  seethe's 0 and 1.
+- The flow drawn bare, its points at the true positions: a cell's most
+  10 to 11 a second against the seethe's 3 to 4.
+- Particles of the moving electron alone, the rest stippled: the issue
+  asks every particle a trajectory.
