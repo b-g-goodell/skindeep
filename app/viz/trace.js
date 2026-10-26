@@ -200,12 +200,16 @@
   // plane), and which tiles of TILE pixels hold anything, as sums over
   // the tiles above and left. A screen plane holds what is drawn where
   // it is seen, already bent (image): a ray that reaches its depth reads
-  // it at the ray's own pixel.
+  // it at the ray's own pixel. A ground plane (ground), the waves' picture,
+  // a diagram of the strain and not light, is read once a ray, where it
+  // first reaches its depth, and never by a ray a hole captures: a ray
+  // turned back by a hole would read it again on its way to the camera,
+  // and a hole behind it would show the diagram over its shadow.
   const TILE = 8
   function plane (z, data, w, h, p, ox = 0, oy = 0) {
     const tw = Math.ceil(w / TILE)
     const th = Math.ceil(h / TILE)
-    if (!p || p.occ.length < tw * th || p.sum.length < (tw + 1) * (th + 1)) p = { z: 0, data: null, w: 0, h: 0, tw: 0, th: 0, ox: 0, oy: 0, edge: false, add: false, smooth: false, screen: false, k: 1, dil: null, occ: new Uint8Array(tw * th), sum: new Int32Array((tw + 1) * (th + 1)) }
+    if (!p || p.occ.length < tw * th || p.sum.length < (tw + 1) * (th + 1)) p = { z: 0, data: null, w: 0, h: 0, tw: 0, th: 0, ox: 0, oy: 0, edge: false, add: false, smooth: false, screen: false, ground: false, k: 1, dil: null, occ: new Uint8Array(tw * th), sum: new Int32Array((tw + 1) * (th + 1)) }
     p.z = z
     p.data = data
     p.w = w
@@ -444,6 +448,8 @@
     const ps = sc.planes
     const np = ps.length
     const { cx, cy, f } = sc
+    // Whether the ground was read: once a ray, and not if it is captured.
+    let read = cap
     for (let s = 0; s < n && T > 0.004; s++) {
       const k = STRIDE * s
       const ox = SEG[k]
@@ -460,6 +466,10 @@
           const p = ps[q]
           if (p.z <= oz) continue
           if (p.z > z1) break
+          if (p.ground) {
+            if (read) continue
+            read = true
+          }
           cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y)
         }
       } else {
@@ -467,6 +477,10 @@
           const p = ps[q]
           if (p.z >= oz) continue
           if (p.z < z1) break
+          if (p.ground) {
+            if (read) continue
+            read = true
+          }
           cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y)
         }
       }
@@ -562,7 +576,7 @@
         const end = SEG[k1 + 6] === Infinity ? Infinity : SEG[k1 + 2] + SEG[k1 + 6] * SEG[k1 + 5]
         for (let q = 0; q < np; q++) {
           const z = planes[q].z
-          if (z > end) {
+          if (z > end || (cap && planes[q].ground)) {
             px[q * NN + node] = NaN
             continue
           }

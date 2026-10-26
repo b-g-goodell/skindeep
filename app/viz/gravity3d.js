@@ -1386,7 +1386,8 @@
     // in teal and rose, over black: the frame's ground, a plane at the
     // sources' mean depth that emits this light and hides nothing, which
     // the trace bends as it bends what else lies at that depth, read
-    // bilinear from the grid itself at the trace's scale kt.
+    // bilinear from the grid itself at the trace's scale kt, once a ray
+    // and never in a hole's shadow (trace.js plane).
     function drawWaves (w, h, dim, kt) {
       const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
       const gw = Math.ceil(w / cell) + 1
@@ -1462,7 +1463,7 @@
         }
       }
       ground = T3.plane(groundZ, img.data, gw, gh, ground, -cell * kt / 2, -cell * kt / 2)
-      ground.edge = ground.add = ground.smooth = true
+      ground.edge = ground.add = ground.smooth = ground.ground = true
       ground.k = 1 / (cell * kt)
     }
 
