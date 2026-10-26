@@ -218,7 +218,8 @@ function follow (tab) {
   if (readOnly(tab) || kindOf(tab.cmd) !== 'claude') return null
   const cmd = background.attachFor(tab.cmd, tab.session.lastScreen)
   if (!cmd) return null
-  log(`tab ${tab.id}: claude refused to open a background session in place, opening it with: ${cmd.join(' ')}`)
+  // Every word after the program is the app's own: attach and the job id.
+  log(`tab ${tab.id}: claude refused to open a background session in place, opening it with: ${identity.logged(cmd, cmd.map((_, i) => i).slice(1))}`)
   return { cmd, cwd: tab.cwd, env: tab.env, file: tab.file, snapshot: tab.snapshot }
 }
 

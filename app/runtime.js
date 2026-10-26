@@ -9,8 +9,7 @@ const KEEP_LOGS = 10
 
 // Without XDG_RUNTIME_DIR the root lies in the user's own state dir,
 // never in a shared TMPDIR or /tmp, where another user can create it
-// first, and beside the log dir, not in it: bin/skinned makes that
-// under the caller's umask (decision 0016).
+// first, and beside the log dir, not in it (decision 0016).
 function base () {
   if (process.env.XDG_RUNTIME_DIR) return path.join(process.env.XDG_RUNTIME_DIR, 'claude-skins')
   return path.join(stateHome(), 'claude-skins-run')

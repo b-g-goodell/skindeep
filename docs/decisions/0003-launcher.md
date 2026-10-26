@@ -2,7 +2,8 @@
 
 Status: accepted 2026-10-11, revised 2026-10-12 for portable commands,
 for the Session's exit status, for tabs (decision 0023), for `--mute`
-(decision 0024), and for the one exec route through `exec-clean.py`.
+(decision 0024), for the one exec route through `exec-clean.py`, and
+for Chromium's sandbox (decision 0001).
 
 ## Context
 
@@ -14,10 +15,13 @@ stderr, which would land in the user's shell.
 ## Decision
 
 - `bin/skinned [--skin NAME|PATH] [--statusline=always|chain-only]
-  [--no-viz] [--mute] -- CMD [ARGS]`, a POSIX sh script. It resolves the
+  [--no-viz] [--mute] [--unsafe-no-sandbox] -- CMD [ARGS]`, a POSIX sh
+  script. It resolves the
   repository, keeps the caller's stderr on fd 3 (`exec 3>&2`), sends
-  Electron's own stderr to a per-launch log, and execs
-  `electron --no-sandbox <repo> ...`.
+  Electron's own stderr to a per-launch log, and runs
+  `electron <repo> ...`. Where Chromium's sandbox cannot start it
+  refuses with 125 before any window, unless `--unsafe-no-sandbox` or
+  `SKINNED_UNSAFE_NO_SANDBOX=1` asks for `--no-sandbox` (decision 0001).
 - User-facing errors (bad skin, missing command) go to fd 3.
 - Exit status: the child's status, of the tab that ends last when the
   window has several (decision 0023). 128+n when the child dies by

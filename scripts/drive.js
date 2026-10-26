@@ -5,8 +5,24 @@ const { _electron } = require('playwright-core')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
+const { spawnSync } = require('child_process')
 
 const root = path.join(__dirname, '..')
+
+// Chromium's sandbox, as bin/skinned probes it (decision 0001), once per
+// process, with CHROME_DEVEL_SANDBOX as sandbox_env sets it. Returns
+// that variable's value for the launch, '' for none. Where the sandbox
+// cannot start, a check runs only with SKINNED_UNSAFE_NO_SANDBOX=1,
+// which launches Electron with --no-sandbox.
+let sandboxHelper = null
+function checkSandbox () {
+  if (sandboxHelper !== null) return sandboxHelper
+  const electron = require('electron')
+  const r = spawnSync('sh', ['-c', '. "$1" && sandbox_env "$2" && sandbox_starts "$2" && printf %s "${CHROME_DEVEL_SANDBOX:-}"', 'sh', path.join(root, 'scripts', 'sandbox.sh'), electron], { encoding: 'utf8' })
+  if (r.status !== 0) throw new Error(`Chromium's sandbox does not start for ${electron}: run install.sh once, or set SKINNED_UNSAFE_NO_SANDBOX=1 to run without it`)
+  sandboxHelper = r.stdout
+  return sandboxHelper
+}
 
 // opts.root: an app tree other than this checkout. Each launch gets a
 // state dir of its own unless the caller names one,
@@ -16,15 +32,20 @@ const root = path.join(__dirname, '..')
 // sound: a skin's sounds (decision 0024) would otherwise reach the
 // user's speakers, so Chromium mutes all output and has no sound server.
 async function launch (cmd, opts = {}) {
+  const unsafe = process.env.SKINNED_UNSAFE_NO_SANDBOX === '1'
+  const helper = unsafe ? '' : checkSandbox()
   const given = opts.env && opts.env.XDG_STATE_HOME
   const state = given || fs.mkdtempSync(path.join(os.tmpdir(), 'skinned-drive-'))
   const env = Object.assign({}, process.env, opts.env || {}, { XDG_STATE_HOME: state, PULSE_SERVER: 'unix:/nonexistent' })
+  if (helper) env.CHROME_DEVEL_SANDBOX = helper
   delete env.DBUS_SESSION_BUS_ADDRESS
   const app = await _electron.launch({
     executablePath: require('electron'),
-    args: ['--no-sandbox', '--mute-audio', ...(opts.require ? ['-r', opts.require] : []), opts.root || root, ...(opts.appArgs || []), '--', ...cmd],
+    args: [...(unsafe ? ['--no-sandbox'] : []), '--mute-audio', ...(opts.require ? ['-r', opts.require] : []), opts.root || root, ...(opts.appArgs || []), '--', ...cmd],
     cwd: opts.cwd || root,
-    env
+    env,
+    // Playwright adds --no-sandbox on Linux unless this is set.
+    chromiumSandbox: !unsafe
   })
   if (!given) app.on('close', () => fs.rmSync(state, { recursive: true, force: true }))
   const win = await app.firstWindow()

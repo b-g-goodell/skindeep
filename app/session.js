@@ -108,7 +108,7 @@ class Session extends EventEmitter {
       if (this.state !== 'preparing') return
     }
     try {
-      this.spawn([this.argv[0], ...args, ...this.argv.slice(1)], cols, rows)
+      this.spawn([this.argv[0], ...args, ...this.argv.slice(1)], cols, rows, args.length)
     } catch (e) {
       this.log(`spawn failed: ${e.stack || e}`)
       this.tell(`cannot start ${this.argv[0]}: ${e.message}`)
@@ -118,8 +118,9 @@ class Session extends EventEmitter {
 
   // Always through exec-clean.py, so the child holds only fds 0 to 2 and
   // a failed exec ends as decision 0003 says. node-pty's own exec ends
-  // any failure with status 1.
-  spawn (cmd, cols, rows) {
+  // any failure with status 1. injected: the count of the adapters'
+  // words after cmd[0], the only values the log keeps.
+  spawn (cmd, cols, rows, injected = 0) {
     const py = cli.resolveCommand('python3', this.env.PATH)
     if (!py) throw new Error('python3 not found on PATH, the app needs it to start a command')
     const words = this.wrap ? this.wrap(cmd) : cmd
@@ -129,7 +130,8 @@ class Session extends EventEmitter {
     this.state = 'running'
     // The CLI's argv. /proc shows it once the exec has happened.
     this.cmdline = cmd.map(identity.quote).join(' ')
-    this.log(`spawn ${this.pid}: ${this.label}: ${this.file}: ${words.map(identity.quote).join(' ')}`)
+    const own = Array.from({ length: injected }, (_, i) => i + 1)
+    this.log(`spawn ${this.pid}: ${this.label}: ${this.file}: ${this.wrap ? 'wrapped: ' : ''}${identity.logged(cmd, own)}`)
     this.sendStrip()
     this.pollTimer = setInterval(() => this.pollStrip(), this.pollMs)
     for (const a of this.adapters) if (a.attach) a.attach(this.pid)

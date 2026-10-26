@@ -37,7 +37,9 @@ DejaVu fonts. To draw the visualizer from your speakers, add `parec`
 If something is missing, the script says how to get it and stops.
 Otherwise it downloads Electron (about 120 MB) and puts `claude-skins`,
 `codex-skins` and `skinned` in `~/.local/bin`, or in `BINDIR` if you
-set it. Run it again after each `git pull`, and `./uninstall.sh`
+set it. Where Chromium's sandbox cannot start yet, it asks for `sudo`
+once to make it start, or, with no terminal to ask on, prints the one
+command to run as root. Run it again after each `git pull`, and `./uninstall.sh`
 removes the commands, as [decision 0018](docs/decisions/0018-install.md)
 explains. Or tell your agent:
 
@@ -136,9 +138,18 @@ without spending tokens:
 
 ## Known limits
 
-- Electron runs with `--no-sandbox`, since Ubuntu blocks what Chromium's
-  sandbox needs, but the app loads only local content and skins carry
-  no code.
+- Chromium's sandbox confines every page the app renders: the terminal
+  draws whatever the agent prints, web pages and files it read among
+  them, and a skin's images, fonts and sounds go through Chromium's
+  decoders, so a shared skin is untrusted input. The sandbox needs root
+  once: `install.sh` installs an AppArmor profile for the checkout's
+  Electron where AppArmor restricts user namespaces, as on Ubuntu 23.10
+  and later, else installs a root-owned setuid copy of `chrome-sandbox`
+  in `/usr/local/lib/claude-skins`. Until then
+  `skinned` refuses to start. `skinned --unsafe-no-sandbox` or
+  `SKINNED_UNSAFE_NO_SANDBOX=1` runs without the sandbox, and a bug in
+  any page then runs with all your rights
+  ([decision 0001](docs/decisions/0001-stack.md)).
 - The app keeps its runtime files, among them the scripts its windows
   load and the links its hooks report through, in
   `$XDG_RUNTIME_DIR/claude-skins`, else in
@@ -160,7 +171,9 @@ without spending tokens:
 `npm test` runs the tests, `scripts/checks/` holds live checks that run
 under Xvfb, and `npm run checks -- OUT` runs every one of them that
 needs no real agent, `scripts/fuzz/` holds a fuzz harness, and `scripts/shots.js`
-retakes this page's screenshots with two real prompts. The design is in
+retakes this page's screenshots with two real prompts. The live checks
+start Electron with Chromium's sandbox, so they need `install.sh`'s
+root step, or `SKINNED_UNSAFE_NO_SANDBOX=1` to run without it. The design is in
 [docs/DESIGN.md](docs/DESIGN.md), how it was built, chapter by chapter,
 in the [dev diary](docs/diary/README.md), and [decision 0019](docs/decisions/0019-tests.md)
 says what the tests cover.
