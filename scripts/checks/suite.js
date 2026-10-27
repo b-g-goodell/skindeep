@@ -28,7 +28,7 @@ const JOBS = [
   ['manager'], ['menufit'], ['menus'], ['newtab', 'profiles'], ['newtab', 'codex'], ['newtab', 'snapshot'],
   ['p1', 'bash'],
   ...['widgets', 'hostile', 'menu', 'switching', 'reload', 'collision', 'button', 'openskin', 'keys', 'remember'].map(m => ['p3', m]),
-  ['p5'], ['panels'], ['popout'], ['quarter'], ['rename'],
+  ['p5'], ['panels'], ['popout'], ['providers'], ['quarter'], ['rename'],
   ...['claude', 'plain', 'codex'].map(m => ['reopen', m]),
   ['settings'],
   ...['play', 'mute', 'start', 'skins', 'coffee'].map(m => ['sounds', m]),
