@@ -27,6 +27,10 @@ const FRAME_RATES = [15, 20, 24, 30, 60]
 // null: the mode's own PANE, TRACE_OWN.
 const TRACES = [15000, 45000, 60000, 90000, 135000]
 const TRACE_OWN = 30000
+// How the Gravity modes draw their gravitational waves. null: the
+// colour field, WAVES_OWN.
+const WAVES = ['smoke']
+const WAVES_OWN = 'colour'
 
 // own: the value null stands for, own(skin). show: a value as the menu
 // writes it.
@@ -77,6 +81,14 @@ const SETTINGS = [
     values: TRACES,
     own: () => TRACE_OWN,
     show: v => `${v} px a pane`,
+    none: 'Default'
+  },
+  {
+    id: 'viz.waves',
+    label: 'Gravitational waves',
+    values: WAVES,
+    own: () => WAVES_OWN,
+    show: v => v,
     none: 'Default'
   }
 ]
@@ -156,4 +168,4 @@ const value = (values, id) => {
   return values && s.values.includes(values[id]) ? values[id] : s.own(null)
 }
 
-module.exports = { SETTINGS, TEXT_SCALES, FRAME_RATES, TRACES, TRACE_OWN, file, load, save, valid, menu, scale, value, setPanel, panelsOf }
+module.exports = { SETTINGS, TEXT_SCALES, FRAME_RATES, TRACES, TRACE_OWN, WAVES, WAVES_OWN, file, load, save, valid, menu, scale, value, setPanel, panelsOf }

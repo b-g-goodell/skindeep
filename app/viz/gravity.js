@@ -156,6 +156,12 @@
     let hs = null
     let vs = null
     const hv = [0, 0]
+    // The waves as smoke (waves.js smoke), when env.waves() chooses it:
+    // its texels, SUB to a cell, and the gradient's scratch.
+    const sgrid = document.createElement('canvas')
+    const sg = sgrid.getContext('2d', { willReadFrequently: true })
+    let simg = null
+    let sbuf = null
 
     function body (x, y, vx, vy, m, hue, star) {
       const b = { x, y, vx, vy, m, hue, star: !!star, r: radius(m, star), ax: 0, ay: 0 }
@@ -288,7 +294,8 @@
     // 8 px at least, blurred up to the pane: at each, the sum over
     // sources of h_+ in the plane, the only polarization there, as
     // shown (waves.js), + in a cool tint and - in a warm one, opaque over
-    // black: the frame's ground, the trails added over it.
+    // black: the frame's ground, the trails added over it. With smoke,
+    // the gas that strain compresses and thins instead (waves.js smoke).
     function drawWaves (w, h, s, cx, cy, dim) {
       const cell = Math.max(8, Math.round(Math.min(w, h) / 32))
       const gw = Math.ceil(w / cell) + 1
@@ -315,6 +322,10 @@
         }
       }
       W.shown(hs, gw, gh, vs)
+      if (env && env.waves && env.waves() === 'smoke') {
+        drawSmoke(gw, gh, cell, dim)
+        return
+      }
       for (let j = 0; j < gh; j++) {
         for (let i = 0; i < gw; i++) {
           const v = vs[j * gw + i] * k
@@ -334,6 +345,24 @@
       gg.putImageData(img, 0, 0)
       g.imageSmoothingEnabled = true
       g.drawImage(grid, 0, 0, gw, gh, -cell / 2, -cell / 2, gw * cell, gh * cell)
+    }
+
+    // The smoke of the strain as shown, vs, on its grid gw by gh of cells
+    // cell px across, the frame's ground as the colour field is.
+    function drawSmoke (gw, gh, cell, dim) {
+      const tw = (gw - 1) * W.SUB + 1
+      const th = (gh - 1) * W.SUB + 1
+      if (sgrid.width !== tw || sgrid.height !== th || !simg) {
+        sgrid.width = tw
+        sgrid.height = th
+        simg = sg.createImageData(tw, th)
+        sbuf = new Float32Array(2 * gw * gh)
+      }
+      W.smoke(vs, gw, gh, clock, simg.data, 0.16 * dim, sbuf)
+      sg.putImageData(simg, 0, 0)
+      g.imageSmoothingEnabled = true
+      const d = cell / W.SUB
+      g.drawImage(sgrid, 0, 0, tw, th, -d / 2, -d / 2, tw * d, th * d)
     }
 
     seed()

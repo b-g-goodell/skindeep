@@ -111,3 +111,73 @@ test('waves: the drawn field\'s box filter takes the mean of Iddot, nothing outs
   assert.ok(one.mean(10, 1, q) && Math.abs(q[0] - 0.5) < 1e-9, `${q[0]}`)
   assert.ok(!one.mean(8.5, 1, q), 'a box wholly before the samples reads nothing')
 })
+
+test('waves: the gain keeps GAIN for a weak field and lowers it so a strong one\'s top tenth is drawn at tanh(1)', () => {
+  const n = 1000
+  const buf = new Float32Array(n)
+  const zero = new Float32Array(n)
+  // A weak field, a seed pair's at most: GAIN, and shown as before.
+  const weak = Float32Array.from({ length: n }, (_, i) => 0.9 / W.GAIN * Math.sin(i))
+  assert.strictEqual(W.gain(weak, zero, n, buf), W.GAIN)
+  const a = W.shown(weak, 40, 25, new Float32Array(n))
+  const b = W.shown(weak, 40, 25, new Float32Array(n), W.GAIN)
+  assert.deepStrictEqual(a, b)
+  // Bright cells under a tenth of the pane leave GAIN.
+  const spot = Float32Array.from({ length: n }, (_, i) => i < 0.05 * n ? 1 : 1e-6)
+  assert.strictEqual(W.gain(spot, zero, n, buf), W.GAIN)
+  // A strong field, as a second hole's pair radiates: |h| from 1e-4 to
+  // 1e-2, every cell past tanh(1) at GAIN. The cell at the top tenth is
+  // drawn at tanh(1), the strongest cells below saturation, by either
+  // polarization.
+  const strong = Float32Array.from({ length: n }, (_, i) => (i % 2 ? -1 : 1) * 1e-4 * 100 ** (i / (n - 1)))
+  const k = W.gain(zero, strong, n, buf)
+  const top = 1e-4 * 100 ** (Math.floor(0.9 * n) / (n - 1))
+  assert.ok(Math.abs(k * top - 1) < 1e-4, `the top tenth at ${k * top}`)
+  assert.ok(Math.tanh(k * 1e-2) < 0.99, `the strongest cell at ${Math.tanh(k * 1e-2)}`)
+  let sat = 0
+  for (let i = 0; i < n; i++) if (Math.abs(Math.tanh(k * strong[i])) > 0.9) sat++
+  assert.ok(sat < 0.1 * n, `${sat} cells saturated`)
+})
+
+// The smoke (issue #183): a sheet of gas in the drawn plane, its density
+// 1 + s for the strain as shown, s, glowing as its square, and
+// carried along the lines of equal strain by the stream function STIR s.
+test('waves: the smoke is the gas at rest where the strain is nothing, compressed and thinned by it, and carried along its fronts', () => {
+  const gw = 12
+  const gh = 9
+  const n = gw * gh
+  const tw = (gw - 1) * W.SUB + 1
+  const th = (gh - 1) * W.SUB + 1
+  const t = 37.5
+  const k = 0.4
+  const buf = new Float32Array(2 * n)
+  const draw = s => W.smoke(s, gw, gh, t, new Float32Array(4 * tw * th), k, buf)
+  // The texel at cell (x, y) as the gas at rest read at (x + dx, y + dy),
+  // its density rho.
+  const want = (out, rho, dx, dy, msg) => {
+    for (let b = 0; b < th; b++) {
+      for (let a = 0; a < tw; a++) {
+        const x = a / W.SUB
+        const y = b / W.SUB
+        const v = W.medium(x + dx, y + dy(x), t) * rho(x) ** 2 * k
+        const p = 4 * (b * tw + a)
+        assert.ok(Math.abs(out[p + 1] - 215 * v) < 1e-3, `${msg}: texel ${a}, ${b} at ${out[p + 1]}, want ${215 * v}`)
+        assert.strictEqual(out[p + 3], 255)
+      }
+    }
+  }
+  want(draw(new Float32Array(n)), () => 1, 0, () => 0, 'no strain')
+  // A uniform strain: compressed or thinned where it is, moved nowhere.
+  want(draw(new Float32Array(n).fill(0.6)), () => 1.6, 0, () => 0, 's 0.6')
+  want(draw(new Float32Array(n).fill(-0.6)), () => 0.4, 0, () => 0, 's -0.6')
+  // A strain rising along x, fronts along y: the gas carried along y by
+  // STIR times the slope, and its density with the strain.
+  const slope = 0.05
+  const ramp = Float32Array.from({ length: n }, (_, o) => -0.3 + slope * (o % gw))
+  want(draw(ramp), x => 1 + (-0.3 + slope * x), 0, () => W.STIR * slope, 'a ramp')
+  // The rest's own density lies in HAZE to 1, and differs from place to
+  // place.
+  const rest = Array.from({ length: 400 }, (_, i) => W.medium(i * 0.37, i * 0.21, t))
+  assert.ok(rest.every(v => v >= W.HAZE - 1e-9 && v <= 1 + 1e-9), 'a density outside HAZE to 1')
+  assert.ok(Math.max(...rest) - Math.min(...rest) > (1 - W.HAZE) / 2, 'the gas at rest is uniform')
+})

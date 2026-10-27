@@ -149,7 +149,10 @@ butterchurn-presets is MIT for its conversion only.
   save a press on a drop-down: the left button's press, moves and release go to the pane under the
   press, found with `layout.js`, in the pane's canvas pixels, through
   the renderer's optional `pointer(kind, x, y, down)`. The press holds
-  the pointer to its pane until the release. Nothing the pointer does
+  the pointer to its pane until the release. The wheel, and a pinch on
+  a touchpad, goes to the same method as a fourth kind, `wheel`, with
+  its delta in steps (see 2026-10-26: Gravity 3D's zoom and its holes'
+  evaporation), and the page neither scrolls nor zooms. Nothing the pointer does
   changes a mode, the pane layout or the tab, and the keyboard stays
   with the terminal. Each mode answers in its own way:
   - Quantum: a drag throws a packet, a press held still for a quarter
@@ -164,8 +167,9 @@ butterchurn-presets is MIT for its conversion only.
   - Gravity: the release throws a moon from the press: a click puts it
     on a circular orbit about the heaviest body, a drag gives it a
     velocity in proportion to the drag, its aim drawn while pressed.
-  - Gravity 3D: a drag turns the camera, a click throws a moon (see
-    2026-10-15: Gravity 3D).
+  - Gravity 3D: a drag turns the camera, a click throws a moon, the
+    wheel or a pinch zooms (see 2026-10-15: Gravity 3D, and 2026-10-26:
+    Gravity 3D's zoom and its holes' evaporation).
   - Carbon: a drag turns the camera, a click on the atom lets the drawn
     atom absorb a photon from its present level, a click on the level
     diagram lifts it to the level under the click by a collision (see
@@ -347,14 +351,17 @@ distant background of stars".
   frame of their centre of mass, merging on contact.
 - Potential: a hole pulls by Paczynski and Wiita's
   $\Phi = -GM/(r - r_+)$, $r_+$ its horizon, $r_s$ at rest. Its
-  circular orbits have $v^2 = GMr/(r - r_s)^2$ and
-  $L^2 = GMr^3/(r - r_s)^2$, least at $r = 3 r_s$: the last stable
-  circular orbit, at $6GM/c^2$ as in Schwarzschild's geometry. The pair
+  circular orbits have $v^2 = GMr/(r - r_+)^2$ and
+  $L^2 = GMr^3/(r - r_+)^2$, least at $r = 3 r_+$: the last stable
+  circular orbit, at rest $3 r_s = 6GM/c^2$ as in Schwarzschild's
+  geometry, nearer with spin. The pair
   force is symmetric, so momentum holds. Near a hole the step is cut
   into substeps of at most 3% of the gap to the horizon over the speed
   across it.
 - Spin: a hole carries $a = \chi GM/c^2$, $0 \le \chi \le 0.95$, about
-  a unit axis $\hat{j}$, and its horizon shrinks to
+  a unit axis $\hat{j}$, $\chi$ set by the session's activity from the
+  hole's own spin $\chi_0$ (see 2026-10-26: Gravity 3D's spin follows
+  the session), and its horizon shrinks to
   $r_+ = GM/c^2 + \sqrt{(GM/c^2)^2 - a^2}$. What moves at $\mathbf{v}$
   relative to it, at $r \hat{n}$ from it, feels the Lense-Thirring
   acceleration $\mathbf{a} = \mathbf{v} \times \mathbf{B}_g$ with
@@ -367,8 +374,8 @@ distant background of stars".
 - Capture: a body whose centre crosses $r_+$ is swallowed, a crossing
   within a substep caught by the least distance of the pair's relative
   motion taken as straight over it, its mass,
-  momentum and angular momentum about the hole the hole's, whose spin
-  follows, capped at $\chi = 0.95$. A grain of dust weighs 0.004. Two
+  momentum and angular momentum about the hole the hole's, whose own
+  spin follows, capped at $\chi_0 = 0.95$. A grain of dust weighs 0.004. Two
   holes merge when their horizons touch.
 - Checked by `test/viz-gravity3d.test.js`: $r_+ = r_s$ at rest and
   $0.9 r_s$ at $\chi = 0.6$, the least $L$ at $3 r_s$ to within 0.002,
@@ -379,32 +386,39 @@ distant background of stars".
   about a hole of $\chi = 0.9$ turning its node to within 10% of the
   Lense-Thirring rate, the other way for the opposite spin and not at
   all at rest.
-- The seed: a hole of 900 spinning at $\chi = 0.7$, 420 grains in its
+- The seed: a hole of 900 of own spin $\chi_0 = 0.35$, 420 grains in its
   equator between 3.3 and 8 $r_s$, a companion of 80 at 175, a star of
   50 and a hole of 30 in a tight pair 16 apart (see 2026-10-16:
-  gravitational waves), and two planets, at 215 and 245. Within 10 $r_s$ of a hole and outside $3 r_s$, the
+  gravitational waves), and two planets, at 215 and 245. Within 10
+  $r_s$ of a hole and outside its last stable orbit, $3 r_+$, the
   disc's viscosity relaxes a grain's velocity, at a rate of 0.01 per
   unit of time, toward 99.5% of the circular velocity in the plane of
   its orbit: grains settle on circles, spiral to the last stable orbit
   and plunge. The star nearest a hole sheds grains from the point
   between them where the pulls balance, L1, at 1.1 to 1.45 times its
   own angular speed: a stream that feeds the disc.
-- Drawing: the camera, 620 from the heaviest hole with a half view
-  angle of 0.42 rad, turns about it (see 2026-10-18: Gravity 3D's
-  centre). Bodies, grains and trails are
+- Drawing: the camera, 620 from the heaviest hole at first, which the
+  wheel moves from 90 to 3300 (see 2026-10-26: Gravity 3D's zoom and
+  its holes' evaporation), with a half view angle of 0.42 rad, turns
+  about it (see 2026-10-18: Gravity 3D's centre). Bodies and grains are
   drawn flat on slices of depth and seen through the trace (see
   2026-10-17: Gravity 3D's optics), and bodies are sized and dimmed
   with distance. A
-  trail is the places a body passed, kept every 1.5 units of time or 4
-  of travel and projected each frame. Matter at $d$ from a hole heats
+  trail is the places a body passed, kept after a step when 1.5 units
+  of time or 4 of travel have passed (see 2026-10-26: Gravity 3D's
+  ring, flood and corners), drawn each frame as their images through
+  the holes (see 2026-10-22: Gravity 3D's trails, one curve). Matter at $d$ from a hole heats
   as $\min(1, (2.3 r_s/d)^2)$, toward orange, white and then blue
-  white, larger and brighter, a hot grain beamed by
-  $(1 + 0.6 v_\parallel/c)^2$ toward the camera. Merger rings and the
+  white, larger and brighter. What emits is shifted in colour and
+  brightness by its motion and by the holes' potential (see
+  2026-10-18: Gravity 3D's Doppler shift). Merger rings and the
   idle dimming are the Gravity mode's.
 - A hole is not drawn. Its shadow, of radius
-  $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$, the image of its photon
-  sphere at $1.5 r_s$, and its photon ring are what the trace makes of
-  the light near it (see 2026-10-17). A hole's flash, as it swallows,
+  $\frac{\sqrt{27}}{2} r_s \approx 2.6 r_s$ at rest, the image of its
+  photon sphere at $1.5 r_s$, and its photon ring are what the trace
+  makes of the light near it (see 2026-10-17), a spinning hole's shadow
+  shifted and flattened (see 2026-10-26: Gravity 3D's spin follows the
+  session). A hole's flash, as it swallows,
   brightens the hot matter about it.
 - Background: 3000 stars at infinity, a third of them in a band about
   a great circle, a galaxy's disc seen from inside, under 120 soft dots
@@ -421,8 +435,10 @@ distant background of stars".
   a hole's disc. A prompt sends a comet from the edge, aimed to miss a
   hole by 1.5 to 4.5 $r_s$, so some are swallowed, and rings the
   heaviest body. A stop flares the heaviest body and adds 12% to its
-  mass, up to 1500. A subagent adds a black hole of 150 to 300 spinning
-  at $\chi$ of 0.3 to 0.9 about any axis, with a small disc, the next a
+  mass, up to 1500 for a hole and 800 for any other body. While idle
+  the holes evaporate (see 2026-10-26: Gravity 3D's zoom and its holes'
+  evaporation). A subagent adds a black hole of 150 to 300 of own
+  spin 0.15 to 0.45 about any axis, with a small disc, the next a
   star, three of each at most, and a star first when none is left. A
   compaction slows every body and grain to 0.6 of its speed, so
   everything falls inward. An output event puffs 16 grains from a body
@@ -994,7 +1010,8 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   each body's term is held to $4 m c^2$ in norm, so a plunge's burst
   stays near $\mu c^2$. The dynamics keep the whole pull.
 - The gain: the strain is drawn as $\tanh(5000\,h)$, one gain for both
-  modes. Where a strong source's strain would turn from + to - within
+  modes, which Gravity 3D lowers where a strong field would saturate it
+  (see 2026-10-26: Gravity 3D's ring, flood and corners). Where a strong source's strain would turn from + to - within
   one drawn cell, so that the grid blurred up to the pane would show the
   turn as steps, the argument is divided by the local steepness, the
   largest step of $5000\,h$ to a neighbouring cell over 0.8: an
@@ -1005,7 +1022,8 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   along the axis and half in the plane, and 5000 brings that to about
   0.6: 0.63 for Gravity's pair in its plane, 0.87 on the axis of
   Gravity 3D's and 0.44 in its plane. The pane says so at its top
-  right, "gravitational waves, exaggerated x5000", clear of the
+  right, "gravitational waves, exaggerated x5000", the gain in use at
+  two figures, clear of the
   drop-down's button, else "waves exaggerated x5000", else that under
   the button, at the visualization text size.
 - Gravity's wave speed: $c = 11.5$, the value of Gravity 3D's, so the
@@ -1056,7 +1074,8 @@ the 2D wave speed and radiation reaction to the builder, settled here.
   thinner than a cell is drawn ramped, not aliased into beads. In
   Gravity the ground is opaque, under everything else. In Gravity 3D
   it lies at its sources' mean depth and is traced as everything else
-  is (see 2026-10-17: Gravity 3D's optics).
+  is, read once a ray and never in a shadow (see 2026-10-17: Gravity
+  3D's optics, and 2026-10-26: Gravity 3D's ring, flood and corners).
 - Probe: both modes report their sources and, for the pair of shortest
   period, its separation, period, turns and the sign changes of its
   $h_+$ 80 from it, along its axis in Gravity 3D and in its plane in
@@ -1157,31 +1176,36 @@ behind it vanished under paint.
   for Schwarzschild, so $g$ is smooth up to $u = 1$, where it is his
   $\bar{b} = -0.4002$.
 - The scene's sources are drawn flat, as before, on slices of depth:
-  the bodies, their trails, the dust and the flares. The slices part at
+  the bodies, the dust and the flares, and the trails' images on a
+  screen layer of each slice (see 2026-10-22: Gravity 3D's trails, one
+  curve). The slices part at
   each hole's depth, and behind the nearest hole in eight more, even in
   $\sum_h \sqrt{(z - z_h)/z}$ over the holes in front, so that the
   Einstein radii within a slice differ little. Each slice is a plane at
   its content's mean depth. The waves' picture (see 2026-10-16) is a
   plane at its sources' mean depth that emits and hides nothing: it is
   a diagram of the strain on the planes through its sources, so it is
-  bent as what else lies there is. The distant stars and the galaxy's
+  bent as what else lies there is, but read once a ray and never by a
+  captured one (see 2026-10-26: Gravity 3D's ring, flood and corners).
+  The distant stars and the galaxy's
   glow are a cube of directions, built at about the pane's density,
   its faces in steps of 64 pixels so that panes of near sizes share
   it, read along a ray's last direction.
 - A ray takes, front to back, the planes it crosses and, unless
   captured, the sky. A colour is taken as found: specific intensity
   is constant along a ray ($I_\nu/\nu^3$, Liouville, as James et al.,
-  arXiv:1502.03808, use it, with no frequency shift here), so a lensed
-  source is magnified by its area, not brightened. The Doppler beaming
-  of the disc's hot grains is their emission's, as before.
-- Spin is not in the optics: the light is Schwarzschild's for every
-  hole, and nothing paints a shift. A spinning hole's shadow bulges on
-  the side moving away and flattens on the side moving toward the
-  camera (Bardeen at Les Houches in 1972, as James et al., section
-  1.1, recount it), but
-  tracing Kerr geodesics per ray, as they do, is beyond the frame's
-  cost on a CPU. The spin moves matter, by the Lense-Thirring term,
-  and #173 will move the spin.
+  arXiv:1502.03808, use it), so a lensed source is magnified by its
+  area, not brightened. The shift of an emitter's light by its motion
+  and by the holes' potential is applied where it is drawn, on its
+  slice (see 2026-10-18: Gravity 3D's Doppler shift).
+- Spin: a spinning hole's shadow bulges on the side moving away and
+  flattens on the side moving toward the camera (Bardeen at Les
+  Houches in 1972, as James et al., section 1.1, recount it). Tracing
+  Kerr geodesics per ray, as they do, is beyond the frame's cost on a
+  CPU, so the trace takes the edge of Kerr's shadow and Schwarzschild's
+  deflection measured from it (see 2026-10-26: Gravity 3D's spin
+  follows the session). Nothing paints it. The spin also moves matter,
+  by the Lense-Thirring term.
 - What the rule leaves out: it is a thin lens, exact for camera and
   source far from the hole that bends the ray, so matter within a few
   $b$ of a hole, the inner disc, is bent as if its light left the lens
@@ -1610,7 +1634,8 @@ of mass's drift since the last.
   merged hole, which is the same body. With no hole the view takes the
   origin, the centre of mass. `anchor` in `app/viz/gravity3d.js`
   chooses it each frame.
-- Only the camera follows it. The camera stands 620 from it, turns
+- Only the camera follows it. The camera stands 620 from it, or where
+  the wheel puts it, turns
   about it by itself and by the pointer's drag, and every world point
   is taken relative to it: `place` for the bodies, the dust, the
   trails, the flares and the waves' sources, and so the slices, their
@@ -2823,3 +2848,880 @@ Rejected:
 - The paper multiplied over the whole pane every frame: 1.9 ms a frame
   at 1200 by 760. It is laid on the sky and the land when they are
   painted, and the clouds carry their own granulation.
+
+## 2026-10-18: Gravity 3D's Doppler shift
+
+Owner, issue #172, 2026-10-16: "we want gravity 3d visualization to
+also take the doppler effect into account".
+
+Before (`app/viz/gravity3d.js` at 711d1d7), only the hot dust was
+beamed, its alpha scaled by
+$\max(0.35, \min(2.2, (1 + 0.6 v_\parallel/C)^2))$, $v_\parallel$ its
+speed toward the camera relative to the hole that heats it most. No
+colour was shifted.
+
+- The factor: `doppler` gives
+  $D = 1/(\gamma(1 - \beta\cos\theta))$, $\beta = v/C$ at the mode's
+  $C = 11.5$, $\theta$ the angle between the emitter's velocity and
+  the straight line from it to the camera. One function serves the
+  dust, the bodies and the trails (`emit`). $\beta$ is capped at 0.99:
+  the Paczynski-Wiita pull has no speed limit, and a grain that plunges
+  from the last stable orbit can pass $C$.
+- The frame: velocities are taken relative to the view's centre, the
+  heaviest hole (see 2026-10-18: Gravity 3D's centre), or the origin,
+  at rest, when there is no hole. The camera stands 620 from that hole
+  and goes where it goes, so the hole's frame is the camera's, and a
+  hole's own disc is seen as it turns about the hole. In the frame of
+  the centre of mass, the physics', the seed's hole moves at up to
+  0.254, $\beta = 0.022$ (in Node, a hole of 900, a body of 80 at 175
+  for the companion and two of 3.5 at 215 and 245, on circular orbits,
+  stepped 1000 units of time), which would lay a common shift
+  of up to 2.2% on its whole disc, swinging with the companion's
+  orbit. The camera's own turn about the hole is the viewer's, not a
+  motion of the simulation, and takes no part.
+- Unshifted: the distant stars, as the issue directs, though in this
+  frame they would take the hole's motion about the centre of mass,
+  the same 2.2% at most. The flares, which mark an event at a place,
+  and the waves' picture, a diagram of the strain and not light, are
+  unshifted too. Nothing of a hole is painted, so nothing of one is
+  shifted.
+- The line of sight is the straight one from the emitter to the
+  camera. A lensed image's light leaves the emitter in another
+  direction, most for matter close behind a hole, but matter is drawn
+  once, on its slice, for all its images (see 2026-10-17: Gravity 3D's
+  optics), so each image of a grain takes the shift of its straight
+  line.
+- Gravitational redshift is applied with the kinematic shift: the
+  shift is $g = D \prod_h \sqrt{1 - r_{s,h}/r_h}$ over the holes, $r_h$
+  the emitter's distance from hole $h$ (`lapse`), and $g = 0$ within
+  $r_s$, where the Schwarzschild factor has no static observer: a
+  grain between a spinning hole's horizon and $r_s$ is drawn black.
+  For one hole the product is the shift of an emitter whose speed is
+  measured by the static observer where it is, $\theta$ that
+  observer's angle to the light it sends. Here $v$ is the
+  Paczynski-Wiita speed, $\beta = 0.57$ at the last stable orbit of
+  the seed's hole against $1/2$ in Schwarzschild, and $\theta$ the
+  straight line's, so near a hole it is an approximation, and for
+  several holes a weak-field one. The factor is 0.816 at $3 r_s$ and
+  0.935 at $8 r_s$. The camera's own, 0.989 at 620 from the seed's
+  hole, is left out: the issue's factor is for a distant observer.
+- The colour rule (`shift`): $\lambda_{obs} = \lambda_{em}/g$. A hue's
+  nominal emitted wavelength is that of the spectral colour of that
+  hue. For each wavelength from 440 to 640 nm, every 0.25 nm, the mode
+  computes when it loads the colour of the CIE 1931 colour matching
+  functions, by the multi-lobe fit of Wyman, Sloan and Shirley (JCGT
+  2(2), 2013, eq. 4 and table 1), in linear sRGB (IEC 61966-2-1), mixed with white
+  until no channel is negative, which keeps its dominant wavelength,
+  and that colour's CSS hue. The hue falls strictly over that range,
+  from 271.8 at 440 nm through 0 at 611.0 nm to 341.6 at 640 nm, and
+  the fit's hue folds back below 440 nm and stops falling past 644 nm,
+  so the range ends there and a shifted wavelength is clamped to it. A
+  hue turns toward 271.8, violet, for $g > 1$ and toward 341.6, the
+  deepest red, for $g < 1$. The hues of sRGB's primaries take 611.0,
+  549.2 and 462.9 nm. The purples, between 271.8 and 341.6, have no
+  wavelength: one moves along their arc by the part
+  $\ln g / \ln(640/440)$ of it, toward violet for $g > 1$ and red for
+  $g < 1$. A body's colour is shifted after its heat sets it (`hot`).
+  At the mode's speeds the shift is large: the disc's orange, hue 30,
+  591.5 nm, turns green (150.7) at $g = 1.1$, violet (263.0) at 1.3
+  and the deepest red at 0.9.
+- Brightness: $g^3$, from the invariance of $I_\nu/\nu^3$ that the
+  optics use, the spectrum's shape left out: the issue's $D^3$ for a
+  discrete emitter, spectral index 0. It scales a grain's alpha, a
+  body's glow and a trail's alpha, each clamped at 1, past which the
+  grains still add, being drawn lighter. A body's disc takes it in
+  its lightness, up to 80%, past which its hue would wash to white. It
+  replaces the dust's former factor. A hole's flash still brightens
+  the hot matter about it.
+- The gain is 1, no exaggeration, and the pane says nothing of it. The
+  seed's disc moves at $\beta$ 0.28 at $8 r_s$ to 0.57 at $3 r_s$, $D$
+  1.33 to 1.92 coming and 0.75 to 0.52 going, and the companion and
+  the planets at 175, 215 and 245 at $\beta$ 0.21, 0.19 and 0.18, $D$
+  1.24 to 0.81 at most, so the shift reads as it is.
+- Trails: each trail place keeps the body's velocity there, relative
+  to the view's centre (`tv`), and each of a trail's six pieces takes
+  the shift of its middle place, so a trail shows where the body came
+  toward the camera and where it went away.
+- The dust's batching stands: a grain's shift is taken in steps of
+  0.02 in $\ln g$, so grains of near shifts and one heat share a
+  fill, and each fill and alpha is one path. A draw of a pane of 400
+  by 380 at full activity made a median of 202 to 212 fill calls
+  against 165 to 173 at 711d1d7, in the rounds below.
+- Frame rate, under swiftshader on this host, by the script of
+  2026-10-17 (gravity3d alone at full activity, then one pane of a
+  1200 by 760 window and three panes of 240 by 460 in a 720 by 460
+  window, five times 2 s each), 711d1d7 and this tree in turn, three
+  rounds each. The host stood at a load of 36 to 66 throughout, the
+  first figure of /proc/loadavg read at each line, far above the 14
+  that gated the runs of 2026-10-17, so each figure moved widely
+  between its times of 2 s. The median of a draw at 400 by 380 was
+  10.0, 10.6 and 10.5 ms at 711d1d7 (loads 39.1, 41.4, 53.3) against
+  10.3, 10.8 and 12.1 now (43.2, 46.3, 66.5), and at 1200 by 760 15.9,
+  16.0 and 15.1 against 17.5, 16.4 and 18.6. Three panes ran at a
+  median of 14, 15 and 6.5 frames per second at 711d1d7 (loads 40.8,
+  44.1, 63.4) against 14, 7.5 and 10.5 now (40.5, 52.2, 64.8), and one
+  pane of 1200 by 760 at 15, 12.5 and 9 (40.5, 42.4, 55.3) against 13,
+  9.5 and 10.5 (42.4, 48.6, 62.9): within the load's spread. In the
+  first two rounds, of nearer load, the draw cost 0.2 to 0.3 ms more at
+  400 by 380 and 0.4 to 1.6 ms more at 1200 by 760.
+- Checked by `test/viz-gravity3d.test.js`: $D = 1$ at rest and within
+  $10^{-4}$ of 1 across the line at $\beta = 0.01$, above 1 coming
+  and below 1 going, and at $\beta = 0.6$ the values 2, 8/7, 0.8 and
+  0.5 at $\theta$ of 0, 60, 90 and 180 degrees, and $\beta$ capped
+  past $C$. The colour rule leaves every hue at $D = 1$, turns the
+  spectral hues and the purples toward violet at $D = 1.05$ and toward
+  red at $D = 0.95$, divides a hue's nominal wavelength by $D$ to
+  $10^{-6}$ nm, and clamps at the range's ends. The gravitational
+  factor is $\sqrt{3}/2$ at $4 r_s$ and 0 within $r_s$.
+  `scripts/checks/vizmodes.js` stages a hole of 900 with a disc of 420
+  grains seen 0.15 rad above its plane, in Gravity 3D's full pane and
+  its small one, and less the same scene without the disc, wants the
+  side coming toward the camera more than 1.5 times as bright and its
+  blue over red more than 1.2 times the other side's. In the run of
+  this tree it read 3.79 and 1.45 in the full pane and 3.19 and 1.45
+  in a small pane of 300 by 380. In both frames the approaching side
+  shows violet, cyan and green grains and the receding side faint red
+  ones. Without the control the lensed glow of the galaxy, on one
+  side of the hole, held the full pane's colour ratio to 1.18.
+  `scripts/checks/vizlens.js` still sees its moons and its hole
+  behind the hole, 8 of 8 points each, the moon at rest 250 behind
+  the hole now shifted by its lapse, 0.972 in frequency.
+
+Rejected:
+
+- A hue linear in $\ln\lambda$, 700 nm at hue 0 to 380 nm at 270 (the
+  first build): it put hue 30 at 655 nm, where sRGB's orange lies near
+  591, so a grain coming toward the camera turned green where its
+  light is blue.
+- The frame of the centre of mass: see the frame, above.
+- Each grain shifted relative to the hole that heats it most, as the
+  old beaming was: every grain would have a frame of its own, and the
+  bodies none.
+
+## 2026-10-22: Gravity 3D's trails, one curve
+
+Issue #182: "A trail draws as one continuous curve through its lensed
+places: no gap and no kink at the joint of two pieces, at any depth
+and lensing strength." The owner's screenshot showed trails near the
+hole split into dashes, and pieces of one trail that did not meet.
+
+Before (`app/viz/gravity3d.js` at 1587565), a trail was cut into six
+pieces, each drawn flat on the slice of its middle place and bent as
+that slice's plane at its mean depth. Staged with a hole of 900 and a
+trail of 64 places on a line from 40 to 360 behind it, 28 above its
+line, in a pane of 1200 by 760, the frame showed two faults, measured
+on the pixels that differ from the same scene without the trail by 4
+in a channel or more:
+
+- Pieces on two slices, bent by two Einstein radii, put their shared
+  place at two points on the screen: the outer image fell into two
+  pieces of 4110 and 1241 pixels, a gap on one side of the hole and,
+  on the other, two pieces side by side down one column. That was the
+  issue's suspected cause.
+- The inner image was a dotted ring of 6 pieces. The hole squeezes it
+  across, so a stroke a third of a traced pixel wide, read at one
+  point a pixel, was hit only every few pixels. No cut of the pieces
+  mends that.
+
+The rule now:
+
+- A trail is drawn where it is seen. Each place's images are found
+  forward (`trace.js`, `image`): the frame's point whose ray, traced by
+  the one rule of 2026-10-17, crosses the place's depth at the place,
+  by Newton's method on that map, its steps capped at 4 pixels and
+  halved until the ray comes nearer, to 0.002 traced pixels. The change
+  of the crossing with the image, J, is taken by differences. Where no
+  part of Newton's step brings the ray nearer, as beside a critical
+  curve, where J is near singular, the step is damped, (J^T J +
+  0.05^2)^-1 J^T, and turns toward the well-conditioned direction.
+- The images are followed along the trail (`curve`): each place's
+  guessed from the place before it, turned about the hole nearest it,
+  in units of its Einstein radius, as the place turns about that hole,
+  and moved along the line through the hole by J. For one hole the
+  image, the hole's point and the place's lie on one line, so the turn
+  is exact. A piece between places is halved while the guess lies
+  farther than 3 traced pixels from the last image, as often as that
+  asks, and six times more where the image found lies farther than
+  that, so an image that swings round a hole is followed, not cut
+  across, however near the hole's line the trail passes. A trail
+  through the line itself turns by pi at one point: at the last
+  halving the guess is the place's step carried by J, and its images
+  pass through the ring along the line. A branch ends where its image is lost, in the shadow or
+  behind the camera, where J passes 20, a stroke squeezed to a
+  twentieth, or at a fold, where it meets its twin and both are lost.
+  A place with fewer branches than images to look for starts one: the
+  weak field's outer image about each hole in front of it, and its
+  inner one, found by halving along the line through the hole, while
+  the weak field puts it at a twentieth or more. Each is followed both
+  ways along the trail from there, and stops where it meets another.
+- With several holes the weak field's pairs are not all the images.
+  Two holes' shear turns a hole's point caustic into a small astroid,
+  and as a place crosses it, images are born and lost in pairs at
+  folds, where J's less singular value falls to 0, at J of 2 to 3,
+  bright. The rule at 5e426fd seeded only at whole places, from each
+  hole's pair, so those images were never followed: with a second hole
+  of 300 the staged trail lost its inner arc and broke its outer one.
+  Now, where a branch starts or ends bright with J's less singular
+  value under 0.3, its twin is looked for a little back from the end,
+  2^-12 to 2^-1 of a piece, nearest first, from the branch's image
+  there mirrored through the end, since near a fold the pair lie on a
+  line through the fold point, one either side. The first image found
+  of the other parity, sign det J, apart from the branch and on no
+  other, is followed both ways, and its own ends the same. A branch
+  keeps its parity: a step to an image of the other sign, both with
+  J's less singular value 0.02 or more, is refused and the piece
+  halved, since an image changes sign only where it meets its twin.
+  Without that the follower stepped across a fold onto an image born
+  there, det J +0.36 to -0.68 in one step of 1.2 pixels on an arc
+  behind holes of 900 and 300, and left the image it should have
+  followed. Three further steps close what that leaves. Two branches
+  lost, or born, together at a fold, which stopped up to 6 pixels
+  apart, are joined through images found between them, or by one step
+  where they lie 3 pixels apart or less, never by a longer one. Past a
+  cusp an image sweeps along the
+  critical curve faster than halving follows, so one branch ends at a
+  fold within 2^-6 of a piece of where another starts farther along
+  it: the two are made one through images found between them. An end
+  with neither is looked past for an image of its parity. Beside a
+  fold the follower's guess inverts J damped as `image` does, so a
+  near-singular J no longer sends it crawling in steps of 1e-4 pixels,
+  and it halves a piece ten times more there, since the image runs as
+  the root of the place's step. The tolerance of 0.002 pixels keeps the
+  smear of points a fold leaves within it under a pixel: at 0.05 the
+  follower broke a trail along a cusp into up to 32 branches. Nearer
+  the fold the smear is the tolerance over J's less singular value, and
+  two followers may take one image there: a branch whose every image
+  lies on another, within 1.5 pixels or that smear, up to 3, is that
+  one's double, and dropped.
+- Each image is stroked lw / |adj(J) t| wide, lw the trail's width and
+  t its unbent direction there, at most 3 lw: the width the trace of
+  a stroke would show, so the inner image is thin and faint, not
+  bright. Runs of one width, in steps of a quarter of an octave, are
+  one path each, butt ended, so pieces and runs meet without overlap.
+  A fill of a ribbon was tried first: under a tenth of a pixel wide it
+  dropped out every 8 pixels, and a stroke under a pixel is drawn thin
+  and faint instead.
+- The strokes go on a screen layer of each slice, a plane flagged
+  `screen` that the trace reads at the ray's own pixel, already bent,
+  at the mean depth of the pieces on that slice. A ray captured or
+  turned back before that depth does not read it, and what lies nearer
+  hides it as it hides any plane: a body in front of a trail still
+  covers it. Each piece keeps its slice, its alpha by age and its
+  Doppler shift, and neighbouring pieces share the image at their
+  joint, so the curve is one.
+- A control of the lens record now draws the scene again without its
+  hole, so the trails' images in it are found without that hole too.
+
+Cost, by the script of 2026-10-17's draw times (gravity3d alone at
+full activity, the median of draws 300 to 540), 1587565, the first
+follower (dde46e4) and 5e426fd in turn, three rounds, the host at a
+load of 29.5 to 43.5: a draw of 400 by 380 took 11.1, 9.8 and 11.5 ms
+at 1587565, 13.1, 12.8 and 15.2 with the first follower and 15.9, 14.9
+and 15.5 at 5e426fd, at 1200 by 760 17.7, 14.9 and 18.1, 21.7, 23.7 and 22.6,
+and 18.5, 20.9 and 20.2, and at 360 by 230 9.5, 8.4 and 8.9, 12.2,
+13.4 and 13.9, and 11.5, 12.1 and 13.9. The images of five to eight
+trails, 307 to 707 images a draw, took 0.7 to 2.7 ms at 5e426fd against 1.0
+to 2.8 with the first follower: the turn about the hole costs no
+more than the arcs it now draws. In a fourth round of the first
+build, timed by parts, the screen layers' strokes and reads took 0.4
+to 0.6 ms and the trace 0.7 to 1.2 ms more, for its reads of the
+extra planes. A build before that solved each image to 0.01 pixels
+and pieces to 2 pixels: it traced 2.3 times the rays of the first
+follower on the staged trail.
+
+Checked by `test/viz-trace.test.js`: a point in front of the hole has
+its one image where a straight ray shows it, and behind the hole, off
+its line and near it, both images' rays meet it to 0.05 pixels, the
+outer beyond the weak field's Einstein radius on its side and the
+inner nearer the hole on the other. The staged trail, 28, 14, 3, 1 and
+0.3 above the line of the hole of 900, and 28, 3, 1 and 0.3 above that
+of a hole of 3000 at 400, has an outer image along all of it and an
+inner one, neighbouring images 3 pixels apart or less, each meeting
+its place, and a curve that runs behind the camera has one image,
+unbroken across the traced frame, which ends past its edge. The
+trail at 28, 14, 6, 3, 1 and 0.3, with a second hole of 300 beside
+the first and behind it, in front of it, and near its line, leaves no
+bright image with an open end: each end of a branch inside the trail
+is faint, past the frame, on another branch, or met by another
+branch's end within 4 pixels and one place. With the follower of
+5e426fd it failed at once: "second hole at 150, 20, 710, Y 28: an
+image is lost bright at 54.492". An arc of radius 150 behind the holes
+of 900 and of 300, 6 and 0.5 above the line, 64 and 220 places, never
+steps between images of opposite parity clear of a fold, never steps
+more than 3 pixels, and each bright end inside the frame is met by
+another branch's end, an end on another branch not excused; two holes
+of 900 25 apart, a line 0.1 and 0.7 above theirs, never step more than
+3 pixels. Before the parity rule it failed with "an image turns parity
+at 36.000, det J 0.361 to -0.677", before the join kept to 3 pixels
+with "a step of 4.40 px at 36.082", and before doubles were dropped
+with "an image begins bright at 110.310". A dot on
+a screen plane behind the hole is drawn where it is, and the same dot
+on a plane is bent away. Each fails with its behaviour removed: image
+returning the unbent place, the screen plane read as a plane, and the
+follower of the first build, which at 1 above the hole of 900 broke
+into four branches.
+
+`scripts/checks/vizlens.js` stages that trail at 28, 14, 3 and 1 in
+the full pane and takes the pixels that differ from the scene without
+it by 4 or more. At 28 and 14 it wants those above the hole's row one
+8-connected piece with one run of pixels down each column, and those
+below one piece. At 3 and 1 the inner image's ends reach the hole's
+row beside the straight arms, and a cut at the row splits whole
+curves: at 3, pieces of 4818, 22 and 8 above, the small ones the inner
+image's tips. There it wants, over the frame, one or two pieces, a
+pixel in every bin of 5 degrees about the hole, and one run down each
+column above the row 8 pixels over the hole's. This tree read one
+piece of 4176 and of 4146 pixels above at 28 and 14, one run a column,
+and one piece of 1483 and of 1879 below, and at 3 and 1 two pieces,
+4818 and 2428, and 5119 and 2626, no empty bin and one run. At 1587565
+the first frame read two pieces and two runs above and six pieces
+below. With the follower of the first build the frame at 1 read four
+pieces, 2312, 1652, 1033 and 431, and 38 empty bins, the arcs over
+and under the hole cut where the images swing round it.
+
+It stages the trail at 14, 6 and 1 again with a second hole of 300
+at X 70, Y 8, Z 80, and there wants a pixel in every bin of 5 degrees
+and no more pieces than the images drawn apart: at 14 and 6 three, the
+outer arc, the inner one, and the second hole's own image of the trail
+beside it, and at 1, where the arcs meet, two. Runs down a column
+are not counted, since a fold turns one image back under another, and
+the second hole's image lies under the outer arc. This tree read
+pieces of 4383, 2622 and 392, of 4082, 3744 and 331, and of 7941 and
+309, no empty bin, two runs. The smallest piece lies at x 665 to 708,
+y 362 to 398 of the pane at all three heights, the hole at 600, 380:
+an image beside the second hole that begins and ends faint, not a
+stub of the arcs. With the follower of 5e426fd the
+frame at 14 read four pieces, 4387, 748, 419 and 383, and 19 empty
+bins, 245 to 335 degrees, the inner arc gone but for stubs. Traced
+alone at 14, 6, 1 and 0.3, behind the second holes of the unit case
+at 150, 20, 90 and at 120, -40, -100, behind that of the live check
+alone and with a third of 200, and behind two of 250, every image that
+Newton's method finds from a grid of starts 3 pixels apart, at each
+quarter place, J under 14, lies within 1.5 pixels of a branch: none of
+544 to 795 a frame is off every branch now, and 0 to 108 a frame were
+with the follower of 5e426fd.
+
+Cost, the draw times of gravity3d alone at full activity (median of
+draws 300 to 540), 5e426fd and this tree in turn, two rounds, the host
+at a load of 22 to 52: with the central hole alone a draw of 400 by
+380 took 16.4 and 14.0 ms at 5e426fd and 9.7 and 12.9 now, at 1200 by
+760 22.4 and 20.7, and 18.2 and 19.9; with a subagent event every 5
+draws, up to three holes more, at 1200 by 760 28.7 and 27.6, and 24.4
+and 32.8, the trails' images 5.9 and 5.4 ms, and 4.7 and 10.3. The
+rounds of one tree differ as much as the two trees do.
+
+A closed loop of images born and lost together, which touches no
+branch and no seed, is not drawn. None was found in these scans.
+
+The review's scan of 2268 curves, one hole of 200 to 3000 and two
+holes, on lines, diagonals, lines through depth, arcs and orbits, 64 to
+220 places, 21 heights from 0 to 28, reads no step over 3 pixels, and
+of the ends of branches inside a curve 100 are bright and met by no
+other's end. 84 lie on the orbit of 2.6 Schwarzschild radii about the
+hole of 3000, which grazes its shadow. 16 lie behind two holes of 900
+25 apart, a third of their Einstein radius, the curve within 1.5 of
+their line, where J's less singular value is under 0.01 and an image
+is found only to the tolerance over it, pixels along the critical
+curve. 15 of those lie within 1.5 pixels of another branch, and one,
+at 62.526 on the line through depth 0.02 above theirs, does not. A
+subagent's hole is born with 150 to 300 on an orbit of 150 to 210
+about its star, far from such a pair. The staged trail behind that pair at 1, 0.3 and 0.1 drew two pieces, one
+and one, no empty bin: at 0.1 a closed ring with both arms on it.
+
+Rejected:
+
+- Cutting a trail at the slices' bounds, each piece on the slice of
+  its depth: the shared place of two pieces is still bent as two
+  planes' depths, and the inner image is still read a point a pixel.
+- One screen layer for all the trails, nearer than everything: a
+  body in front of a trail would no longer hide it.
+- Strokes over the presented frame, after the trace: at the pane's
+  scale they are sharp, but nothing nearer would hide them, and the
+  shadow would not cut a trail behind the hole short of where its
+  image is lost.
+
+
+## 2026-10-26: Gravity 3D's ring, flood and corners
+
+Issue #193: the owner's second screenshot showed a thick ring about the
+central hole, brighter than anything else and coloured as the field
+behind it, about a soft dark blur where the shadow should be, a pane
+covered in soft blocks of saturated colour with straight edges, and a
+trail that ran straight down from its body and then straight left.
+The three were reproduced at 644cbc4, which holds the trails of
+2026-10-22, by a capture of the running mode in one pane of 400 by 380
+every 2.5 s for 150 s, the probe read with each frame, and by the mode
+driven in Node with a seeded generator and stub canvases, its traced
+frame dumped: the waves' ground and the holes, no slice.
+
+- The ring and the blur. The waves' ground lies at its sources' mean
+  depth, which swings before and behind the hole as the companion
+  turns: in the capture it lay 571 to 674 from the camera, the hole at
+  620. Whenever it lay in front, two kinds of ray read it wrongly. A
+  ray the hole turns by more than a right angle crossed the ground's
+  depth again on its way back to the camera and read it a second time,
+  so a ring just outside the shadow shone twice as bright as the ground
+  about it, in its colours. A ray the hole captures crossed the ground
+  first, so the shadow showed the ground. The frame of the capture with
+  the ground at 611 showed both, as the screenshot does, and frames
+  with it behind showed a black disc with a thin ring. The ground is
+  now read once a ray, where it first reaches its depth, and by no
+  captured ray, in the rays traced pixel by pixel and at the lens
+  map's nodes, whose smooth cells fill the shadow (`trace.js`, a plane
+  flagged `ground`). For a transparent emitter the second crossing
+  would be light of its own, but the picture is a diagram of the
+  strain, not light, and the hole's shadow and photon ring stand over
+  it whichever side of the hole its sources lie. In the seeded run,
+  with the ground at 543, 608 and 556 before the hole, the frames at
+  644cbc4 show the ring and the filled shadow, and this tree's a black
+  disc. In a capture of this tree the frames with the ground before
+  the hole show a dark disc and a thin ring.
+- The flood. The strain was drawn as $\tanh(5000\,h)$, which brings
+  the seed's pair to about 0.6. A subagent's hole or star of 100 to
+  300 about the central hole, or that hole grown by stops, radiates a
+  field strong enough to pass 1 across the whole pane, and its
+  wavelength, longer than the view, leaves large flat lobes of
+  saturated colour. A front that ends on the grid of cells then draws
+  as a step, the blocks' straight edges. In the seeded run up to 95.4%
+  of the cells were drawn past 0.9. Gravity 3D now lowers the gain
+  below 5000 just enough that the top tenth of the cells, by the
+  greater polarization, is drawn at $\tanh(1)$, the rest darker
+  (`waves.js` `gain`). It falls at once and rises again over 2 s, so a
+  burst does not flood the pane nor pump it, and the label reads the
+  gain in use at two figures. A field whose top tenth stays under 1 at
+  5000, as the seeds' pairs' does, keeps 5000, and Gravity keeps its
+  fixed gain. In the same run no frame drew more than 2.3% of its
+  cells past 0.9. In a capture of this tree the gain fell as low as 76
+  and no pane was flooded.
+- The corners. A trail kept a place once a frame, when 1.5 units of
+  time or 4 of travel had passed, and a frame advances up to 60 steps
+  of 0.25, so a fast body's trail was its path cut into chords of a
+  frame's travel. With places kept that way, the probe's figure for the
+  most a trail's places lie apart beyond one step's travel at their
+  speed read 5.9 to 24.7 over 86 reads of the pane of 400 by 380, a
+  frame advancing up to 2.8. The places are now kept after every step,
+  by the same rule (`track`), so the spacing the rule names holds at
+  any frame rate. At a usual frame rate the trails are as long as
+  before, and on a slow host shorter in time, as the rule always meant.
+  Separately, a planet that merged into a star could leave its trail
+  on the star, when it was the first of the pair. A star keeps no
+  places, so the trail stood still and was drawn to the star in one
+  straight leg as it moved on, a corner where the old trail ends. One
+  run read 335.8 for that figure over 17 reads while a frame advanced
+  under 1.7, a leg no frame's travel explains, which a stranded trail
+  does. A merged body now keeps the larger's trail, as it keeps its
+  colour, or none if it is a star. The screenshot's body at the corner
+  is large and orange, as a star is drawn. That both legs lie along
+  the screen's axes is not explained by either cause.
+- Checked by `test/viz-trace.test.js`: a uniform ground before the
+  hole and behind it renders a black shadow and no pixel brighter than
+  the ground; at 644cbc4 it failed with "the ground at 500: 120,180,240
+  at 56, 47, 13.6 px from the hole, brighter than the ground", against
+  the ground's 60,90,120. `test/viz-waves.test.js`: a weak field keeps
+  5000 and is shown as before, a bright spot on under a tenth of the
+  cells keeps it, and a strong one's top tenth is drawn at $\tanh(1)$.
+  `test/viz-gravity3d.test.js`: a trail kept every step about a hole
+  of 900 at 4 $r_s$ has its places at most 4 plus one step's travel
+  apart, and a planet merged into a star leaves no trail on it, two
+  planets the larger's. `scripts/checks/vizlens.js` reads the probe's
+  figure in its smoke pass of the full pane and wants it at most 8:
+  this tree read 3.92 and 3.93 in two runs.
+
+Rejected:
+
+- A fixed lower gain: the seed's pair, the field most panes show,
+  would fade to nothing.
+- Each source drawn to its own peak: a burst or a strong pair would
+  look no stronger than the seed's.
+- The top hundredth of the cells at $\tanh(1)$, tried first: no cell
+  saturated, but the far field of a strong pair went near black and
+  its fronts were lost. The top quarter left up to 7.2% of the cells
+  past 0.9.
+- The ground placed behind every hole: its far field would be pulled
+  into rings that fill the frame, as the light at infinity was (see
+  2026-10-17: Gravity 3D's optics).
+
+## 2026-10-26: Gravity 3D's spin follows the session
+
+Owner, issue #173: "black hole rotation can depend on activity so the
+distortion from rotation gets more exagerrated with high activity."
+
+The issue was written when Gravity 3D painted a hole's shadow
+(`drawHole` at d18161f: a disc shifted by $2 a \sin i$ and flattened
+by $1 - 0.22 \chi \sin i$ on the approaching side). Issue #170 then
+removed every painted part of a hole, and its optics left spin out
+(2026-10-17). The issue's shadow, "flattened on its approaching side
+and shifted toward the receding one", is taken as the traced shadow
+and its photon ring, which spin now shapes.
+
+- The spinning shadow (`trace.js` `shadow`, `edge`). The edge of a
+  Kerr hole's shadow seen from far away at inclination $i$ to its axis
+  is Bardeen's curve: for the spherical photon orbit of radius $r$,
+  $M = 1$, between the prograde and the retrograde circular ones,
+  $\xi = [r^2(3 - r) - a^2(r + 1)]/[a(r - 1)]$,
+  $\eta = r^3[4a^2 - r(r - 3)^2]/[a^2(r - 1)^2]$,
+  $\alpha = -\xi/\sin i$ and
+  $\beta = \pm\sqrt{\eta + a^2\cos^2 i - \xi^2\cot^2 i}$
+  (after Bardeen 1973). It is swept over 256 orbits and kept as the
+  edge's radius about the hole's point at 128 angles, $\alpha$ across
+  the projected axis toward the side moving away from the camera. Each
+  frame builds it for every spinning hole from the camera's
+  inclination to its axis, $\sin i$ held at 0.05 or more. A ray whose
+  line passes the hole at $b$, at angle $\phi$ about it, is captured
+  within $b_c + e(\phi)$, $e$ the edge's offset from the Schwarzschild
+  $b_c$, and is turned by the Schwarzschild $\hat\alpha(b - e(\phi))$.
+  The deflection then diverges at the edge, so the photon ring follows
+  it, and far out it is Schwarzschild's to within $e/b$. It is Kerr's
+  shadow, not Kerr's light: the dragging of rays past the edge, which
+  twists the higher images, is left out, and a ray turned back by a
+  hole reads the edge as one seen from the camera. The cost is an
+  arctangent and a table read for each ray at a spinning hole, and the
+  cells traced pixel by pixel reach out to $1.5 b_c$ plus the edge's
+  greatest offset.
+- The mapping. The session's activity is
+  $A = \max(\min(1, \text{bass}), \text{busy}, \text{treble})(1 - \text{idle})$,
+  the synthesiser's levels. A share $s$ moves toward $A$ by
+  $1 - e^{-\Delta t/\tau}$ of the gap each frame, $\tau = 3$ s, and
+  every hole spins at $\chi = \chi_0 + (0.95 - \chi_0) s$, $\chi_0$ its
+  own spin. $\chi$ changes by at most $(0.95 - \chi_0)/\tau$ a second,
+  0.2 of the seed's at most in a burst of 0.2 s, never steps with a
+  stalled frame, and stays below 1. A staged scene holds $s$.
+- The own spin is the idle base. The seed's hole has $\chi_0 = 0.35$
+  and a subagent's 0.15 to 0.45, half of the 0.7 and 0.3 to 0.9 they
+  had, so the idle hole is less spun than before and a busy one spins
+  up toward 0.95. A swallowing sums the holes' own spins' angular
+  momentum and the orbit's, sets $\chi_0$ from it, capped at 0.95, and
+  keeps the hole's share, so what a hole swallows still raises its
+  idle spin. A hole of no spin of its own, the companion's, spins up
+  with the rest.
+- No gain. The shadow drawn is Kerr's at the hole's $\chi$, so nothing
+  is drawn past what $\chi < 1$ gives and the pane says nothing of it.
+  At the staged hole's inclination, 0.15 rad from its equator, the
+  side coming toward the camera lies at 0.858 of the Schwarzschild
+  radius $R$ at $\chi = 0.35$ and 0.501 at 0.95, and the shadow's centre
+  0.134 $R$ and 0.413 $R$ toward the side going away (`shadow`); at
+  the old seed's 0.7 they were 0.688 and 0.279.
+- The dynamics read the same $\chi$: the horizon $r_+$, the last
+  stable orbit $3 r_+$, which is now also where the disc's viscosity
+  stops (it stopped at $3 r_s$), and the Lense-Thirring drag. A busy
+  burst does not fling the disc or the planets: on the seed's hole,
+  120 grains between 3.3 and 8 $r_s$ and planets of 4 at 215 and 245,
+  12 s at 30 frames a second and 42 of simulation a second, the first
+  6 s busy, against the same at idle, every grain was kept, the
+  farthest at 8.52 $r_s$ against 8.15, and the planets ended 218.57
+  and 258.30 from the hole against 212.19 and 249.62. That 3 to 3.5%
+  is the potential's: $-GM/(r - r_+)$ pulls less far out as $r_+$
+  shrinks with spin, 3.6% less at 245 from $\chi$ 0.35 to 0.95, where
+  Kerr's far field does not change.
+- Seen: `scripts/checks/vizmodes.js` stages the hole of 900 with the
+  Doppler arm's camera, own spin 0.35, idle and busy, before a square
+  of grains at its depth, which every ray the hole lets past reads
+  where it passes, in the full pane of 1200 by 760 and a small one of
+  300 by 380. At 8c2c59e the probe read, along the line across the
+  axis, from the hole's point: in the full pane, $R$ 48.53 px, idle
+  41.71 toward the camera and 54.83 away, busy 24.33 and 64.59, the
+  centre 6.56 and 20.13 px toward the side going away; in the small
+  pane, $R$ 19.16, idle 16.46 and 21.64, busy 9.60 and 25.49, the
+  centre 2.59 and 7.95. In the frames the idle shadow is all but round
+  about the hole's point and the busy one is pushed toward the side
+  going away, its side coming toward the camera flattened and near
+  the point, with a bright crescent outside it, in both panes. That
+  side is the disc's brighter and bluer side in the Doppler arm's
+  frames. In the live full pane, the session busy, the shadow lies
+  off the hole's point toward the side going away.
+- Frame rate, under swiftshader on this host, by a script that puts
+  Gravity 3D alone in one pane of a 1200 by 760 window and then in
+  three panes of a 720 by 460 window, the session busy, five times 2 s
+  each, b40443a and 8c2c59e in turn, twice, at loads of 11.7 to 14.9:
+  one pane ran at a median of 34 and 30.5 frames a second at b40443a
+  against 32 and 32 at 8c2c59e, three panes at 23.5 and 25 against
+  18.5 and 22. Single rounds of 2 s ran from 16.5 to 28 at either tree.
+  In three earlier pairs on the same tree but for comments, three panes
+  ran at 24.5, 23.5 and 24 against 25, 24.5 and 26. The trace alone,
+  timed in Node at 44efc18 on a frame of 126 by 240 behind a hole of
+  $\chi = 0.95$, 200 renders, cost 2.01 ms against 1.98 ms without
+  spin, 1044 pixels traced one by one against 720.
+- Checked by `test/viz-trace.test.js`: the edge seen edge-on meets the
+  equatorial photon orbits' impact parameters,
+  $\mp a + 6\cos[\frac{1}{3}\arccos(\mp a)]$, to $2 \times 10^{-3}$ at
+  $\chi$ of 0.3, 0.7 and 0.95, is the circle at 0 and flattens less at
+  45 degrees; a hole of $\chi = 0.95$ captures at its edge on both
+  sides to $10^{-9}$ rad and loops a ray just outside it past $2\pi$;
+  and a hole whose entry does not spin traces as before.
+  `test/viz-gravity3d.test.js`: the spin rises toward 0.95 under
+  sustained activity and falls back to $\chi_0$ at idle, within 1% of
+  the gap after $5\tau$ each, monotone, the horizon with it, never
+  faster than the bound, a 1 s frame included; a swallowing keeps the
+  own spins and the share; and the burst above.
+
+Rejected:
+
+- A drawing gain on the edge's offset, the hole's own spin kept at its
+  old values: a gain that made the busy hole plainly more distorted
+  would draw the idle one past its spin too, more distorted than the
+  painted shadow of d18161f, and a gain on the spin-up's part alone
+  would be a second law beside Kerr's.
+- The own spin replaced by the activity's target: what a hole
+  swallows would no longer change it.
+- The waves kept as the ground behind the staged hole, tried first:
+  in the small pane the ground about the hole was dark when staged,
+  and the shadow did not show on it.
+- Kerr geodesics per ray: see 2026-10-17.
+
+## 2026-10-26: Gravity 3D's zoom and its holes' evaporation
+
+Owner, issue #194, 2026-10-22: "for the 3d gravity visualizer i want
+to be able to zoom in and out quite far, and i want the black holes to
+gradually shrink so that if the agents have become idle for a long
+period of time, all the gravitational bodies are sub-schwarzschild".
+
+- The wheel. `viz.js` sends a wheel event to the mode in the pane under
+  the pointer, or the pane a press holds, as
+  `pointer('wheel', x, y, down, steps)`. A notch of a mouse wheel, 100
+  pixels or 3 lines, is one step, positive away from the user. Chromium
+  sends a pinch as a wheel with ctrlKey and $\Delta y = -100 \ln s$, $s$
+  the pinch's scale, so a pinch's steps are $\Delta y / (100 \ln 1.2)$
+  and a mode zooming by 1.2 a step follows the fingers. Both the
+  notch's 100 pixels and the pinch's form are Chromium's as recalled,
+  not measured here: Xvfb has no touchpad and the check sends its own
+  wheel events, and a notch of another size changes only how many
+  notches cross the range, not its ends. The page
+  neither scrolls nor zooms, a mode without a pointer method hears
+  nothing, and the other modes' pointer methods read a wheel as a move
+  at most, to where the mouse already is.
+- The zoom. The camera stands $D$ from the view's centre, 620 at first,
+  and each step multiplies $D$ by 1.2, held within 90 and 3300 until
+  the wheel moves it again. The slow turn and a drag's turn go on at
+  any zoom. At 90 the seed hole's shadow, of $b_c = 35.4$, has a
+  radius of $f \tan(\arcsin(b_c / D))$, 364 px of a full pane's 380 to
+  its shorter edge, its photon ring at that edge: $b_c / \sin 0.42$ is
+  87. At 3300 the pane's half height, $D \tan 0.42$, is 1474, the 1472
+  that the waves' fronts reach from their source (`waves.js` KEEP, 512
+  samples of 0.25 at $c = 11.5$), and the system, 250 across from its
+  hole, is 64 px of that 380. Twenty notches cross the range. The
+  camera stands $2 b_c$ from the hole it turns about at least, which
+  moves it past 90 for a hole over 1145, so a hole past 2290, whose
+  $b_c$ passes 90, never captures every ray: the standoff moves only
+  the camera, not the zoom. A staged scene and its
+  release put the zoom back at 620, so the staged checks' figures
+  hold.
+- What the zoom moves. `frameOf`, `place`, the eye of the Doppler shift,
+  the fog, the slices' depths, the click's plane and the waves' ground
+  already read the camera's distance. Zoomed in, the camera stands
+  among the bodies and the disc: what lies less than 1 ahead of it,
+  the depth the trails' images already start at (`trace.js` curve), is
+  not drawn, where it was drawn at depth 1 on the nearest slice, the
+  slices part only at holes ahead of the camera, and the slice audit
+  counts what is ahead. A wave source nearer than half the camera's
+  distance shows its field on the plane at that half, through the
+  axis, which is its own plane where it reaches it, so the pair's
+  waves still cross the view while it passes behind the camera.
+- The thin lens, zoomed in: the trace takes the camera as far from the
+  hole, so at 90 from the seed's hole, 6.6 $r_s$, its shadow is drawn
+  at $\arcsin(b_c / D)$ where a camera at rest there would see
+  $\arcsin(b_c \sqrt{1 - r_s / D} / D)$ (Synge 1966), 9% smaller across.
+- The clock of the evaporation. The synthesiser keeps the seconds since
+  the session's last activity, `pty.idle_s` as the frame gives it, 0
+  while the sound output alone drives the signal. Gravity 3D integrates
+  the idle level's ramp, 0 to 3 s and 1 from 13 s, over them:
+  $E(q) = (q - 3)^2 / 20$ between, $q - 8$ past 13 s, and each frame
+  evaporates the holes by $E$ less what this spell has spent. The
+  simulation's clock, which an idle spell all but stops, plays no part,
+  and a stalled frame or a closed window loses none of the spell: a
+  pane that opens after a long spell sees it all at once.
+- The rate and the floor. While idle every hole loses mass, $M$ times
+  $e^{-s/200}$ in $s$ s of full idle, its velocity kept, as an even
+  loss of light carries no momentum in its own frame. Its horizon, its
+  shadow and photon ring ($b_c$), its last stable orbit $3 r_+$ and
+  its disc's reach shrink with it at one rate, its spin $\chi$
+  unchanged, so the shadow keeps its shape (see 2026-10-26: Gravity
+  3D's spin follows the session), and the heaviest hole stays the
+  heaviest. Below a mass of 2, whose shadow is under a pixel even at
+  90, a hole ends in a flare, a ring from its shadow's radius, and is
+  gone, and the bodies are recentred, so with none left the view takes
+  the centre of mass of what remains (see 2026-10-18: Gravity 3D's
+  centre). A hole of $M$ lasts $200 \ln(M / 2)$ s of full idle: the
+  pair's 30 9.0 min, a subagent's 300 16.7 min, the seed's 900 20.4
+  min and a stop's 1500 22.1 min. After 25 min of quiet no hole of up
+  to 3474 is left, more than twice 1500, the stop's cap.
+- No body within its own $r_s$. A star or a planet of $m$ has the radius
+  $4 + 1.1 m^{1/3}$ or $1.2 + 1.3 m^{1/3}$, and $r_s = 2m/c^2$ passes
+  it at 990 for a star and 914 for a planet. A stop grew the heaviest
+  body to 1500, so with no hole
+  left a star could become one in all but name: a stop now grows a body
+  that is not a hole to 800 at most, where its radius is 14.2 against
+  $r_s$ 12.1. A merger of two such bodies could still pass 914, and is
+  left as it was.
+- The seed waits for the session. A frame with fewer than two bodies
+  seeds the scene again, as before, but only on an event or with the
+  idle level under 0.5, and before the events are read, so no hole
+  comes back while idle and an event never meets an empty scene. A
+  subagent's hole and the seed after a dispersal are the holes the
+  session makes again.
+- What remains. The holes' pull is their mass, so as they lose it what
+  orbits them is let go. A run of the seed's system in Node, stepped at
+  the idle clock of 0.6 of simulation a second with 120 grains, no
+  events and no recentring, the holes evaporating as above: after
+  150 s the holes were 425 and 14.2 and the planets 227 and 279 from
+  the centre of mass, against 214 and 258; after 300 s the disc's
+  median grain was at 307, against 82; after 600 s 6 grains of 120
+  were left within the cull at 480; after 1050 s the planets had passed
+  the cull at 960 and the star stood at 990; at 1350 s no hole was
+  left. Past about ten minutes of quiet the pane holds the star or
+  stars, what planets and dust have not left, and the sky.
+- The flash. A flare ages on the simulation's clock, as the other
+  rings do, so an evaporating hole's ring grows and fades over about
+  30 s at full idle, and in a fraction of a second when the session is
+  busy, as a hole aged at once by the check shows.
+- Checked by `test/viz-gravity3d.test.js`: the zoom stepped in and out
+  past both ends follows $1.2^{k}$ and holds at 90 and 3300, a pinch's
+  scale of 2 halves it, the ends' derivations above, the standoff, and
+  a point behind the camera not drawn; and 25 min of quiet in frames of
+  10 s over the seed's holes, a hole of 1500 and a star of 800, every
+  hole losing mass every frame past 3 s, its horizon with it, each
+  taken out within one frame of $8 + 200 \ln(M / 2)$ s, after 550,
+  1230 and 1340 s, and at the end no hole and no body within its own
+  $r_s$. `scripts/checks/vizmodes.js`, in the full pane and the small
+  one, wheels the live mode to both ends and captures it, pinches, and
+  ages its holes by 270 s and by 1500 s more, capturing them shrunk,
+  shrunk 10 notches in, and gone. At 2f01e90, under swiftshader, the
+  host's load 3.9 as it began, the full pane of 1200 by 760 drew 34.5 frames a
+  second at 620, 11.5 at 90, where the shadow fills it and 52375 of
+  its traced pixels were traced one by one against 1512 at 3300, and
+  27 at 3300; the small pane of 300 by 380 drew 19, 10 and 27.5. The
+  trace's cap on its pixels (see 2026-10-18: Gravity 3D's sharpness as
+  a setting) bounds the cost zoomed in. In the frames, zoomed in, the
+  shadow fills the pane's shorter side, the waves' ground and the sky
+  bent into rings about it and the disc's grains along its edge;
+  zoomed out, the system is a small knot at the centre in the waves'
+  bands; shrunk, the disc's grains stand far out from a hole whose
+  shadow, 10 notches in, is a small dark disc that a trail's image
+  bends about; gone, a flare's ring at each hole's last place, the
+  star at the view's centre and the dust.
+
+Rejected:
+
+- Hawking's own law, $\dot{M} \propto -1/M^2$, a lifetime in $M^3$: with
+  the seed's 900 gone in 20.4 min, the pair's 30 would last 0.045 s of
+  idle and be gone at every pause, and a hole of 1500 would last 94 min.
+  The loss here is a fixed part a second, so every hole shrinks at one
+  rate and the last goes in a bounded time.
+- The idle level summed over the frames drawn, $\Delta t$ times the
+  level: the frame's $\Delta t$ is held to 0.1 s and no frame is drawn
+  while the window is closed, so an idle spell spent with the window
+  closed would leave every hole as it was.
+- A zoom range in the hole's own $r_s$: the zoom would move as the hole
+  shrank or grew, where the issue wants it held until the wheel moves
+  it.
+
+## 2026-10-26: the waves as smoke
+
+Issue #183: the owner wants to see the Gravity modes' waves drawn as
+smoke or gas, a medium the passing fronts stir, compress and thin,
+beside the colour field, which stays as it is. The issue left the
+medium and its law to the builder, settled here.
+
+- The setting. File, Settings, Gravitational waves: Default, the colour
+  field, or smoke, `viz.waves` in `settings.json`, null for the default.
+  The window sends it with every frame as `w`, 1 for smoke, and a mode
+  reads it through `env.waves()`, so a pick shows on the next frame.
+  Both modes compute the field, the gain and the strain as shown
+  exactly as before and branch only where the pixels are filled: the
+  colour field's code is unchanged and runs whenever smoke is not
+  chosen.
+- What the gas feels. The drawn plane holds the direction a wave
+  travels: Gravity's is the orbital plane, Gravity 3D's the plane
+  through each source that faces the camera. Of a wave's two
+  transverse directions one then lies in the plane, along the front,
+  and one leaves it, and with the basis of the polarizations above the
+  strain in the plane is $h_{\phi\phi} = -h_+$ along the front alone. A
+  sheet of gas in the plane changes its area by $1 - h_+/2$ and its
+  density by $1 + h_+/2$ to first order, and $h_\times$ tilts it out of
+  the plane and moves nothing in it. So the smoke shows $h_+$ alone, in
+  both modes, where Gravity 3D's colour field also shows $h_\times$.
+- The law. The gas's density is $1 + s$, $s$ the strain as shown
+  (`waves.js` shown) at the gain in use, the first-order response with
+  $s$ for $h_+/2$: a front at $\tanh(1)$ nearly doubles the gas and a
+  trough nearly empties it. It glows as its density squared, as a thin
+  hot gas does, its emission measure, so a front is three times the
+  rest's brightness and a trough near black. The fronts also carry it
+  along themselves by a flow that keeps its area, its stream function
+  3 cells squared times $s$: a stir along the front, the direction the
+  strain stretches it, of at most about two cells, where the shown
+  strain turns most steeply. The eased gain of Gravity 3D, the
+  antialiased turn and the label naming the exaggeration therefore
+  hold for the smoke as for the colour field.
+- The gas at rest. Value noise, three octaves, its place warped by two
+  more, in units of 3.5 cells, its density in 0.6 to 1, wisps over a
+  haze, drifting with the mode's clock, so it stands still while the
+  session is idle as the waves do. It is laid on the grid of cells, 32
+  across the pane's shorter side, so it looks alike in a full pane and
+  a small one, and in Gravity 3D at every zoom: the fronts' spacing
+  changes with the zoom, the wisps' does not.
+- Drawn on the grid of cells at four texels a cell, the strain and its
+  slope bilinear between the cells, grey with a cool tint over black,
+  at 0.16 of full brightness at rest in Gravity and 0.2 in Gravity 3D,
+  times the idle dimming. In Gravity it is the frame's ground, opaque,
+  under the trails, as the colour field is. In Gravity 3D it is the
+  same ground plane, at the sources' mean depth, read once a ray and
+  never in a hole's shadow (see 2026-10-26: Gravity 3D's ring, flood
+  and corners), but read at every traced pixel: the lens map's nodes,
+  6 traced pixels apart, lie farther apart than the wisps, and the
+  colour field keeps its reading at the nodes.
+- Seen and measured at 49972b0 in the viz page under swiftshader, each
+  mode drawn
+  alone on a canvas of its own at a fixed step of 1/30 s for 14 s, its
+  random numbers seeded so the colour field and the smoke run one
+  scene, the host's load 2 to 2.7: the seed's pair (weak) and, in
+  Gravity 3D, three subagent events (strong, its gain falling to 456;
+  Gravity's subagent stars orbit wide, within their near zone, and gave
+  no field stronger than the seed's, so no strong field of Gravity was
+  seen), in a
+  pane of 1200 by 760 and one of 300 by 380, and Gravity 3D wheeled to
+  90 and to 3300. The median draw went from 5.2 to 7.6 ms in Gravity's
+  full pane and from 1.8 to 4.2 in its small one, and in Gravity 3D's
+  from 14.9 to 20.5 and from 8.4 to 12.0, from 31.4 to 32.9 at 90 and
+  from 13.1 to 19.6 at 3300. Every frame past the first 4 s went
+  through the flash counter of `scripts/flash.js`: no field of 341 by
+  256 flashed more than once in any second, in either style. In the
+  frames the seed's pair's spiral shows in Gravity as dark thinned arms
+  between paler ones; in Gravity 3D a bright compressed ring stands
+  about the pair with a dark thinned lobe at it, and the strong field
+  compresses the gas into a bright mass where the colour field is
+  blue and empties it where it is amber, unflooded, both holes'
+  shadows black. Wheeled in, the gas is bent into rings about the
+  shadow that fills the pane; wheeled out, a darker thinned band rings
+  the small system in the haze.
+- Checked by `test/viz-waves.test.js`: with no strain every texel is
+  the gas at rest; a uniform strain of 0.6 or -0.6 draws it at 1.6 or
+  0.4 squared, unmoved; a strain rising along x draws it carried along
+  y by 3 times the slope. `test/settings.test.js`: the setting reads
+  back, colour by default, and the menu offers it.
+  `scripts/checks/vizmodes.js` picks smoke as the menu does after the
+  colour field's frames, in the full pane and the small ones, and wants
+  the page told, three frames 0.5 s apart to
+  OUT/<mode>-smoke-<full|small>-<k>.png, none blank and over half of
+  each one's lit cells grey, its channels within a quarter of the
+  brightest, then the colour field again with under half grey. At 2a1caaa
+  the smoke's frames read 0.82 to 1.00 grey and the colour field's after
+  them 0.007 to 0.076, in two runs.
+
+Rejected:
+
+- A fluid solved on the grid, density advected frame to frame: a
+  wave's push oscillates, so its net displacement is of second order
+  and the memory adds nothing the density read from the strain each
+  frame lacks, while the
+  resampling each frame smears the wisps within seconds, and a grid
+  in the pane's cells would have to be carried through every zoom,
+  turn, resize and split.
+- The gas displaced along the line from the source, as a sound wave
+  compresses it: the strain is transverse, and the earlier rejection
+  of the dust displaced by it stands.
+- Density $1 + s/2$, the first-order response at the label's gain,
+  glowing as itself, tried first: in the full pane the seed's pair's
+  spiral was lost in the wisps. The wisps at 6 cells and the haze at
+  0.2 to 0.45 of the densest, tried with it, covered the pane in grey
+  where the colour field is black.
+- Grains of gas drawn as points: Gravity 3D would trace each through
+  the lens, a cost the one ground plane does not have.

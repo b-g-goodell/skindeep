@@ -20,6 +20,11 @@ window.Synth = (function () {
       this.voices = []
       this.level = { bass: 0, treble: 0, busy: 0, idle: 0 }
       this.target = { bass: 0, treble: 0, busy: 0, idle: 0 }
+      // The seconds since the session's last activity, as the last frame
+      // gave them, 0 while the sound output drives the signal: the clock
+      // of what changes while idle rather than with the simulation's
+      // time, which an idle spell all but stops (gravity3d.js, evaporate).
+      this.quiet = 0
       this.samples = new Float32Array(N)
       this.bands = new Float32Array(BANDS)
       this.flashes = []
@@ -42,6 +47,7 @@ window.Synth = (function () {
       this.target.treble = Math.min(1, outRate / 120)
       this.target.busy = busy ? 1 : 0
       this.target.idle = idle > 3 ? Math.min(1, (idle - 3) / 10) : 0
+      this.quiet = Math.max(0, idle)
       for (let i = 0; i + 1 < frame.e.length; i += 2) this.trigger(frame.e[i], frame.e[i + 1])
     }
 
@@ -80,6 +86,7 @@ window.Synth = (function () {
       this.target.treble = Math.min(1, 12 * d / a.length)
       this.target.busy = 0
       this.target.idle = 0
+      this.quiet = 0
     }
 
     // Advance by dt seconds and fill this.samples and this.bands. sound:

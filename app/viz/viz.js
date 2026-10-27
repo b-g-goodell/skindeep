@@ -35,10 +35,13 @@
   let text = 1
   // The frame rate cap, frames a second or 0 for none (decision 0036),
   // and Gravity 3D's traced pixels a pane, 0 for the mode's own
-  // (decision 0015), which a mode reads through trace().
+  // (decision 0015), which a mode reads through trace(). The Gravity
+  // modes' waves, 0 the colour field and 1 smoke (decision 0015), which
+  // a mode reads through waves() as 'colour' or 'smoke'.
   let cap = 0
   let trace = 0
-  const env = { text: () => text, trace: () => trace }
+  let waves = 0
+  const env = { text: () => text, trace: () => trace, waves: () => waves ? 'smoke' : 'colour' }
 
   try {
     const probe = document.createElement('canvas').getContext('webgl2')
@@ -234,11 +237,31 @@
   window.addEventListener('mousedown', e => { if (e.button === 0) point('down', e) })
   window.addEventListener('mousemove', e => point(held && !(e.buttons & 1) ? 'up' : 'move', e))
   window.addEventListener('mouseup', e => { if (e.button === 0 && held) point('up', e) })
+  // The wheel, and a pinch on a touchpad, to the mode's pointer as a
+  // fourth kind, wheel, with down as for a move and its delta in steps:
+  // a notch of a mouse wheel, 100 pixels or 3 lines, is one, positive
+  // away from the user. Chromium sends a pinch as a wheel with ctrlKey
+  // and deltaY = -100 ln of the pinch's scale, so a pinch's steps are
+  // that over 100 ln WHEEL_ZOOM, and a mode that zooms by WHEEL_ZOOM a
+  // step follows the fingers. A mode without a pointer ignores it, and
+  // the page neither scrolls nor zooms.
+  const WHEEL_ZOOM = 1.2
+  window.addEventListener('wheel', e => {
+    e.preventDefault()
+    const all = [...panes.values()]
+    if (all.some(q => q.o === 1)) return
+    const p = held || all[VizLayout.at(e.clientX, e.clientY, all.length, window.innerWidth, window.innerHeight)]
+    if (!p || !p.flat || !p.flat.pointer) return
+    const d = e.deltaY * (e.deltaMode === 1 ? 1 / 3 : e.deltaMode === 2 ? 1 : 1 / 100)
+    const steps = e.ctrlKey && e.deltaMode === 0 ? e.deltaY / (100 * Math.log(WHEEL_ZOOM)) : d
+    if (steps) p.flat.pointer('wheel', e.clientX - p.x, e.clientY - p.y, held === p, steps)
+  }, { passive: false })
   window.vizFeed.onFrame(f => {
     const was = sound.src + ':' + sound.st
     sound = { src: f.src, st: f.st, s: f.s }
     cap = f.c
     trace = f.r
+    waves = f.w
     if (f.t !== text) {
       text = f.t
       document.documentElement.style.setProperty('--viz-text', String(text))
@@ -313,7 +336,7 @@
   }
 
   // mode: the active pane's, else the first's. drawn: the frames drawn,
-  // cap and trace as the last frame set them. A pane's clock: its synthesiser's
+  // cap, trace and waves as the last frame set them. A pane's clock: its synthesiser's
   // seconds, and milkTime its butterchurn's, which steps by its own
   // reading of the time between the frames it renders. warp: the zoom's
   // log and the turn butterchurn has applied, summed (loop).
@@ -329,13 +352,14 @@
       drawn,
       cap,
       trace,
+      waves: env.waves(),
       sound: { src: sound.src, st: sound.st, peak: sound.s.reduce((m, v) => Math.max(m, Math.abs(v)), 0) },
       panes: list.map(p => ({ tab: p.k, place: p.i, active: p.a === 1, mode: id(p), open: p.o === 1, button: p.menu && p.menu.button, milk: !!p.milk, lost: !!p.milk && p.milkCanvas.getContext('webgl2').isContextLost(), x: p.x, y: p.y, w: p.w, h: p.h, touches: p.synth.touches.length, clock: p.synth.t, milkTime: p.milk && !p.flat ? p.milk.renderer.time : null, warp: p.milk && !p.flat ? { zoom: p.zoomed, rot: p.turned } : null, beats: p.synth.beats, rises: p.synth.rises, idle: p.synth.level.idle, probe: p.flat && p.flat.probe ? p.flat.probe() : null }))
     }
   }
   // For the live checks alone: pane k's mode stages a scene and holds it
-  // still, or lets it go (gravity3d stage, unstage). Nothing else calls
-  // them, and a mode without them answers null.
+  // still, lets it go, or ages it (gravity3d stage, unstage, age).
+  // Nothing else calls them, and a mode without them answers null.
   const flat = k => {
     const p = [...panes.values()][k]
     return p && p.flat && p.flat.stage ? p.flat : null
@@ -347,6 +371,11 @@
   window.vizUnstage = k => {
     const f = flat(k)
     return f ? (f.unstage(), true) : null
+  }
+  // Pane k's holes evaporated at once by s s of full idle (gravity3d age).
+  window.vizAge = (k, s) => {
+    const f = flat(k)
+    return f && f.age ? (f.age(s), true) : null
   }
   requestAnimationFrame(loop)
 })()
