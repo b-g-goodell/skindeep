@@ -38,8 +38,8 @@ Dotted names. A metric absent for the current CLI reads as "no data"
   the list is null when there is none.
 - A provider's own readings (decision 0038), on a provider other than
   the CLI's: `limits.balances`, a list of `{ key, label, currency,
-  amount }`, one per currency, money and never a percent;
-  `limits.balance_available` (1 or 0); `limits.peak` (1 in the peak
+  amount }`, one per currency, money and never a percent,
+  `limits.balance_available` (1 or 0), `limits.peak` (1 in the peak
   price hours, 0 off-peak) and `limits.peak_changes_at` (Unix
   seconds). Each is absent while nothing reads.
 - Activity: `tools.total`, `tools.rate` (per minute), `tools.<Name>` per

@@ -305,11 +305,11 @@ How the shipped skins draw them:
 | `coffee` | a jar of cold brew a limit on the table, its label and reset on tape. Four jars stand smaller |
 | `library` | a marker bar a limit on the whiteboard: red for five hours, green for a week or a spend limit, orange and purple for a model's. Two columns for three or more |
 
-And a provider's readings: `deck` and `phosphor` a row each, the
+And a provider's readings. `deck` and `phosphor`: a row each, the
 amount in the screen's green and an amber or bright lamp in the peak
-hours; `library` the amount in blue marker and a ring filled orange;
-`coffee` a tip jar with the amount on its tape and a jar with a candle
-lit in the peak hours.
+hours. `library`: the amount in blue marker and a ring filled orange.
+`coffee`: a tip jar with the amount on its tape and a jar with a
+candle lit in the peak hours.
 
 ## Styling with CSS
 

@@ -13,8 +13,8 @@
 //   does, with a key in its env_key that reads 0.40 USD, too low.
 // - claude-anthropic: a profile with no base URL.
 // Each DeepSeek session draws its balance and the peak state the
-// schedule gives now, and no limit; the fake got one read with that
-// session's key alone. The Anthropic session draws its 5h and 7d
+// schedule gives now, and no limit, and the fake got one read with
+// that session's key alone. The Anthropic session draws its 5h and 7d
 // limits, no balance and no peak, and the fake got nothing from it.
 // No key reaches the log, the page or the runtime dir. Writes
 // OUT/<skin>-<session>.png and OUT/<skin>-<session>-quarter.png. The

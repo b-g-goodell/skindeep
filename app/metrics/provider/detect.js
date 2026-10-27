@@ -42,7 +42,7 @@ async function claudeKey (ctx) {
 }
 
 // The helper's first line of output, or null. No terminal and no
-// askpass program, so it cannot prompt in the app; stderr is dropped
+// askpass program, so it cannot prompt in the app. stderr is dropped
 // unread.
 function helper (command, ctx, timeoutMs = 10000) {
   const env = Object.assign({}, ctx.env, { GIT_TERMINAL_PROMPT: '0' })

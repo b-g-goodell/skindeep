@@ -39,7 +39,7 @@ login. This decision makes the second exception, on the same ground.
   local, project, user, the highest layer that sets it), else of the
   child's environment, else none: Anthropic. Codex: the `base_url` of
   the `model_providers` entry its `model_provider` names, in
-  `config.toml`, a `--profile` of it, or a `-c` override; none or
+  `config.toml`, a `--profile` of it, or a `-c` override. None or
   `openai` is OpenAI. A base URL is https, or http on the loopback host
   alone. A host the table does not list gets no provider readings and
   no request.
