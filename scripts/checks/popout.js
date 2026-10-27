@@ -39,7 +39,15 @@ function exited (app) {
   await sleep(2000)
   let pr = await probe(app)
   const [a, b] = pr.tabs
-  const before = (await page(win)).panes.find(p => p.id === b.id)
+  // The scrollback before the move, once the fake's last line is drawn:
+  // under load the terminal can still be writing its 300 lines 2 s on,
+  // and a copy taken then is shorter than the popped tab's.
+  let before = null
+  for (let i = 0; i < 100; i++) {
+    before = (await page(win)).panes.find(p => p.id === b.id)
+    if (before && trim(before.lines).includes(`pid ${b.childPid} line 300`)) break
+    await sleep(200)
+  }
   const vizBefore = app.windows().find(w => w.url().includes('/viz/'))
   const panesBefore = vizBefore ? (await vizBefore.evaluate(() => window.vizState().panes.map(p => p.tab))) : null
   check(pr.tabs.length === 2 && b.active, 'want a second, active tab')
@@ -58,9 +66,17 @@ function exited (app) {
   const popped = ws.find(w => w !== win)
   pr = await probe(app)
   const src = await page(win)
-  const dst = await page(popped)
+  // The popped window restores the scrollback after it loads: read it
+  // once its last line is drawn, or as it stands after 20 s.
+  let dst = null
+  let after = null
+  for (let i = 0; i < 100; i++) {
+    dst = await page(popped)
+    after = dst.panes.find(p => p.id === b.id)
+    if (after && trim(after.lines).includes(`pid ${b.childPid} line 300`)) break
+    await sleep(200)
+  }
   const moved = pr.tabs.find(t => t.id === b.id)
-  const after = dst.panes.find(p => p.id === b.id)
   const seen = {
     windows: pr.windows,
     tabs: pr.tabs.map(t => ({ id: t.id, win: t.win, pid: t.childPid })),
