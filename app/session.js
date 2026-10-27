@@ -12,7 +12,7 @@ const cli = require('./cli')
 const identity = require('./identity')
 const proc = require('./metrics/proc')
 
-const DROPPED_ENV = ['CHROME_DESKTOP', 'FC_FONTATIONS', 'SKINNED_RUNTIME_DIR', 'SKINNED_SKIN', 'SKINNED_MUTE']
+const DROPPED_ENV = ['CHROME_DESKTOP', 'FC_FONTATIONS', 'SKINNED_RUNTIME_DIR', 'SKINNED_SKIN', 'SKINNED_MUTE', 'SKINNED_PROVIDERS']
 
 // A close of the window, or a signal to the app, before the CLI started:
 // the status a hung-up child usually reports.
