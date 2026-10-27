@@ -17,7 +17,10 @@
 // session's key alone. The Anthropic session draws its 5h and 7d
 // limits, no balance and no peak, and the fake got nothing from it.
 // No key reaches the log, the page or the runtime dir. Writes
-// OUT/<skin>-<session>.png and OUT/<skin>-<session>-quarter.png.
+// OUT/<skin>-<session>.png and OUT/<skin>-<session>-quarter.png. The
+// peak state wanted is worked out just before each reading of the
+// page, so only a run that reads the page across a switch (01:00,
+// 04:00, 06:00 or 10:00 UTC on a weekday) can fail on it.
 const { launch, probe, childPid, shot, sleep } = require('../drive.js')
 const fs = require('fs')
 const http = require('http')
@@ -112,21 +115,22 @@ async function one (skin, name, s, base, entry) {
   app.process().stderr.on('data', x => { stderr += x })
   try {
     await sleep(2500)
-    const peak = peakNow(entry)
-    const want = s.want(peak)
-    const ready = await until(async () => { const q = await page(win); const w = limitsOf(q); return w && w.rows && w.rows.map(r => r.key).join() === want.map(x => x.key).join() && q }, s.cmd === 'codex' ? 90000 : 30000)
+    const keys = s.want(false).map(x => x.key).join()
+    const ready = await until(async () => { const q = await page(win); const w = limitsOf(q); return w && w.rows && w.rows.map(r => r.key).join() === keys && q }, s.cmd === 'codex' ? 90000 : 30000)
     await sleep(1500)
     await shot(win, path.join(out, `${skin}-${name}.png`))
+    let peak = peakNow(entry)
     const p = await page(win)
-    const full = judge(limitsOf(p), want, `${skin} ${name}`)
+    const full = judge(limitsOf(p), s.want(peak), `${skin} ${name}`)
     check(ready, `${skin} ${name}: the rows never settled`)
     const following = (await probe(app)).following
     const ch = following.channels.find(c => c.name === 'balance')
     await resize(app, ...TILE)
     await sleep(1500)
     await shot(win, path.join(out, `${skin}-${name}-quarter.png`))
+    peak = peakNow(entry)
     const q = await page(win)
-    const quarter = judge(limitsOf(q), want, `${skin} ${name} quarter`)
+    const quarter = judge(limitsOf(q), s.want(peak), `${skin} ${name} quarter`)
     const mine = seen.slice(before)
     if (s.key) {
       check(ch && ch.state === 'live', `${skin} ${name}: the balance channel is ${ch ? ch.state : 'absent'}`)
@@ -141,7 +145,7 @@ async function one (skin, name, s, base, entry) {
       check(!text.includes(k), `${skin} ${name}: a key in the page`)
     }
     const lines = stderr.split('\n').filter(l => /provider/.test(l)).map(l => l.trim())
-    console.log(skin, name, JSON.stringify({ rows: p.widgets.find(w => w.type === 'limits').rows.map(r => `${r.key}: ${r.label} ${r.value} ${r.resets}`.trim()), fill: full, quarterFill: quarter, requests: mine.length, channel: ch ? ch.state : null, log: lines }))
+    console.log(skin, name, JSON.stringify({ peak, rows: p.widgets.find(w => w.type === 'limits').rows.map(r => `${r.key}: ${r.label} ${r.value} ${r.resets}`.trim()), fill: full, quarterFill: quarter, requests: mine.length, channel: ch ? ch.state : null, log: lines }))
   } finally {
     const pid = await childPid(app).catch(() => null)
     if (pid > 0) try { process.kill(-pid, 'SIGHUP') } catch (e) {}
