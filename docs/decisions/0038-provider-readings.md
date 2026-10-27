@@ -56,9 +56,11 @@ login. This decision makes the second exception, on the same ground.
   `ANTHROPIC_AUTH_TOKEN`, then `ANTHROPIC_API_KEY`, each from the
   settings env, then the child's environment, then the first line of
   the settings' `apiKeyHelper`, run by `/bin/sh` as Claude Code runs
-  it, with no terminal, stderr dropped unread, 10 s at most. Codex: the
-  variable its provider's `env_key` names, else the provider's
-  `experimental_bearer_token`. The helper and the bearer token go past
+  it, with no terminal, stderr dropped unread, 10 s at most. A helper
+  that itself asks, such as a locked keyring's unlock dialog, is the
+  helper's, as it would be for Claude Code, as decision 0029 rules for
+  git's credential helper. Codex: the variable its provider's
+  `env_key` names, else the provider's `experimental_bearer_token`. The helper and the bearer token go past
   the coordinator's ruling, which named the settings env and
   `env_key`: the profile this machine runs on DeepSeek holds its key
   in an `apiKeyHelper`, and DeepSeek's own Codex guide writes
