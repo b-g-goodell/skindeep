@@ -3,8 +3,11 @@
 Status: current for Claude Code 2.1.301 and codex-cli 0.162.1, gathered
 2026-10-15 from strings in the installed binaries, the rollouts Codex
 wrote on this machine, and the files Claude Code writes in its config
-directory. No CLI was run and nothing was fetched. Re-check after a CLI
-upgrade. Decision 0011 holds the metric names.
+directory, with no CLI run and nothing fetched. The section By
+provider was added 2026-10-26 (issue #211) from the providers'
+documentation, fetched that day, with no API called and no key used.
+Re-check after a CLI upgrade. Decisions 0011 and 0038 hold the metric
+names.
 
 ## Claude Code
 
@@ -102,3 +105,64 @@ A limit with no reading is no item, so no skin draws it, never as 0.
 An item whose `resets_at` has passed is not drawn either: its window has
 started over and the app has no reading of the new one until the
 provider sends it.
+
+## By provider
+
+A Claude Code or Codex session can run on another provider than the
+CLI's own: Claude Code by `ANTHROPIC_BASE_URL`, Codex by a
+`model_providers` entry. What each provider in use here reports, and
+the channel by which it reaches the app, if any (decision 0038). A
+limit with no channel is a gap.
+
+### Anthropic
+
+| Limit or balance | Channel | Metric |
+| --- | --- | --- |
+| Subscription: current session (5 h), current week, a gateway's spend limit | statusline `rate_limits` | `limits.items` and the scalar names, as above |
+| Subscription: current week of one model, extra usage credit | none: a gap (above) | none |
+| API organization: rate limits per model class in RPM, ITPM and OTPM, a token bucket [A1] | response headers `anthropic-ratelimit-requests-*`, `-tokens-*`, `-input-tokens-*`, `-output-tokens-*` [A1], which the CLI hands to no channel the app reads: a gap | none |
+| API organization: monthly spend cap of its tier ($500 Start, $1,000 Build, $200,000 Scale) and a spend limit of its own below it [A1] | none: a gap. The Console's Billing page shows it | none |
+| API organization: usage and cost history | the Usage and Cost Admin API, `/v1/organizations/usage_report/messages` and `/v1/organizations/cost_report`, which needs an Admin API credential, not a workspace key [A2]. History, not a balance. Not read: an Anthropic session keeps its readings (decision 0038) | none |
+| A prepaid credit balance | no API documented on the pages read: a gap | none |
+
+### OpenAI
+
+| Limit or balance | Channel | Metric |
+| --- | --- | --- |
+| ChatGPT plan: the account's windows (5 h, 7 d, 30 d) and a model's own (GPT-5.3-Codex-Spark) | rollout `token_count` `rate_limits` (above) | `limits.items` and the scalar names |
+| ChatGPT plan: `credits.balance` | rollout `token_count` `rate_limits.credits` | sent, not drawn: an OpenAI session keeps its readings (decision 0038) |
+| API organization: RPM, RPD, TPM, TPD, IPM [O1] | response headers `x-ratelimit-limit-*`, `-remaining-*`, `-reset-*` for requests, tokens and project tokens [O1]. Not seen in a rollout: no API-key Codex session has run here, so whether Codex writes them is unverified | none |
+| API organization: approved monthly usage limit of its tier ($100 Free, $500 Build, $5,000 Launch, $200,000 Grow) and the spend limits an owner sets [O1] | none: a gap | none |
+
+### DeepSeek
+
+Claude Code reaches it at `https://api.deepseek.com/anthropic`, Codex
+at `https://api.deepseek.com/` by a `model_providers` entry [D4][D5].
+
+| Limit or balance | Channel | Metric |
+| --- | --- | --- |
+| A Claude Code session's `rate_limits` | none expected: the session has no claude.ai login. Not yet seen, no live session has run, and the replay fake sends none | none |
+| A Codex session's rollout `rate_limits` | none expected, for the same reason. Not yet seen, and the replay fake sends none | none |
+| Prepaid balance: `is_available` and `balance_infos[]` of `{ currency, total_balance, granted_balance, topped_up_balance }`, currency CNY or USD, amounts as strings [D1] | `GET https://api.deepseek.com/user/balance` with the session's own key as a bearer token [D1][D2], read by the app at most every 5 minutes (decision 0038) | `limits.balances` (`total_balance` per currency), `limits.balance_available` |
+| Peak and off-peak price: peak 01:00 to 04:00 and 06:00 to 10:00 UTC, Monday through Friday, excluding Chinese public holidays, off-peak at half the peak price [D3] | none needed: the published schedule, computed by the app, with the 2026 holidays of the State Council's notice [D7] | `limits.peak`, `limits.peak_changes_at` |
+| Concurrency: 2500 for `deepseek-flash`, 500 for `deepseek-v4-pro`, per account, a request counted from its send to the end of its response, HTTP 429 past it [D6] | none: no header or endpoint reports the requests in flight [D6], so the cap alone is no reading | none |
+
+What the CLI sends on DeepSeek, its statusline and rollouts above all,
+waits on a live session with the owner's key.
+
+### Sources
+
+Fetched 2026-10-26.
+
+- [A1] Rate limits. https://platform.claude.com/docs/en/api/rate-limits
+- [A2] Usage and Cost API. https://platform.claude.com/docs/en/manage-claude/usage-cost-api
+- [O1] Rate limits. https://developers.openai.com/api/docs/guides/rate-limits
+- [D1] Get user balance. https://api-docs.deepseek.com/api/get-user-balance
+- [D2] DeepSeek API, authentication (HTTP bearer). https://api-docs.deepseek.com/api/deepseek-api
+- [D3] Models and Pricing. https://api-docs.deepseek.com/quick_start/pricing/
+- [D4] Anthropic API guide. https://api-docs.deepseek.com/guides/anthropic_api
+- [D5] Integrate with Codex. https://api-docs.deepseek.com/quick_start/agent_integrations/codex
+- [D6] Rate Limit. https://api-docs.deepseek.com/quick_start/rate_limit
+- [D7] State Council General Office, notice on the 2026 holiday
+  arrangements, 2025-11-04.
+  https://www.news.cn/politics/20251104/88bcffd88ae249e58c699b8772548e3d/c.html
