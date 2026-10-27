@@ -65,3 +65,9 @@
 .lims.n-3 .suffix, .lims.n-4 .suffix, .lims.n-5 .suffix, .lims.n-6 .suffix,
 .lims.n-3 .word, .lims.n-4 .word, .lims.n-5 .word, .lims.n-6 .word { display: none; }
 .lims.n-3 > :last-child, .lims.n-5 > :last-child { grid-column: span 2; }
+/* A limit's label and its time left share one row, a gap between, so
+   a long label is cut before it meets the time at a large text size. */
+.lims > .meter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr; column-gap: 0.5em; }
+.lims > .meter .label { grid-column: 1; grid-row: 1; }
+.lims > .meter .resets { position: static; grid-column: 2; grid-row: 1; }
+.lims > .meter .track { grid-column: 1 / -1; grid-row: 2; }
