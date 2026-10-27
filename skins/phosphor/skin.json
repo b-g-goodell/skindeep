@@ -213,6 +213,7 @@
    "meter": "bar",
    "suffix": " limit",
    "itemClass": "meter",
+   "provider": ["balance", "peak"],
    "max": 100,
    "segments": 20,
    "gap": 2,

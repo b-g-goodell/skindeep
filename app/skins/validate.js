@@ -31,8 +31,11 @@ const TYPES = {
   readout: ['prefix', 'suffix', 'resets', 'fallback'],
   sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps'],
   list: ['rows', 'toggle'],
-  limits: ['meter', 'direction', 'suffix', 'itemClass', 'orientation', 'segments', 'gap', 'startAngle', 'endAngle', 'ticks', 'face']
+  limits: ['meter', 'direction', 'suffix', 'itemClass', 'orientation', 'segments', 'gap', 'startAngle', 'endAngle', 'ticks', 'face', 'provider']
 }
+// The provider readings a limits widget draws beside the limits
+// (decision 0038).
+const PROVIDER = ['balance', 'peak']
 // The list-valued metric each list-showing type binds (decisions 0034,
 // 0011).
 const LIST_OF = { list: 'checklist.items', limits: 'limits.items' }
@@ -334,11 +337,15 @@ function validate (dir) {
         if (!isStr(w.bind)) err(`${fld}.bind`, 'missing metric name')
         else if (!names.known(w.bind)) err(`${fld}.bind`, `unknown metric "${w.bind}"`)
         else if (LIST_OF[w.type] && w.bind !== LIST_OF[w.type]) err(`${fld}.bind`, `"${w.bind}": a ${w.type} widget shows ${LIST_OF[w.type]}`)
-        else if (!LIST_OF[w.type] && names.isList(w.bind)) err(`${fld}.bind`, `"${w.bind}": a list-valued metric needs a ${Object.keys(LIST_OF).find(k => LIST_OF[k] === w.bind)} widget`)
+        else if (!LIST_OF[w.type] && names.isList(w.bind)) {
+          const by = Object.keys(LIST_OF).find(k => LIST_OF[k] === w.bind)
+          err(`${fld}.bind`, by ? `"${w.bind}": a list-valued metric needs a ${by} widget` : `"${w.bind}": a list-valued metric a limits widget draws, by its provider field`)
+        }
         if (w.type === 'limits') {
           if ('meter' in w && !['bar', 'needle'].includes(w.meter)) err(`${fld}.meter`, 'must be bar or needle')
           if ('direction' in w && !['row', 'column'].includes(w.direction)) err(`${fld}.direction`, 'must be row or column')
           if ('itemClass' in w && (!isStr(w.itemClass) || !CLASS.test(w.itemClass))) err(`${fld}.itemClass`, 'must be lowercase class names')
+          if ('provider' in w && (!Array.isArray(w.provider) || !w.provider.every(r => PROVIDER.includes(r)) || new Set(w.provider).size !== w.provider.length)) err(`${fld}.provider`, `must be a list of distinct readings of ${PROVIDER.join(', ')}`)
         }
         if ('resets' in w && (!isStr(w.resets) || !names.known(w.resets))) err(`${fld}.resets`, `unknown metric "${w.resets}"`)
         if ('fallback' in w) {

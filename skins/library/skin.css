@@ -89,3 +89,12 @@
 .brass .label { font: 11px/12px "Special Elite", monospace; letter-spacing: 2px; color: #f2dca4; }
 .brass .value { font: 13px/14px "Special Elite", monospace; color: #f8ecc8; }
 .lims.n-3 > :last-child, .lims.n-5 > :last-child { grid-column: span 2; }
+/* A provider's balance and peak price state (decision 0038), in
+   marker on the whiteboard: the amount in blue, a red note when it no
+   longer pays, a ring filled orange in the peak hours. */
+.lims .balance .value { font: 17px/18px "Permanent Marker", cursive; color: #2457b8; }
+.lims .balance .note { font: 13px/16px "Permanent Marker", cursive; color: #c7362f; }
+.lims .balance.unavailable .value { color: #c7362f; }
+.lims .peak .lamp { width: 12px; height: 12px; box-sizing: border-box; border: 2px solid #3a3f45; background: transparent; box-shadow: none; }
+.lims .peak .lamp.on { background: #d0731c; border-color: #d0731c; box-shadow: none; }
+.lims .peak .resets { font: 13px/16px "Permanent Marker", cursive; color: #5a6068; }

@@ -41,9 +41,11 @@ const BROKEN = {
     'skin.json: widgets[0].toggle.rect: overlaps the list at the minimum window',
     'skin.json: widgets[0].toggle.rect: overlaps the terminal at the minimum window',
     'skin.json: widgets[1].bind: "checklist.items": a list-valued metric needs a list widget',
-    'skin.json: widgets[2].bind: "checklist.items": a limits widget shows limits.items',
-    'skin.json: widgets[2].meter: must be bar or needle',
-    'skin.json: widgets[2].direction: must be row or column'
+    'skin.json: widgets[2].bind: "limits.balances": a list-valued metric a limits widget draws, by its provider field',
+    'skin.json: widgets[3].bind: "checklist.items": a limits widget shows limits.items',
+    'skin.json: widgets[3].meter: must be bar or needle',
+    'skin.json: widgets[3].direction: must be row or column',
+    'skin.json: widgets[3].provider: must be a list of distinct readings of balance, peak'
   ],
   'broken-fallback': [
     'skin.json: widgets[0].resets: unknown metric "foo.when"',

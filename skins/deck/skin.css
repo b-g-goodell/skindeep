@@ -109,3 +109,14 @@
 .lims .limit-item .resets { position: absolute; right: 0; top: 0; font: 8px/10px Silkscreen, monospace; letter-spacing: 1px; color: #3cff3c; opacity: 0.85; }
 .lims.n-3 .word, .lims.n-4 .word, .lims.n-5 .word, .lims.n-6 .word, .lims.n-3 .suffix, .lims.n-4 .suffix, .lims.n-5 .suffix, .lims.n-6 .suffix { display: none; }
 .lims.n-3 > :last-child, .lims.n-5 > :last-child { grid-column: span 2; }
+/* A provider's balance and peak price state (decision 0038), in the
+   bars' place: the amount in LCD green, a note in red when it no longer
+   pays, an amber lamp in the peak hours. */
+.lims .balance .value { font: 13px/14px "DejaVu Sans Mono", monospace; color: #3cff3c; text-shadow: 0 0 6px rgba(60, 255, 60, 0.55); }
+.lims .balance .note { font: 8px/10px Silkscreen, monospace; letter-spacing: 1px; color: #ff4a2a; }
+.lims .balance.unavailable .value { color: #ff4a2a; text-shadow: 0 0 6px rgba(255, 74, 42, 0.55); }
+.lims .balance, .lims .peak { gap: 6px; }
+.lims .peak { --on: #d8e030; }
+.lims .peak .lamp { width: 9px; height: 9px; border-radius: 1px; }
+.lims .peak.on .label { color: #d8e030; }
+.lims .peak .resets { position: static; margin-left: auto; }

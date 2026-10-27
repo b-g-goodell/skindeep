@@ -71,3 +71,11 @@
 .lims > .meter .label { grid-column: 1; grid-row: 1; }
 .lims > .meter .resets { position: static; grid-column: 2; grid-row: 1; }
 .lims > .meter .track { grid-column: 1 / -1; grid-row: 2; }
+/* A provider's balance and peak price state (decision 0038), in the
+   bars' place: the amount in bright phosphor, a square lamp lit in the
+   peak hours, the time to the switch at the right. */
+.lims .balance .value { font: 24px/24px VT323, monospace; color: #8affb4; }
+.lims .balance .note { font: 17px/18px VT323, monospace; letter-spacing: 1px; color: #b8ffd0; }
+.lims .balance.unavailable .value { opacity: 0.6; }
+.lims .peak .lamp { width: 10px; height: 10px; border-radius: 0; background: #0a2a16; border: 1px solid #3aff7e; }
+.lims .peak .lamp.on { background: #b8ffd0; box-shadow: 0 0 10px #8affb4; }
