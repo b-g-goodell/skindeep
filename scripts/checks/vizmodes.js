@@ -381,18 +381,35 @@ function centred (probe, where) {
   const size0 = await vizWin(null)
   await vizWin([1200, 760])
   const one = (await tabs())[0].id
+  // A watched pair wider than TIGHT is not the seed's: that pair has
+  // merged and the watcher took the next, which in a scene of many
+  // bodies is no clean binary and need not change sign four times a
+  // turn. The mode starts again, with a new seed, up to RESTAGE times.
+  const TIGHT = 40
+  const RESTAGE = 3
   for (const id of ['gravity', 'gravity3d']) {
     await assign(one, id)
     let pair = null
+    let restaged = 0
     const held = []
     await until(async () => {
       const probe = (await state()).panes[0].probe
       pair = probe.pair
+      if (pair && pair.sep > TIGHT && restaged < RESTAGE) {
+        restaged++
+        console.log(id, 'full pane: the seed pair is gone, restaged', JSON.stringify(pair))
+        await assign(one, 'drift')
+        await assign(one, id)
+        held.length = 0
+        pair = null
+        return false
+      }
       // From its first traced frame.
       if (id === 'gravity3d' && probe.trace) held.push(centred(probe, 'gravity3d full pane'))
       return pair && pair.turns >= 3
     }, `${id}: no tight pair turned three times`, 900)
     console.log(id, 'full pane pair', JSON.stringify(pair))
+    check(pair.sep <= TIGHT, `${id}: the seed pair merged before three turns in each of ${RESTAGE + 1} stagings`, pair)
     if (held.length) console.log(id, 'full pane centre', JSON.stringify({ reads: held.length, recentred: [held[0].recentred, held[held.length - 1].recentred], worst: Math.max(...held.map(c => c.off)), last: held[held.length - 1] }))
     check(Math.abs(pair.flips / pair.turns - 4) < 1, `${id}: ${pair.flips} sign changes of its wave in ${pair.turns} turns, not four a turn`)
     for (let k = 0; k < 3; k++) {

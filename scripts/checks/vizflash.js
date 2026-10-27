@@ -141,6 +141,22 @@ const scenes = [
   for (const sc of scenes) {
     const t0 = Date.now()
     await viz.evaluate(sc => {
+      // The scene's chance draws are seeded by its name, so a scene
+      // reads the same on every run: a burst of some 70 photons put 8
+      // in a late quarter second by chance alone (0.114 against 0.1).
+      // Math.random is the scene's own only inside these evaluates,
+      // which no other pane's frame interrupts.
+      let a = [...sc.name].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0, 2166136261)
+      const rng = () => {
+        a = (a + 0x6D2B79F5) >>> 0
+        let t = a
+        t = Math.imul(t ^ (t >>> 15), t | 1)
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+      }
+      const real = Math.random
+      Math.random = rng
+      try {
       const c = document.createElement('canvas')
       c.width = sc.w
       c.height = sc.h
@@ -159,11 +175,18 @@ const scenes = [
         R.r.pointer('move', d.x + 2 * d.r * Math.sin(Math.PI / 3), d.y - 2 * d.r * Math.cos(Math.PI / 3), true)
         R.r.pointer('up', d.x + 2 * d.r * Math.sin(Math.PI / 3), d.y - 2 * d.r * Math.cos(Math.PI / 3), false)
       }
+      R.rng = rng
+      } finally {
+        Math.random = real
+      }
     }, Object.assign({ warm: 3 * fieldT, win }, sc))
     // Frames in chunks, so no one evaluate runs for long.
     for (;;) {
       const done = await viz.evaluate(() => {
         const R = window.flashRun
+        const real = Math.random
+        Math.random = R.rng
+        try {
         const { sc, s, r } = R
         const dt = 1 / sc.fps
         for (let k = 0; k < 30; k++) {
@@ -247,6 +270,9 @@ const scenes = [
           }
         }
         return false
+        } finally {
+          Math.random = real
+        }
       })
       if (done) break
     }
