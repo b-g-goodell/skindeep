@@ -2,7 +2,8 @@
 
 Status: accepted 2026-10-11, the usage limits' resets and spend limit
 added 2026-10-13, the checklist family added 2026-10-14 (decision
-0034), the list of every usage limit added 2026-10-15.
+0034), the list of every usage limit added 2026-10-15, a provider's
+balance and peak price state added 2026-10-26 (decision 0038).
 
 ## Context
 
@@ -35,13 +36,20 @@ Dotted names. A metric absent for the current CLI reads as "no data"
   the model or null, `label` the two together, short enough for a
   quarter tile (`Spark 5h`). A limit with no reading is no item, and
   the list is null when there is none.
+- A provider's own readings (decision 0038), on a provider other than
+  the CLI's: `limits.balances`, a list of `{ key, label, currency,
+  amount }`, one per currency, money and never a percent;
+  `limits.balance_available` (1 or 0); `limits.peak` (1 in the peak
+  price hours, 0 off-peak) and `limits.peak_changes_at` (Unix
+  seconds). Each is absent while nothing reads.
 - Activity: `tools.total`, `tools.rate` (per minute), `tools.<Name>` per
   tool type, `agents.active`, `lines.added`, `lines.removed`,
   `state.busy` (1 between prompt submit and stop).
 - Identity: `model.name` (text), `session.clock_s`, `session.compactions`.
 - Checklist (decision 0034): `checklist.items`, a list of `{ text,
   state }`, `checklist.count`, `checklist.done`. It and
-  `limits.items` are the list-valued names.
+  `limits.items` are the list-valued names, and `limits.balances`
+  (decision 0038).
 - Generic: `pty.out_bps`, `pty.in_kps`, `pty.idle_s`, `proc.cpu_pct`,
   `proc.mem_mb`.
 - Events (pulse counters that only increase): `event.output`,
@@ -53,8 +61,9 @@ Codex fills the same names where its rollout carries the figure.
 What each provider lists, and what reaches the app, read from Claude
 Code 2.1.301 and codex-cli 0.162.1 (`docs/research/usage-limits.md`).
 `/usage` fetches its figures from Anthropic itself. The app makes no
-request of its own (the thin-wrapper ruling), so a figure no channel
-carries is left out.
+request of its own for them (the thin-wrapper ruling), so a figure no
+channel carries is left out. A provider other than the CLI's is read
+on its own account endpoint, with the CLI's key, by decision 0038.
 
 | Limit | channel | metric |
 | --- | --- | --- |

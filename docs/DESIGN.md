@@ -131,5 +131,6 @@ own keys, pastes and mouse reports.
 | [0035](decisions/0035-resizable-panels.md) | Resizable panels: a dragged boundary between the terminal and a panel |
 | [0036](decisions/0036-text-sizes.md) | Text sizes: every text the app draws follows a setting |
 | [0037](decisions/0037-snapshot-tabs.md) | New tab... in a select-agent-config snapshot |
+| [0038](decisions/0038-provider-readings.md) | Each provider's own readings: a balance and a peak price state |
 
 Channel facts: `docs/research/side-channels.md`.

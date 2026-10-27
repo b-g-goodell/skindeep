@@ -17,6 +17,7 @@ skindeep now shows each one as the time left, such as 3h 12m or 4d 2h,
 next to its meter in every skin.
 skindeep never asks the internet for anything itself,
 so the parts of the usage report that never reach it stay out.
+(Decision 0038 later let it read a provider's balance with the key the CLI already uses.)
 
 Some sessions are paid through a gateway that a company sets up,
 with a spending cap instead of the usual limits.

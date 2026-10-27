@@ -257,6 +257,7 @@ holds them all, so bind it once:
 | `direction` | `column` (default): the meters stack top to bottom. `row`: side by side |
 | `suffix` | text after each limit's label: `" limit"` makes `5h limit`. It is a `.suffix` span, so a crowded layout can hide it |
 | `itemClass` | classes given to every meter, so your rules for a lone bar style them |
+| `provider` | the provider readings drawn after the limits, in the same rect (decision 0038): a list of `balance` and `peak`. Omit it and the widget draws limits alone |
 
 Each meter is a `.w` of its type inside the widget, `.w-limits`. It
 carries `.limit-item`, `.account` or `.model`, and the window's class:
@@ -277,6 +278,24 @@ How many meters to plan for: Claude Code sends two (a gateway session
 one), Codex on a paid plan one to four. A meter whose limit has reset
 is dropped until the provider sends the new window's reading.
 
+A session on another provider than the CLI's own, such as Claude Code
+on DeepSeek, sends no usage limit, and the provider has readings of its
+own instead (decision 0038). With `provider`, each is one more `.w` in
+the widget, after the limits, drawn only while it reads:
+
+- `balance`: a `.w-readout.limit-item.balance` per currency of
+  `limits.balances`, `.label` (`balance`), `.value` the amount in its
+  currency (`110.00 CNY`, never a percent), and `.note` (`too low to
+  call`, with `.unavailable` on the item) while
+  `limits.balance_available` is 0.
+- `peak`: a `.w-led.limit-item.peak`, its `.lamp` and the item `.on` in
+  the provider's peak price hours, `.label` `peak price` or `off-peak`,
+  and `.resets` with `.word` (`ends ` or `peak in `) and `.left`, the
+  time to `limits.peak_changes_at`.
+
+They count in `.n-<count>`, and the widget carries `.provider` while
+one is drawn. An Anthropic or OpenAI session has neither.
+
 How the shipped skins draw them:
 
 | Skin | Meters |
@@ -285,6 +304,12 @@ How the shipped skins draw them:
 | `phosphor` | segmented bars under the cache meter, two columns for three or more |
 | `coffee` | a jar of cold brew a limit on the table, its label and reset on tape. Four jars stand smaller |
 | `library` | a marker bar a limit on the whiteboard: red for five hours, green for a week or a spend limit, orange and purple for a model's. Two columns for three or more |
+
+And a provider's readings: `deck` and `phosphor` a row each, the
+amount in the screen's green and an amber or bright lamp in the peak
+hours; `library` the amount in blue marker and a ring filled orange;
+`coffee` a tip jar with the amount on its tape and a jar with a candle
+lit in the peak hours.
 
 ## Styling with CSS
 
@@ -300,7 +325,8 @@ Class names you can style:
   takes a click and `.open` while its dial is open.
 - A `limits` widget's meters: `.limit-item` with `.account` or
   `.model` and `.span-5h`, `.span-7d`, `.span-30d` or `.spend`, and
-  `.n-<count>` on the widget (see Usage limits).
+  `.n-<count>` on the widget (see Usage limits), and a provider's
+  `.balance` and `.peak`.
 - Parts: `.label`, `.value`, `.track`, `.fill` (gauge arc, bar fill),
   `.tick`, `.mark`, `.needle`, `.pivot`, `.face`, `.knob-face`,
   `.knob-pointer`, `.knob-image`, `.seg` and `.seg.on` (bar segments),
@@ -393,6 +419,10 @@ any command fills the `pty.*`, `proc.*` and `session.clock_s` meters.
 | `limits.seven_day_resets_at` | when the seven-day limit resets, Unix seconds |
 | `limits.spend_pct`, `limits.spend_usd`, `limits.spend_limit_usd`, `limits.spend_resets_at` | a gateway session's spend limit: percent used, dollars spent, the limit, its reset |
 | `limits.items` | every usage limit the provider sends now, a list of `{ key, label, window, model, pct, resets_at }`: Claude Code's statusline limits, and each Codex limit, a model's among them. For a `limits` widget alone |
+| `limits.balances` | a provider's account balance, one per currency, a list of `{ key, label, currency, amount }`, read from its account endpoint (decision 0038). Absent until a read succeeds, never 0 for none. For a `limits` widget's `provider` alone |
+| `limits.balance_available` | 1 while the provider says the balance pays for calls, 0 when it does not |
+| `limits.peak` | 1 in the provider's peak price hours, 0 off-peak, from its published schedule. Absent for a provider with none |
+| `limits.peak_changes_at` | when the price next switches between peak and off-peak, Unix seconds |
 | `tools.total` | tool calls this session |
 | `tools.rate` | tool calls in the last 60 s |
 | `agents.active` | subagents running now |
