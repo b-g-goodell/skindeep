@@ -346,9 +346,15 @@ function centred (probe, where) {
   // The waves as smoke in panes js, as File, Settings sets them, three
   // frames, then the colour field again.
   async function smoked (js, size) {
+    // A setting reaches the page at once and its pixels a frame later,
+    // which under load is seconds on: the panes are read once drawn.
+    const drawn = (ok, why) => until(async () => {
+      const xs = await viz.evaluate(grab)
+      return js.every(j => ok(grey(xs[j].grid)))
+    }, why, 600)
     check((await win.evaluate(() => window.skinned.setSetting('viz.waves', 'smoke'))).ok, 'the settings refused viz.waves smoke')
     await until(async () => (await state()).waves === 'smoke', 'the page never drew smoke')
-    await sleep(500)
+    await drawn(g => g > 0.5, 'the panes never drew the smoke')
     const seen = js.map(() => [])
     for (let k = 0; k < 3; k++) {
       if (k) await sleep(500)
@@ -365,7 +371,7 @@ function centred (probe, where) {
     for (const s of seen) check(s.every(g => g > 0.5), `the ${size} smoke is not grey`, seen)
     check((await win.evaluate(() => window.skinned.setSetting('viz.waves', null))).ok, 'the settings refused viz.waves null')
     await until(async () => (await state()).waves === 'colour', 'the page never drew the colour field again')
-    await sleep(500)
+    await drawn(g => g < 0.5, 'the panes never drew the colour field again')
     const xs = await viz.evaluate(grab)
     const back = js.map(j => Math.round(grey(xs[j].grid) * 1000) / 1000)
     console.log('colour again', size, 'grey share of lit cells', JSON.stringify(back))
