@@ -190,10 +190,9 @@ class Viz {
     this.trace = px || 0
   }
 
-  // The Gravity modes' waves, 'colour' or 'smoke', sent with every
-  // frame as 0 or 1.
+  // Wave drawing: colour, smoke or lensing, sent as 0, 1 or 2.
   setWaves (style) {
-    this.waves = style === 'smoke' ? 1 : 0
+    this.waves = style === 'lensing' ? 2 : style === 'smoke' ? 1 : 0
   }
 
   step (pane) {
