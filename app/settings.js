@@ -29,7 +29,7 @@ const TRACES = [15000, 45000, 60000, 90000, 135000]
 const TRACE_OWN = 30000
 // How the Gravity modes draw their gravitational waves. null: the
 // colour field, WAVES_OWN.
-const WAVES = ['smoke']
+const WAVES = ['smoke', 'lensing']
 const WAVES_OWN = 'colour'
 
 // own: the value null stands for, own(skin). show: a value as the menu

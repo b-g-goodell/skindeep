@@ -9,6 +9,29 @@ const assert = require('node:assert')
 const W = require('../app/viz/waves')
 
 const C = 10
+test('wave lens: quiet strain is still, weak strain scales, strong strain stays bounded', () => {
+  const w = 16
+  const h = 12
+  const hp = new Float32Array(w * h)
+  const hx = new Float32Array(w * h)
+  const dx = new Float32Array(w * h)
+  const dy = new Float32Array(w * h)
+  assert.strictEqual(W.lens(hp, hx, w, h, dx, dy), 0)
+  assert.ok(dx.every(v => v === 0) && dy.every(v => v === 0))
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) hp[y * w + x] = 0.01 * x
+  }
+  W.lens(hp, hx, w, h, dx, dy)
+  assert.ok(dx.every(v => Math.abs(v - 0.02) < 1e-6))
+  assert.ok(dy.every(v => v === 0))
+  hp.forEach((v, i) => { hp[i] = 2 * v })
+  W.lens(hp, hx, w, h, dx, dy)
+  assert.ok(dx.every(v => Math.abs(v - 0.04) < 1e-6))
+  hp.forEach((v, i) => { hp[i] = 1000 * v })
+  assert.strictEqual(W.lens(hp, hx, w, h, dx, dy), 1.5)
+  assert.ok(dx.every((v, i) => Math.hypot(v, dy[i]) <= 1.500001))
+})
+
 const QC = [3, -3, 0, 1, 0, 0]
 
 // A trace of Iddot 0 until t0 and QC from t0, its place x(t), its near

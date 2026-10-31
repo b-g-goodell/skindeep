@@ -75,7 +75,7 @@ test('only a defined setting and one of its values is valid', () => {
   for (const v of [0, 25, 120, '30', 30.5]) assert.ok(!settings.valid('viz.fps', v), `viz.fps ${v}`)
   for (const v of [15000, 45000, 60000, 90000, 135000, null]) assert.ok(settings.valid('viz.trace', v), `viz.trace ${v}`)
   for (const v of [0, 30000, 200000, '45000']) assert.ok(!settings.valid('viz.trace', v), `viz.trace ${v}`)
-  for (const v of ['smoke', null]) assert.ok(settings.valid('viz.waves', v), `viz.waves ${v}`)
+  for (const v of ['smoke', 'lensing', null]) assert.ok(settings.valid('viz.waves', v), `viz.waves ${v}`)
   for (const v of ['colour', 'gas', 1, 0]) assert.ok(!settings.valid('viz.waves', v), `viz.waves ${v}`)
 })
 
@@ -91,7 +91,7 @@ test('the waves\' style is the colour field by default, and smoke when chosen', 
     settings.save(f, { 'viz.waves': 'fog' })
     assert.strictEqual(settings.value(settings.load(f), 'viz.waves'), 'colour')
     const row = settings.menu(settings.load(f), null).find(r => r.id === 'viz.waves')
-    assert.deepStrictEqual(row.choices.map(c => c.label), ['Default (colour)', 'smoke'])
+    assert.deepStrictEqual(row.choices.map(c => c.label), ['Default (colour)', 'smoke', 'lensing'])
     assert.deepStrictEqual(row.choices.filter(c => c.current).map(c => c.value), [null])
   } finally {
     fs.rmSync(d, { recursive: true, force: true })

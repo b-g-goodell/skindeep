@@ -546,6 +546,27 @@
   const SEG = new Float64Array(STRIDE * MAXSEG)
   const EV = []
 
+  // Thin-screen displacement in projected pixels. Foreground stays fixed.
+  const WXY = new Float64Array(2)
+  function waveShift (sc, x, y, z) {
+    WXY[0] = WXY[1] = 0
+    const a = sc.wave
+    if (!a || z <= a.z) return WXY
+    const gx = Math.max(0, Math.min(a.w - 1, x / a.cell))
+    const gy = Math.max(0, Math.min(a.h - 1, y / a.cell))
+    const i = Math.min(a.w - 2, Math.floor(gx))
+    const j = Math.min(a.h - 2, Math.floor(gy))
+    const u = gx - i
+    const v = gy - j
+    const p = j * a.w + i
+    const k = a.cell * (1 - a.z / z)
+    for (let c = 0; c < 2; c++) {
+      const q = c ? a.dy : a.dx
+      WXY[c] = k * ((1 - v) * ((1 - u) * q[p] + u * q[p + 1]) + v * ((1 - u) * q[p + a.w] + u * q[p + a.w + 1]))
+    }
+    return WXY
+  }
+
   // One ray from the camera along unit (dx, dy, dz), of the frame's
   // point (x, y): the planes it crosses, in the order it crosses them,
   // then, unless it is captured, the sky along its last direction.
@@ -580,7 +601,7 @@
             if (read) continue
             read = true
           }
-          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y)
+          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y, sc)
         }
       } else {
         for (let q = np - 1; q >= 0; q--) {
@@ -591,22 +612,24 @@
             if (read) continue
             read = true
           }
-          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y)
+          cross(p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y, sc)
         }
       }
     }
     if (!cap && T > 0.004 && sc.sky) {
       const k = STRIDE * (n - 1)
-      skyPlace(sc.sky, SEG[k + 3], SEG[k + 4], SEG[k + 5])
+      const shift = waveShift(sc, x, y, Infinity)
+      skyPlace(sc.sky, SEG[k + 3] + shift[0] * SEG[k + 5] / f, SEG[k + 4] - shift[1] * SEG[k + 5] / f, SEG[k + 5])
       skyAdd(sc.sky, FI, FX, FY)
     }
     return cap
   }
 
-  function cross (p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y) {
+  function cross (p, ox, oy, oz, ex, ey, ez, cx, cy, f, x, y, sc) {
     const t = (p.z - oz) / ez
-    const sx = p.screen ? x : cx + f * (ox + t * ex) / p.z
-    const sy = p.screen ? y : cy - f * (oy + t * ey) / p.z
+    const shift = waveShift(sc, x, y, p.screen ? 0 : p.z)
+    const sx = p.screen ? x : cx + f * (ox + t * ex) / p.z + shift[0]
+    const sy = p.screen ? y : cy - f * (oy + t * ey) / p.z + shift[1]
     if (p.edge) return sample(p, sx, sy)
     const tx = Math.floor((sx - p.ox) / TILE)
     const ty = Math.floor((sy - p.oy) / TILE)
@@ -695,6 +718,9 @@
           const t = (z - SEG[k + 2]) / SEG[k + 5]
           px[q * NN + node] = planes[q].screen ? i * S + 0.5 : cx + f * (SEG[k] + t * SEG[k + 3]) / z
           py[q * NN + node] = planes[q].screen ? j * S + 0.5 : cy - f * (SEG[k + 1] + t * SEG[k + 4]) / z
+          const shift = waveShift(sc, i * S + 0.5, j * S + 0.5, planes[q].screen ? 0 : z)
+          px[q * NN + node] += shift[0]
+          py[q * NN + node] += shift[1]
           crossed++
           if (planes[q].smooth) {
             R = Gc = B = 0
@@ -707,10 +733,11 @@
         }
         sig[node] = code * 64 + crossed + (cap ? 0.5 : 0)
         if (cap || !sky) continue
-        fd[3 * node] = SEG[k1 + 3]
-        fd[3 * node + 1] = SEG[k1 + 4]
+        const shift = waveShift(sc, i * S + 0.5, j * S + 0.5, Infinity)
+        fd[3 * node] = SEG[k1 + 3] + shift[0] * SEG[k1 + 5] / f
+        fd[3 * node + 1] = SEG[k1 + 4] - shift[1] * SEG[k1 + 5] / f
         fd[3 * node + 2] = SEG[k1 + 5]
-        skyPlace(sky, SEG[k1 + 3], SEG[k1 + 4], SEG[k1 + 5])
+        skyPlace(sky, fd[3 * node], fd[3 * node + 1], fd[3 * node + 2])
         fi[node] = FI
         mfx[node] = FX
         mfy[node] = FY
@@ -923,6 +950,9 @@
       if (t <= 0 || t > SEEN[k + 6]) continue
       XY[0] = sc.cx + sc.f * (SEEN[k] + t * SEEN[k + 3]) / z
       XY[1] = sc.cy - sc.f * (SEEN[k + 1] + t * SEEN[k + 4]) / z
+      const shift = waveShift(sc, sx, sy, z)
+      XY[0] += shift[0]
+      XY[1] += shift[1]
       return true
     }
     return false
