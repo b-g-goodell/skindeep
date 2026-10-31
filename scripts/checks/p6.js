@@ -14,7 +14,7 @@ fs.mkdirSync(out, { recursive: true })
 const snap = async app => (await probe(app)).snapshot
 
 ;(async () => {
-  const args = extra.length ? extra : ['--no-daemon', '-s', 'read-only', '-a', 'never']
+  const args = extra.length ? extra : ['-s', 'read-only', '-a', 'never']
   const { app, win } = await launch(['codex', ...args], { appArgs: ['--skin', 'phosphor'], env: { SKINNED_GL: 'swiftshader' } })
   try {
   await sleep(10000)
