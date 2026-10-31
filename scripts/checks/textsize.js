@@ -105,7 +105,7 @@ async function sizes (app, win, skin, tag, tabs, own, has) {
   for (const pct of PCTS) {
     const at = `${skin} ${tag} ${pct || 100}`
     if (pct === 150 && skin === SKINS[0] && tag === 'initial') {
-      await openMenu(win)
+      await openMenu(win, 'Settings')
       await win.locator('#menu .submenu', { hasText: 'Skin text size' }).hover()
       await sleep(200)
       await win.locator('#menu .submenu', { hasText: 'Skin text size' }).locator('.sub .item', { hasText: '150%' }).click()
@@ -117,8 +117,8 @@ async function sizes (app, win, skin, tag, tabs, own, has) {
     const v = await page(win)
     const w = await windowTexts(win, { strip: PARTS.strip, tabs: PARTS.tabs })
     await shot(win, path.join(out, `${skin}-${tag}-${pct || 100}.png`))
-    // The File menu, and a flyout of it.
-    await openMenu(win)
+    // The Settings menu and its text size flyout.
+    await openMenu(win, 'Settings')
     const menu = await windowTexts(win, { menu: PARTS.menu })
     const mbox = await win.evaluate(() => { const r = document.getElementById('menu').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height } })
     await win.locator('#menu .submenu', { hasText: 'Window text size' }).hover()

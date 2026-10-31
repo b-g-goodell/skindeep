@@ -75,7 +75,7 @@ async function menuItem (win, re, name = 'File') {
   await win.locator('#menu .item').filter({ hasText: re }).first().click({ timeout: 5000 })
 }
 
-async function flyout (win, title, re, name = 'File') {
+async function flyout (win, title, re, name = 'Settings') {
   await openMenu(win, name)
   await win.locator('#menu .submenu', { hasText: title }).hover({ timeout: 5000 })
   await sleep(200)

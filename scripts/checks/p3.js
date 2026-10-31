@@ -266,7 +266,7 @@ async function remember () {
     return { buttons: JSON.parse(fs.readFileSync(asked, 'utf8')).buttons }
   })
   await run('forget', {}, async (app, win) => {
-    await openMenu(win)
+    await openMenu(win, 'Skins')
     await win.locator('#menu .item', { hasText: 'Forget remembered skin' }).click()
     await sleep(300)
     return { note: await win.evaluate(() => (document.querySelector('#menu .note') || {}).textContent || null), left: last.read(recs).length }

@@ -65,9 +65,9 @@ const boxes = win => win.evaluate(() => {
     check(JSON.stringify(before) === JSON.stringify(after), 'an entry below the sessions list moved')
     check(ended.every(x => x === true), 'want the two ended sessions marked ended in their places')
 
-    // File's last entries: Housekeeping's, and the font size flyout's last.
+    // The remembered skin and the last font size remain reachable.
     await win.keyboard.press('Escape')
-    await openMenu(win)
+    await openMenu(win, 'Skins')
     const file = await win.evaluate(() => Math.round(document.getElementById('menu').getBoundingClientRect().bottom))
     console.log('file menu bottom', file, 'of', fit.height)
     check(file <= fit.height, 'want the File menu inside the window')
@@ -76,7 +76,7 @@ const boxes = win => win.evaluate(() => {
     const note = await win.evaluate(() => { const n = document.querySelector('#menu .note'); return n && n.textContent })
     check(note && note.startsWith('Forgotten'), 'want Forget remembered skin reached')
     await win.keyboard.press('Escape')
-    await openMenu(win)
+    await openMenu(win, 'Settings')
     await win.locator('#menu .submenu', { hasText: 'Terminal font size' }).hover({ timeout: 5000 })
     await sleep(300)
     await win.locator('#menu .submenu .sub .item').filter({ hasText: /32 px$/ }).click({ timeout: 5000 })

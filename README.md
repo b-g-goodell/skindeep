@@ -54,11 +54,13 @@ exits with the CLI's own status. `SKINNED_SKIN=phosphor claude-skins`
 picks a skin, and a profile set by `CLAUDE_CONFIG_DIR` or `CODEX_HOME`
 works as usual, with its name in the window title.
 
-The three bars at the top left open four menus in a bar: **File** for
-the tabs, Settings and Housekeeping, **Agents** for Agent sessions and
+The three bars at the top left open menus grouped by task: **File** for
+tabs, **Agents** for Agent sessions and
 Sessions dashboard, which watch every Claude Code and Codex session on
 your machine, **Skins** for Open skin... and the skins, and
-**Visualization** for its window, mode and input and Mute skin sounds.
+**Visualization** for its window, modes, input, rendering settings and
+Mute skin sounds, **Settings** for text sizes and panel sizes, and
+**Help** for session notices and logs.
 A click on a title, or Left and Right, moves between them, and Escape
 closes them.
 
@@ -120,11 +122,11 @@ atom to that level.
 
 Drag the edge between the terminal and a panel beside it to give the
 panel more room or less. The skin keeps the size, and **Reset panel
-sizes** in the File menu's Settings brings back its own.
+sizes** in Settings brings back its own.
 
-Settings also holds the size of every text: the terminal's font size,
-and from 70 to 150 percent the skin's text, the window's own (strips,
-tabs, menus, dialog, dashboard) and the visualization's. A larger text
+Settings also holds the terminal's font size and, from 70 to 150
+percent, the skin's text and the window's own (strips, tabs, menus,
+dialog, dashboard). Visualization holds its own text size. A larger text
 grows as far as the skin's art leaves it room.
 
 A plain `claude-skins` opens the skin you used last, and you can mute

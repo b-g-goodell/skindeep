@@ -17,16 +17,17 @@ const root = path.join(__dirname, '..', '..')
 const fake = path.join(root, 'scripts', 'fake', 'claude')
 const SKINS = ['deck', 'phosphor', 'coffee', 'library']
 const TILE = [960, 1048 / 2 - 37]
-const MENUS = ['File', 'Agents', 'Skins', 'Visualization']
+const MENUS = ['File', 'Agents', 'Skins', 'Visualization', 'Settings', 'Help']
 
 // The entries each menu holds, headings and flyout rows included, in
 // order. Skins lists the shipped skins after its heading.
 const WANT = {
-  File: ['New tab', 'New tab...', 'Close tab', 'Reopen closed tab', 'Duplicate tab', 'Next tab', 'Previous tab',
-    'Settings', 'Terminal font size', 'Skin text size', 'Window text size', 'Visualization text size', 'Visualization frame rate', 'Gravity 3D sharpness', 'Gravitational waves', 'Reset panel sizes', 'Housekeeping', 'Forget remembered skin', 'Open log folder', 'Clear logs'],
+  File: ['New tab', 'New tab...', 'Reopen closed tab', 'Duplicate tab', 'Next tab', 'Previous tab', 'Close tab'],
+  Settings: ['Terminal font size', 'Skin text size', 'Window text size', 'Reset panel sizes'],
+  Help: ['Session notices', 'No problems reported', 'Open log folder', 'Clear logs'],
   Agents: ['Agent sessions', 'Sessions dashboard'],
-  Skins: ['Open skin...', 'Skins', ...fs.readdirSync(path.join(root, 'skins')).filter(n => fs.existsSync(path.join(root, 'skins', n, 'skin.json'))).sort()],
-  Visualization: ['Hide visualization', 'Visualization mode', 'Visualization input', 'Mute skin sounds']
+  Skins: ['Open skin...', 'Skins', ...fs.readdirSync(path.join(root, 'skins')).filter(n => fs.existsSync(path.join(root, 'skins', n, 'skin.json'))).sort(), 'Forget remembered skin'],
+  Visualization: ['Hide visualization', 'Visualization mode', 'Visualization input', 'Visualization text size', 'Visualization frame rate', 'Gravity 3D sharpness', 'Gravitational waves', 'Mute skin sounds']
 }
 
 const bad = []
@@ -97,7 +98,7 @@ async function pass (win, skin, tag) {
     await sleep(300)
     seen.push((await look(win)).current.join())
   }
-  check(seen.join() === 'Visualization,File,Agents', `${skin} ${tag}: arrows gave ${seen}`)
+  check(seen.join() === 'Help,File,Agents', `${skin} ${tag}: arrows gave ${seen}`)
   await win.keyboard.press('Escape')
   await sleep(200)
 }
@@ -124,5 +125,5 @@ async function one (skin) {
     for (const b of bad) console.error('FAIL', b)
     process.exit(1)
   }
-  console.log('done: four menus in', SKINS.length, 'skins at two sizes')
+  console.log('done: six menus in', SKINS.length, 'skins at two sizes')
 })().catch(e => { console.error(e); process.exit(1) })
