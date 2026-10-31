@@ -109,8 +109,9 @@ test('the panes tile the window, and a point maps back to its pane', () => {
 })
 
 test('the procedural modes follow the ten, each its own renderer file', () => {
-  assert.deepStrictEqual(MODES.map(m => m.id), ['drift', 'rings', 'plasma', 'stardust', 'whirlpool', 'scope', 'analyzer', 'fire', 'superscope', 'dotplane', 'fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon', 'savannah', 'murmuration', 'baitball', 'sunset'])
+  assert.deepStrictEqual(MODES.map(m => m.id), ['drift', 'rings', 'plasma', 'stardust', 'whirlpool', 'scope', 'analyzer', 'fire', 'superscope', 'dotplane', 'fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon', 'savannah', 'murmuration', 'baitball', 'sunset', 'chromatic', 'filaments'])
   const html = fs.readFileSync(path.join(VIZ, 'index.html'), 'utf8')
+  assert.ok(html.includes('<script src="particles.js">'))
   for (const id of ['fern', 'go', 'zoom', 'gravity', 'gravity3d', 'quantum', 'carbon', 'savannah', 'murmuration', 'baitball', 'sunset']) assert.ok(html.includes(`<script src="${id}.js">`), `${id}.js not loaded`)
 })
 
