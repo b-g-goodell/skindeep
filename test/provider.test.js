@@ -145,6 +145,14 @@ test('codex: the key of env_key, else experimental_bearer_token', async t => {
   assert.strictEqual(await detect.codexKey(codexCtx(d, literal)), 'k-literal')
 })
 
+test('codex: profile files layer provider fields, then command-line overrides win', t => {
+  const ctx = codexCtx(tempDir(t), CODEX_DEEPSEEK, {}, ['codex', '-p', 'custom'])
+  fs.writeFileSync(path.join(ctx.env.CODEX_HOME, 'custom.config.toml'), '[model_providers.deepseek]\nbase_url = "https://profile.example/"\n')
+  assert.strictEqual(detect.codexBase(ctx), 'https://profile.example/')
+  ctx.cmd.push('-c', 'model_provider="openai"')
+  assert.strictEqual(detect.codexBase(ctx), null)
+})
+
 test('toml: strings, quoted keys, dotted keys, comments', () => {
   const c = detect.toml('a = "x\\"y" # c\nb = \'lit\'\n[t."q.k"]\nn = 3\nf = true\nd.e = "z"\narr = [1, 2]\n')
   assert.deepStrictEqual(c, { a: 'x"y', b: 'lit', t: { 'q.k': { n: 3, f: true, d: { e: 'z' } } } })

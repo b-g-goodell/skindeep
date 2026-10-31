@@ -99,10 +99,10 @@ function keyParts (k) {
 function put (o, parts, v) {
   let t = o
   for (const p of parts.slice(0, -1)) {
-    if (!t[p] || typeof t[p] !== 'object') t[p] = {}
+    if (!Object.hasOwn(t, p) || !t[p] || typeof t[p] !== 'object') Object.defineProperty(t, p, { value: {}, writable: true, enumerable: true, configurable: true })
     t = t[p]
   }
-  t[parts[parts.length - 1]] = v
+  Object.defineProperty(t, parts[parts.length - 1], { value: v, writable: true, enumerable: true, configurable: true })
 }
 
 // The tables and string, boolean and number keys of a config.toml, as
@@ -161,10 +161,21 @@ function codexProvider (ctx) {
   try { text = fs.readFileSync(path.join(codexHome(ctx), 'config.toml'), 'utf8') } catch (e) {}
   const c = toml(text)
   const { sets, profile } = codexArgs(ctx.cmd.slice(1))
-  for (const [k, v] of sets) if (k.length) put(c, k, v)
   const prof = profile || (typeof c.profile === 'string' ? c.profile : null)
   const p = prof && c.profiles && c.profiles[prof] && typeof c.profiles[prof] === 'object' ? c.profiles[prof] : {}
-  const id = typeof p.model_provider === 'string' ? p.model_provider : typeof c.model_provider === 'string' ? c.model_provider : 'openai'
+  function layer (values, prefix = []) {
+    for (const [k, v] of Object.entries(values)) {
+      if (v && typeof v === 'object') layer(v, prefix.concat(k))
+      else put(c, prefix.concat(k), v)
+    }
+  }
+  layer(p)
+  // Current Codex profiles layer a named config file over config.toml.
+  if (prof && path.basename(prof) === prof) {
+    try { layer(toml(fs.readFileSync(path.join(codexHome(ctx), `${prof}.config.toml`), 'utf8'))) } catch (e) {}
+  }
+  for (const [k, v] of sets) if (k.length) put(c, k, v)
+  const id = typeof c.model_provider === 'string' ? c.model_provider : 'openai'
   const block = c.model_providers && c.model_providers[id]
   if (!block || typeof block !== 'object') return id === 'openai' ? null : { id, base_url: undefined }
   return { id, base_url: typeof block.base_url === 'string' ? block.base_url : undefined, env_key: block.env_key, experimental_bearer_token: block.experimental_bearer_token }
