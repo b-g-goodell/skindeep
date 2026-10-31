@@ -66,6 +66,7 @@ const ACTIONS = {
   vizSpace: { ok: s => s.viz, run: s => stepMode(s) },
   mute: { ok: () => true, run: s => { s.muted = !s.muted } },
   font: { ok: () => true, arg: (s, r) => ({ size: r() < 0.2 ? null : FONT_SIZES[Math.floor(r() * FONT_SIZES.length)] }), run: (s, a) => { s.font = a.size } },
+  textScale: { ok: () => true, arg: (s, r) => ({ size: [70, 90, 100, 110, 125, 150][Math.floor(r() * 6)] }), run: () => {} },
   type: { ok: () => true, arg: (s, r) => ({ text: Array.from({ length: 3 + Math.floor(r() * 8) }, () => 'abcdefghij klmnop'[Math.floor(r() * 17)]).join('') }), run: () => {} },
   resize: { ok: () => true, arg: (s, r) => ({ width: 400 + Math.floor(r() * 1300) }), run: (s, a) => { s.width = a.width } },
   wait: { ok: () => true, arg: (s, r) => ({ ms: 500 + Math.floor(r() * 2500) }), run: () => {} }
