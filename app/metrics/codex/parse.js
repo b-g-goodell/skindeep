@@ -7,7 +7,7 @@ const { toolKey, num } = require('../names')
 
 // Tool class for the visualization, as in the Claude adapter.
 function toolClass (name) {
-  const n = String(name || '')
+  const n = String(name || '').split('.').pop()
   if (/^(exec|shell|local_shell|container\.exec|exec_command|unified_exec)$/.test(n)) return 3
   if (/^(apply_patch|write_file|edit)$/.test(n)) return 2
   if (/^(read_file|view_image|list_dir|grep|search)$/.test(n)) return 1
@@ -113,7 +113,7 @@ class CodexState {
       r.set.push(['state.busy', 1])
       r.add.push(['event.prompt', 1])
       r.events.push([EVENT.prompt, 0])
-    } else if (obj.type === 'event_msg' && p.type === 'task_complete') {
+    } else if (obj.type === 'event_msg' && ['task_complete', 'turn_aborted'].includes(p.type)) {
       r.set.push(['state.busy', 0])
       r.add.push(['event.stop', 1])
       r.events.push([EVENT.stop, 0])

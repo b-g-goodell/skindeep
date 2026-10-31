@@ -53,6 +53,20 @@ test('turns set busy and session meta is kept', () => {
   assert.strictEqual(counts['event.prompt'], lines.filter(o => o.payload.type === 'task_started').length)
 })
 
+test('an interrupted Codex turn clears the busy indicator', () => {
+  const s = new CodexState()
+  assert.deepStrictEqual(s.add({ type: 'event_msg', payload: { type: 'task_started' } }).set, [['state.busy', 1]])
+  const stop = s.add({ type: 'event_msg', payload: { type: 'turn_aborted', reason: 'interrupted' } })
+  assert.deepStrictEqual(stop.set, [['state.busy', 0]])
+  assert.deepStrictEqual(stop.add, [['event.stop', 1]])
+})
+
+test('namespaced Codex tools keep their visualization class', () => {
+  for (const [name, expected] of [['functions.exec_command', 3], ['functions.apply_patch', 2], ['functions.read_file', 1], ['collaboration.spawn_agent', 5], ['container.exec', 3]]) {
+    assert.strictEqual(toolClass(name), expected, name)
+  }
+})
+
 // An adapter on a temp CODEX_HOME, launched as `codex resume <id>` so
 // discovery takes the argv route to the rollout written there.
 function adapterFor (t, { rollout = true } = {}) {
