@@ -376,6 +376,26 @@ function centred (probe, where) {
     const back = js.map(j => Math.round(grey(xs[j].grid) * 1000) / 1000)
     console.log('colour again', size, 'grey share of lit cells', JSON.stringify(back))
     check(back.every(g => g < 0.5), `the ${size} colour field came back grey`, back)
+    const before = await state()
+    const lens = js.filter(j => before.panes[j].mode === 'gravity3d')
+    if (lens.length) {
+      check((await win.evaluate(() => window.skinned.setSetting('viz.waves', 'lensing'))).ok, 'the settings refused lensing')
+      await until(async () => (await state()).waves === 'lensing', 'lensing did not reach the renderer')
+      const first = (await state()).drawn
+      await until(async () => (await state()).drawn >= first + 3, 'lensing did not draw')
+      for (let k = 0; k < 3; k++) {
+        if (k) await sleep(500)
+        const frames = await viz.evaluate(grab)
+        for (const j of lens) {
+          check(peak(frames[j].grid) > 40, `blank ${size} lensing pane`)
+          fs.writeFileSync(path.join(out, `gravity3d-lensing-${size}-${k}.png`), Buffer.from(frames[j].png.split(',')[1], 'base64'))
+        }
+      }
+      console.log('lensing', size, 'selected and drew')
+      check((await win.evaluate(() => window.skinned.setSetting('viz.waves', null))).ok, 'could not restore colour after lensing')
+      await until(async () => (await state()).waves === 'colour', 'colour did not return after lensing')
+      await drawn(g => g < 0.5, 'colour pixels did not return after lensing')
+    }
   }
 
   // Gravity and Gravity 3D alone in a full pane: the seed's tight pair,
