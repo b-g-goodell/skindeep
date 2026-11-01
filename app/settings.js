@@ -88,7 +88,7 @@ const SETTINGS = [
     label: 'Gravitational waves',
     values: WAVES,
     own: () => WAVES_OWN,
-    show: v => v,
+    show: v => v === 'lensing' ? 'lensing (Gravity 3D)' : v,
     none: 'Default'
   }
 ]
