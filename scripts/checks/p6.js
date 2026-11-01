@@ -17,42 +17,42 @@ const snap = async app => (await probe(app)).snapshot
   const args = extra.length ? extra : ['-s', 'read-only', '-a', 'never']
   const { app, win } = await launch(['codex', ...args], { appArgs: ['--skin', 'phosphor'], env: { SKINNED_GL: 'swiftshader' } })
   try {
-  await sleep(10000)
-  await shot(win, path.join(out, 'codex-start.png'))
-  // Codex asks once per folder whether to trust it. Accept, as a user would.
-  const screen = await win.evaluate(() => window.skinnedPage().panes.find(p => p.shown).lines.join('\n'))
-  if (screen.includes('Trust this folder?')) {
-    console.log('trust prompt: accepting')
-    await win.keyboard.press('Enter')
-    await sleep(8000)
-    await shot(win, path.join(out, 'codex-trusted.png'))
-  }
-  const a = await snap(app)
-  if (!extra.length || process.env.P6_TYPE) {
-    await win.keyboard.type('Reply with the single word pong and nothing else.')
-    await sleep(500)
-    await win.keyboard.press('Enter')
-  }
-  await sleep(35000)
-  await shot(win, path.join(out, 'codex-after.png'))
-  const b = await snap(app)
-  if (!extra.length || process.env.P6_TYPE) {
-    const text = await win.evaluate(() => window.skinnedPage().panes.find(p => p.shown).lines.join('\n'))
-    assert.match(text, /\bpong\b/, 'Codex did not answer the prompt')
-    assert.ok(b['tokens.in'] > 0 && b['tokens.out'] > 0, 'Codex token metrics did not arrive')
-    assert.ok(b['event.stop'] >= 1 && b['state.busy'] === 0, 'Codex did not finish its turn')
-    assert.ok(b['context.window'] > 0 && b['model.name'], 'Codex context and model metrics did not arrive')
-  }
-  console.log('rollout', JSON.stringify((await probe(app)).following.channels.find(c => c.name === 'rollout')))
-  for (const k of [...new Set([...Object.keys(a), ...Object.keys(b)])].sort()) {
-    console.log(`${JSON.stringify(a[k]) !== JSON.stringify(b[k]) ? '*' : ' '} ${k.padEnd(24)} ${JSON.stringify(a[k])} -> ${JSON.stringify(b[k])}`)
-  }
+    await sleep(10000)
+    await shot(win, path.join(out, 'codex-start.png'))
+    // Codex asks once per folder whether to trust it. Accept, as a user would.
+    const screen = await win.evaluate(() => window.skinnedPage().panes.find(p => p.shown).lines.join('\n'))
+    if (screen.includes('Trust this folder?')) {
+      console.log('trust prompt: accepting')
+      await win.keyboard.press('Enter')
+      await sleep(8000)
+      await shot(win, path.join(out, 'codex-trusted.png'))
+    }
+    const a = await snap(app)
+    if (!extra.length || process.env.P6_TYPE) {
+      await win.keyboard.type('Reply with the single word pong and nothing else.')
+      await sleep(500)
+      await win.keyboard.press('Enter')
+    }
+    await sleep(35000)
+    await shot(win, path.join(out, 'codex-after.png'))
+    const b = await snap(app)
+    if (!extra.length || process.env.P6_TYPE) {
+      const text = await win.evaluate(() => window.skinnedPage().panes.find(p => p.shown).lines.join('\n'))
+      assert.match(text, /^[^\w\n]*pong\s*$/m, 'Codex did not answer the prompt')
+      assert.ok(b['tokens.in'] > 0 && b['tokens.out'] > 0, 'Codex token metrics did not arrive')
+      assert.ok(b['event.stop'] >= 1 && b['state.busy'] === 0, 'Codex did not finish its turn')
+      assert.ok(b['context.window'] > 0 && b['model.name'], 'Codex context and model metrics did not arrive')
+    }
+    console.log('rollout', JSON.stringify((await probe(app)).following.channels.find(c => c.name === 'rollout')))
+    for (const k of [...new Set([...Object.keys(a), ...Object.keys(b)])].sort()) {
+      console.log(`${JSON.stringify(a[k]) !== JSON.stringify(b[k]) ? '*' : ' '} ${k.padEnd(24)} ${JSON.stringify(a[k])} -> ${JSON.stringify(b[k])}`)
+    }
   } finally {
-  const pid = await childPid(app)
-  console.log('codex pid', pid)
-  try { process.kill(-pid, 'SIGHUP') } catch (e) { console.log('kill', e.code) }
-  await sleep(3000)
-  await app.close().catch(() => {})
+    const pid = await childPid(app)
+    console.log('codex pid', pid)
+    try { process.kill(-pid, 'SIGHUP') } catch (e) { console.log('kill', e.code) }
+    await sleep(3000)
+    await app.close().catch(() => {})
   }
   console.log('done')
 })().catch(e => { console.error(e); process.exit(1) })
