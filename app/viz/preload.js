@@ -25,6 +25,6 @@ contextBridge.exposeInMainWorld('vizFeed', {
     t: Math.max(0.5, Math.min(2, Number(f.t) || 1)),
     c: within(f.c, 1, 240),
     r: within(f.r, 1000, 1000000),
-    w: within(f.w, 1, 1)
+    w: within(f.w, 1, 2)
   }))
 })

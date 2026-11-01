@@ -91,7 +91,7 @@ test('the waves\' style is the colour field by default, and smoke when chosen', 
     settings.save(f, { 'viz.waves': 'fog' })
     assert.strictEqual(settings.value(settings.load(f), 'viz.waves'), 'colour')
     const row = settings.menu(settings.load(f), null).find(r => r.id === 'viz.waves')
-    assert.deepStrictEqual(row.choices.map(c => c.label), ['Default (colour)', 'smoke', 'lensing'])
+    assert.deepStrictEqual(row.choices.map(c => c.label), ['Default (colour)', 'smoke', 'lensing (Gravity 3D)'])
     assert.deepStrictEqual(row.choices.filter(c => c.current).map(c => c.value), [null])
   } finally {
     fs.rmSync(d, { recursive: true, force: true })
