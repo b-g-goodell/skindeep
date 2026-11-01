@@ -176,6 +176,7 @@ function compare (c, seen, prev) {
   if (c.scale !== null && Math.abs(seen.scale - c.scale) > 0.01) bad.push({ claim: 'scale', predicted: c.scale, observed: seen.scale })
   if (c.mode !== undefined && seen.mode !== c.mode) bad.push({ claim: 'mode', predicted: c.mode, observed: seen.mode })
   if (c.modeChanged && prev && prev.active === seen.active && seen.mode === prev.mode) bad.push({ claim: 'modeChanged', predicted: `a mode other than ${prev.mode}`, observed: seen.mode })
+  if (c.modeUnchanged && prev && prev.active === seen.active && seen.mode !== prev.mode) bad.push({ claim: 'modeUnchanged', predicted: prev.mode, observed: seen.mode })
   if (seen.menu) bad.push({ claim: 'menu', predicted: 'closed', observed: 'open' })
   if (seen.errors.length) bad.push({ claim: 'errors', predicted: 0, observed: seen.errors })
   if (seen.layout.length) bad.push({ claim: 'layout', predicted: 'no overlapping text', observed: seen.layout })

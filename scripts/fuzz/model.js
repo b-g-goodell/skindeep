@@ -62,7 +62,7 @@ const ACTIONS = {
   skin: { ok: () => true, arg: (s, r) => ({ skin: SKINS[Math.floor(r() * SKINS.length)] }), run: (s, a) => { s.skin = a.skin } },
   vizToggle: { ok: () => true, run: s => { s.viz = !s.viz } },
   vizMode: { ok: () => true, arg: (s, r) => ({ mode: MODES[Math.floor(r() * MODES.length)].id }), run: (s, a) => { s.viz = true; s.modes[s.active] = a.mode } },
-  vizClick: { ok: s => s.viz, run: s => stepMode(s) },
+  vizClick: { ok: s => s.viz, run: () => {} },
   vizSpace: { ok: s => s.viz, run: s => stepMode(s) },
   mute: { ok: () => true, run: s => { s.muted = !s.muted } },
   font: { ok: () => true, arg: (s, r) => ({ size: r() < 0.2 ? null : FONT_SIZES[Math.floor(r() * FONT_SIZES.length)] }), run: (s, a) => { s.font = a.size } },
@@ -140,8 +140,10 @@ function generate (seed, n, skin = 'deck') {
     const a = ACTIONS[name]
     const arg = a.arg ? a.arg(s, r) : {}
     s = clone(s)
+    for (const id of Object.keys(s.modes)) if (s.modes[id] === 'step') delete s.modes[id]
     a.run(s, arg)
     const c = claims(s)
+    if (name === 'vizClick') c.modeUnchanged = true
     steps.push({ k, action: name, arg, claims: c, says: sentence(s, c) })
     // A stepped mode not predicted before stays unpredicted after.
     for (const id of Object.keys(s.modes)) if (s.modes[id] === 'step') delete s.modes[id]
