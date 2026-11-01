@@ -8,7 +8,7 @@
 // 2 (decision 0036). c: the frame rate cap, frames a second in 1 to
 // 240, 0 for none. r: Gravity 3D's traced pixels a pane, in 1000 to
 // 1000000, 0 for the mode's own (decision 0015). w: the Gravity modes'
-// waves, 1 for smoke, 0 for the colour field (decision 0015).
+// waves: 0 colour, 1 smoke, 2 lensing (decision 0015).
 const { contextBridge, ipcRenderer } = require('electron')
 
 // A number in lo to hi, else 0.
