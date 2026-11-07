@@ -249,7 +249,7 @@ async function remember () {
   last.record(recs, 999999, '/nonexistent/skin')
   await run('stale', {}, async (app, win) => {
     const dot = await win.evaluate(() => !document.querySelector('#menu-button .dot').hidden)
-    await openMenu(win)
+    await openMenu(win, 'Help')
     await win.locator('#menu .item.problem').click()
     await sleep(300)
     await shot(win, path.join(out, 'remember-stale.png'))
