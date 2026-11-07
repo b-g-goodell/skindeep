@@ -40,6 +40,17 @@ if (bg && si >= 0 && (argv.includes('--resume') || argv.includes('-r'))) {
   process.exit(0)
 }
 const attached = argv[0] === 'attach' ? argv[1] : null
+// A profile on another provider's endpoint (decision 0038):
+// ANTHROPIC_BASE_URL of its settings env, else of the environment, on a
+// host other than Anthropic's. Its statusline carries no rate_limits,
+// as expected of a session with no claude.ai login: no such session
+// has been seen yet.
+const baseUrl = (() => {
+  let e = {}
+  try { e = JSON.parse(fs.readFileSync(path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'settings.json'), 'utf8')).env || {} } catch (err) {}
+  return e.ANTHROPIC_BASE_URL || process.env.ANTHROPIC_BASE_URL || ''
+})()
+const elsewhere = (() => { try { return !!baseUrl && new URL(baseUrl).hostname !== 'api.anthropic.com' } catch (e) { return false } })()
 const base = JSON.parse(fs.readFileSync(path.join(fixtures, 'statusline.json'), 'utf8'))
 
 const dir = path.join(process.env.XDG_RUNTIME_DIR || os.homedir(), 'claude-skins-fake')
@@ -128,6 +139,7 @@ function statusline () {
   // FAKE_CLAUDE_GATEWAY=1: a gateway session, a spend limit and no
   // subscription limits, as Claude Code 2.1.299 builds them.
   if (process.env.FAKE_CLAUDE_GATEWAY === '1') j.rate_limits = { spend_limit: { used_percentage: 42.5, resets_at: now + 9 * 86400, used_usd: 85, limit_usd: 200, period: 'month' } }
+  if (elsewhere) delete j.rate_limits
   const p = spawn('/bin/sh', ['-c', statusCmd], { stdio: ['pipe', 'ignore', 'ignore'] })
   p.on('error', () => {})
   p.stdin.on('error', () => {})

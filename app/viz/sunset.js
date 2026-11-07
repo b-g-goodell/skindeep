@@ -34,7 +34,7 @@
   const CYCLE = 300
   const EL0 = 10
   const EL1 = -7
-  const IDLE_DIP = 6
+  const IDLE_DIP = 2
   // The clouds: the number the sky keeps, the most, their base's height
   // and depth range, metres.
   const KEEP = 11
@@ -233,6 +233,7 @@
     let el = EL0
     let pal = palette(el)
     let wind = 0
+    let energy = 0
     // The clouds, the march in progress, the drops on the paper, the
     // rays, the old painting while it fades, the pointer.
     let clouds = []
@@ -289,7 +290,7 @@
       }
       let top = 0
       for (const b of blobs) top = Math.max(top, b[1] + b[4])
-      return { id: nextId++, X, Y0, Z, L, blobs, top, scale: (o && o.scale) || 1, target: 1, fade: 1, gone: false, born: clock, shape: 1, sprite: null, seed: (r() * 4294967296) >>> 0, push: 0 }
+      return { id: nextId++, X, Y0, Z, L, blobs, base: blobs.map(b => b.slice()), top, scale: (o && o.scale) || 1, target: 1, fade: 1, gone: false, born: clock, shape: 1, morphed: clock, previous: null, sprite: null, seed: (r() * 4294967296) >>> 0, push: 0 }
     }
 
     // The screen box of a cloud, [x0, y0, x1, y1].
@@ -492,9 +493,11 @@
       if (c.gone) return
       const sw = 2 * j.w
       const sh = 2 * j.h
-      const cv = c.sprite && c.sprite.cv.width === sw && c.sprite.cv.height === sh ? c.sprite.cv : document.createElement('canvas')
+      const cv = document.createElement('canvas')
       cv.width = sw
       cv.height = sh
+      c.previous = c.sprite
+      c.blended = clock
       c.sprite = { cv, g: cpu(cv), m: j, colour: null, at: c.sprite ? c.sprite.at : clock }
       paint(c)
     }
@@ -916,6 +919,26 @@
         c.push *= Math.exp(-h / 3)
         c.scale += (c.target - c.scale) * (1 - Math.exp(-h / 2.2))
         if (c.gone) c.fade -= h / 3
+        // Reshape only a completed volume, then dissolve between its renders.
+        if (!c.gone && c.sprite && (!job || job.c !== c) && clock - c.morphed > 1.2 && c.sprite.m.shape === c.shape) {
+          const t = clock * 0.24
+          const a = 0.12 + 0.22 * energy
+          c.top = 0
+          c.blobs.forEach((b, i) => {
+            const base = c.base[i]
+            const phase = c.id * 2.39 + i * 1.73
+            b[0] = base[0] + c.L * a * 0.28 * Math.sin(t + phase)
+            b[1] = base[1] * (1 + a * Math.sin(t * 0.83 + phase))
+            b[2] = base[2] + c.L * a * 0.15 * Math.cos(t * 0.71 + phase)
+            b[3] = base[3] * (1 + a * Math.sin(t * 0.91 + phase))
+            b[4] = base[4] * (1 + a * Math.cos(t + phase))
+            b[5] = base[5] * (1 + a * Math.cos(t * 0.67 + phase))
+            c.top = Math.max(c.top, b[1] + b[4])
+          })
+          c.shape++
+          c.morphed = clock
+        }
+        if (c.previous && clock - c.blended >= 1.2) c.previous = null
       }
       clouds = clouds.filter(c => c.fade > 0 && !(windSign > 0 ? bbox(c)[0] > W + 20 : bbox(c)[2] < -20))
       // A crowded sky: past the clouds it keeps, the oldest of a minute
@@ -955,11 +978,12 @@
       }
       for (const e of synth.since(mark)) react(e)
       const L = synth.level
-      // The clock: a little faster while busy, slowed to a fifth as the
-      // session idles. The sun sets over the cycle, idle sinks it
-      // further toward dusk, and the wind follows the bass.
-      const speed = (0.8 + 0.2 * Math.min(1, L.bass) + 0.2 * L.busy) * (1 - 0.8 * L.idle)
-      wind = (8 + 30 * Math.min(1, L.bass)) * (1 - 0.7 * L.idle)
+      // Clouds keep moving at idle. Activity speeds their drift and
+      // deformation. The sun sets over the cycle.
+      const target = clamp(0.65 * L.bass + 0.35 * L.busy, 0, 1)
+      energy += (target - energy) * (1 - Math.exp(-dt / 1.5))
+      const speed = 0.6 + 1.2 * energy
+      wind = 24 + 100 * energy
       let left = Math.min(0.25, speed * dt)
       while (left > 1e-9) {
         const hh = Math.min(0.05, left)
@@ -1045,19 +1069,22 @@
       // The clouds, far to near.
       clouds.sort((a, b) => b.Z - a.Z)
       for (const c of clouds) {
-        const sp = c.sprite
-        if (!sp) continue
-        const m = sp.m
-        const k = (f / c.Z) * (m.mpp / 2) * (c.scale / m.scale)
-        const ax = sx(c.X, c.Z)
-        const ay = sy(c.Y0, c.Z)
-        const x0 = ax + (m.ox / (m.mpp / 2)) * k
-        const y0 = ay - (m.oy / (m.mpp / 2)) * k
-        const dw = sp.cv.width * k
-        const dh = sp.cv.height * k
-        if (x0 > W || x0 + dw < 0 || y0 > H || y0 + dh < 0) continue
-        g.globalAlpha = clamp(c.fade, 0, 1) * Math.min(1, (clock - sp.at) / 0.8 + 0.05)
-        g.drawImage(sp.cv, x0, y0, dw, dh)
+        if (!c.sprite) continue
+        const blend = sstep((clock - c.blended) / 1.2)
+        for (const [sp, opacity] of [[c.previous, 1 - blend], [c.sprite, c.previous ? blend : 1]]) {
+          if (!sp || opacity <= 0) continue
+          const m = sp.m
+          const k = (f / c.Z) * (m.mpp / 2) * (c.scale / m.scale)
+          const ax = sx(c.X, c.Z)
+          const ay = sy(c.Y0, c.Z)
+          const x0 = ax + (m.ox / (m.mpp / 2)) * k
+          const y0 = ay - (m.oy / (m.mpp / 2)) * k
+          const dw = sp.cv.width * k
+          const dh = sp.cv.height * k
+          if (x0 > W || x0 + dw < 0 || y0 > H || y0 + dh < 0) continue
+          g.globalAlpha = opacity * clamp(c.fade, 0, 1) * Math.min(1, (clock - sp.at) / 0.8 + 0.05)
+          g.drawImage(sp.cv, x0, y0, dw, dh)
+        }
       }
       g.globalAlpha = 1
       g.drawImage(land.full, 0, land.G.top)

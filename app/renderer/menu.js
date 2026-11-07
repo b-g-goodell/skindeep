@@ -1,7 +1,7 @@
 'use strict'
 // The menus (decisions 0008, 0022 to 0028): the skin's button opens an
 // app-owned drop-down, above the skin and below the identity strip, with
-// a bar of four menus, File, Agents, Skins and Visualization, on File.
+// a bar of menus grouped by task, opening on File.
 // While it is open it takes the keyboard: Left and Right step through
 // the menus, Escape closes it, and focus returns to the terminal.
 
@@ -170,13 +170,15 @@ window.AppMenu = (function () {
     row.addEventListener('mouseleave', () => row.classList.remove('open'))
   }
 
-  // The four menus (decision 0022), in the order of the bar. Each fills
+  // The menus, in the order of the bar. Each fills
   // the drop-down below the bar from what it asks the main process.
   const MENUS = [
     ['File', fileMenu],
     ['Agents', agentsMenu],
     ['Skins', skinsMenu],
-    ['Visualization', vizMenu]
+    ['Visualization', vizMenu],
+    ['Settings', settingsMenu],
+    ['Help', helpMenu]
   ]
   const then = fn => () => { fn(); close() }
 
@@ -195,29 +197,48 @@ window.AppMenu = (function () {
     menu.appendChild(row)
   }
 
-  // File: the tab entries of decision 0023, Settings and Housekeeping.
+  // File: creating, restoring and navigating tabs.
   async function fileMenu () {
-    const [tm, prefs, house] = await Promise.all([api.tabsMenu(), api.settingsMenu(), api.housekeeping()])
+    const tm = await api.tabsMenu()
     return () => {
       item('New tab', then(() => api.newTab()), '', 'Ctrl+Shift+T')
       item('New tab...', then(() => window.Chooser.open()))
-      item('Close tab', then(() => api.closeTab(null)), '', 'Ctrl+Shift+W')
       // Reopen and Duplicate resume or fork the session, else start a new one.
       const fresh = e => e && e.fresh ? ' (new session)' : ''
       item('Reopen closed tab' + fresh(tm.reopen), tm.reopen ? then(() => api.reopenTab()) : null, tm.reopen ? '' : 'disabled')
       item('Duplicate tab' + fresh(tm.duplicate), tm.duplicate ? then(() => api.duplicateTab()) : null, tm.duplicate ? '' : 'disabled')
+      rule()
       item('Next tab', then(() => api.stepTab(1)), '', 'Ctrl+Tab')
       item('Previous tab', then(() => api.stepTab(-1)), '', 'Ctrl+Shift+Tab')
       rule()
-      item('Settings', null, 'heading')
-      for (const s of prefs) flyout(s.label, s.choices.map(c => ({ id: c.value, label: c.label, current: c.current })), v => api.setSetting(s.id, v))
+      item('Close tab', then(() => api.closeTab(null)), '', 'Ctrl+Shift+W')
+    }
+  }
+
+  function setting (s) {
+    flyout(s.label, s.choices.map(c => ({ id: c.value, label: c.label, current: c.current })), v => api.setSetting(s.id, v))
+  }
+
+  const forViz = s => s.id.startsWith('viz.') || s.id === 'text.viz'
+
+  async function settingsMenu () {
+    const prefs = await api.settingsMenu()
+    return () => {
+      for (const s of prefs.filter(s => !forViz(s))) setting(s)
+      rule()
       // The skin's splits back to its own sizes (decision 0035).
       const split = window.SkinView.splits().length > 0
       item('Reset panel sizes', split ? () => act(api.resetPanels()) : null, split ? '' : 'disabled')
-      rule()
-      item('Housekeeping', null, 'heading')
+    }
+  }
+
+  async function helpMenu () {
+    const house = await api.housekeeping()
+    return () => {
+      item('Session notices', null, 'heading')
       for (const p of house.problems) item(p.title, () => say(p.detail, 'error'), 'problem')
-      item('Forget remembered skin', () => act(api.forgetSkin()))
+      if (!house.problems.length) item('No problems reported', null, 'disabled')
+      rule()
       item('Open log folder', () => { api.openLogs(); close() })
       item('Clear logs', () => act(api.clearLogs()))
       dot.hidden = true
@@ -253,17 +274,22 @@ window.AppMenu = (function () {
         const el = item((s.current ? '* ' : '  ') + s.label, () => act(api.selectSkin(s.id)), (s.current ? 'current' : '') + (s.location ? ' located' : ''))
         if (s.location) el.appendChild(pathSpan('location', s.location))
       }
+      rule()
+      item('Forget remembered skin', () => act(api.forgetSkin()))
     }
   }
 
   // Visualization: the window, its modes and inputs (decision 0015), and
   // the skin's sounds (decision 0024).
   async function vizMenu () {
-    const [viz, muted] = await Promise.all([api.vizState(), api.soundMuted()])
+    const [viz, muted, prefs] = await Promise.all([api.vizState(), api.soundMuted(), api.settingsMenu()])
     return () => {
       item(viz.open ? 'Hide visualization' : 'Show visualization', () => { api.toggleViz(); close() })
       flyout('Visualization mode', viz.modes, api.selectViz)
       flyout('Visualization input', viz.inputs, api.selectVizInput)
+      rule()
+      for (const s of prefs.filter(forViz)) setting(s)
+      rule()
       item(muted ? 'Unmute skin sounds' : 'Mute skin sounds', () => { api.toggleSound(); close() })
     }
   }

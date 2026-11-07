@@ -61,11 +61,23 @@
    }
   },
   {
+   "id": "bal",
+   "type": "readout",
+   "bind": "limits.balances",
+   "rect": {
+    "left": 190,
+    "top": 5,
+    "width": 50,
+    "height": 50
+   }
+  },
+  {
    "id": "lim",
    "type": "limits",
    "bind": "checklist.items",
    "meter": "dial",
    "direction": "up",
+   "provider": ["balance", "tips"],
    "rect": {
     "left": 130,
     "top": 5,

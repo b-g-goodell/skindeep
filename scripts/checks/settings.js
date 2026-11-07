@@ -23,7 +23,7 @@ const terms = win => win.evaluate(() => window.skinnedPage().panes.filter(p => !
 const manifest = name => JSON.parse(fs.readFileSync(path.join(root, 'skins', name, 'skin.json'), 'utf8')).terminal.fontSize
 
 async function pick (win, label) {
-  await openMenu(win)
+  await openMenu(win, 'Settings')
   await win.locator('#menu .submenu', { hasText: 'Terminal font size' }).hover()
   await sleep(200)
   await win.locator('#menu .submenu', { hasText: 'Terminal font size' }).locator('.sub .item', { hasText: label }).click()
@@ -43,7 +43,7 @@ async function end (app) {
   await win.keyboard.press('Control+Shift+T')
   await sleep(1500)
   const before = await terms(win)
-  await openMenu(win)
+  await openMenu(win, 'Settings')
   const rows = await win.evaluate(() => [...document.querySelectorAll('#menu .submenu')].map(e => e.firstChild.textContent))
   const choices = await win.evaluate(() => [...document.querySelectorAll('#menu .submenu')].find(e => e.firstChild.textContent === 'Terminal font size').querySelectorAll('.sub .item').length)
   await win.keyboard.press('Escape')

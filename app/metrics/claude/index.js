@@ -72,10 +72,11 @@ class ClaudeAdapter {
   feed (fn) {
     if (this.closed || !this.core) return
     fn(this.core)
-    const file = this.core.transcript && this.outside(this.core.transcript)
+    const transcript = this.core.transcript
+    const file = transcript && this.outside(transcript)
     if (!file || (this.tail && this.tail.file === file)) return
     if (this.tail) this.tail.stop()
-    this.tail = new Tail(file, (obj, replayed) => this.core.line(file, obj, replayed))
+    this.tail = new Tail(file, (obj, replayed) => this.core.line(transcript, obj, replayed))
   }
 
   // The relays find this tab by its CLI's pid (decision 0030).
@@ -94,7 +95,7 @@ class ClaudeAdapter {
   rename (name) {
     if (this.closed || !this.core || !this.core.session || !this.core.transcript) return false
     try {
-      title.record(this.core.transcript, this.core.session, name)
+      title.record(this.outside(this.core.transcript), this.core.session, name)
       return true
     } catch (e) {
       this.log(`claude adapter: rename not recorded: ${e.message}`)

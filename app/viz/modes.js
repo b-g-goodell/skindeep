@@ -30,7 +30,9 @@
     { id: 'savannah', label: 'Savannah hunt', kind: 'canvas' },
     { id: 'murmuration', label: 'Murmuration', kind: 'canvas' },
     { id: 'baitball', label: 'Bait ball', kind: 'canvas' },
-    { id: 'sunset', label: 'Sunset clouds', kind: 'canvas' }
+    { id: 'sunset', label: 'Sunset clouds', kind: 'canvas' },
+    { id: 'chromatic', label: 'Chromatic cells', kind: 'canvas' },
+    { id: 'filaments', label: 'Living filaments', kind: 'canvas' }
   ]
   if (typeof module === 'object' && module.exports) module.exports = { MODES }
   else root.VizModes = MODES

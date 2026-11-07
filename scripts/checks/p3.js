@@ -249,7 +249,7 @@ async function remember () {
   last.record(recs, 999999, '/nonexistent/skin')
   await run('stale', {}, async (app, win) => {
     const dot = await win.evaluate(() => !document.querySelector('#menu-button .dot').hidden)
-    await openMenu(win)
+    await openMenu(win, 'Help')
     await win.locator('#menu .item.problem').click()
     await sleep(300)
     await shot(win, path.join(out, 'remember-stale.png'))
@@ -266,7 +266,7 @@ async function remember () {
     return { buttons: JSON.parse(fs.readFileSync(asked, 'utf8')).buttons }
   })
   await run('forget', {}, async (app, win) => {
-    await openMenu(win)
+    await openMenu(win, 'Skins')
     await win.locator('#menu .item', { hasText: 'Forget remembered skin' }).click()
     await sleep(300)
     return { note: await win.evaluate(() => (document.querySelector('#menu .note') || {}).textContent || null), left: last.read(recs).length }

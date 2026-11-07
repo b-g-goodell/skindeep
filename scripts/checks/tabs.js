@@ -180,7 +180,7 @@ async function exit () {
   await sleep(1500)
   const after = await probe(app)
   const dot = await win.evaluate(() => !document.querySelector('#menu-button .dot').hidden)
-  await openMenu(win)
+  await openMenu(win, 'Help')
   const problems = await win.evaluate(() => [...document.querySelectorAll('#menu .problem')].map(e => e.textContent))
   await win.keyboard.press('Escape')
   console.log(JSON.stringify({ left: after.tabs.map(t => t.id), active: after.childPid, dot, problems }))
@@ -205,7 +205,7 @@ async function execfail () {
   await win.keyboard.press('Control+Shift+T')
   await sleep(2000)
   const after = await probe(app)
-  await openMenu(win)
+  await openMenu(win, 'Help')
   const problem = win.locator('#menu .problem', { hasText: 'exited with status 127' })
   const titles = await win.evaluate(() => [...document.querySelectorAll('#menu .problem')].map(e => e.textContent))
   let detail = null

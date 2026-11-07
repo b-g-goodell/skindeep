@@ -172,6 +172,24 @@ window.TextFit = (function () {
       if (j.lo >= s) j.h.style.removeProperty('--text-scale')
       else set(j.h, j.lo)
     }
+    // Neighboring holders can each fit while their overflowing labels meet.
+    // Keep their relative growth, bounded by the whole stage's baseline.
+    const basePairs = pairs(jobs.flatMap(j => j.base.list))
+    const apart = () => {
+      for (const p of pairs(jobs.flatMap(j => texts(j.h, true)))) if (!basePairs.has(p)) return false
+      return true
+    }
+    if (!apart()) {
+      let lo = 0
+      let hi = 1
+      for (let k = 0; k < STEPS; k++) {
+        const f = (lo + hi) / 2
+        for (const j of jobs) set(j.h, 1 + f * (j.lo - 1))
+        if (apart()) lo = f
+        else hi = f
+      }
+      for (const j of jobs) set(j.h, 1 + lo * (j.lo - 1))
+    }
   }
 
   return { texts, words, fit }

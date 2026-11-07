@@ -75,3 +75,15 @@
 .w-limits.nodata { display: none; }
 .w-limits > .w { position: relative; flex: 1 1 0; min-width: 0; min-height: 0; }
 .w-limits > .w .label { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* A provider's readings in the limits widget (decision 0038): a
+   balance, its label, amount and note in a row, and the peak lamp with
+   its label and the time to the switch at the right. Never a bar: a
+   balance is no percent. The amount keeps its room, the note gives way.
+   A skin's own rules of the same weight win. */
+.w-limits > .balance, .w-limits > .peak { flex-direction: row; align-items: center; justify-content: flex-start; gap: 6px; overflow: hidden; }
+.w-limits > .balance .label, .w-limits > .peak .label { flex: none; align-self: center; }
+.w-limits > .balance .value { flex: none; font-size: 1.3em; }
+.w-limits > .balance .note { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85em; }
+.w-limits > .balance .note.nodata { display: none; }
+.w-limits > .peak .lamp { align-self: center; }
+.w-limits > .peak .resets { position: static; margin-left: auto; transform: none; }

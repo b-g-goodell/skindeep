@@ -19,6 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const { execFileSync } = require('child_process')
 const { generate } = require('./model')
+const { layout } = require('./layout')
 const { MODES } = require('../../app/viz/modes')
 
 const root = path.join(__dirname, '..', '..')
@@ -74,7 +75,7 @@ async function menuItem (win, re, name = 'File') {
   await win.locator('#menu .item').filter({ hasText: re }).first().click({ timeout: 5000 })
 }
 
-async function flyout (win, title, re, name = 'File') {
+async function flyout (win, title, re, name = 'Settings') {
   await openMenu(win, name)
   await win.locator('#menu .submenu', { hasText: title }).hover({ timeout: 5000 })
   await sleep(200)
@@ -132,6 +133,7 @@ async function act (app, win, s) {
     case 'vizSpace': return viz && viz.keyboard.press('Space')
     case 'mute': return menuItem(win, /^(Mute|Unmute) skin sounds$/, 'Visualization')
     case 'font': return flyout(win, 'Terminal font size', a.size === null ? /^[* ]\s*Skin default/ : exact(`${a.size} px`))
+    case 'textScale': return win.evaluate(size => window.skinned.setSetting('text.skin', size === 100 ? null : size), a.size)
     case 'type': return win.keyboard.type(a.text)
     case 'resize': return app.evaluate(({ BrowserWindow }, w) => BrowserWindow.getAllWindows().find(x => !x.getTitle().startsWith('visualization')).setContentSize(w, 900), a.width)
     case 'wait': return sleep(a.ms)
@@ -159,7 +161,8 @@ async function observe (app, win) {
     fontSize: fonts.every(f => f === fonts[0]) ? fonts[0] : fonts,
     width: size[0],
     scale: page.scale,
-    menu: await menuOpen(win)
+    menu: await menuOpen(win),
+    layout: layout(page)
   }
 }
 
@@ -173,8 +176,10 @@ function compare (c, seen, prev) {
   if (c.scale !== null && Math.abs(seen.scale - c.scale) > 0.01) bad.push({ claim: 'scale', predicted: c.scale, observed: seen.scale })
   if (c.mode !== undefined && seen.mode !== c.mode) bad.push({ claim: 'mode', predicted: c.mode, observed: seen.mode })
   if (c.modeChanged && prev && prev.active === seen.active && seen.mode === prev.mode) bad.push({ claim: 'modeChanged', predicted: `a mode other than ${prev.mode}`, observed: seen.mode })
+  if (c.modeUnchanged && prev && prev.active === seen.active && seen.mode !== prev.mode) bad.push({ claim: 'modeUnchanged', predicted: prev.mode, observed: seen.mode })
   if (seen.menu) bad.push({ claim: 'menu', predicted: 'closed', observed: 'open' })
   if (seen.errors.length) bad.push({ claim: 'errors', predicted: 0, observed: seen.errors })
+  if (seen.layout.length) bad.push({ claim: 'layout', predicted: 'no overlapping text', observed: seen.layout })
   return bad
 }
 

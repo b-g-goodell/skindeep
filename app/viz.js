@@ -76,8 +76,8 @@ class Viz {
     this.menu = null
     // The visualization text size as a factor, and the frame rate cap,
     // 0 for none (decision 0036). Gravity 3D's traced pixels a pane, 0
-    // for the mode's own, and the Gravity modes' waves, 0 the colour
-    // field and 1 smoke (decision 0015).
+    // for the mode's own, and the Gravity modes' waves, 0 colour,
+    // 1 smoke and 2 lensing (decision 0015).
     this.text = 1
     this.cap = 0
     this.trace = 0
@@ -190,10 +190,9 @@ class Viz {
     this.trace = px || 0
   }
 
-  // The Gravity modes' waves, 'colour' or 'smoke', sent with every
-  // frame as 0 or 1.
+  // Wave drawing: colour, smoke or lensing, sent as 0, 1 or 2.
   setWaves (style) {
-    this.waves = style === 'smoke' ? 1 : 0
+    this.waves = style === 'lensing' ? 2 : style === 'smoke' ? 1 : 0
   }
 
   step (pane) {

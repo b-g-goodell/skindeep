@@ -95,13 +95,13 @@ body.tabbed #stage { top: 46px; }
   background: #ff3b30; box-shadow: 0 0 0 1px #000; }
 
 #menu {
-  position: absolute; z-index: 20; min-width: calc(180px * var(--window-text, 1)); max-width: calc(520px * var(--window-text, 1)); padding: 4px 0; overflow-y: auto;
+  position: absolute; z-index: 20; min-width: calc(180px * var(--window-text, 1)); max-width: min(calc(520px * var(--window-text, 1)), calc(100vw - 8px)); padding: 4px 0; overflow-y: auto;
   background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a;
   font: calc(13px * var(--window-text, 1))/1.6 "DejaVu Sans", sans-serif; user-select: none;
 }
-/* The bar of the four menus, at the drop-down's top, the shown one lit. */
-#menu .bar { display: flex; position: sticky; top: -4px; z-index: 1; margin: -4px 0 4px; background: #24272c; border-bottom: 1px solid #3a3f47; }
-#menu .bar .title { padding: 1px 14px; white-space: nowrap; cursor: default; }
+/* The menu bar wraps within narrow windows. */
+#menu .bar { display: flex; flex-wrap: wrap; position: sticky; top: -4px; z-index: 1; margin: -4px 0 4px; background: #24272c; border-bottom: 1px solid #3a3f47; }
+#menu .bar .title { padding: 1px 8px; white-space: nowrap; cursor: default; }
 #menu .bar .title:hover { background: #2c3138; }
 #menu .bar .title.current { background: #2f5d8a; color: #fff; font-weight: normal; }
 #menu .item { padding: 0 14px; white-space: pre; cursor: default; }
@@ -123,7 +123,7 @@ body.tabbed #stage { top: 46px; }
 #menu .submenu { position: relative; }
 #menu .submenu::after { content: '\25B8'; float: right; margin-left: 28px; color: #8a929c; }
 #menu .submenu.open { background: #2f5d8a; }
-#menu .sub { display: none; position: fixed; min-width: calc(160px * var(--window-text, 1)); padding: 4px 0;
+#menu .sub { display: none; position: fixed; min-width: calc(160px * var(--window-text, 1)); max-height: calc(100vh - 18px); overflow-y: auto; padding: 4px 0;
   background: #1b1d21; color: #d8dde3; border: 1px solid #4a505a; box-shadow: 0 4px 16px #000a; font-weight: normal; }
 #menu .submenu.open > .sub { display: block; }
 /* A long path shows its end: the line runs right to left, so it

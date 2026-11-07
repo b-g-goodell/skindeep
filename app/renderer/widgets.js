@@ -471,6 +471,60 @@ function list (spec) {
   }
 }
 
+// A balance in its currency, never a percent (decision 0038):
+// 110.00 CNY.
+function money (amount, currency) {
+  return `${amount.toFixed(2)} ${currency}`
+}
+
+// A provider's balance as a readout of the limits widget (decision
+// 0038): its label, the amount in its currency, and a note while the
+// provider says it no longer pays for calls.
+function balanceItem (spec, item) {
+  const el = div(['w w-readout limit-item balance', spec.itemClass].filter(Boolean).join(' '))
+  el.dataset.id = `${spec.id}-${item.key}`
+  div('label', el, item.label)
+  const val = div('value', el)
+  const note = div('note', el)
+  return {
+    el,
+    update (i, available) {
+      val.textContent = money(i.amount, i.currency)
+      note.textContent = available === 0 ? 'too low to call' : ''
+      note.classList.toggle('nodata', available !== 0)
+      el.classList.toggle('unavailable', available === 0)
+    },
+    frame () {}
+  }
+}
+
+// A provider's peak price state as a lamp of the limits widget
+// (decision 0038): lit in the peak hours, with the time to the switch.
+function peakItem (spec) {
+  const el = div(['w w-led limit-item peak', spec.itemClass].filter(Boolean).join(' '))
+  el.dataset.id = `${spec.id}-peak`
+  const lamp = div('lamp', el)
+  const label = div('label', el)
+  const box = div('resets', el)
+  const word = document.createElement('span')
+  word.className = 'word'
+  const left = document.createElement('span')
+  left.className = 'left'
+  box.append(word, left)
+  return {
+    el,
+    update (on, at) {
+      label.textContent = on ? 'peak price' : 'off-peak'
+      word.textContent = on ? 'ends ' : 'peak in '
+      left.textContent = at === null ? '--' : format(at, 'until')
+      box.classList.toggle('nodata', at === null)
+      el.classList.toggle('on', !!on)
+      lamp.classList.toggle('on', !!on)
+    },
+    frame () {}
+  }
+}
+
 // Every usage limit the provider sends (decision 0011): one meter per
 // item of limits.items, a bar or a needle with that type's options,
 // labelled with the item's label and suffix (a span of its own, which a
@@ -478,12 +532,17 @@ function list (spec) {
 // limit not in the list has no meter, and the meters there share the
 // rect, so an absent limit leaves no gap. An item whose reset has
 // passed is left out: its window has started over and no reading of
-// the new one has come. The widget carries n-<count>, so a skin can lay
-// out three meters unlike two, and is hidden while there is none.
+// the new one has come. With spec.provider, the provider's readings
+// follow the limits in the same rect (decision 0038): `balance`, a
+// readout per currency of limits.balances, and `peak`, a lamp of
+// limits.peak, each drawn only while it reads. The widget carries
+// n-<count>, so a skin can lay out three meters unlike two, and is
+// hidden while there is none.
 function limits (spec) {
   const { el } = base(spec, 'limits')
   el.classList.add(spec.direction === 'row' ? 'across' : 'down')
   const make = spec.meter === 'needle' ? needle : bar
+  const wants = new Set(Array.isArray(spec.provider) ? spec.provider : [])
   let meters = []
   let drawn = null
   let count = 0
@@ -495,13 +554,19 @@ function limits (spec) {
     rows: () => meters.map(m => {
       const e = m.w.el
       const left = e.querySelector('.resets .left')
-      return { key: m.key, label: m.label, resets: left ? left.textContent : '', classes: [...e.classList], box: { x: e.offsetLeft, y: e.offsetTop, width: e.offsetWidth, height: e.offsetHeight }, within: { width: el.clientWidth, height: el.clientHeight } }
+      const value = e.querySelector('.value')
+      const label = e.querySelector('.label')
+      return { key: m.key, label: m.kind === 'limit' ? m.label : label ? label.textContent : '', kind: m.kind, value: value ? value.textContent : '', resets: left ? left.textContent : '', classes: [...e.classList], box: { x: e.offsetLeft, y: e.offsetTop, width: e.offsetWidth, height: e.offsetHeight }, within: { width: el.clientWidth, height: el.clientHeight } }
     }),
     update (snap, now) {
       const v = valueOf(snap, spec.bind)
       const t = Date.now() / 1000
       const items = (Array.isArray(v) ? v : []).filter(i => i && typeof i.pct === 'number' && !(typeof i.resets_at === 'number' && i.resets_at <= t))
-      const key = JSON.stringify(items.map(i => [i.key, i.label, i.window, i.model]))
+      const bv = wants.has('balance') ? valueOf(snap, 'limits.balances') : null
+      const balances = (Array.isArray(bv) ? bv : []).filter(i => i && typeof i.amount === 'number' && isFinite(i.amount) && typeof i.currency === 'string')
+      const pk = wants.has('peak') ? valueOf(snap, 'limits.peak') : null
+      const peak = typeof pk === 'number' ? pk : null
+      const key = JSON.stringify([items.map(i => [i.key, i.label, i.window, i.model]), balances.map(i => [i.key, i.label]), peak !== null])
       if (key !== drawn) {
         drawn = key
         el.textContent = ''
@@ -509,6 +574,7 @@ function limits (spec) {
           const cls = ['limit-item', i.model ? 'model' : 'account', span(i), spec.itemClass].filter(Boolean).join(' ')
           const sub = Object.assign({}, spec, { id: `${spec.id}-${i.key}`, type: spec.meter === 'needle' ? 'needle' : 'bar', bind: 'pct', resets: 'resets', label: i.label + (spec.suffix || ''), class: cls })
           delete sub.fallback
+          delete sub.provider
           const w = make(sub)
           const label = w.el.querySelector('.label')
           if (label && spec.suffix) {
@@ -519,14 +585,31 @@ function limits (spec) {
             label.appendChild(tail)
           }
           el.appendChild(w.el)
-          return { key: i.key, label: sub.label, w }
+          return { key: i.key, label: sub.label, kind: 'limit', w }
         })
+        for (const i of balances) {
+          const w = balanceItem(spec, i)
+          el.appendChild(w.el)
+          meters.push({ key: i.key, label: i.label, kind: 'balance', w })
+        }
+        if (peak !== null) {
+          const w = peakItem(spec)
+          el.appendChild(w.el)
+          meters.push({ key: 'peak', label: 'peak', kind: 'peak', w })
+        }
         el.classList.remove('n-' + count)
         count = meters.length
         el.classList.add('n-' + count)
       }
       items.forEach((i, n) => meters[n].w.update({ pct: i.pct, resets: i.resets_at }, now))
-      el.classList.toggle('nodata', !items.length)
+      const avail = valueOf(snap, 'limits.balance_available')
+      balances.forEach((i, n) => meters[items.length + n].w.update(i, typeof avail === 'number' ? avail : null))
+      if (peak !== null) {
+        const at = valueOf(snap, 'limits.peak_changes_at')
+        meters[meters.length - 1].w.update(peak, typeof at === 'number' ? at : null)
+      }
+      el.classList.toggle('nodata', !meters.length)
+      el.classList.toggle('provider', balances.length + (peak !== null) > 0)
     },
     frame (now, dt) {
       for (const m of meters) m.w.frame(now, dt)

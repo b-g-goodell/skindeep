@@ -11,6 +11,7 @@ const codex = require('./codex')
 const plain = require('./plain')
 const generic = require('./generic')
 const claudeWatch = require('./claude/watch')
+const provider = require('./provider')
 
 // Dispatch, first match wins, else plain. A provider is a row here and a
 // module exporting { kind, matches(basename), create(ctx), carry(argv) }.
@@ -29,25 +30,26 @@ const REAL_CLOCK = {
   }
 }
 
-function provider (cmd) {
+function adapterOf (cmd) {
   const base = path.basename(cmd[0])
   return TABLE.find(m => m.matches(base)) || plain
 }
 
 function kindOf (cmd) {
-  return provider(cmd).kind
+  return adapterOf(cmd).kind
 }
 
 // The arguments of cmd a new tab carries, and those it drops, by the
 // dispatched provider's options (decision 0023).
 function carry (cmd) {
-  return provider(cmd).carry(cmd.slice(1))
+  return adapterOf(cmd).carry(cmd.slice(1))
 }
 
 class Agent {
-  constructor (kind, adapter, gen, { bus, log, clock }) {
-    Object.assign(this, { kind, adapter, generic: gen, bus, log, clock })
-    this.parts = [adapter, gen]
+  // more: further parts, such as the provider's (decision 0038).
+  constructor (kind, adapter, gen, { bus, log, clock }, more = []) {
+    Object.assign(this, { kind, adapter, generic: gen, bus, log, clock, more })
+    this.parts = [adapter, gen, ...more]
     this.prepared = false
     this.attached = false
     this.closed = false
@@ -113,7 +115,8 @@ class Agent {
   // else null (decision 0032).
   report () {
     const r = this.adapter.report()
-    return { agent: this.kind, session: r.session, title: r.title || null, channels: [...r.channels, ...this.generic.report().channels], notice: this.failed || r.notice, replaying: !!r.replaying }
+    const more = this.more.flatMap(p => p.report().channels)
+    return { agent: this.kind, session: r.session, title: r.title || null, channels: [...r.channels, ...this.generic.report().channels, ...more], notice: this.failed || r.notice, replaying: !!r.replaying }
   }
 
   // A rename made in the tab, into the CLI's record where the adapter
@@ -141,10 +144,14 @@ class Agent {
 // app reads it at, the identity unless the tab runs in a snapshot
 // (decision 0037). Writes nothing to the bus and starts no channel:
 // prepare does.
+// A Claude or Codex session that runs the agent, not a subcommand of
+// the CLI, gets the provider part beside them (decision 0038).
 function open (ctx) {
   ctx = Object.assign({ clock: REAL_CLOCK, outside: p => p }, ctx)
-  const mod = provider(ctx.cmd)
-  return new Agent(mod.kind, mod.create(ctx), generic.create(ctx), ctx)
+  const mod = adapterOf(ctx.cmd)
+  const sub = mod === claude ? claude.subcommand(ctx.cmd) : null
+  const more = (mod === claude && (!sub || sub === 'attach')) || mod === codex ? [provider.create(ctx, mod.kind)] : []
+  return new Agent(mod.kind, mod.create(ctx), generic.create(ctx), ctx, more)
 }
 
 // A session the app did not start (decision 0027), read only: Claude's

@@ -25,6 +25,12 @@ function tell (msg) {
   try { fs.writeSync(userFd, 'skinned: ' + msg + '\n') } catch (e) {}
 }
 
+function defaultCommand (cmd) {
+  return cmd.length === 1 && cmd[0] === 'codex'
+    ? ['codex', '--sandbox', 'danger-full-access', '--ask-for-approval', 'never']
+    : cmd
+}
+
 // argv: process.argv. Electron and Chromium switches before `--` are
 // ignored, bin/skinned has already rejected unknown options of ours.
 function parse (argv) {
@@ -33,7 +39,7 @@ function parse (argv) {
     return { error: 'usage: skinned [--skin NAME|PATH] [--statusline=always|chain-only] [--no-viz] [--mute] [--unsafe-no-sandbox] -- CMD [ARGS...]\n  SKINNED_SKIN=NAME sets the default skin, SKINNED_MUTE=1 starts with skin sounds muted, SKINNED_UNSAFE_NO_SANDBOX=1 runs without Chromium\'s sandbox' }
   }
   const own = argv.slice(0, sep)
-  const opts = { skin: process.env.SKINNED_SKIN || null, statusline: 'always', viz: true, mute: process.env.SKINNED_MUTE === '1', cmd: argv.slice(sep + 1) }
+  const opts = { skin: process.env.SKINNED_SKIN || null, statusline: 'always', viz: true, mute: process.env.SKINNED_MUTE === '1', cmd: defaultCommand(argv.slice(sep + 1)) }
   for (let i = 0; i < own.length; i++) {
     const a = own[i]
     if (a === '--skin' && i + 1 < own.length) opts.skin = own[++i]
@@ -58,4 +64,4 @@ function resolveCommand (cmd, envPath) {
   return null
 }
 
-module.exports = { EXIT_APP, EXIT_NOT_FOUND, adoptUserFd, tell, parse, resolveCommand }
+module.exports = { EXIT_APP, EXIT_NOT_FOUND, adoptUserFd, tell, defaultCommand, parse, resolveCommand }

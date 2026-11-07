@@ -11,6 +11,38 @@ const T = require('../app/viz/trace')
 
 const SEG = new Float64Array(T.STRIDE * T.MAXSEG)
 
+test('wave lens moves a background plane, preserves foreground and emits no light', () => {
+  const n = 17
+  const data = new Uint8ClampedArray(n * n * 4)
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) data.set([x * 12, y * 12, 30, 255], 4 * (y * n + x))
+  }
+  const wave = { w: 6, h: 6, cell: 4, z: 10, dx: new Float32Array(36).fill(1), dy: new Float32Array(36) }
+  const sc = { w: n, h: n, cx: 8, cy: 8, f: 20, S: 2, hs: new Float64Array(), nh: 0, bref: [], planes: [], sky: null }
+  const draw = () => {
+    const out = new Uint8ClampedArray(n * n * 4)
+    T.render(sc, out)
+    return out
+  }
+  for (const z of [5, 10, 20]) {
+    const p = T.plane(z, data, n, n)
+    p.edge = true
+    sc.planes = [p]
+    sc.wave = null
+    const before = draw()
+    sc.wave = wave
+    const after = draw()
+    if (z <= 10) assert.deepEqual(after, before)
+    else {
+      const at = 4 * (8 * n + 8)
+      assert.ok(Math.abs(after[at] - before[at] - 24) <= 1)
+      assert.equal(after[at + 1], before[at + 1])
+    }
+  }
+  sc.planes = []
+  assert.ok(draw().every((v, i) => v === (i % 4 === 3 ? 255 : 0)))
+})
+
 // Carlson's R_F, for the elliptic integrals of the first kind.
 function rf (x, y, z) {
   for (let i = 0; i < 60; i++) {

@@ -495,8 +495,8 @@ function tabsMenu () {
 
 // New tab... (decision 0025): per agent its profiles and the command
 // line it would run, the window's command with the options it carries
-// when the window runs that agent, else the bare CLI. The agent and the
-// folder of the active tab come first.
+// when the window runs that agent, else its default command. The active
+// tab's agent and folder come first.
 const profilesDir = profiles.dir()
 
 // fresh: scan the home directory again, as each opening of the dialog
@@ -514,7 +514,7 @@ function chooserState (fresh = true) {
       kind,
       name: a.name,
       variable: a.variable,
-      line: [own ? opts.cmd[0] : a.cmd, ...c.args].map(identity.quote).join(' '),
+      line: (own ? [opts.cmd[0], ...c.args] : cli.defaultCommand([a.cmd])).map(identity.quote).join(' '),
       dropped: c.dropped.map(identity.quote).join(' '),
       profiles: profiles.list(kind, records, open, found).map(p => Object.assign(p, { shown: identity.tildify(p.dir) })),
       profile: from && kindOf(from.cmd) === kind ? profiles.of(from.env, kind) : profiles.defaultDir(kind)

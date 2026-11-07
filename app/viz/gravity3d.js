@@ -1019,6 +1019,7 @@
     let vs = null
     let ws = null
     let gb = null
+    let waveLens = null
     // The waves' gain as drawn (waves.js gain), and the time over which
     // it rises again, in s: it falls at once, so a burst or a strong
     // pair never floods the pane, and rises slowly, so the pane does not
@@ -1597,6 +1598,17 @@
       gk = want < gk ? want : gk * (want / gk) ** (1 - Math.exp(-dt / RISE))
       W.shown(hs, gw, gh, vs, gk)
       W.shown(xs, gw, gh, ws, gk)
+      if (env && env.waves && env.waves() === 'lensing') {
+        if (!waveLens || waveLens.w !== gw || waveLens.h !== gh) {
+          waveLens = { w: gw, h: gh, dx: new Float32Array(gw * gh), dy: new Float32Array(gw * gh) }
+        }
+        waveLens.cell = cell * kt
+        waveLens.z = groundZ
+        waveLens.peak = W.lens(vs, ws, gw, gh, waveLens.dx, waveLens.dy)
+        ground = null
+        return
+      }
+      waveLens = null
       if (env && env.waves && env.waves() === 'smoke') {
         drawSmoke(gw, gh, cell, dim, kt)
         return
@@ -1870,7 +1882,7 @@
         while (i < planes.length && planes[i].z < ground.z) i++
         planes.splice(i, 0, ground)
       }
-      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, ks, bref, planes, sky: sk, holes: hb, audit }
+      return { w: tw, h: th, cx: tcx, cy: tcy, f: tf, S: STEP, hs, nh: hb.length, ks, bref, planes, sky: sk, holes: hb, audit, wave: waveLens }
     }
 
     // The edge of spinning hole b's shadow, of b_c bc, for the trace,

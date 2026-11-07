@@ -181,3 +181,19 @@
 .mugs { justify-content: flex-start; }
 .mugs .sheet { flex: none; width: 186px; height: 84px; image-rendering: auto; }
 .mugs .label { top: 92px; }
+/* A provider's balance and peak price state (decision 0038): a tip
+   jar, its amount on the second strip of tape and a red note above it
+   when it no longer pays, and a jar with a candle lit in the peak
+   hours, the time to the switch on its tape. */
+.jars .jar.balance, .jars .jar.peak { display: block; }
+.jars .jar.balance .value { position: absolute; z-index: 1; left: 50%; top: calc(100% - 14px); transform: translate(-50%, -50%) rotate(3deg); padding: 1px 4px;
+  background: rgba(236, 224, 190, 0.94); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  font: bold 13px/13px "Amatic SC", cursive; letter-spacing: 1px; color: #3a2a1c; white-space: nowrap; overflow: visible; }
+.jars .jar.balance .note { position: absolute; z-index: 1; left: 50%; top: calc(100% - 66px); transform: translate(-50%, -50%) rotate(-2deg); margin: 0;
+  font: bold 14px/14px "Amatic SC", cursive; letter-spacing: 1px; color: #ff9a7a; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+.jars .jar.balance.unavailable .value { color: #b0381e; }
+.jars .jar.peak .lamp { position: absolute; left: calc(50% - 12px); bottom: 14px; width: 24px; height: 34px; border-radius: 45% 45% 40% 40%;
+  background: rgba(255, 240, 220, 0.06); box-shadow: none; }
+.jars .jar.peak .lamp.on { background: radial-gradient(ellipse 40% 50% at 50% 55%, #fff2c0, #ffb040 45%, rgba(255, 140, 40, 0) 100%); box-shadow: 0 0 18px rgba(255, 170, 60, 0.7); }
+.jars .jar.peak .resets { position: absolute; margin: 0; left: 50%; top: calc(100% - 14px); transform: translate(-50%, -50%) rotate(3deg); white-space: nowrap; }
+.jars .jar.peak .resets .word { display: inline; }

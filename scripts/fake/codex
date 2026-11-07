@@ -22,7 +22,16 @@ const fixtures = path.join(__dirname, '..', '..', 'test', 'fixtures', 'codex')
 const read = f => fs.readFileSync(path.join(fixtures, f), 'utf8').split('\n').filter(Boolean)
 // The rollout, then a model's own limit (GPT-5.3-Codex-Spark, 5 h and
 // 7 d) as recorded beside the account's, unless FAKE_CODEX_MODELS=0.
-const models = new Set(process.env.FAKE_CODEX_MODELS === '0' ? [] : read('limits.jsonl').filter(l => l.includes('"limit_id":"codex_bengalfox"')))
+// A config.toml whose model_provider is another than openai (decision
+// 0038): its rollout carries no rate_limits, as expected of a provider
+// that sends no Codex limits: no such session has been seen yet.
+const elsewhere = (() => {
+  try {
+    const m = /^\s*model_provider\s*=\s*"([^"]*)"/m.exec(fs.readFileSync(path.join(home, 'config.toml'), 'utf8'))
+    return !!m && m[1] !== 'openai'
+  } catch (e) { return false }
+})()
+const models = new Set(process.env.FAKE_CODEX_MODELS === '0' || elsewhere ? [] : read('limits.jsonl').filter(l => l.includes('"limit_id":"codex_bengalfox"')))
 const fixture = read('rollout.jsonl').concat([...models])
 const w = s => process.stdout.write(s)
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -107,6 +116,7 @@ process.stdin.on('data', d => { if (d.includes(3) || d.includes(4)) cleanup() })
     }
     // Recorded limits reset in the past: each window resets halfway
     // through it from now, as a live one might.
+    if (elsewhere && o.payload && o.payload.rate_limits) o.payload.rate_limits = null
     const rl = o.payload && o.payload.rate_limits
     for (const w of rl ? [rl.primary, rl.secondary] : []) if (w && w.window_minutes) w.resets_at = Math.floor(Date.now() / 1000) + w.window_minutes * 30
     fs.appendFileSync(file, JSON.stringify(o) + '\n')

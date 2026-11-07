@@ -85,7 +85,7 @@
       "format": "fixed:1", "class": "brass", "rect": { "right": 22, "top": 22, "width": 80, "height": 96 } },
     { "id": "cache", "follow": { "bottom": "desk" }, "type": "bar", "bind": "cache.hit_ratio", "label": "cache hits", "max": 1, "segments": 14, "gap": 3,
       "class": "marker blue", "rect": { "left": 336, "bottom": 118, "width": 296, "height": 40 } },
-    { "id": "lims", "follow": { "height": "desk" }, "type": "limits", "bind": "limits.items", "meter": "bar", "suffix": " limit", "itemClass": "marker", "max": 100, "segments": 14, "gap": 3,
+    { "id": "lims", "follow": { "height": "desk" }, "type": "limits", "bind": "limits.items", "meter": "bar", "suffix": " limit", "itemClass": "marker", "provider": ["balance", "peak"], "max": 100, "segments": 14, "gap": 3,
       "class": "lims", "rect": { "left": 336, "bottom": 26, "width": 296, "height": 86 } },
     { "id": "cost", "type": "readout", "bind": "cost.usd", "format": "usd", "label": "cost",
       "class": "card", "rect": { "right": 313, "bottom": 112, "width": 112, "height": 50 } },

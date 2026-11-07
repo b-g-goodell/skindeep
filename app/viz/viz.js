@@ -36,12 +36,11 @@
   // The frame rate cap, frames a second or 0 for none (decision 0036),
   // and Gravity 3D's traced pixels a pane, 0 for the mode's own
   // (decision 0015), which a mode reads through trace(). The Gravity
-  // modes' waves, 0 the colour field and 1 smoke (decision 0015), which
-  // a mode reads through waves() as 'colour' or 'smoke'.
+  // modes' waves: 0 colour, 1 smoke, 2 lensing, read through waves().
   let cap = 0
   let trace = 0
   let waves = 0
-  const env = { text: () => text, trace: () => trace, waves: () => waves ? 'smoke' : 'colour' }
+  const env = { text: () => text, trace: () => trace, waves: () => ['colour', 'smoke', 'lensing'][waves] || 'colour' }
 
   try {
     const probe = document.createElement('canvas').getContext('webgl2')

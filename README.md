@@ -54,11 +54,18 @@ exits with the CLI's own status. `SKINNED_SKIN=phosphor claude-skins`
 picks a skin, and a profile set by `CLAUDE_CONFIG_DIR` or `CODEX_HOME`
 works as usual, with its name in the window title.
 
-The three bars at the top left open four menus in a bar: **File** for
-the tabs, Settings and Housekeeping, **Agents** for Agent sessions and
+A bare Codex launch defaults to
+`codex --sandbox danger-full-access --ask-for-approval never`, including
+Codex selected in **New tab...**. An explicit command with arguments keeps
+its supplied options.
+
+The three bars at the top left open menus grouped by task: **File** for
+tabs, **Agents** for Agent sessions and
 Sessions dashboard, which watch every Claude Code and Codex session on
 your machine, **Skins** for Open skin... and the skins, and
-**Visualization** for its window, mode and input and Mute skin sounds.
+**Visualization** for its window, modes, input, rendering settings and
+Mute skin sounds, **Settings** for text sizes and panel sizes, and
+**Help** for session notices and logs.
 A click on a title, or Left and Right, moves between them, and Escape
 closes them.
 
@@ -110,6 +117,14 @@ held still paints a barrier and a click measures, a click in Go plays
 a stone, and a click on Carbon's level diagram excites the
 atom to that level.
 
+Sunset clouds keeps a Southwest landscape beneath clouds that drift and
+change shape even at idle. Activity strengthens their movement.
+Chromatic cells and Living filaments form colored particle clusters and
+trails. Click or drag through either to push the particles aside.
+In Gravity 3D, **Gravitational waves** in the Visualization menu offers
+**lensing**: passing fronts distort the stars and matter behind them
+instead of painting a field of colour or smoke.
+
 ## Skins
 
 | deck | phosphor |
@@ -120,11 +135,11 @@ atom to that level.
 
 Drag the edge between the terminal and a panel beside it to give the
 panel more room or less. The skin keeps the size, and **Reset panel
-sizes** in the File menu's Settings brings back its own.
+sizes** in Settings brings back its own.
 
-Settings also holds the size of every text: the terminal's font size,
-and from 70 to 150 percent the skin's text, the window's own (strips,
-tabs, menus, dialog, dashboard) and the visualization's. A larger text
+Settings also holds the terminal's font size and, from 70 to 150
+percent, the skin's text and the window's own (strips, tabs, menus,
+dialog, dashboard). Visualization holds its own text size. A larger text
 grows as far as the skin's art leaves it room.
 
 A plain `claude-skins` opens the skin you used last, and you can mute

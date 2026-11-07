@@ -704,7 +704,32 @@
     return out
   }
 
-  const api = { GAIN, TOP, SUB, STIR, HAZE, quadrupole, sources, Trace, Field, Watch, shown, gain, label, medium, smoke }
+  // A bounded thin-screen distortion from the displayed strain gradient.
+  // This is a visual approximation, in grid cells, not a geodesic solver.
+  function lens (hp, hx, w, h, dx, dy) {
+    let peak = 0
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x
+        const l = x ? i - 1 : i
+        const r = x < w - 1 ? i + 1 : i
+        const u = y ? i - w : i
+        const d = y < h - 1 ? i + w : i
+        const nx = Math.max(1, r - l)
+        const ny = Math.max(1, (d - u) / w)
+        const a = 2 * ((hp[r] - hp[l]) / nx - (hx[d] - hx[u]) / ny)
+        const b = -2 * ((hx[r] - hx[l]) / nx + (hp[d] - hp[u]) / ny)
+        const m = Math.hypot(a, b)
+        const k = m > 1.5 ? 1.5 / m : 1
+        dx[i] = a * k
+        dy[i] = b * k
+        peak = Math.max(peak, m * k)
+      }
+    }
+    return peak
+  }
+
+  const api = { GAIN, TOP, SUB, STIR, HAZE, quadrupole, sources, Trace, Field, Watch, shown, gain, label, medium, smoke, lens }
   if (typeof module === 'object' && module.exports) module.exports = api
   else root.VizWaves = api
 })(this)

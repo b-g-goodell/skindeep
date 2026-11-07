@@ -97,6 +97,26 @@ function effectiveStatusLine (ls) {
   return eff && eff.command ? eff : null
 }
 
+// The values of `names` in the settings env blocks, and the
+// apiKeyHelper, of the highest layer that sets each (decision 0038):
+// managed, a --settings file or JSON of the user's, local, project,
+// user. Every other key of a block is dropped at once, since a block
+// can hold credentials. { env: { name: value }, apiKeyHelper }.
+function envOf ({ env, cwd, argv, outside = p => p, managedDir = MANAGED_DIR }, names) {
+  const datas = layers({ env, cwd, argv, outside }).map(l => l.file).map(readJson)
+  const flag = argValue(argv, '--settings')
+  if (typeof flag === 'string') datas.push(flag.trim().startsWith('{') ? (() => { try { return JSON.parse(flag) } catch (e) { return null } })() : readJson(flag))
+  for (const m of managedLayers(managedDir)) datas.push(readJson(m.file))
+  const out = { env: {}, apiKeyHelper: null }
+  for (const d of datas) {
+    if (!d || typeof d !== 'object') continue
+    const e = d.env && typeof d.env === 'object' ? d.env : {}
+    for (const k of names) if (typeof e[k] === 'string') out.env[k] = e[k]
+    if (typeof d.apiKeyHelper === 'string' && d.apiKeyHelper.trim()) out.apiKeyHelper = d.apiKeyHelper
+  }
+  return out
+}
+
 function quote (s) {
   return "'" + String(s).replace(/'/g, "'\\''") + "'"
 }
@@ -157,4 +177,4 @@ function prepare (opts) {
   return { args: ['--settings', file], reason: null, compaction, managed, statusline: !!settings.statusLine, chain: !!chain }
 }
 
-module.exports = { HOOK_EVENTS, prepare, layers, effectiveStatusLine, argValue, configDir }
+module.exports = { HOOK_EVENTS, prepare, layers, envOf, effectiveStatusLine, argValue, configDir }

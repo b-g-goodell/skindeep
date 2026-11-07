@@ -163,7 +163,7 @@ async function one (skin) {
     check(hits.length === 0, `${skin} ${s.id}: boxes meet at the quarter tile: ${hits.join(', ')}`)
   }
 
-  await openMenu(win)
+  await openMenu(win, 'Settings')
   await win.locator('#menu .item', { hasText: 'Reset panel sizes' }).click()
   await sleep(1000)
   p = await page(win)
