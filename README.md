@@ -54,6 +54,11 @@ exits with the CLI's own status. `SKINNED_SKIN=phosphor claude-skins`
 picks a skin, and a profile set by `CLAUDE_CONFIG_DIR` or `CODEX_HOME`
 works as usual, with its name in the window title.
 
+A bare Codex launch defaults to
+`codex --sandbox danger-full-access --ask-for-approval never`, including
+Codex selected in **New tab...**. An explicit command with arguments keeps
+its supplied options.
+
 The three bars at the top left open menus grouped by task: **File** for
 tabs, **Agents** for Agent sessions and
 Sessions dashboard, which watch every Claude Code and Codex session on

@@ -13,7 +13,6 @@ const what = process.argv[3]
 const root = path.join(__dirname, '..', '..')
 const fakes = path.join(root, 'scripts', 'fake')
 const claudeFake = path.join(fakes, 'claude')
-const codexFake = path.join(fakes, 'codex')
 const state = path.join(out, 'state')
 const lab = path.join(out, 'profiles', 'lab', '.claude')
 const work = path.join(out, 'profiles', 'work', '.claude')
@@ -171,8 +170,7 @@ async function codex () {
   await sleep(200)
   c = await read(win)
   console.log('codex chooser', JSON.stringify(c))
-  check(c.agent === 'codex' && c.line === 'codex' && c.env.startsWith('CODEX_HOME unset'), 'want the bare codex on the default profile')
-  await win.fill('#chooser .line', codexFake)
+  check(c.agent === 'codex' && c.line === 'codex --sandbox danger-full-access --ask-for-approval never' && c.env.startsWith('CODEX_HOME unset'), 'want the default Codex command on the default profile')
   await answer(app, codexLab)
   await click(win, 'Other profile...')
   await sleep(300)
@@ -180,6 +178,7 @@ async function codex () {
   await sleep(8000)
   const pr = await probe(app)
   const [a, b] = pr.tabs
+  check(b.argv.join(' ') === 'codex --sandbox danger-full-access --ask-for-approval never', 'want the default options on the Codex child')
   const roll = b.following.channels.find(x => x.name === 'rollout')
   const seen = { labels: pr.tabs.map(t => t.label), rollout: roll, codexHome: environ(b.childPid).CODEX_HOME, models: [a.snapshot['model.name'], b.snapshot['model.name']], tokens: [a.snapshot['tokens.in'], b.snapshot['tokens.in']], claude: a.following.channels.map(x => `${x.name}:${x.state}`) }
   console.log(JSON.stringify(seen))
