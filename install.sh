@@ -83,6 +83,8 @@ fi
 # Electron fetches its binary on first use, not at npm install. Its own
 # installer does nothing when the binary is already there.
 (cd "$repo" && node node_modules/electron/install.js) || fail "the Electron download failed"
+# Normalize cached and downloaded runtime permissions before execution.
+chmod -R go-w "$repo/node_modules/electron/dist"
 "$repo/node_modules/electron/dist/electron" --no-sandbox --version >/dev/null ||
   fail "Electron does not start, see the error above (a missing system library such as libnss3 or libgtk-3)"
 
