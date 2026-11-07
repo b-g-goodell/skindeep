@@ -172,3 +172,23 @@ test('S5 a socket that cannot bind rejects with its path, never listens unseen',
   const dir = path.join(root, 'gone')
   await assert.rejects(server.start(dir, root, () => {}, () => {}), e => e.message.startsWith(`hooks socket ${path.join(dir, 'hooks.sock')}: cannot bind: `))
 })
+
+test('a snapshot rename writes the mapped transcript and title file', async t => {
+  const s = await setup(t)
+  const session = 'snapshot-session'
+  const inside = path.join(s.root, 'inside', `${session}.jsonl`)
+  const outside = path.join(s.root, 'snapshot', `${session}.jsonl`)
+  for (const file of [inside, outside]) {
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, '')
+  }
+  s.adapter.outside = file => file === inside ? outside : file
+  s.adapter.receive('hooks', core => core.hook({ hook_event_name: 'SessionStart', source: 'startup', session_id: session, transcript_path: inside }))
+
+  assert.strictEqual(s.adapter.rename('snapshot work'), true)
+  assert.strictEqual(fs.readFileSync(inside, 'utf8'), '')
+  assert.ok(!fs.existsSync(path.join(path.dirname(inside), session)))
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(outside, 'utf8')), { type: 'custom-title', customTitle: 'snapshot work', sessionId: session })
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(path.dirname(outside), session, 'custom-title.json'), 'utf8')), { customTitle: 'snapshot work' })
+  assert.ok(await until(() => { s.adapter.poll(Date.now()); return s.adapter.report().title === 'snapshot work' }), 'the adapter reads the mapped title back')
+})

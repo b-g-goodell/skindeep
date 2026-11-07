@@ -243,6 +243,19 @@ async function snapshot () {
   console.log('strip', JSON.stringify(strip))
   await shot(win, path.join(out, 'snapshot-tab.png'))
 
+  await win.locator('#tabs .tab').nth(1).click({ button: 'right' })
+  await win.locator('#tab-menu .item').click()
+  await win.locator('#tabs .rename').fill('snapshot work')
+  await win.keyboard.press('Enter')
+  await sleep(1200)
+  t = (await probe(app)).tabs[1]
+  const transcript = t.following.channels.find(c => c.name === 'transcript').target
+  const titleFile = path.join(path.dirname(transcript), t.following.session, 'custom-title.json')
+  check(JSON.parse(fs.readFileSync(titleFile, 'utf8')).customTitle === 'snapshot work', 'want the rename written beside the snapshot transcript')
+  check(t.following.title === 'snapshot work' && t.title === 'snapshot work', 'want the snapshot adapter to read back the tab rename')
+  console.log('snapshot rename', JSON.stringify({ title: t.following.title, transcript, titleFile }))
+  await shot(win, path.join(out, 'snapshot-renamed.png'))
+
   // The tab closes by a hangup to the CLI, and reopens in the snapshot.
   await win.keyboard.press('Control+Shift+W')
   await sleep(3000)
