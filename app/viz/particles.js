@@ -7,6 +7,14 @@
   const wrap = (x, n) => ((x % n) + n) % n
   const delta = (x, n) => x - Math.round(x / n) * n
 
+  function limit (p) {
+    const speed = Math.hypot(p.vx, p.vy)
+    if (speed > 0.35) {
+      p.vx *= 0.35 / speed
+      p.vy *= 0.35 / speed
+    }
+  }
+
   function world (aspect, filaments, random = Math.random, count = 1200) {
     const p = Array.from({ length: count }, (_, i) => ({ x: random() * aspect, y: random(), vx: 0, vy: 0, kind: i % COLORS.length }))
     let clock = 0
@@ -90,16 +98,29 @@
         const a = p[i]
         a.vx = (a.vx + ax[i] * h * drive) * damp
         a.vy = (a.vy + ay[i] * h * drive) * damp
-        const speed = Math.hypot(a.vx, a.vy)
-        if (speed > 0.35) {
-          a.vx *= 0.35 / speed
-          a.vy *= 0.35 / speed
-        }
+        limit(a)
         a.x = wrap(a.x + a.vx * h, aspect)
         a.y = wrap(a.y + a.vy * h, 1)
       }
     }
-    return { p, step, excite () { pulse = Math.min(2, pulse + 0.5) }, point (x, y) { pointer = x === null ? null : { x, y } } }
+    return {
+      p,
+      step,
+      excite () { pulse = Math.min(2, pulse + 0.5) },
+      point (x, y) { pointer = x === null ? null : { x, y } },
+      poke (x, y) {
+        for (const a of p) {
+          const dx = delta(a.x - x, aspect)
+          const dy = delta(a.y - y, 1)
+          const d = Math.hypot(dx, dy)
+          if (d <= 1e-5 || d >= 0.22) continue
+          const kick = 0.12 * (1 - d / 0.22)
+          a.vx += kick * dx / d
+          a.vy += kick * dy / d
+          limit(a)
+        }
+      }
+    }
   }
 
   function create (canvas, env, filaments = false) {
@@ -108,19 +129,28 @@
     let width = 0
     let height = 0
     let activity = 0
+    let presses = 0
     const mark = {}
+
+    function sized () {
+      const w = canvas.width
+      const h = canvas.height
+      if (w < 4 || h < 4) return false
+      if (w !== width || h !== height) {
+        width = w
+        height = h
+        sim = world(w / h, filaments)
+        g.fillStyle = '#05070f'
+        g.fillRect(0, 0, w, h)
+      }
+      return true
+    }
+
     return {
       draw (synth, dt) {
-        const w = canvas.width
-        const h = canvas.height
-        if (w < 4 || h < 4) return
-        if (w !== width || h !== height) {
-          width = w
-          height = h
-          sim = world(w / h, filaments)
-          g.fillStyle = '#05070f'
-          g.fillRect(0, 0, w, h)
-        }
+        if (!sized()) return
+        const w = width
+        const h = height
         for (const e of synth.since(mark)) if (e.kind !== 1) sim.excite()
         const level = synth.level
         const target = Math.min(1, 0.7 * level.bass + 0.3 * level.busy)
@@ -156,8 +186,13 @@
         g.globalAlpha = 1
         g.globalCompositeOperation = 'source-over'
       },
+      probe () { return { presses, particles: sim ? sim.p.length : 0 } },
       pointer (kind, x, y, down) {
-        if (!sim) return
+        if (!sized()) return
+        if (kind === 'down' && down) {
+          presses++
+          sim.poke(x / height, y / height)
+        }
         if (kind === 'up' || !down) sim.point(null)
         else sim.point(x / height, y / height)
       }

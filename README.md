@@ -120,7 +120,7 @@ atom to that level.
 Sunset clouds keeps a Southwest landscape beneath clouds that drift and
 change shape even at idle. Activity strengthens their movement.
 Chromatic cells and Living filaments form colored particle clusters and
-trails. Drag through either to push the particles aside.
+trails. Click or drag through either to push the particles aside.
 In Gravity 3D, **Gravitational waves** in the Visualization menu offers
 **lensing**: passing fronts distort the stars and matter behind them
 instead of painting a field of colour or smoke.
