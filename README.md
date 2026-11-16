@@ -56,8 +56,11 @@ works as usual, with its name in the window title.
 
 A bare Codex launch defaults to
 `codex --sandbox danger-full-access --ask-for-approval never`, including
-Codex selected in **New tab...**. An explicit command with arguments keeps
-its supplied options.
+Codex selected in **New tab...**. **New tab...** also offers Antigravity,
+Google's `agy`, whose bare launch defaults to
+`agy --dangerously-skip-permissions --model gemini-4-carbon-medium`, on
+its one profile `~/.gemini`. An `agy` tab gets the generic meters only.
+An explicit command with arguments keeps its supplied options.
 
 The three bars at the top left open menus grouped by task: **File** for
 tabs, **Agents** for Agent sessions and

@@ -46,11 +46,12 @@ window.Chooser = (function () {
     const a = current()
     const p = chosen()
     const s = snapshot()
-    f.profile.disabled = !!s
-    f.other.disabled = !!s
-    if (s) f.env.textContent = `In the snapshot ${s.name}: ${a.variable} is set by its shell's launchers, and the snapshot's tree stands at the canonical paths`
+    f.profile.disabled = !!s || !a.variable
+    f.other.disabled = !!s || !a.variable
+    if (!a.variable) f.env.textContent = `${a.name} has one profile, ${p ? p.shown : ''}: ${a.cmd} reads no config dir variable`
+    else if (s) f.env.textContent = `In the snapshot ${s.name}: ${a.variable} is set by its shell's launchers, and the snapshot's tree stands at the canonical paths`
     else f.env.textContent = p && p.isDefault ? `${a.variable} unset, the default profile` : `${a.variable}=${p ? p.shown : ''}`
-    f.forget.disabled = !!s || !(p && p.remembered)
+    f.forget.disabled = !!s || !a.variable || !(p && p.remembered)
     f.shell.textContent = s
       ? 'The line runs in the snapshot\'s interactive shell, each word quoted: its launchers and aliases apply, ~ and $VAR do not expand.'
       : 'No shell runs the line: quotes and backslashes work, ~ and $VAR do not.'

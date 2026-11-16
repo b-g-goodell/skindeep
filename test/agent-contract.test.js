@@ -1,6 +1,6 @@
 'use strict'
 // The contract every agent adapter keeps at the seam, run against Claude,
-// Codex and plain, each with Generic beside it, on a fake clock.
+// Codex, plain and Antigravity, each with Generic beside it, on a fake clock.
 const test = require('node:test')
 const assert = require('node:assert')
 const fs = require('fs')
@@ -111,7 +111,8 @@ const ADAPTERS = {
       fs.appendFileSync(h.file, JSON.stringify(o) + '\n')
     }
   },
-  plain: { defaults: [], ctx: () => ({ cmd: ['bash'], env: { PATH: process.env.PATH } }), async ready () {} }
+  plain: { defaults: [], ctx: () => ({ cmd: ['bash'], env: { PATH: process.env.PATH } }), async ready () {} },
+  antigravity: { defaults: [], ctx: () => ({ cmd: ['agy'], env: { PATH: process.env.PATH } }), async ready () {} }
 }
 
 async function harness (t, kind) {
@@ -268,7 +269,8 @@ test('claude: row 4, a new session resets its names and reseeds in the same call
 const CHANNELS = {
   claude: { before: { hooks: 'waiting', statusline: 'waiting', transcript: 'waiting' }, after: { hooks: 'live', transcript: 'live' }, followed: 'transcript' },
   codex: { before: { rollout: 'waiting' }, after: { rollout: 'live' }, followed: 'rollout' },
-  plain: { before: {}, after: {} }
+  plain: { before: {}, after: {} },
+  antigravity: { before: {}, after: {} }
 }
 
 const states = r => Object.fromEntries(r.channels.filter(c => !['pty', 'proc'].includes(c.name)).map(c => [c.name, c.state]))
