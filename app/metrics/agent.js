@@ -9,13 +9,14 @@ const path = require('path')
 const claude = require('./claude')
 const codex = require('./codex')
 const plain = require('./plain')
+const antigravity = require('./antigravity')
 const generic = require('./generic')
 const claudeWatch = require('./claude/watch')
 const provider = require('./provider')
 
 // Dispatch, first match wins, else plain. A provider is a row here and a
 // module exporting { kind, matches(basename), create(ctx), carry(argv) }.
-const TABLE = [claude, codex]
+const TABLE = [claude, codex, antigravity]
 
 const FAILED = 'meters limited: adapter failed'
 const TICK_MS = 250
