@@ -25,10 +25,15 @@ function tell (msg) {
   try { fs.writeSync(userFd, 'skinned: ' + msg + '\n') } catch (e) {}
 }
 
+// A bare agent's default line: Codex without its approvals and sandbox,
+// Antigravity without its permission prompts and on Gemini 4 Carbon.
+const DEFAULTS = {
+  codex: ['codex', '--sandbox', 'danger-full-access', '--ask-for-approval', 'never'],
+  agy: ['agy', '--dangerously-skip-permissions', '--model', 'gemini-4-carbon-medium']
+}
+
 function defaultCommand (cmd) {
-  return cmd.length === 1 && cmd[0] === 'codex'
-    ? ['codex', '--sandbox', 'danger-full-access', '--ask-for-approval', 'never']
-    : cmd
+  return cmd.length === 1 && Object.hasOwn(DEFAULTS, cmd[0]) ? DEFAULTS[cmd[0]].slice() : cmd
 }
 
 // argv: process.argv. Electron and Chromium switches before `--` are
