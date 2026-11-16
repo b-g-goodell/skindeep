@@ -1,7 +1,8 @@
 # 0025 New tab... with another agent, profile or folder
 
 Status: accepted 2026-10-12. The scan of the home directory
-added 2026-10-13 on the maintainer's word.
+added 2026-10-13 on the maintainer's word. Antigravity added
+2026-11-15, issue #240.
 
 ## Context
 
@@ -15,7 +16,7 @@ layout of config dirs.
 
 - File menu entry **New tab...** opens an app-owned dialog above the
   skin and the tab strip, under the identity strip, out of reach of skin
-  CSS (decision 0005): the agent (Claude Code or Codex), its profile, the
+  CSS (decision 0005): the agent (Claude Code, Codex or Antigravity), its profile, the
   folder, and the command line the tab will run. The tab strip's `+` opens
   it too. The plain New tab and its shortcut stay as decision 0023
   has them, a new tab at once. Enter opens, Escape
@@ -26,7 +27,10 @@ layout of config dirs.
   0003). The default profile, `~/.claude` or `~/.codex`, runs with the
   variable unset, even when the window's own environment sets it. The
   dialog shows the variable as the tab will have it. The rest of the
-  window's environment is the tab's.
+  window's environment is the tab's. Antigravity's `agy` reads no
+  config dir variable, so it has one profile, `~/.gemini`, the Profile
+  row is disabled for it, and its tab gets the window's environment as
+  it is.
 - The profile list of an agent: its default profile, the profiles of the
   open tabs of that agent in tab order, every profile a tab was opened
   on, newest first, then every profile the scan finds, by path, each
@@ -57,7 +61,10 @@ layout of config dirs.
 - The command line is shown and editable. For the
   window's own agent it starts as the window's command with the options
   New tab carries (decision 0023), and the dialog names what it does not
-  carry. For the other agent it starts as the bare CLI. The line is split
+  carry. For another agent it starts as the bare CLI, with the default
+  options a bare launch of it gets: Codex's sandbox and approvals off,
+  and `agy --dangerously-skip-permissions --model gemini-4-carbon-medium`
+  for Antigravity. The line is split
   into words as a shell splits them, by `app/argv.js`, and no shell runs:
   quotes and backslashes work, `~`, `$VAR`, globs and redirection do not.
   A wrapper on PATH (`claude_work`) gets its CLI's adapter (decision

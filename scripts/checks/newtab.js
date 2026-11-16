@@ -1,8 +1,8 @@
 'use strict'
 // Live checks of New tab... (decision 0025). Run under xvfb-run:
-//   node scripts/checks/newtab.js OUT profiles|codex
-// Fakes only: scripts/fake comes first on PATH, so a bare claude or
-// codex in the chooser runs a fake, never a real CLI.
+//   node scripts/checks/newtab.js OUT profiles|codex|snapshot|antigravity
+// Fakes only: scripts/fake comes first on PATH, so a bare claude, codex
+// or agy in the chooser runs a fake, never a real CLI.
 const { launch, probe, openMenu, shot, sleep } = require('../drive.js')
 const fs = require('fs')
 const os = require('os')
@@ -272,4 +272,42 @@ async function snapshot () {
   await end(app)
 }
 
-;({ profiles, codex, snapshot })[what]().then(() => console.log('done')).catch(e => { console.error(e); process.exit(1) })
+// An Antigravity tab: its default line on Gemini 4 Carbon, its one
+// profile with the Profile row disabled, the window's environment as it
+// is, and a plain New tab in an agy window carrying its setup options.
+async function antigravity () {
+  let { app, win } = await start()
+  let c = await chooser(win)
+  await win.locator('#chooser input[value=antigravity]').check()
+  await sleep(200)
+  c = await read(win)
+  const off = await win.evaluate(() => ['.profile', '.other', '.forget'].map(s => document.querySelector('#chooser ' + s).disabled))
+  console.log('antigravity chooser', JSON.stringify(c), JSON.stringify(off))
+  const gemini = path.join(os.homedir(), '.gemini')
+  check(c.agent === 'antigravity' && c.line === 'agy --dangerously-skip-permissions --model gemini-4-carbon-medium', 'want the default Antigravity line on Gemini 4 Carbon')
+  check(c.profiles.join() === gemini && c.env === 'Antigravity has one profile, ~/.gemini: agy reads no config dir variable' && off.every(Boolean), 'want one profile, ~/.gemini, with the Profile row disabled')
+  await shot(win, path.join(out, 'chooser-antigravity.png'))
+  await click(win, 'Open')
+  await sleep(3000)
+  let pr = await probe(app)
+  const t = pr.tabs[1]
+  check(pr.tabs.length === 2 && t.label === 'agy' && t.active, `want an active tab agy, saw ${JSON.stringify(pr.tabs.map(t => t.label))}`)
+  check(t.argv.join(' ') === 'agy --dangerously-skip-permissions --model gemini-4-carbon-medium', `want the default line on the agy child, saw ${JSON.stringify(t.argv)}`)
+  check(environ(t.childPid).CLAUDE_CONFIG_DIR === lab, 'want the window\'s environment on the agy child as it is')
+  c = await chooser(win)
+  check(c.agent === 'antigravity', 'want the chooser to start on the active agy tab\'s agent')
+  await win.keyboard.press('Escape')
+  await end(app)
+
+  const agy = path.join(fakes, 'agy')
+  ;({ app, win } = await launch([agy, '--model', 'gemini-4-carbon-high', '--continue'], { appArgs: ['--skin', 'deck', '--no-viz'], env }))
+  await sleep(2500)
+  await win.keyboard.press('Control+Shift+T')
+  await sleep(2500)
+  pr = await probe(app)
+  console.log('agy window, New tab', JSON.stringify(pr.tabs.map(t => t.argv)))
+  check(pr.tabs.length === 2 && pr.tabs[1].argv.slice(1).join(' ') === '--model gemini-4-carbon-high', `want New tab to carry --model and drop --continue, saw ${JSON.stringify(pr.tabs.map(t => t.argv))}`)
+  await end(app)
+}
+
+;({ profiles, codex, snapshot, antigravity })[what]().then(() => console.log('done')).catch(e => { console.error(e); process.exit(1) })

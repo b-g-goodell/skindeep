@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+'use strict'
+// Fake of the Antigravity CLI for the live checks: named `agy` so the
+// app dispatches the Antigravity adapter. It prints its argv and a line
+// a second until a hangup, and spends nothing.
+process.stdout.write(`fake agy ${JSON.stringify(process.argv.slice(2))}\r\n`)
+let n = 0
+setInterval(() => process.stdout.write(`agy line ${++n}\r\n`), 1000)
+process.on('SIGHUP', () => process.exit(0))
+process.stdin.resume()

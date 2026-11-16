@@ -47,6 +47,16 @@ test('a tab\'s environment: the variable set, or unset for the default', () => {
   assert.strictEqual(profiles.of(env, 'codex'), profiles.defaultDir('codex'))
 })
 
+test('Antigravity: one profile, ~/.gemini, and the environment as it is', () => {
+  const env = { PATH: '/bin', CLAUDE_CONFIG_DIR: '/p/lab' }
+  const dflt = profiles.defaultDir('antigravity')
+  assert.strictEqual(dflt, path.join(os.homedir(), '.gemini'))
+  assert.strictEqual(profiles.of(env, 'antigravity'), dflt)
+  assert.deepStrictEqual(profiles.envFor(env, 'antigravity', dflt), env)
+  assert.notStrictEqual(profiles.envFor(env, 'antigravity', dflt), env)
+  assert.deepStrictEqual(profiles.list('antigravity', [{ t: 1, agent: 'claude', dir: '/p/a' }], [dflt]), [{ dir: dflt, isDefault: true, remembered: false }])
+})
+
 test('the scan: config dirs by the names they hold, bounded, links not followed', t => {
   const root = path.dirname(tempDir(t))
   const mk = (rel, ...files) => {

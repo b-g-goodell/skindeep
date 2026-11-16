@@ -513,6 +513,7 @@ function chooserState (fresh = true) {
     return {
       kind,
       name: a.name,
+      cmd: a.cmd,
       variable: a.variable,
       line: (own ? [opts.cmd[0], ...c.args] : cli.defaultCommand([a.cmd])).map(identity.quote).join(' '),
       dropped: c.dropped.map(identity.quote).join(' '),

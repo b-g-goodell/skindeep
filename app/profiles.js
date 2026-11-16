@@ -1,10 +1,12 @@
 'use strict'
 // The profiles New tab... offers (decision 0025). A profile is a config
 // dir: CLAUDE_CONFIG_DIR of Claude Code, CODEX_HOME of Codex (decision
-// 0003). Each profile a tab was opened on is recorded in a file of its
-// own, <dir>/<agent>-<hash>, by write and rename, as the last skins are
-// (decision 0022), so no two windows write one file. The scan of the
-// home directory reads directory listings, never a file's contents.
+// 0003). Antigravity's agy reads no config dir variable, so it has one
+// profile, ~/.gemini, and a null variable. Each profile a tab was
+// opened on is recorded in a file of its own, <dir>/<agent>-<hash>, by
+// write and rename, as the last skins are (decision 0022), so no two
+// windows write one file. The scan of the home directory reads
+// directory listings, never a file's contents.
 
 const crypto = require('crypto')
 const fs = require('fs')
@@ -13,7 +15,8 @@ const path = require('path')
 
 const AGENTS = {
   claude: { name: 'Claude Code', cmd: 'claude', variable: 'CLAUDE_CONFIG_DIR', dflt: '.claude' },
-  codex: { name: 'Codex', cmd: 'codex', variable: 'CODEX_HOME', dflt: '.codex' }
+  codex: { name: 'Codex', cmd: 'codex', variable: 'CODEX_HOME', dflt: '.codex' },
+  antigravity: { name: 'Antigravity', cmd: 'agy', variable: null, dflt: '.gemini' }
 }
 
 const NAME = /^(claude|codex)-[0-9a-f]{16}$/
@@ -28,7 +31,7 @@ function defaultDir (agent) {
 
 // The profile a tab of `agent` runs on under env.
 function of (env, agent) {
-  const v = env[AGENTS[agent].variable]
+  const v = AGENTS[agent].variable && env[AGENTS[agent].variable]
   return v ? path.resolve(v) : defaultDir(agent)
 }
 
@@ -37,6 +40,7 @@ function of (env, agent) {
 function envFor (env, agent, p) {
   const out = Object.assign({}, env)
   const v = AGENTS[agent].variable
+  if (!v) return out
   if (path.resolve(p) === defaultDir(agent)) delete out[v]
   else out[v] = path.resolve(p)
   return out
