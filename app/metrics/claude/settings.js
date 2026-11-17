@@ -140,6 +140,21 @@ function write (store, settings) {
   return file
 }
 
+const CODE_MODE = 'CLAUDE_CODE_EXPERIMENTAL_CODE_MODE'
+
+// Code Mode on for the child: 1 in its environment or the env of its
+// user or managed settings, and 0 in none, since a 0 anywhere keeps it
+// off. Claude Code ignores the variable in project settings.
+function codeMode (opts) {
+  const vals = [opts.env[CODE_MODE]]
+  const user = layers({ env: opts.env, cwd: opts.cwd, argv: opts.cmd.slice(1), outside: opts.outside }).filter(l => l.name === 'user')
+  for (const l of [...user, ...managedLayers(opts.managedDir || MANAGED_DIR)]) {
+    const d = readJson(l.file)
+    if (d && d.env && typeof d.env === 'object') vals.push(d.env[CODE_MODE])
+  }
+  return vals.includes('1') && !vals.includes('0')
+}
+
 // opts: { cmd, env, cwd, root, store, mode, node, python, managedDir }
 // root: the runtime root the relays search. store: where the file goes.
 // node: { path, asElectron } for running the statusline relay. python:
@@ -159,8 +174,11 @@ function prepare (opts) {
   const chain = effectiveStatusLine(ls)
   const relays = path.join(__dirname, '..', '..', 'relay')
   const hook = `${quote(opts.python)} -I -S ${quote(path.join(relays, 'hook.py'))} ${quote(opts.root)}`
+  // In Code Mode a hook that fails or times out on a call from code
+  // refuses the call (#242). The relay only observes, so it never may.
+  const entry = Object.assign({ type: 'command', command: hook, timeout: 1 }, codeMode(opts) ? { onFailure: 'continue' } : {})
   const hooks = {}
-  for (const ev of HOOK_EVENTS) hooks[ev] = [{ hooks: [{ type: 'command', command: hook, timeout: 1 }] }]
+  for (const ev of HOOK_EVENTS) hooks[ev] = [{ hooks: [entry] }]
   const settings = { hooks }
   if (opts.mode === 'always' || chain) {
     const prefix = opts.node.asElectron ? 'ELECTRON_RUN_AS_NODE=1 ' : ''
@@ -177,4 +195,4 @@ function prepare (opts) {
   return { args: ['--settings', file], reason: null, compaction, managed, statusline: !!settings.statusLine, chain: !!chain }
 }
 
-module.exports = { HOOK_EVENTS, prepare, layers, envOf, effectiveStatusLine, argValue, configDir }
+module.exports = { HOOK_EVENTS, CODE_MODE, codeMode, prepare, layers, envOf, effectiveStatusLine, argValue, configDir }
