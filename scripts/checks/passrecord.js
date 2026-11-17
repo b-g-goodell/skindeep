@@ -38,9 +38,31 @@ function write (cwd, info = {}) {
   return file
 }
 
+function jobStore (cwd, t) {
+  return path.join(path.dirname(store(cwd)), 'checks-passed-jobs', t)
+}
+
+// Records job's pass on HEAD's tree. Refuses a dirty tree, as write.
+function writeJob (cwd, job, info = {}) {
+  const changes = dirty(cwd)
+  if (changes) throw new Error(`tree dirty, no pass record of ${job}: ${changes.split('\n')[0]}`)
+  const dir = jobStore(cwd, tree(cwd))
+  fs.mkdirSync(dir, { recursive: true })
+  const file = path.join(dir, job)
+  fs.writeFileSync(file, JSON.stringify(Object.assign({ job, at: new Date().toISOString() }, info)) + '\n')
+  return file
+}
+
+// The jobs that passed on ref's tree: { name: record }.
+function jobs (cwd, ref = 'HEAD') {
+  const dir = jobStore(cwd, tree(cwd, ref))
+  if (!fs.existsSync(dir)) return {}
+  return Object.fromEntries(fs.readdirSync(dir).map(f => [f, JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))]))
+}
+
 function has (cwd, ref = 'HEAD') {
   return fs.existsSync(path.join(store(cwd), tree(cwd, ref)))
 }
 
-module.exports = { store, tree, dirty, write, has }
+module.exports = { store, tree, dirty, write, has, writeJob, jobs }
 
