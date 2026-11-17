@@ -2,7 +2,8 @@
 // The four menus (decision 0022) in each shipped skin, at the skin's
 // initial size and in a quarter of a 1920 x 1080 screen (decision 0006).
 // Run under xvfb-run:
-//   node scripts/checks/menus.js OUT
+//   node scripts/checks/menus.js OUT [SKIN]
+// SKIN: that skin alone, else every shipped skin.
 // Each menu is opened from the skin's button and the bar, its entries
 // read and compared with the list it must hold, its drop-down and its
 // flyouts kept inside the window. Writes OUT/<skin>-<size>-<menu>.png
@@ -15,7 +16,7 @@ const out = path.resolve(process.argv[2])
 fs.mkdirSync(out, { recursive: true })
 const root = path.join(__dirname, '..', '..')
 const fake = path.join(root, 'scripts', 'fake', 'claude')
-const SKINS = ['deck', 'phosphor', 'coffee', 'library']
+const SKINS = process.argv[3] ? [process.argv[3]] : ['deck', 'phosphor', 'coffee', 'library']
 const TILE = [960, 1048 / 2 - 37]
 const MENUS = ['File', 'Agents', 'Skins', 'Visualization', 'Settings', 'Help']
 

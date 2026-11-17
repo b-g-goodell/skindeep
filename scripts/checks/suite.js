@@ -3,16 +3,21 @@
 // that runs on the fakes alone, each mode of it, each under
 // scripts/clean-env xvfb-run, with scripts/fake first on PATH so no
 // real claude, codex or gh runs and no token is spent.
-//   node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...] [--no-record]
+//   node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...] [--chunk K/N] [--rerun-passed] [--no-record]
 // --jobs: checks run at once, default 3. --timeout: seconds a check may
 // take, default 900. --only: the jobs named, as their OUT folder is
-// named (tabs-keys, p5), and no pass record. Each check's log goes to
-// OUT/<job>.log and its own OUT to OUT/<job>/. The summary names each
-// failing job with its log's error line, and the exit is 1 on any
-// failure, after each failed job has run once more alone, which a job
-// that passes counts as its pass. A full pass on a clean tree records HEAD's tree
-// (scripts/checks/passrecord.js), which ops/publish.py requires;
-// --no-record skips it.
+// named (tabs-keys, p5). --chunk K/N: the Kth of N equal runs of the
+// job list, so a loaded host runs the suite a chunk at a time. Each
+// check's log goes to OUT/<job>.log and its own OUT to OUT/<job>/. The
+// summary names each failing job with its log's error line, and the
+// exit is 1 on any failure, after each failed job has run once more
+// alone, which a job that passes counts as its pass.
+// On a clean tree each job's pass is recorded against HEAD's tree
+// (scripts/checks/passrecord.js), and a job that passed on the tree
+// is carried, not run again; --rerun-passed runs it all the same. Once
+// every job has a pass on the tree, by one run or by chunks, the full
+// record is written, which ops/publish.py requires. --no-record
+// neither reads nor writes any record.
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
@@ -25,7 +30,7 @@ const fakes = path.join(root, 'scripts', 'fake')
 const JOBS = [
   ['attach'], ['board'], ['checklist'], ['claude-bus'], ['claude-bus', '--continue'],
   ['dashboard'], ['dials'], ['foreign'], ['halfscreen'], ['limits'], ['listtoggle'],
-  ['manager'], ['menufit'], ['menus'], ['newtab', 'profiles'], ['newtab', 'codex'], ['newtab', 'snapshot'], ['newtab', 'antigravity'], ['newtab', 'codemode'],
+  ['manager'], ['menufit'], ...['deck', 'phosphor', 'coffee', 'library'].map(m => ['menus', m]), ['newtab', 'profiles'], ['newtab', 'codex'], ['newtab', 'snapshot'], ['newtab', 'antigravity'], ['newtab', 'codemode'],
   ['p1', 'bash'],
   ...['widgets', 'hostile', 'menu', 'switching', 'reload', 'collision', 'button', 'openskin', 'keys', 'remember'].map(m => ['p3', m]),
   ['p5'], ['panels'], ['popout'], ['providers'], ['quarter'], ['rename'],
@@ -55,17 +60,20 @@ const EXCLUDED = {
 const name = job => [job[0], ...job.slice(1).map(a => a.startsWith('--') ? a.slice(2, 6) : a)].join('-')
 
 function args (argv) {
-  const o = { jobs: 3, timeout: 900, only: null, record: true, out: null }
+  const o = { jobs: 3, timeout: 900, only: null, chunk: null, carry: true, record: true, out: null }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--jobs') o.jobs = Number(argv[++i])
     else if (a === '--timeout') o.timeout = Number(argv[++i])
     else if (a === '--only') o.only = argv[++i].split(',')
+    else if (a === '--chunk') o.chunk = argv[++i].split('/').map(Number)
+    else if (a === '--rerun-passed') o.carry = false
     else if (a === '--no-record') o.record = false
     else if (!a.startsWith('--') && !o.out) o.out = path.resolve(a)
     else throw new Error(`unknown argument ${a}`)
   }
-  if (!o.out || !(o.jobs >= 1) || !(o.timeout > 0)) throw new Error('usage: node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...] [--no-record]')
+  const badChunk = o.chunk && !(o.chunk.length === 2 && Number.isInteger(o.chunk[0]) && Number.isInteger(o.chunk[1]) && o.chunk[0] >= 1 && o.chunk[0] <= o.chunk[1])
+  if (!o.out || !(o.jobs >= 1) || !(o.timeout > 0) || badChunk || (o.chunk && o.only)) throw new Error('usage: node scripts/checks/suite.js OUT [--jobs N] [--timeout S] [--only NAME,...] [--chunk K/N] [--rerun-passed] [--no-record]')
   return o
 }
 
@@ -124,21 +132,39 @@ async function run (job, o) {
   return res
 }
 
+// The Kth of N runs of the job list, as equal as whole jobs allow.
+function chunkOf (list, [k, n]) {
+  return list.slice(Math.round((k - 1) * list.length / n), Math.round(k * list.length / n))
+}
+
 async function main () {
   const o = args(process.argv.slice(2))
   const missing = unlisted()
   if (missing.length) throw new Error(`neither a job nor excluded in suite.js: ${missing.join(', ')}`)
-  const jobs = o.only ? JOBS.filter(j => o.only.includes(name(j))) : JOBS
-  if (o.only && jobs.length !== o.only.length) throw new Error(`no such job among ${o.only.join(', ')}`)
+  const picked = o.only ? JOBS.filter(j => o.only.includes(name(j))) : o.chunk ? chunkOf(JOBS, o.chunk) : JOBS
+  if (o.only && picked.length !== o.only.length) throw new Error(`no such job among ${o.only.join(', ')}`)
 
   const tree = passrecord.tree(root)
   const changes = passrecord.dirty(root)
-  // Why no record will be written, or '' if a full pass writes one.
-  let skip = !o.record ? '--no-record' : o.only ? '--only' : changes ? `tree dirty (${changes.split('\n')[0]})` : ''
+  // Why no record will be written, or '' if passes are recorded.
+  let skip = !o.record ? '--no-record' : changes ? `tree dirty (${changes.split('\n')[0]})` : ''
   if (skip) console.log(`no pass record: ${skip}`)
   for (const [k, why] of Object.entries(EXCLUDED)) console.log(`excluded ${k}: ${why}`)
   fs.mkdirSync(o.out, { recursive: true })
-  console.log(`${jobs.length} jobs, ${o.jobs} at once, tree ${tree}`)
+  const before = skip ? {} : passrecord.jobs(root)
+  const carried = o.carry ? picked.filter(j => before[name(j)]) : []
+  for (const j of carried) console.log(`carried ${name(j)}: passed on this tree at ${before[name(j)].at}`)
+  const jobs = picked.filter(j => !carried.includes(j))
+  console.log(`${jobs.length} jobs${o.chunk ? `, chunk ${o.chunk.join('/')}` : ''}, ${o.jobs} at once, tree ${tree}`)
+
+  // A pass is recorded at once, so a run stopped midway keeps it, and
+  // only while the tree is the one the run started on.
+  const same = () => passrecord.tree(root) === tree && !passrecord.dirty(root)
+  const record = (r, alone) => {
+    if (skip) return
+    if (!same()) skip = 'the tree changed during the run'
+    else passrecord.writeJob(root, r.job, { s: r.s, alone })
+  }
 
   const t0 = Date.now()
   const queue = jobs.slice()
@@ -146,7 +172,11 @@ async function main () {
   // Starts are a second apart, so xvfb-run's display picks rarely race.
   await Promise.all(Array.from({ length: Math.min(o.jobs, queue.length) }, async (_, i) => {
     await sleep(i * 1000)
-    while (queue.length) results.push(await run(queue.shift(), o))
+    while (queue.length) {
+      const r = await run(queue.shift(), o)
+      results.push(r)
+      if (r.ok) record(r, false)
+    }
   }))
   // A job that failed beside others runs once more, alone: a loaded
   // host fails the checks that time real frames, and a defect fails
@@ -158,6 +188,7 @@ async function main () {
     if (again.ok) {
       reran.push(r.job)
       r.ok = true
+      record(again, true)
     } else r.why = again.why
   }
   const wall = Math.round((Date.now() - t0) / 1000)
@@ -165,10 +196,18 @@ async function main () {
   for (const r of failed) console.log(`failed ${r.job}: ${r.why}`)
   for (const j of reran) console.log(`passed on a rerun alone: ${j}`)
 
-  if (!skip && failed.length) skip = 'a job failed'
-  if (!skip && (passrecord.tree(root) !== tree || passrecord.dirty(root))) skip = 'the tree changed during the run'
-  const note = skip ? `no pass record: ${skip}` : `recorded ${passrecord.write(root, { jobs: jobs.length, wall_s: wall, reran })}`
-  console.log(`suite: ${results.length - failed.length} pass (${reran.length} on a rerun alone), ${failed.length} fail of ${jobs.length}, wall ${wall} s, tree ${tree}, ${note}`)
+  // The full record, once every job of the suite has a pass on the tree.
+  let note = `no pass record: ${skip}`
+  if (!skip) {
+    const all = passrecord.jobs(root)
+    const left = JOBS.map(name).filter(n => !all[n])
+    if (left.length) note = `${JOBS.length - left.length} of ${JOBS.length} jobs passed on this tree, not yet ${left.join(', ')}`
+    else {
+      const recs = JOBS.map(j => all[name(j)])
+      note = `recorded ${passrecord.write(root, { jobs: JOBS.length, wall_s: recs.reduce((t, r) => t + (r.s || 0), 0), reran: JOBS.map(name).filter(n => all[n].alone) })}`
+    }
+  }
+  console.log(`suite: ${results.length - failed.length} pass (${reran.length} on a rerun alone, ${carried.length} carried), ${failed.length} fail of ${jobs.length}, wall ${wall} s, tree ${tree}, ${note}`)
   process.exitCode = failed.length ? 1 : 0
 }
 
