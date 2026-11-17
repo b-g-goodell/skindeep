@@ -25,7 +25,7 @@ const fakes = path.join(root, 'scripts', 'fake')
 const JOBS = [
   ['attach'], ['board'], ['checklist'], ['claude-bus'], ['claude-bus', '--continue'],
   ['dashboard'], ['dials'], ['foreign'], ['halfscreen'], ['limits'], ['listtoggle'],
-  ['manager'], ['menufit'], ['menus'], ['newtab', 'profiles'], ['newtab', 'codex'], ['newtab', 'snapshot'], ['newtab', 'antigravity'],
+  ['manager'], ['menufit'], ['menus'], ['newtab', 'profiles'], ['newtab', 'codex'], ['newtab', 'snapshot'], ['newtab', 'antigravity'], ['newtab', 'codemode'],
   ['p1', 'bash'],
   ...['widgets', 'hostile', 'menu', 'switching', 'reload', 'collision', 'button', 'openskin', 'keys', 'remember'].map(m => ['p3', m]),
   ['p5'], ['panels'], ['popout'], ['providers'], ['quarter'], ['rename'],

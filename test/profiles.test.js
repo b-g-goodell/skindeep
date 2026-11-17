@@ -95,3 +95,12 @@ test('the scan: config dirs by the names they hold, bounded, links not followed'
     { dir: split, isDefault: false, remembered: false }
   ])
 })
+
+test('withCodeMode sets the variable to 1, or unsets it (#242)', () => {
+  const env = { A: 'a', CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '0' }
+  assert.deepStrictEqual(profiles.withCodeMode(env, true), { A: 'a', CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1' })
+  assert.deepStrictEqual(profiles.withCodeMode(env, false), { A: 'a' })
+  assert.strictEqual(env.CLAUDE_CODE_EXPERIMENTAL_CODE_MODE, '0')
+  assert.strictEqual(profiles.codeModeOf({ CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1' }), true)
+  assert.strictEqual(profiles.codeModeOf({}), false)
+})
