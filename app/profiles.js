@@ -125,4 +125,19 @@ function list (agent, records, open, found = []) {
   return out
 }
 
-module.exports = { AGENTS, dir, defaultDir, of, envFor, record, read, forget, scan, list }
+// Claude Code's Code Mode (issue #242): the variable that turns it on.
+// A Code Mode session resumes only with it on, so Reopen and Duplicate
+// keep the tab's environment as it is.
+const CODE_MODE = 'CLAUDE_CODE_EXPERIMENTAL_CODE_MODE'
+
+const codeModeOf = env => env[CODE_MODE] === '1'
+
+// env with Code Mode set to 1, or unset, so the profile's settings decide.
+function withCodeMode (env, on) {
+  const out = Object.assign({}, env)
+  if (on) out[CODE_MODE] = '1'
+  else delete out[CODE_MODE]
+  return out
+}
+
+module.exports = { AGENTS, CODE_MODE, dir, defaultDir, of, envFor, codeModeOf, withCodeMode, record, read, forget, scan, list }
