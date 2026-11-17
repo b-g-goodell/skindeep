@@ -6,7 +6,8 @@
 // has no focus and the tab chords do nothing. With select-agent-config
 // installed a Config row offers its snapshots (decision 0037): in a
 // snapshot the line runs in the snapshot's shell, whose launchers set
-// the profile, so the Profile row is disabled.
+// the profile, so the Profile row is disabled. A Code Mode box sets
+// Claude Code's Code Mode variable for the tab (#242).
 
 window.Chooser = (function () {
   const api = window.skinned
@@ -52,6 +53,13 @@ window.Chooser = (function () {
     else if (s) f.env.textContent = `In the snapshot ${s.name}: ${a.variable} is set by its shell's launchers, and the snapshot's tree stands at the canonical paths`
     else f.env.textContent = p && p.isDefault ? `${a.variable} unset, the default profile` : `${a.variable}=${p ? p.shown : ''}`
     f.forget.disabled = !!s || !a.variable || !(p && p.remembered)
+    // Code Mode (#242): Claude Code alone, and not in a snapshot, whose
+    // tool scrubs every CLAUDE variable.
+    f.codeMode.disabled = !!s || agent !== 'claude'
+    f.codeMode.checked = !f.codeMode.disabled && f.wantCodeMode
+    f.codeModeHint.textContent = f.codeMode.disabled
+      ? (s ? 'Not in a snapshot: its tool scrubs every CLAUDE variable' : `${a.name} has no Code Mode`)
+      : f.codeMode.checked ? `${state.codeModeVariable}=1` : `${state.codeModeVariable} unset, the profile's settings decide`
     f.shell.textContent = s
       ? 'The line runs in the snapshot\'s interactive shell, each word quoted: its launchers and aliases apply, ~ and $VAR do not expand.'
       : 'No shell runs the line: quotes and backslashes work, ~ and $VAR do not.'
@@ -103,7 +111,7 @@ window.Chooser = (function () {
   }
 
   async function submit () {
-    const r = await api.chooserOpen({ agent, profile: f.profile.value, folder: f.folder.value, line: f.line.value, snapshot: f.snapshot ? f.snapshot.value : '' })
+    const r = await api.chooserOpen({ agent, profile: f.profile.value, folder: f.folder.value, line: f.line.value, snapshot: f.snapshot ? f.snapshot.value : '', codeMode: !f.codeMode.disabled && f.codeMode.checked })
     if (r && r.error) say(r.error)
     else close()
   }
@@ -154,6 +162,15 @@ window.Chooser = (function () {
     }
     f.env = el('div', 'hint env')
     form.appendChild(f.env)
+    f.codeMode = el('input', 'codemode')
+    f.codeMode.type = 'checkbox'
+    f.wantCodeMode = !!state.codeMode
+    f.codeMode.addEventListener('change', () => { f.wantCodeMode = f.codeMode.checked; showProfile() })
+    const cm = el('label', 'codemode-label')
+    cm.append(f.codeMode, ' Code Mode, experimental')
+    row(form, 'Code', cm)
+    f.codeModeHint = el('div', 'hint env codemode-hint')
+    form.appendChild(f.codeModeHint)
     f.folder = el('input', 'folder')
     f.folder.spellcheck = false
     row(form, 'Folder', f.folder, button('Choose...', chooseFolder))
