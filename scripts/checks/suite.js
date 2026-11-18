@@ -17,8 +17,11 @@
 // is carried, not run again; --rerun-passed runs it all the same. Once
 // every job has a pass on the tree, by one run or by chunks, the full
 // record is written, which ops/publish.py requires. --no-record
-// neither reads nor writes any record.
+// neither reads nor writes any pass record. Every outcome of every job,
+// a failure too, is appended to the outcome log beside the records,
+// which scripts/checks/flaky.js reads.
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
 const { spawn } = require('child_process')
 const passrecord = require('./passrecord')
@@ -80,7 +83,7 @@ function args (argv) {
 // Every file of scripts/checks is a job or excluded, so a new check is
 // never left out unseen.
 function unlisted () {
-  const known = new Set(JOBS.map(j => j[0]).concat(Object.keys(EXCLUDED).map(k => k.split(' ')[0]), ['suite', 'passrecord']))
+  const known = new Set(JOBS.map(j => j[0]).concat(Object.keys(EXCLUDED).map(k => k.split(' ')[0]), ['suite', 'passrecord', 'flaky']))
   return fs.readdirSync(__dirname).filter(f => f.endsWith('.js')).map(f => f.slice(0, -3)).filter(n => !known.has(n))
 }
 
@@ -122,13 +125,20 @@ function runOnce (job, out, timeout) {
 
 // xvfb-run -a can lose a display number to a launch beside it: one
 // retry, for that alone.
+// Each outcome goes to the outcome log, pass or not, with the load and
+// the jobs beside it at the start (ticket: flaky checks).
 async function run (job, o) {
   const t0 = Date.now()
+  const load = Math.round(os.loadavg()[0] * 10) / 10
+  const beside = running.size
   let r = await runOnce(job, o.out, o.timeout)
   if (r.code !== 0 && /xvfb-run: error/.test(r.log)) r = await runOnce(job, o.out, o.timeout)
   const s = Math.round((Date.now() - t0) / 1000)
   const res = { job: name(job), ok: r.code === 0, s, why: r.code === 0 ? '' : r.code === 'timeout' ? `timeout after ${o.timeout} s` : `exit ${r.code}: ${errorLine(r.log)}` }
   console.log(`${res.ok ? 'PASS' : 'FAIL'} ${res.job} ${s} s${res.ok ? '' : ` ${res.why}`}`)
+  try {
+    passrecord.outcome(root, { job: res.job, outcome: res.ok ? 'pass' : r.code === 'timeout' ? 'timeout' : 'fail', s, load, beside, why: res.why })
+  } catch (e) { console.log(`outcome not logged: ${e.message}`) }
   return res
 }
 

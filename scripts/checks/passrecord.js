@@ -60,9 +60,35 @@ function jobs (cwd, ref = 'HEAD') {
   return Object.fromEntries(fs.readdirSync(dir).map(f => [f, JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))]))
 }
 
+// Every outcome of every job, pass or not, one JSON line each, beside
+// the pass records: the sample from which a check's failure rate on
+// unchanged code is read (scripts/checks/flaky.js).
+function outcomeLog (cwd) {
+  return path.join(path.dirname(store(cwd)), 'checks-outcomes.jsonl')
+}
+
+// Appends one outcome: { job, outcome: 'pass' | 'fail' | 'timeout', s,
+// load, ... }, stamped with HEAD's tree and whether the tree was dirty.
+function outcome (cwd, rec) {
+  const file = outcomeLog(cwd)
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  const line = Object.assign({ at: new Date().toISOString(), tree: tree(cwd), dirty: Boolean(dirty(cwd)) }, rec)
+  fs.appendFileSync(file, JSON.stringify(line) + '\n')
+  return file
+}
+
+// The outcomes logged so far, oldest first. A torn last line is skipped.
+function outcomes (cwd) {
+  const file = outcomeLog(cwd)
+  if (!fs.existsSync(file)) return []
+  return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).flatMap(l => {
+    try { return [JSON.parse(l)] } catch (e) { return [] }
+  })
+}
+
 function has (cwd, ref = 'HEAD') {
   return fs.existsSync(path.join(store(cwd), tree(cwd, ref)))
 }
 
-module.exports = { store, tree, dirty, write, has, writeJob, jobs }
+module.exports = { store, tree, dirty, write, has, writeJob, jobs, outcomeLog, outcome, outcomes }
 
