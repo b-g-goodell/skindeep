@@ -29,7 +29,7 @@ const fakes = path.join(root, 'scripts', 'fake')
 // [check, ...args]: every mode of every hermetic check.
 const JOBS = [
   ['attach'], ['board'], ['checklist'], ['claude-bus'], ['claude-bus', '--continue'],
-  ['dashboard'], ['dials'], ['foreign'], ['halfscreen'], ['limits'], ['listtoggle'],
+  ['dashboard'], ['dials'], ['effort'], ['foreign'], ['halfscreen'], ['limits'], ['listtoggle'],
   ['manager'], ['menufit'], ...['deck', 'phosphor', 'coffee', 'library'].map(m => ['menus', m]), ['newtab', 'profiles'], ['newtab', 'codex'], ['newtab', 'snapshot'], ['newtab', 'antigravity'], ['newtab', 'codemode'],
   ['p1', 'bash'],
   ...['widgets', 'hostile', 'menu', 'switching', 'reload', 'collision', 'button', 'openskin', 'keys', 'remember'].map(m => ['p3', m]),
