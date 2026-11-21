@@ -125,9 +125,13 @@ document.addEventListener('drop', e => {
   if (p && p.term && paths.length) p.term.paste(paths.map(quote).join(' ') + ' ')
 })
 
+// The id of the skin last laid out, for the live checks: set once its
+// view has applied, not when the switch begins.
+let laidSkin = null
 api.onSkin(skin => {
   SkinSounds.apply(skin)
   SkinView.apply(skin, terms).then(() => {
+    laidSkin = skin ? skin.id : null
     for (const p of panes.values()) if (p.dash) p.dash.render()
     focusActive()
   })
@@ -157,6 +161,7 @@ SkinView.onDrag((id, v) => api.setPanel(id, v))
 // and widgets.
 window.skinnedPage = () => ({
   active,
+  skin: laidSkin,
   metrics,
   sounds: SkinSounds.state(),
   scale: SkinView.scale(),

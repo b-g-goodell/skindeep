@@ -57,7 +57,7 @@ let launched = null
   const pid = await childPid(app)
   for (const skin of SKINS) {
     await win.evaluate(id => window.skinned.selectSkin(id), skin)
-    let p = await until(async () => { const q = await page(win); const w = widget(q); return w && w.text !== '--' && q }, 15000)
+    let p = await until(async () => { const q = await page(win); const w = widget(q); return q.skin === skin && w && w.text !== '--' && q }, 15000)
     check(p, `${skin}: want an effort widget naming a level within 15 s`)
     let w = widget(p)
     const at = LEVELS.indexOf(w.text)
