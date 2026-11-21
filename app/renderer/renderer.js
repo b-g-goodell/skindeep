@@ -125,9 +125,13 @@ document.addEventListener('drop', e => {
   if (p && p.term && paths.length) p.term.paste(paths.map(quote).join(' ') + ' ')
 })
 
+// The id of the skin last laid out, for the live checks: set once its
+// view has applied, not when the switch begins.
+let laidSkin = null
 api.onSkin(skin => {
   SkinSounds.apply(skin)
   SkinView.apply(skin, terms).then(() => {
+    laidSkin = skin ? skin.id : null
     for (const p of panes.values()) if (p.dash) p.dash.render()
     focusActive()
   })
@@ -146,6 +150,9 @@ api.onMetrics(snap => {
 api.onDials(names => SkinView.setDials(names))
 // A toggle's choice is the active tab's, kept by main (decision 0034).
 SkinView.onPick(off => { if (active) api.setListOff(active, off) })
+// An effort widget's button writes its key to the active tab's terminal,
+// as a key typed there would.
+SkinView.onKeys(seq => { if (active && panes.get(active) && panes.get(active).term) api.input(active, seq) })
 // A dragged split's size, kept by main for the skin (decision 0035).
 SkinView.onDrag((id, v) => api.setPanel(id, v))
 
@@ -154,6 +161,7 @@ SkinView.onDrag((id, v) => api.setPanel(id, v))
 // and widgets.
 window.skinnedPage = () => ({
   active,
+  skin: laidSkin,
   metrics,
   sounds: SkinSounds.state(),
   scale: SkinView.scale(),

@@ -98,7 +98,9 @@
       "class": "mugs tape", "rect": { "right": 24, "bottom": 70, "width": 186, "height": 104 } },
     { "id": "todo", "follow": { "height": "slate" }, "type": "list", "bind": "checklist.items",
       "class": "chalk-list", "rect": { "left": 44, "top": 62, "width": 584, "height": 84 },
-      "toggle": { "rect": { "left": 504, "top": 34, "width": 128, "height": 26 }, "labels": ["tasks", "menu"], "class": "chalk-tabs" } }
+      "toggle": { "rect": { "left": 504, "top": 34, "width": 128, "height": 26 }, "labels": ["tasks", "menu"], "class": "chalk-tabs" } },
+    { "id": "effort", "follow": { "top": "slate" }, "type": "effort", "bind": "effort.level", "label": "effort", "class": "across tag",
+      "rect": { "left": 40, "top": 574, "width": 248, "height": 44 } }
   ],
   "sounds": [
     { "file": "sounds/murmur.ogg", "mode": "loop", "volume": 0.5 },

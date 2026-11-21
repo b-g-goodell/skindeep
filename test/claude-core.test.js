@@ -65,7 +65,9 @@ test('C3 the hooks fixture counts tools by type and tracks busy state', () => {
     'tools.total': 1,
     'tools.Read': 1,
     'tools.rate': 0,
-    'tokens.out_rate': 0
+    'tokens.out_rate': 0,
+    'effort.level': 4,
+    'effort.name': 'xhigh'
   })
   core.hook({ session_id: HOOKS[11].session_id, hook_event_name: 'PreToolUse', tool_name: 'mcp__srv__do-it' })
   assert.strictEqual(bus.get('tools.mcp__srv__do_it'), 1)
@@ -313,4 +315,25 @@ test('C17 a TodoWrite line writes the checklist family, a session change forgets
   core.hook({ session_id: 'b', transcript_path: 'B', hook_event_name: 'SessionStart' })
   assert.strictEqual(bus.get('checklist.items'), undefined)
   assert.strictEqual(bus.get('checklist.count'), undefined)
+})
+
+test('C20 effort: the statusline names the level and claims it over the hooks, a subagent\'s hooks never write it', () => {
+  const { bus, core } = make()
+  const hook = (level, extra) => at(HOOKS[0], Object.assign({ hook_event_name: 'UserPromptSubmit', effort: { level } }, extra))
+  core.hook(hook('medium', { agent_id: 'a1' }))
+  assert.strictEqual(bus.snapshot()['effort.level'], undefined)
+  core.hook(hook('medium'))
+  assert.strictEqual(bus.snapshot()['effort.level'], 2)
+  assert.strictEqual(bus.snapshot()['effort.name'], 'medium')
+  core.statusline(at(STATUS, { session_id: HOOKS[0].session_id, effort: { level: 'xhigh' } }))
+  assert.strictEqual(bus.snapshot()['effort.level'], 4)
+  assert.strictEqual(bus.snapshot()['effort.name'], 'xhigh')
+  core.hook(hook('low'))
+  assert.strictEqual(bus.snapshot()['effort.level'], 4, 'the statusline claimed effort')
+  core.statusline(at(STATUS, { session_id: HOOKS[0].session_id, effort: { level: 'turbo' } }))
+  assert.strictEqual(bus.snapshot()['effort.name'], 'xhigh', 'an unknown level writes nothing')
+  const other = at(STATUS, { session_id: 'another-session' })
+  delete other.effort
+  core.statusline(other)
+  assert.strictEqual(bus.snapshot()['effort.level'], undefined, 'a new session forgets the level')
 })

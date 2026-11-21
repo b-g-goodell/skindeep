@@ -225,6 +225,18 @@
    "class": "marquee"
   },
   {
+   "id": "effort",
+   "type": "effort",
+   "bind": "effort.level",
+   "rect": {
+    "left": 140,
+    "top": 96,
+    "width": 192,
+    "height": 16
+   },
+   "class": "across lcd-effort"
+  },
+  {
    "id": "an-out",
    "follow": { "height": "meters" },
    "type": "bar",

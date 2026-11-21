@@ -79,3 +79,9 @@
 .lims .balance.unavailable .value { opacity: 0.6; }
 .lims .peak .lamp { width: 10px; height: 10px; border-radius: 0; background: #0a2a16; border: 1px solid #3aff7e; }
 .lims .peak .lamp.on { background: #b8ffd0; box-shadow: 0 0 10px #8affb4; }
+
+/* The effort level in the header, one row. */
+.w-effort .label { font-size: 20px; }
+.w-effort .value { font: 22px/22px VT323, monospace; color: #8affb4; text-transform: uppercase; }
+.w-effort .btn { font: 20px/20px VT323, monospace; border: 0; padding: 0; }
+.w-effort .pip { width: 10px; height: 8px; }

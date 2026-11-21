@@ -18,7 +18,7 @@ const RATES = {
 }
 
 // What a new session forgets. event.*, model.name and limits.* survive.
-const SESSION_PREFIXES = ['context.', 'tokens.', 'cost.', 'lines.', 'tools.', 'agents.', 'cache.', 'state.', 'checklist.', 'session.compactions']
+const SESSION_PREFIXES = ['context.', 'effort.', 'tokens.', 'cost.', 'lines.', 'tools.', 'agents.', 'cache.', 'state.', 'checklist.', 'session.compactions']
 
 class Bus {
   constructor ({ log } = {}) {

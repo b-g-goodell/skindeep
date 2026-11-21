@@ -1,7 +1,8 @@
 # 0019 Tests and dev tools
 
 Status: accepted 2026-10-11. Revised 2026-10-15: the live check suite
-and its pass record. Revised 2026-11-17: the suite runs in chunks.
+and its pass record. Revised 2026-11-17: the suite runs in chunks and logs
+every outcome.
 
 ## Context
 
@@ -65,6 +66,12 @@ Tests only where they pay.
   on the tree, by one run or by chunks, and it names the jobs that
   passed only alone. A check that lists several subjects takes one as
   an argument, so a long one runs as several jobs (`menus` by skin).
+- Since a carried pass lets a flaky check pass by repetition, every
+  outcome of every job, a failure or a timeout too, is appended to
+  `checks-outcomes.jsonl` beside the records, with the tree, the load
+  and the jobs beside it at the start. `scripts/checks/flaky.js` reads
+  it into a failure rate per job over clean runs, for one tree or all,
+  to find the checks to run N times against a pass threshold.
 - `scripts/fake/claude`: a replay fake named `claude`, so the app injects
   its settings. It plays a synthetic scenario (coloured output bursts,
   tool calls of several types, a subagent, turns) through the real

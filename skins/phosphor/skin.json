@@ -419,6 +419,20 @@
     "height": 48
    },
    "class": "stat"
+  },
+  {
+   "id": "effort",
+   "type": "effort",
+   "bind": "effort.level",
+   "label": "effort",
+   "buttons": ["[-]", "[+]"],
+   "rect": {
+    "left": 560,
+    "top": 24,
+    "width": 340,
+    "height": 26
+   },
+   "class": "across"
   }
  ]
 }

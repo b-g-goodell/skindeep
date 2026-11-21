@@ -26,9 +26,10 @@ const KINDS = { PreToolUse: EVENT.tool, UserPromptSubmit: EVENT.prompt, Stop: EV
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v)
 
 // A statusline payload claims each of these it carries, for the rest of
-// the session: the context family as one, model.name, cache.hit_ratio.
-// The transcript writes a metric only while it is unclaimed.
-const claimOf = name => name.startsWith('context.') ? 'context' : (name === 'model.name' || name === 'cache.hit_ratio') ? name : null
+// the session: the context family as one, model.name, cache.hit_ratio,
+// the effort family as one. The transcript and the hooks write a metric
+// only while it is unclaimed.
+const claimOf = name => name.startsWith('context.') ? 'context' : name.startsWith('effort.') ? 'effort' : (name === 'model.name' || name === 'cache.hit_ratio') ? name : null
 
 class ClaudeCore {
   // src: a writer source made from source(facts). facts, frozen at
@@ -87,6 +88,8 @@ class ClaudeCore {
       else if (op === 'add') this.src.add(name, v)
       else this.src.pulse(name)
     }
+    // The main session's effort: a subagent's hooks carry its own.
+    if (m.effort && !m.agent_id && !this.claims.has('effort')) for (const [k, v] of parse.effortMetrics(m.effort)) this.src.set(k, v)
     const ev = m.hook_event_name
     const kind = KINDS[ev]
     if (kind) this.src.event(kind, kind === EVENT.tool ? parse.toolClass(m.tool_name) : 0)

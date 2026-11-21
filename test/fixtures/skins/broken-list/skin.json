@@ -84,6 +84,18 @@
     "width": 50,
     "height": 50
    }
+  },
+  {
+   "id": "eff",
+   "type": "effort",
+   "bind": "tools.total",
+   "buttons": ["less"],
+   "rect": {
+    "left": 250,
+    "top": 5,
+    "width": 50,
+    "height": 50
+   }
   }
  ]
 }

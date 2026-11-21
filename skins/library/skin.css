@@ -98,3 +98,12 @@
 .lims .peak .lamp { width: 12px; height: 12px; box-sizing: border-box; border: 2px solid #3a3f45; background: transparent; box-shadow: none; }
 .lims .peak .lamp.on { background: #d0731c; border-color: #d0731c; box-shadow: none; }
 .lims .peak .resets { font: 13px/16px "Permanent Marker", cursive; color: #5a6068; }
+
+/* The effort level, a brass label plate on the shelf's edge. */
+.plate { padding: 0 10px; color: #2e2410; background: linear-gradient(#e2c27a, #b48a3c); border: 1px solid #6b4e1e;
+  border-radius: 3px; box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5); }
+.plate .label { font: 11px/14px "Special Elite", monospace; letter-spacing: 1px; color: #4a3410; }
+.plate .value { font: 16px/20px "Special Elite", monospace; color: #1f1608; }
+.plate .btn { font: 14px/18px "Special Elite", monospace; color: #2e2410; border-color: #6b4e1e; background: rgba(255, 240, 200, 0.35); }
+.plate .pip { background: rgba(60, 40, 10, 0.3); }
+.plate .pip.on { background: #3a2a0c; box-shadow: none; }

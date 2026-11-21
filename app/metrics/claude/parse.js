@@ -12,11 +12,29 @@ const HOOK_FIELDS = [
 ]
 
 // Keep only the metadata of a hook payload. Prompt text, tool input and
-// output, and assistant messages never leave this function.
+// output, and assistant messages never leave this function. effort is
+// Claude Code's { level }, kept as the level's name.
 function hookMeta (body) {
   const m = {}
   for (const k of HOOK_FIELDS) if (body[k] !== undefined && typeof body[k] !== 'object') m[k] = body[k]
+  const e = effortOf(body.effort)
+  if (e) m.effort = e
   return m
+}
+
+// The effort levels Claude Code 2.1.330 names, lowest first. A model
+// offers a subset: one without xhigh goes from high to max.
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max']
+
+// The level's name from Claude Code's { level }, else null.
+function effortOf (e) {
+  const level = e && typeof e === 'object' ? e.level : null
+  return EFFORTS.includes(level) ? level : null
+}
+
+// effort.level, 1 for low to 5 for max, and effort.name.
+function effortMetrics (name) {
+  return [['effort.level', EFFORTS.indexOf(name) + 1], ['effort.name', name]]
 }
 
 // Tool class for the visualization: 0 other, 1 read, 2 edit, 3 shell,
@@ -115,6 +133,9 @@ function fromStatusline (j, compaction) {
   }
   out.push(['limits.items', limitItems(rl)])
   if (j.model && j.model.display_name) out.push(['model.name', String(j.model.display_name).slice(0, 40)])
+  // Sent only while the model takes an effort level.
+  const effort = effortOf(j.effort)
+  if (effort) out.push(...effortMetrics(effort))
   return out
 }
 
@@ -271,4 +292,4 @@ class Checklist {
   }
 }
 
-module.exports = { toolClass, hookMeta, fromStatusline, fromHook, usage, contextFrom, TranscriptTotals, Checklist }
+module.exports = { EFFORTS, effortMetrics, toolClass, hookMeta, fromStatusline, fromHook, usage, contextFrom, TranscriptTotals, Checklist }

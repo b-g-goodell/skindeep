@@ -377,6 +377,46 @@ function readout (spec) {
   }
 }
 
+// The session's effort level and two buttons that lower and raise it,
+// as Shift+Down and Shift+Up do in Claude Code: a click writes that key
+// to the active tab's terminal through spec.keys. Five pips light up to
+// the level. While the session reports no level the buttons do nothing.
+// mousedown is swallowed so the terminal keeps the keyboard.
+const KEYS = { down: '\x1b[1;2B', up: '\x1b[1;2A' }
+
+function effort (spec) {
+  const { el } = base(spec, 'effort')
+  labelled(el, spec)
+  const [lower, raise] = spec.buttons || ['-', '+']
+  let raw = null
+  const button = (dir, text) => {
+    const b = div(`btn ${dir}`, null, text)
+    b.dataset.dir = dir
+    b.title = dir === 'up' ? 'Raise effort (Shift+Up)' : 'Lower effort (Shift+Down)'
+    b.addEventListener('mousedown', e => e.preventDefault())
+    b.addEventListener('click', () => { if (raw !== null && spec.keys) spec.keys(KEYS[dir]) })
+    return b
+  }
+  const down = button('down', lower)
+  el.appendChild(down)
+  const val = div('value', el)
+  el.appendChild(button('up', raise))
+  const pips = div('pips', el)
+  const pip = [1, 2, 3, 4, 5].map(() => div('pip', pips))
+  return {
+    el,
+    update (snap) {
+      raw = valueOf(snap, spec.bind)
+      if (typeof raw !== 'number') raw = null
+      const name = valueOf(snap, 'effort.name')
+      el.classList.toggle('nodata', raw === null)
+      val.textContent = raw === null ? '--' : String(name || raw)
+      pip.forEach((p, i) => p.classList.toggle('on', raw !== null && i < raw))
+    },
+    frame () {}
+  }
+}
+
 function sprite (spec) {
   const { el, frac } = base(spec, 'sprite')
   const img = div('sheet', el)
@@ -617,4 +657,4 @@ function limits (spec) {
   }
 }
 
-window.Widgets = { gauge, needle, knob, bar, led, readout, sprite, list, limits, format, Spring }
+window.Widgets = { gauge, needle, knob, bar, led, readout, sprite, list, effort, limits, format, Spring }

@@ -98,6 +98,8 @@
     { "id": "tout", "type": "readout", "bind": "tokens.out", "format": "tokens", "label": "tokens out",
       "class": "card", "rect": { "right": 171, "bottom": 34, "width": 112, "height": 46 } },
     { "id": "model", "type": "readout", "bind": "model.name", "format": "text", "label": "model",
-      "class": "card", "rect": { "right": 29, "bottom": 34, "width": 112, "height": 46 } }
+      "class": "card", "rect": { "right": 29, "bottom": 34, "width": 112, "height": 46 } },
+    { "id": "effort", "type": "effort", "bind": "effort.level", "label": "effort", "class": "across plate",
+      "rect": { "left": 330, "top": 86, "width": 272, "height": 32 } }
   ]
 }

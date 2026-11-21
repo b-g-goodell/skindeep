@@ -45,7 +45,9 @@ const BROKEN = {
     'skin.json: widgets[3].bind: "checklist.items": a limits widget shows limits.items',
     'skin.json: widgets[3].meter: must be bar or needle',
     'skin.json: widgets[3].direction: must be row or column',
-    'skin.json: widgets[3].provider: must be a list of distinct readings of balance, peak'
+    'skin.json: widgets[3].provider: must be a list of distinct readings of balance, peak',
+    'skin.json: widgets[4].bind: "tools.total": an effort widget shows effort.level',
+    'skin.json: widgets[4].buttons: must be two short strings'
   ],
   'broken-fallback': [
     'skin.json: widgets[0].resets: unknown metric "foo.when"',

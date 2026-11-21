@@ -36,6 +36,7 @@
     { "id": "todo", "type": "list", "bind": "checklist.items", "label": "TASKS", "rows": 6, "rect": { "right": 16, "top": 450, "width": 200, "height": 130 },
       "toggle": { "rect": { "right": 16, "top": 432, "width": 120, "height": 16 }, "labels": ["tasks", "readouts"], "class": "tabs" } },
     { "id": "limits", "type": "limits", "bind": "limits.items", "meter": "bar", "direction": "column", "suffix": " limit", "itemClass": "meter", "segments": 12, "provider": ["balance", "peak"], "rect": { "right": 16, "top": 590, "width": 200, "height": 90 } },
-    { "id": "dials", "type": "limits", "bind": "limits.items", "meter": "needle", "direction": "row", "ticks": 4, "rect": { "right": 230, "top": 590, "width": 300, "height": 90 } }
+    { "id": "dials", "type": "limits", "bind": "limits.items", "meter": "needle", "direction": "row", "ticks": 4, "rect": { "right": 230, "top": 590, "width": 300, "height": 90 } },
+    { "id": "effort", "type": "effort", "bind": "effort.level", "buttons": ["-", "+"], "rect": { "right": 16, "top": 396, "width": 124, "height": 34 } }
   ]
 }

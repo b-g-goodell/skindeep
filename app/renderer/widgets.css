@@ -68,6 +68,30 @@
 .w-toggle .option:hover { opacity: 1; }
 .w-toggle .option.on { cursor: default; opacity: 1; }
 
+/* The effort level: its label above, the lower and raise buttons either
+   side of the level's name, five pips below lit up to the level. The
+   buttons take a click while the session reports a level. */
+.w-effort {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto auto;
+  grid-template-areas: "label label label" "down value up" "pips pips pips";
+  align-items: center; justify-items: center; column-gap: 4px; row-gap: 2px;
+}
+.w-effort .label { grid-area: label; }
+.w-effort .value { grid-area: value; min-width: 5ch; text-align: center; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.w-effort .btn { min-width: 1.6em; padding: 0 3px; text-align: center; border: 1px solid var(--track); color: var(--fill); cursor: pointer; }
+.w-effort .btn.down { grid-area: down; }
+.w-effort .btn.up { grid-area: up; }
+.w-effort .btn:hover { filter: brightness(1.4); }
+.w-effort.nodata .btn { cursor: default; filter: none; opacity: 0.5; }
+.w-effort .pips { grid-area: pips; display: flex; gap: 3px; }
+.w-effort .pip { width: 8px; height: 4px; background: var(--off); }
+.w-effort .pip.on { background: var(--fill); box-shadow: 0 0 4px var(--glow); }
+/* class across: one row, the label, the buttons about the name, the pips. */
+.w-effort.across {
+  grid-template-columns: auto auto auto auto auto; grid-template-rows: auto;
+  grid-template-areas: "label down value up pips"; justify-content: center; column-gap: 8px;
+}
+
 /* The usage limits (decision 0011): one meter per limit, sharing the
    rect, so an absent limit leaves no gap. */
 .w-limits { align-items: stretch; justify-content: stretch; gap: 4px; }
