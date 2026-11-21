@@ -202,7 +202,7 @@ Every widget has:
 | Field | Meaning |
 | --- | --- |
 | `id` | unique, lowercase letters, digits, dashes |
-| `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout`, `sprite`, `list` or `limits` |
+| `type` | `gauge`, `needle`, `knob`, `bar`, `led`, `readout`, `sprite`, `list`, `effort` or `limits` |
 | `bind` | the metric it shows, see Metrics |
 | `rect` | where it sits |
 | `follow` | optional, rect keys that move with a split, see splits |
@@ -238,6 +238,7 @@ Type options:
 | `sprite` | a sprite sheet, as in Winamp's sliders. `sheet` (a PNG), `frames`, `frameWidth`, `frameHeight`, `layout` (`row` or `column`). `mode`: `value` (default) picks the frame from the value between min and max, `run` cycles the frames at `fps` (12) while the value is above 0. The PNG must be exactly frames x frame size |
 | `limits` | every usage limit the provider sends: bound to `limits.items`, one meter per limit, see Usage limits |
 | `list` | the agent's task list: bound to `checklist.items`, one row per item, a mark (`[ ]`, `[>]`, `[x]`) and the text, at most `rows` rows (default all, the rest cut by the rect). Hidden while the list is empty, so what lies under it shows. While the list has an item the skin's stage carries the class `checklist`: hide what the list replaces with `.skin.checklist .yourclass { visibility: hidden; }`. `toggle` (optional): `{ "rect", "labels", "class", "follow"? }`, a button of two options, the list and what it replaces, `labels` two words (default `tasks` and `readouts`). It shows while the list has an item, at its own rect, clear of the list and the terminal. A click on the second option hides the list and shows what it replaces, the stage carrying `checklist-off` in place of `checklist`, and a click on the first shows the list again. The choice is the tab's and holds while the list changes or comes back. The first list in a tab shows itself |
+| `effort` | the session's effort level: bound to `effort.level`, the label, a lower and a raise button either side of the level's name (`.value`), and five pips (`.pips`, each `.pip`, `.on` up to the level). A click on a button (`.btn.down`, `.btn.up`) acts as Shift+Down or Shift+Up typed in the terminal, which lower and raise Claude Code's effort level, and the name changes when the CLI reports the new level. While the session reports no level the widget carries `nodata` and the buttons do nothing. `buttons` (optional): the two buttons' texts, lower first (default `-` and `+`). The class `across` lays it out in one row |
 
 ### Usage limits
 
@@ -430,6 +431,8 @@ any command fills the `pty.*`, `proc.*` and `session.clock_s` meters.
 | `lines.removed` | lines removed this session |
 | `state.busy` | 1 while the agent works on a prompt, else 0 |
 | `model.name` | model name (text) |
+| `effort.level` | the session's effort level, 1 low, 2 medium, 3 high, 4 xhigh, 5 max: Claude Code's statusline, else its hooks. Absent while the model takes no level. For an `effort` widget |
+| `effort.name` | the session's effort level by name: low, medium, high, xhigh or max (text) |
 | `session.clock_s` | seconds since launch |
 | `session.compactions` | compactions this session |
 | `checklist.items` | the agent's task list, a list of `{ text, state }` with state `todo`, `doing` or `done`: Claude Code's TodoWrite, TaskCreate and TaskUpdate calls, or a markdown task list in the agent's text. For a `list` widget alone |
