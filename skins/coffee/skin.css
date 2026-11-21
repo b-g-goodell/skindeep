@@ -197,3 +197,12 @@
 .jars .jar.peak .lamp.on { background: radial-gradient(ellipse 40% 50% at 50% 55%, #fff2c0, #ffb040 45%, rgba(255, 140, 40, 0) 100%); box-shadow: 0 0 18px rgba(255, 170, 60, 0.7); }
 .jars .jar.peak .resets { position: absolute; margin: 0; left: 50%; top: calc(100% - 14px); transform: translate(-50%, -50%) rotate(3deg); white-space: nowrap; }
 .jars .jar.peak .resets .word { display: inline; }
+
+/* The effort level, a paper tag pinned over the record shelf. */
+.tag { padding: 0 8px; background: #efe6cf; color: #3a2414; border: 1px solid #b89a6a; box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.35);
+  transform: rotate(-1deg); }
+.tag .label { font: 11px/14px "Cutive Mono", monospace; letter-spacing: 1px; color: #6a2e14; }
+.tag .value { font: 18px/20px "Cutive Mono", monospace; color: #b0381e; }
+.tag .btn { min-width: 0; padding: 0 4px; font: 15px/18px "Cutive Mono", monospace; color: #3a2414; border-color: #8a6a3a; background: #f8f1de; }
+.tag .pip { background: #d8c8a4; }
+.tag .pip.on { background: #b0381e; box-shadow: none; }
