@@ -41,6 +41,8 @@ const NAMES = {
   'lines.removed': 'lines removed this session',
   'state.busy': '1 while the agent works on a prompt, else 0',
   'model.name': 'model name (text)',
+  'effort.level': 'the session\'s effort level, 1 low, 2 medium, 3 high, 4 xhigh, 5 max',
+  'effort.name': 'the session\'s effort level by name: low, medium, high, xhigh or max (text)',
   'session.clock_s': 'seconds since launch',
   'session.compactions': 'compactions this session',
   'checklist.items': 'the agent\'s task list, [{ text, state }], state todo, doing or done',
