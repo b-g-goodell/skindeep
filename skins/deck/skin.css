@@ -131,6 +131,6 @@
 
 /* The effort level, one row of the display above the marquee. */
 .lcd-effort { column-gap: 6px; }
-.lcd-effort .value { font: 16px/16px Silkscreen, monospace; color: #3cff3c; text-transform: uppercase; }
+.lcd-effort .value { font: 16px/normal Silkscreen, monospace; color: #3cff3c; text-transform: uppercase; }
 .lcd-effort .btn { min-width: 0; padding: 0 3px; font: 12px/14px Silkscreen, monospace; border-color: #1d4a1d; }
 .lcd-effort .pip { width: 6px; height: 8px; }
