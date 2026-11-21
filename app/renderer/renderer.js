@@ -146,6 +146,9 @@ api.onMetrics(snap => {
 api.onDials(names => SkinView.setDials(names))
 // A toggle's choice is the active tab's, kept by main (decision 0034).
 SkinView.onPick(off => { if (active) api.setListOff(active, off) })
+// An effort widget's button writes its key to the active tab's terminal,
+// as a key typed there would.
+SkinView.onKeys(seq => { if (active && panes.get(active) && panes.get(active).term) api.input(active, seq) })
 // A dragged split's size, kept by main for the skin (decision 0035).
 SkinView.onDrag((id, v) => api.setPanel(id, v))
 

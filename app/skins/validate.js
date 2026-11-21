@@ -31,6 +31,7 @@ const TYPES = {
   readout: ['prefix', 'suffix', 'resets', 'fallback'],
   sprite: ['sheet', 'frames', 'frameWidth', 'frameHeight', 'layout', 'mode', 'fps'],
   list: ['rows', 'toggle'],
+  effort: ['buttons'],
   limits: ['meter', 'direction', 'suffix', 'itemClass', 'orientation', 'segments', 'gap', 'startAngle', 'endAngle', 'ticks', 'face', 'provider']
 }
 // The provider readings a limits widget draws beside the limits
@@ -340,6 +341,10 @@ function validate (dir) {
         else if (!LIST_OF[w.type] && names.isList(w.bind)) {
           const by = Object.keys(LIST_OF).find(k => LIST_OF[k] === w.bind)
           err(`${fld}.bind`, by ? `"${w.bind}": a list-valued metric needs a ${by} widget` : `"${w.bind}": a list-valued metric a limits widget draws, by its provider field`)
+        }
+        if (w.type === 'effort') {
+          if (isStr(w.bind) && w.bind !== 'effort.level') err(`${fld}.bind`, `"${w.bind}": an effort widget shows effort.level`)
+          if ('buttons' in w && (!Array.isArray(w.buttons) || w.buttons.length !== 2 || !w.buttons.every(b => isStr(b) && b.length <= 8))) err(`${fld}.buttons`, 'must be two short strings, the lower button\'s text then the raise button\'s')
         }
         if (w.type === 'limits') {
           if ('meter' in w && !['bar', 'needle'].includes(w.meter)) err(`${fld}.meter`, 'must be bar or needle')

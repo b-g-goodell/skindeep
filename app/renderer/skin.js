@@ -25,6 +25,7 @@ window.SkinView = (function () {
   let dials = new Set()
   let listOff = false
   let picked = () => {}
+  let keyed = () => {}
   let dragged = () => {}
   // Every panel and widget as placed: its element, rect and follow.
   let placed = []
@@ -243,6 +244,7 @@ window.SkinView = (function () {
       if (s.image) s.imageUrl = base + s.image
       if (s.sheet) s.sheetUrl = base + s.sheet
       s.pick = off => picked(off)
+      s.keys = seq => keyed(seq)
       const w = Widgets[s.type](s)
       w.spec = s
       place(w.el, s.rect)
@@ -318,6 +320,8 @@ window.SkinView = (function () {
     mark()
   }
   function onPick (fn) { picked = fn }
+  // The callback an effort widget's button calls with the key it sends.
+  function onKeys (fn) { keyed = fn }
   // The callback a drag calls with the split's id and its size.
   function onDrag (fn) { dragged = fn }
 
@@ -361,7 +365,9 @@ window.SkinView = (function () {
         cursor: getComputedStyle(w.el).cursor,
         visible: getComputedStyle(w.el).visibility === 'visible' && getComputedStyle(w.el).display !== 'none',
         box: { x: b.x, y: b.y, width: b.width, height: b.height },
-        rows: w.rows ? w.rows() : undefined
+        rows: w.rows ? w.rows() : undefined,
+        buttons: w.spec.type === 'effort' ? [...w.el.querySelectorAll('.btn')].map(e => ({ dir: e.dataset.dir, text: e.textContent, cursor: getComputedStyle(e).cursor, box: (b => ({ x: b.x, y: b.y, width: b.width, height: b.height }))(e.getBoundingClientRect()) })) : undefined,
+        text: w.spec.type === 'effort' ? w.el.querySelector('.value').textContent : undefined
       }
     }).concat(widgets.filter(w => w.toggle).map(w => {
       const el = w.toggle.el
@@ -405,5 +411,5 @@ window.SkinView = (function () {
   }
   requestAnimationFrame(loop)
 
-  return { apply, update, setDials, setListOff, onPick, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, texts, terminalTheme: () => terminal && terminal.theme, scale: () => scale, laid: () => laid }
+  return { apply, update, setDials, setListOff, onPick, onKeys, onDrag, splits, panels: panelBoxes, state, stageClasses: () => stageEl ? [...stageEl.classList] : [], styleTerminal, setSettings, texts, terminalTheme: () => terminal && terminal.theme, scale: () => scale, laid: () => laid }
 })()
