@@ -531,7 +531,10 @@ function chooserState (fresh = true) {
     agent: profiles.AGENTS[fromKind] ? fromKind : 'claude',
     folder: identity.tildify(at ? liveCwd(at) : process.cwd()),
     snapshots: snaps,
-    snapshot: from && from.snapshot ? from.snapshot.id : ''
+    snapshot: from && from.snapshot ? from.snapshot.id : '',
+    // Code Mode as the active Claude Code tab runs, else the window.
+    codeMode: profiles.codeModeOf(from && fromKind === 'claude' ? from.env : process.env),
+    codeModeVariable: profiles.CODE_MODE
   }
 }
 
@@ -561,7 +564,8 @@ function snapshotOf (id) {
 // once a tab runs on it. In a snapshot (decision 0037) the command runs
 // in the snapshot's shell, so it is not resolved here: a launcher of
 // that shell is no file on PATH.
-function chooserOpen ({ agent, profile, folder, line, snapshot = '' }) {
+// codeMode: a Claude Code tab runs with Code Mode set or unset (#242).
+function chooserOpen ({ agent, profile, folder, line, snapshot = '', codeMode = false }) {
   if (!profiles.AGENTS[agent]) return { error: `no agent ${agent}` }
   const cwd = folderOf(folder)
   if (!isDir(cwd)) return { error: `no such folder: ${identity.tildify(cwd)}` }
@@ -575,12 +579,14 @@ function chooserOpen ({ agent, profile, folder, line, snapshot = '' }) {
     if (s.error) return s
     const tool = snapshots.tool(process.env)
     if (!tool) return { error: `${snapshots.TOOL}: command not found` }
+    if (codeMode === true) return { error: `Code Mode: ${snapshots.TOOL} scrubs every CLAUDE variable from what it launches` }
     spec = { cmd: r.argv, cwd, env: snapshots.scrub(process.env), file: tool, snapshot: s.snapshot }
   } else {
     if (typeof profile !== 'string' || !path.isAbsolute(profile)) return { error: 'choose a profile' }
     const dflt = profile === profiles.defaultDir(agent)
     if (!dflt && !isDir(profile)) return { error: `no such profile folder: ${identity.tildify(profile)}` }
-    const env = profiles.envFor(process.env, agent, profile)
+    let env = profiles.envFor(process.env, agent, profile)
+    if (agent === 'claude') env = profiles.withCodeMode(env, codeMode === true)
     const file = cli.resolveCommand(c.includes('/') ? path.resolve(cwd, c) : c, env.PATH)
     if (!file) return { error: `${c}: command not found` }
     spec = { cmd: r.argv, cwd, env, file }

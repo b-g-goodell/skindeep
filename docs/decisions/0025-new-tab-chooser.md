@@ -2,7 +2,7 @@
 
 Status: accepted 2026-10-12. The scan of the home directory
 added 2026-10-13 on the maintainer's word. Antigravity added
-2026-11-15, issue #240.
+2026-11-15, issue #240. Code Mode added 2026-11-17, issue #242.
 
 ## Context
 
@@ -72,6 +72,18 @@ layout of config dirs.
   the tab's folder. A command that is not found, a folder or a profile
   that does not exist, and a malformed line are refused in the dialog,
   which stays open.
+- A **Code** row holds a Code Mode box for Claude Code's experimental
+  Code Mode. Checked, the tab runs with
+  `CLAUDE_CODE_EXPERIMENTAL_CODE_MODE=1`. Clear, the variable is unset
+  and the profile's own settings decide. The box starts as the active
+  Claude Code tab runs, else as the window runs. It is disabled for
+  Codex and Antigravity, and in a snapshot, whose tool scrubs every
+  `CLAUDE` variable. Reopen and Duplicate keep the tab's environment,
+  so a Code Mode session resumes with Code Mode on, as it must. In a
+  Code Mode tab, on by the variable or by the user or managed
+  settings, the injected hooks carry `onFailure: "continue"`: there a
+  hook that times out on a call from code would refuse the call, and
+  the relay only observes.
 - Each tab has its own environment, so its label names its own profile
   (decision 0004), its statusline relay chains to its own profile's
   statusline (decisions 0010, 0020), and a Codex tab follows rollouts

@@ -102,8 +102,13 @@ async function reload () {
   fs.writeFileSync(css, fs.readFileSync(css, 'utf8').replace('#a000a0', '#00a000'))
   await openMenu(win, 'Skins')
   await win.locator('#menu .item', { hasText: 'reload' }).click()
-  await sleep(2000)
-  const after = await pixel(app, win, 1235, 400)
+  // The reselected skin repaints when its files are read and applied,
+  // which a loaded host takes longer than any fixed wait to do.
+  let after = null
+  for (let t = 0; t < 20000 && after !== 'rgb(0, 160, 0)'; t += 500) {
+    await sleep(500)
+    after = await pixel(app, win, 1235, 400)
+  }
   console.log('after edit and reselect: body pixel', after)
   await shot(win, path.join(out, 'reload.png'))
   await end(app)

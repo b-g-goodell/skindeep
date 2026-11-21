@@ -48,6 +48,10 @@ async function launch (cmd, opts = {}) {
     chromiumSandbox: !unsafe
   })
   if (!given) app.on('close', () => fs.rmSync(state, { recursive: true, force: true }))
+  // A screenshot or a click waits up to two minutes in every window, not
+  // Playwright's 30 s: software GL on a loaded host renders a frame
+  // that slowly, and a check asserts what it shows, not how fast.
+  app.context().setDefaultTimeout(120000)
   const win = await app.firstWindow()
   const pids = { electron: app.process().pid }
   return { app, win, pids }

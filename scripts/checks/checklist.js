@@ -54,12 +54,17 @@ async function main () {
   check(list.visible && p.stage.includes('checklist') && !widget(p, 'pl-0').visible && !widget(p, 'pl-17').visible, 'want the list shown over hidden counters')
   check(list.cursor === 'default', 'want the arrow over the list, which takes no click')
 
-  p = await until(async () => { const q = await page(win); return states(q)[0] === 'done' && q }, 25000)
-  check(p, 'want the first row done within 25 s')
-  console.log('one done', JSON.stringify(states(p)))
+  // The page and the bus are read together, before the screenshot: a
+  // turn of the fake can pass during a screenshot on a loaded host.
+  let one = null
+  p = await until(async () => {
+    const q = await page(win)
+    one = { rows: states(q).join(), done: (await probe(app)).snapshot['checklist.done'] }
+    return one.rows === 'done,doing,todo' && one.done === 1 && q
+  }, 25000)
+  console.log('one done', JSON.stringify(one))
+  check(p, 'want the first row done and the second doing after the next turn, with checklist.done at 1, within 25 s')
   await shot(win, path.join(out, 'checklist-done.png'))
-  check(states(p).join() === 'done,doing,todo', 'want the first row done and the second doing after the next turn')
-  check((await probe(app)).snapshot['checklist.done'] === 1, 'want checklist.done at 1')
 
   p = await until(async () => { const q = await page(win); return widget(q, 'todo').rows.length === 0 && q }, 60000)
   check(p, 'want the list cleared within 60 s')

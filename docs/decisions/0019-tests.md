@@ -1,7 +1,7 @@
 # 0019 Tests and dev tools
 
 Status: accepted 2026-10-11. Revised 2026-10-15: the live check suite
-and its pass record.
+and its pass record. Revised 2026-11-17: the suite runs in chunks.
 
 ## Context
 
@@ -57,6 +57,14 @@ Tests only where they pay.
   under the checkout's git directory (`scripts/checks/passrecord.js`),
   and publishing refuses a branch whose tree has none, since `npm
   test` alone never runs a live check.
+- The suite runs in chunks on a loaded host: `--chunk K/N` runs the
+  Kth of N equal runs of the job list. On a clean tree each job's pass
+  is recorded against the tree, and a later run carries a job that
+  passed on it instead of running it again (`--rerun-passed` runs it
+  all the same). The full record is written once every job has a pass
+  on the tree, by one run or by chunks, and it names the jobs that
+  passed only alone. A check that lists several subjects takes one as
+  an argument, so a long one runs as several jobs (`menus` by skin).
 - `scripts/fake/claude`: a replay fake named `claude`, so the app injects
   its settings. It plays a synthetic scenario (coloured output bursts,
   tool calls of several types, a subagent, turns) through the real

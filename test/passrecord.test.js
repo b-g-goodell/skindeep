@@ -50,3 +50,31 @@ test('a record is keyed by tree, refused on a dirty tree and shared by worktrees
   passrecord.write(wt)
   assert.strictEqual(passrecord.has(repo, 'side'), true)
 })
+
+test('job passes are kept per tree, apart from the full record', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'passrecord-'))
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }))
+  const repo = path.join(dir, 'repo')
+  fs.mkdirSync(repo)
+  git(repo, 'init', '-q', '-b', 'main')
+  fs.writeFileSync(path.join(repo, 'a'), '1\n')
+  git(repo, 'add', 'a')
+  git(repo, 'commit', '-q', '-m', 'one')
+
+  assert.deepStrictEqual(passrecord.jobs(repo), {})
+  passrecord.writeJob(repo, 'tabs-keys', { s: 12, alone: false })
+  passrecord.writeJob(repo, 'p5', { s: 40, alone: true })
+  const got = passrecord.jobs(repo)
+  assert.deepStrictEqual(Object.keys(got).sort(), ['p5', 'tabs-keys'])
+  assert.strictEqual(got.p5.alone, true)
+  // A job's pass is not the full record publishing reads.
+  assert.strictEqual(passrecord.has(repo), false)
+
+  fs.writeFileSync(path.join(repo, 'b'), 'untracked\n')
+  assert.throws(() => passrecord.writeJob(repo, 'menus-deck'), /tree dirty/)
+  fs.rmSync(path.join(repo, 'b'))
+  fs.writeFileSync(path.join(repo, 'a'), '2\n')
+  git(repo, 'commit', '-q', '-am', 'new tree')
+  assert.deepStrictEqual(passrecord.jobs(repo), {})
+  assert.deepStrictEqual(Object.keys(passrecord.jobs(repo, 'HEAD~1')).sort(), ['p5', 'tabs-keys'])
+})

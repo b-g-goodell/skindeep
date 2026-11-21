@@ -164,3 +164,18 @@ test('W7 the adapter: managed hooks off give the notice and no hook meters', asy
     assert.strictEqual(a.report().channels.find(c => c.name === 'hooks').state, 'off')
   } finally { a.close() }
 })
+
+// #242: in Code Mode a hook that times out on a call from code refuses
+// it, so the injected hooks then carry onFailure continue, and only then.
+test('Code Mode: the injected hooks carry onFailure continue', t => {
+  const d = dirs(t)
+  const failure = r => [...new Set(Object.values(read(r).hooks).map(h => h[0].hooks[0].onFailure))]
+  const env = extra => Object.assign({ CLAUDE_CONFIG_DIR: d.cfg }, extra)
+  assert.deepStrictEqual(failure(prepare(d)), [undefined])
+  assert.deepStrictEqual(failure(prepare(d, { env: env({ CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1' }) })), ['continue'])
+  write(path.join(d.repo, '.claude', 'settings.json'), { env: { CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1' } })
+  assert.deepStrictEqual(failure(prepare(d)), [undefined], 'project settings do not turn it on')
+  write(path.join(d.cfg, 'settings.json'), { env: { CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '1' } })
+  assert.deepStrictEqual(failure(prepare(d)), ['continue'], 'user settings do')
+  assert.deepStrictEqual(failure(prepare(d, { env: env({ CLAUDE_CODE_EXPERIMENTAL_CODE_MODE: '0' }) })), [undefined], 'a 0 anywhere keeps it off')
+})

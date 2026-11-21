@@ -1,6 +1,6 @@
 'use strict'
 // Live checks of New tab... (decision 0025). Run under xvfb-run:
-//   node scripts/checks/newtab.js OUT profiles|codex|snapshot|antigravity
+//   node scripts/checks/newtab.js OUT profiles|codex|snapshot|antigravity|codemode
 // Fakes only: scripts/fake comes first on PATH, so a bare claude, codex
 // or agy in the chooser runs a fake, never a real CLI.
 const { launch, probe, openMenu, shot, sleep } = require('../drive.js')
@@ -310,4 +310,47 @@ async function antigravity () {
   await end(app)
 }
 
-;({ profiles, codex, snapshot, antigravity })[what]().then(() => console.log('done')).catch(e => { console.error(e); process.exit(1) })
+// #242: the Code Mode box sets the variable on a Claude Code tab, its
+// hooks then carry onFailure continue, the next dialog starts checked
+// on that tab, and the box is disabled for Codex.
+async function codemode () {
+  const { app, win } = await start()
+  let c = await chooser(win)
+  const box = () => win.evaluate(() => {
+    const b = document.querySelector('#chooser .codemode')
+    return { checked: b.checked, disabled: b.disabled, hint: document.querySelector('#chooser .codemode-hint').textContent }
+  })
+  let b = await box()
+  console.log('codemode box at start', JSON.stringify(b))
+  check(!b.checked && !b.disabled && /unset/.test(b.hint), 'want the box enabled and clear for a window without Code Mode')
+  await win.locator('#chooser .codemode').check()
+  b = await box()
+  check(b.hint === 'CLAUDE_CODE_EXPERIMENTAL_CODE_MODE=1', `want the hint to show the variable, saw ${b.hint}`)
+  await win.locator('#chooser input[value=codex]').check()
+  await sleep(200)
+  b = await box()
+  check(b.disabled && !b.checked, 'want the box disabled and clear for Codex')
+  await win.locator('#chooser input[value=claude]').check()
+  await sleep(200)
+  b = await box()
+  check(!b.disabled && b.checked, 'want the choice back for Claude Code')
+  await shot(win, path.join(out, 'chooser-codemode.png'))
+  await click(win, 'Open')
+  await sleep(3000)
+  const pr = await probe(app)
+  const t = pr.tabs[1]
+  check(pr.tabs.length === 2 && t.active, `want a second, active tab, saw ${JSON.stringify(pr.tabs.map(t => t.label))}`)
+  check(environ(t.childPid).CLAUDE_CODE_EXPERIMENTAL_CODE_MODE === '1', 'want the variable at 1 on the child')
+  check(environ(pr.tabs[0].childPid).CLAUDE_CODE_EXPERIMENTAL_CODE_MODE === undefined, 'want the first tab without it')
+  const argv = fs.readFileSync(`/proc/${t.childPid}/cmdline`, 'utf8').split('\0')
+  const hooks = JSON.parse(fs.readFileSync(argv[argv.indexOf('--settings') + 1], 'utf8')).hooks
+  console.log('codemode tab', JSON.stringify(argv), JSON.stringify(hooks.PreToolUse))
+  check(Object.values(hooks).every(h => h[0].hooks[0].onFailure === 'continue'), 'want onFailure continue on every injected hook')
+  c = await chooser(win)
+  b = await box()
+  check(c.agent === 'claude' && b.checked, 'want the next dialog checked on the Code Mode tab')
+  await win.keyboard.press('Escape')
+  await end(app)
+}
+
+;({ profiles, codex, snapshot, antigravity, codemode })[what]().then(() => console.log('done')).catch(e => { console.error(e); process.exit(1) })
